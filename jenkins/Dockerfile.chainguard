@@ -1,0 +1,23 @@
+# Jenkins using Chainguard's pre-built zero-CVE JRE image
+# https://images.chainguard.dev/directory/image/jre/overview
+ARG JENKINS_VERSION=2.492
+
+FROM cgr.dev/chainguard/wolfi-base:latest AS downloader
+
+ARG JENKINS_VERSION
+
+RUN apk add --no-cache curl && \
+    curl -fsSL https://get.jenkins.io/war-stable/${JENKINS_VERSION}/jenkins.war \
+    -o /jenkins.war
+
+FROM cgr.dev/chainguard/jre:latest
+
+COPY --from=downloader /jenkins.war /usr/share/jenkins/jenkins.war
+
+ENV JENKINS_HOME=/var/jenkins_home \
+    JENKINS_SLAVE_AGENT_PORT=50000
+
+EXPOSE 8080 50000
+
+ENTRYPOINT ["java", "-jar", "/usr/share/jenkins/jenkins.war"]
+CMD ["--httpPort=8080"]
