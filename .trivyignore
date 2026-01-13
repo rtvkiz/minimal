@@ -1,0 +1,6 @@
+# Trivy Ignore File
+# Add CVE IDs here to ignore them (one per line)
+# Only add CVEs after careful review - document why each is ignored
+
+# Example (uncomment if needed):
+# CVE-2024-XXXXX  # Not exploitable in our context because...

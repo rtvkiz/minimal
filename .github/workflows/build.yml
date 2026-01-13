@@ -72,7 +72,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run Trivy vulnerability scanner
+      - name: Scan for vulnerabilities (table output)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.image.name }}:latest
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'
+
+      - name: Scan for vulnerabilities (SARIF)
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.image.name }}:latest
@@ -80,21 +88,14 @@ jobs:
           output: 'trivy-results-${{ matrix.image.name }}.sarif'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
+          trivyignores: '.trivyignore'
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
         if: always()
-        continue-on-error: true  # Code Scanning requires GitHub Advanced Security on private repos
+        continue-on-error: true
         with:
           sarif_file: 'trivy-results-${{ matrix.image.name }}.sarif'
-
-      - name: Run Trivy for table output (summary)
-        if: always()
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.image.name }}:latest
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM'
 
       - name: Push image
         if: github.event_name != 'pull_request' && success()
