@@ -82,8 +82,9 @@ jobs:
           exit-code: '1'
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
+        continue-on-error: true  # Code Scanning requires GitHub Advanced Security on private repos
         with:
           sarif_file: 'trivy-results-${{ matrix.image.name }}.sarif'
 
