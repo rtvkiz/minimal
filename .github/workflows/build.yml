@@ -39,6 +39,7 @@ jobs:
         run: |
           go install chainguard.dev/melange@latest
           go install chainguard.dev/apko@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
         uses: sigstore/cosign-installer@v3
@@ -146,6 +147,7 @@ jobs:
         run: |
           go install chainguard.dev/melange@latest
           go install chainguard.dev/apko@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
         uses: sigstore/cosign-installer@v3
