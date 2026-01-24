@@ -1,0 +1,135 @@
+# Melange build configuration for minimal Python from source
+# Produces a stripped-down Python with only essential components
+# No shell, no pip, no test suite, no idle, no tkinter
+
+package:
+  name: python-minimal
+  version: 3.13.1
+  epoch: 0
+  description: "Minimal Python runtime built from source"
+  copyright:
+    - license: PSF-2.0
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      # Build toolchain
+      - build-base
+      - busybox
+      - ca-certificates-bundle
+      # Required build dependencies
+      - zlib-dev
+      - openssl-dev
+      - libffi-dev
+      # For optimized builds
+      - linux-headers
+
+pipeline:
+  # Fetch CPython source
+  - uses: fetch
+    with:
+      uri: https://www.python.org/ftp/python/${{package.version}}/Python-${{package.version}}.tar.xz
+      expected-sha256: 9cf9427bee9e2242e3877dd0f6b641c1853ca461f39d6503ce260a59c80bf4e1
+
+  # Configure with minimal options
+  - runs: |
+      ./configure \
+        --prefix=/usr \
+        --enable-optimizations \
+        --with-lto \
+        --disable-test-modules \
+        --without-ensurepip \
+        --without-readline \
+        --without-doc-strings \
+        --without-static-libpython \
+        --disable-ipv6 \
+        --with-ssl-default-suites=openssl \
+        --build=$(uname -m)-linux-musl \
+        --host=$(uname -m)-linux-musl
+
+  # Build Python
+  - runs: |
+      make -j$(nproc)
+
+  # Install to destdir
+  - runs: |
+      make install DESTDIR="${{targets.destdir}}"
+
+  # Strip and minimize the installation
+  - runs: |
+      cd "${{targets.destdir}}"
+
+      # Remove unnecessary components
+      rm -rf usr/lib/python3.13/test
+      rm -rf usr/lib/python3.13/tests
+      rm -rf usr/lib/python3.13/idlelib
+      rm -rf usr/lib/python3.13/tkinter
+      rm -rf usr/lib/python3.13/turtledemo
+      rm -rf usr/lib/python3.13/ensurepip
+      rm -rf usr/lib/python3.13/distutils
+      rm -rf usr/lib/python3.13/lib2to3
+      rm -rf usr/lib/python3.13/pydoc_data
+      rm -rf usr/lib/python3.13/unittest
+      rm -rf usr/lib/python3.13/doctest.py
+      rm -rf usr/lib/python3.13/pydoc.py
+      rm -rf usr/lib/python3.13/turtle.py
+      rm -rf usr/lib/python3.13/curses
+      rm -rf usr/lib/python3.13/dbm
+      rm -rf usr/lib/python3.13/sqlite3
+      rm -rf usr/lib/python3.13/xmlrpc
+      rm -rf usr/lib/python3.13/msilib
+      rm -rf usr/lib/python3.13/multiprocessing
+      rm -rf usr/lib/python3.13/venv
+      rm -rf usr/lib/python3.13/lib-dynload/_sqlite3*
+      rm -rf usr/lib/python3.13/lib-dynload/_tkinter*
+      rm -rf usr/lib/python3.13/lib-dynload/_curses*
+      rm -rf usr/lib/python3.13/lib-dynload/_dbm*
+      rm -rf usr/lib/python3.13/lib-dynload/readline*
+      rm -rf usr/lib/python3.13/lib-dynload/audioop*
+      rm -rf usr/lib/python3.13/lib-dynload/ossaudiodev*
+      rm -rf usr/lib/python3.13/lib-dynload/nis*
+
+      # Remove all __pycache__ directories
+      find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+
+      # Remove .pyc files (we'll run without them)
+      find . -name '*.pyc' -delete 2>/dev/null || true
+      find . -name '*.pyo' -delete 2>/dev/null || true
+
+      # Remove static libraries and pkg-config
+      rm -rf usr/lib/python3.13/config-3.13-*
+      rm -rf usr/lib/pkgconfig
+      rm -f usr/lib/libpython3.13.a
+
+      # Remove header files (not needed at runtime)
+      rm -rf usr/include
+
+      # Remove share/man documentation
+      rm -rf usr/share/man
+      rm -rf usr/share/doc
+
+      # Remove python development tools
+      rm -f usr/bin/python3.13-config
+      rm -f usr/bin/python3-config
+      rm -f usr/bin/2to3*
+      rm -f usr/bin/idle*
+      rm -f usr/bin/pydoc*
+
+      # Strip all binaries and shared libraries
+      find . -type f -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
+      strip --strip-unneeded usr/bin/python3.13 2>/dev/null || true
+
+      # Create symlink
+      ln -sf python3.13 usr/bin/python3
+      ln -sf python3.13 usr/bin/python
+
+  # Verify the build
+  - runs: |
+      "${{targets.destdir}}/usr/bin/python3.13" -c "import sys; print(f'Python {sys.version}')"
+      "${{targets.destdir}}/usr/bin/python3.13" -c "import ssl; print('SSL OK')"
+      "${{targets.destdir}}/usr/bin/python3.13" -c "import json; print('JSON OK')"
+      "${{targets.destdir}}/usr/bin/python3.13" -c "import hashlib; print('Hashlib OK')"

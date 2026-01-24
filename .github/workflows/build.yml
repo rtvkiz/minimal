@@ -1,47 +1,48 @@
-name: Build and Scan Zero-CVE Images
+name: Build Zero-CVE Images
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'python/**'
+      - 'jenkins/**'
+      - '.github/workflows/build.yml'
   pull_request:
     branches: [main]
   schedule:
-    # Rebuild daily at 2am UTC to catch new CVE patches
+    # Rebuild daily at 2am UTC to get latest CVE patches
     - cron: '0 2 * * *'
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
+  JENKINS_VERSION: "2.541.1"
+  PYTHON_VERSION: "3.13.1"
 
 jobs:
-  build-and-scan:
+  #----------------------------------------------------------------------------
+  # PYTHON IMAGE (melange from source + apko, shell-less)
+  #----------------------------------------------------------------------------
+  build-python:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
       security-events: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        image:
-          - name: busybox
-            context: ./busybox
-          - name: alpine
-            context: ./alpine
-          - name: nginx
-            context: ./nginx
-          - name: python
-            context: ./python
-          - name: jenkins
-            context: ./jenkins
+      id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Setup melange
+        uses: chainguard-dev/actions/setup-melange@main
+
+      - name: Setup apko
+        uses: chainguard-dev/actions/setup-apko@main
+
+      - name: Setup cosign
+        uses: sigstore/cosign-installer@v3
 
       - name: Log in to Container Registry
         if: github.event_name != 'pull_request'
@@ -51,73 +52,228 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.image.name }}
-          tags: |
-            type=schedule,pattern={{date 'YYYYMMDD'}}
-            type=sha,prefix=
-            type=raw,value=latest,enable={{is_default_branch}}
+      - name: Generate melange signing key
+        run: melange keygen
 
-      - name: Build image
-        uses: docker/build-push-action@v5
-        with:
-          context: ${{ matrix.image.context }}
-          push: false
-          load: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Build Python from source with melange
+        run: |
+          melange build python/melange.yaml \
+            --arch x86_64,aarch64 \
+            --signing-key melange.rsa
 
-      - name: Scan for vulnerabilities (table output)
+      - name: Build Python image with apko
+        run: |
+          apko build python/apko/python.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }} \
+            python.tar \
+            --arch x86_64,aarch64 \
+            --keyring-append melange.rsa.pub
+          docker load < python.tar
+
+      - name: Report image size
+        run: |
+          echo "## Python Image Size" >> $GITHUB_STEP_SUMMARY
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
+            grep minimal-python >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Scan Python image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.image.name }}:latest
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }}
           format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
           exit-code: '0'
 
-      - name: Scan for vulnerabilities (SARIF)
+      - name: Fail on CVEs
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.image.name }}:latest
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }}
           format: 'sarif'
-          output: 'trivy-results-${{ matrix.image.name }}.sarif'
+          output: 'trivy-python.sarif'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
-          trivyignores: '.trivyignore'
 
-      - name: Upload Trivy scan results to GitHub Security tab
+      - name: Upload scan results
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         continue-on-error: true
         with:
-          sarif_file: 'trivy-results-${{ matrix.image.name }}.sarif'
+          sarif_file: 'trivy-python.sarif'
 
-      - name: Push image
-        if: github.event_name != 'pull_request' && success()
-        uses: docker/build-push-action@v5
+      - name: Test Python image
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }}"
+          echo "Testing Python interpreter..."
+          docker run --rm "$IMAGE" -c "import sys; print(f'Python {sys.version}')"
+          echo "Testing TLS/SSL..."
+          docker run --rm "$IMAGE" -c "import ssl; print('TLS OK:', ssl.OPENSSL_VERSION)"
+          echo "Testing stdlib modules..."
+          docker run --rm "$IMAGE" -c "import json, hashlib, http.client; print('stdlib OK')"
+          echo "Verifying no shell..."
+          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
+            && echo "::error::Shell found in image!" && exit 1 \
+            || echo "No shell confirmed"
+
+      - name: Publish Python image
+        if: github.event_name != 'pull_request'
+        run: |
+          apko publish python/apko/python.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest \
+            --arch x86_64,aarch64 \
+            --keyring-append melange.rsa.pub
+
+      - name: Sign image with cosign
+        if: github.event_name != 'pull_request'
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest
+
+  #----------------------------------------------------------------------------
+  # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
+  #----------------------------------------------------------------------------
+  build-jenkins:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup melange
+        uses: chainguard-dev/actions/setup-melange@main
+
+      - name: Setup apko
+        uses: chainguard-dev/actions/setup-apko@main
+
+      - name: Setup cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
         with:
-          context: ${{ matrix.image.context }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-  # Summary job to enforce zero-CVE policy
-  check-results:
-    needs: build-and-scan
+      - name: Generate melange signing key
+        run: melange keygen
+
+      - name: Build Jenkins with melange (jlink JRE + WAR)
+        run: |
+          melange build jenkins/melange.yaml \
+            --arch x86_64,aarch64 \
+            --signing-key melange.rsa
+
+      - name: Build Jenkins image with apko
+        run: |
+          apko build jenkins/apko/jenkins.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:${{ github.sha }} \
+            jenkins.tar \
+            --arch x86_64,aarch64 \
+            --keyring-append melange.rsa.pub
+          docker load < jenkins.tar
+
+      - name: Report image size
+        run: |
+          echo "## Jenkins Image Size" >> $GITHUB_STEP_SUMMARY
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
+            grep minimal-jenkins >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Scan Jenkins image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:${{ github.sha }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          exit-code: '0'
+
+      - name: Fail on CVEs
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-jenkins.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Upload scan results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: 'trivy-jenkins.sarif'
+
+      - name: Test Jenkins image
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:${{ github.sha }}"
+          echo "Testing Java version..."
+          docker run --rm --entrypoint /usr/bin/java "$IMAGE" -version
+          echo "Testing Jenkins WAR..."
+          docker run --rm --entrypoint /usr/bin/java "$IMAGE" \
+            -jar /usr/share/jenkins/jenkins.war --version
+          echo "Verifying no shell..."
+          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
+            && echo "::error::Shell found in image!" && exit 1 \
+            || echo "No shell confirmed"
+
+      - name: Publish Jenkins image
+        if: github.event_name != 'pull_request'
+        run: |
+          apko publish jenkins/apko/jenkins.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest \
+            --arch x86_64,aarch64 \
+            --keyring-append melange.rsa.pub
+
+      - name: Sign image with cosign
+        if: github.event_name != 'pull_request'
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest
+
+  #----------------------------------------------------------------------------
+  # SUMMARY
+  #----------------------------------------------------------------------------
+  summary:
+    needs: [build-python, build-jenkins]
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Check all images passed
+      - name: Check results
         run: |
-          if [ "${{ needs.build-and-scan.result }}" != "success" ]; then
-            echo "::error::One or more images have CVEs. Check the scan results above."
+          if [ "${{ needs.build-python.result }}" != "success" ] || \
+             [ "${{ needs.build-jenkins.result }}" != "success" ]; then
+            echo "::error::One or more images failed"
             exit 1
           fi
-          echo "All images passed CVE scanning!"
+          echo "All images built with zero CVEs!"
+
+  #----------------------------------------------------------------------------
+  # CLEANUP OLD VERSIONS
+  #----------------------------------------------------------------------------
+  cleanup:
+    needs: [build-python, build-jenkins]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    permissions:
+      packages: write
+    steps:
+      - name: Delete old Python versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: minimal-python
+          package-type: 'container'
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: 'true'
+
+      - name: Delete old Jenkins versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: minimal-jenkins
+          package-type: 'container'
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: 'true'

@@ -1,9 +1,0 @@
-# nginx using Chainguard's pre-built zero-CVE image
-# https://images.chainguard.dev/directory/image/nginx/overview
-FROM cgr.dev/chainguard/nginx:latest
-
-# Copy custom config if needed
-# COPY nginx.conf /etc/nginx/nginx.conf
-
-# Copy static files
-# COPY --chown=nginx:nginx ./html /usr/share/nginx/html

@@ -1,2 +1,21 @@
+# Build artifacts
+*.tar
 *.sarif
+sbom-*.spdx.json
+
+# Environment
 .env
+.env.*
+
+# Melange build outputs
+packages/
+*.apk
+
+# Melange signing keys (generated per-build)
+melange.rsa
+melange.rsa.pub
+
+# IDE
+.idea/
+.vscode/
+*.swp

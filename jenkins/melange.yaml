@@ -1,0 +1,86 @@
+# Melange build configuration for minimal Jenkins
+# Uses jlink to create a custom JRE with only required modules
+# Downloads and verifies Jenkins WAR
+# No shell needed in final image
+
+package:
+  name: jenkins-minimal
+  version: 2.541.1
+  epoch: 0
+  description: "Minimal Jenkins with custom JRE (jlink)"
+  copyright:
+    - license: MIT
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      # Full JDK needed for jlink (build-time only)
+      - openjdk-21-jdk
+      # Fonts for Jenkins UI rendering
+      - ttf-dejavu
+      - fontconfig
+
+pipeline:
+  # Download and verify Jenkins WAR
+  - runs: |
+      mkdir -p /home/build/jenkins
+      curl -fsSL "https://get.jenkins.io/war-stable/${{package.version}}/jenkins.war" \
+        -o /home/build/jenkins/jenkins.war
+      curl -fsSL "https://get.jenkins.io/war-stable/${{package.version}}/jenkins.war.sha256" \
+        -o /tmp/jenkins.war.sha256
+      cd /home/build/jenkins && sha256sum -c /tmp/jenkins.war.sha256
+      rm -f /tmp/jenkins.war.sha256
+
+  # Create minimal JRE with jlink (only modules Jenkins needs)
+  - runs: |
+      JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      $JAVA_HOME/bin/jlink \
+        --add-modules java.base,java.compiler,java.datatransfer,java.desktop,java.instrument,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.prefs,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.xml,java.xml.crypto,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.httpserver,jdk.management,jdk.net,jdk.security.auth,jdk.unsupported,jdk.zipfs \
+        --strip-debug \
+        --no-man-pages \
+        --no-header-files \
+        --compress=zip-6 \
+        --output /home/build/custom-jre
+
+  # Install to destdir
+  - runs: |
+      # Install custom JRE
+      mkdir -p "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+      cp -a /home/build/custom-jre/* "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/"
+
+      # Create java symlink in /usr/bin
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf /usr/lib/jvm/java-21-minimal/bin/java "${{targets.destdir}}/usr/bin/java"
+
+      # Install Jenkins WAR
+      mkdir -p "${{targets.destdir}}/usr/share/jenkins"
+      cp /home/build/jenkins/jenkins.war "${{targets.destdir}}/usr/share/jenkins/jenkins.war"
+
+      # Install fonts (needed for Jenkins UI)
+      mkdir -p "${{targets.destdir}}/usr/share/fonts"
+      cp -a /usr/share/fonts/truetype "${{targets.destdir}}/usr/share/fonts/" 2>/dev/null || true
+      mkdir -p "${{targets.destdir}}/etc/fonts"
+      cp -a /etc/fonts/* "${{targets.destdir}}/etc/fonts/" 2>/dev/null || true
+
+      # Create Jenkins home directory
+      mkdir -p "${{targets.destdir}}/var/jenkins_home"
+
+      # Strip native libraries in JRE
+      find "${{targets.destdir}}/usr/lib/jvm/java-21-minimal" -name '*.so' \
+        -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  # Verify the build
+  - runs: |
+      echo "Verifying custom JRE..."
+      "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/bin/java" -version
+      echo "Checking JRE size..."
+      du -sh "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+      echo "Checking Jenkins WAR..."
+      ls -lh "${{targets.destdir}}/usr/share/jenkins/jenkins.war"

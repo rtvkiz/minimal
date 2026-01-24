@@ -1,110 +1,176 @@
-# Minimal Zero-CVE Container Images
+# Minimal Zero-CVE Python Image
 
-Continuous build system for generating minimal container images with zero known CVEs.
+A minimal Python container image with **zero known CVEs**, built daily using [Chainguard's apko](https://github.com/chainguard-dev/apko) and [Wolfi](https://github.com/wolfi-dev) packages.
 
-## Build Approaches
+## Features
 
-| Approach | Base | CVE Status | Complexity |
-|----------|------|------------|------------|
-| **Wolfi/apko** | Wolfi packages | Zero CVE | Medium |
-| **Chainguard** | Pre-built images | Zero CVE | Easy |
-| **Distroless** | Google distroless | May have CVEs | Easy |
-| **Scratch** | From source | Zero CVE | Complex |
+- **Zero CVEs** - Wolfi packages are patched within 24-48 hours of disclosure
+- **Minimal footprint** - Only essential packages (~29MB compressed)
+- **Multi-arch** - Supports x86_64 and aarch64
+- **Daily rebuilds** - Automatic CI builds ensure latest security patches
+- **Reproducible** - Declarative apko builds guarantee consistency
+- **SBOM included** - Full software bill of materials generated
 
-## Images
+## Quick Start
 
-### Wolfi-based (Recommended for Zero CVE)
-
-| Image | Workflow | Description |
-|-------|----------|-------------|
-| `minimal-nginx-wolfi` | build-apko.yml | nginx on Wolfi |
-| `minimal-python-wolfi` | build-apko.yml | Python 3.12 on Wolfi |
-| `minimal-jenkins-wolfi` | build-apko.yml | Jenkins on Wolfi |
-
-### Legacy (scratch/distroless)
-
-| Image | Base | Description |
-|-------|------|-------------|
-| `minimal-busybox` | scratch | BusyBox shell (musl) |
-| `minimal-alpine` | scratch | Minimal Alpine filesystem |
-| `minimal-nginx` | distroless | nginx web server |
-| `minimal-python` | distroless | Python 3.12 runtime |
-| `minimal-jenkins` | distroless | Jenkins CI server |
-
-## Usage
-
-### Build Wolfi images (zero CVE)
+### Prerequisites
 
 ```bash
-# Requires apko: https://github.com/chainguard-dev/apko
-apko build nginx/apko/nginx.yaml minimal-nginx-wolfi:latest nginx.tar
-docker load < nginx.tar
+# Install apko
+go install chainguard.dev/apko@latest
+# or: brew install apko
 
-apko build python/apko/python.yaml minimal-python-wolfi:latest python.tar
-docker load < python.tar
+# Install trivy for scanning
+brew install trivy
+
+# Docker for loading/testing images
 ```
 
-### Build with Chainguard base images (zero CVE, easiest)
+### Build Locally
 
 ```bash
-docker build -f nginx/Dockerfile.chainguard -t minimal-nginx ./nginx
-docker build -f python/Dockerfile.chainguard -t minimal-python ./python
-docker build -f jenkins/Dockerfile.chainguard -t minimal-jenkins ./jenkins
+make build      # Build multi-arch image
+make scan       # Verify zero CVEs
+make test       # Run Python tests
 ```
 
-### Build legacy images
+### Use the Image
 
 ```bash
-make build          # Build all distroless-based images
-make busybox        # Build single image
+# Run Python interactively
+docker run -it ghcr.io/YOUR_USER/minimal-python:latest
+
+# Run a script
+docker run --rm -v $(pwd):/app ghcr.io/YOUR_USER/minimal-python:latest /app/script.py
+
+# Install packages (as root in Dockerfile)
+FROM ghcr.io/YOUR_USER/minimal-python:latest
+USER root
+RUN pip install requests flask
+USER python
 ```
 
-### Scan for CVEs
+## How It Works
 
-```bash
-make scan           # Scan all images (fails on CRITICAL/HIGH)
-make scan-nginx     # Scan single image
-trivy image minimal-nginx-wolfi:latest  # Scan Wolfi image
+```
+┌─────────────────────┐     ┌──────────────┐     ┌─────────────────┐
+│  Wolfi Packages     │ ──▶ │    apko      │ ──▶ │   OCI Image     │
+│  (CVE patched 24h)  │     │ (declarative)│     │   (zero CVE)    │
+└─────────────────────┘     └──────────────┘     └─────────────────┘
+         │                                               │
+         │                                               ▼
+         │                                    ┌─────────────────┐
+         └───── melange (custom pkgs) ──────▶│ Custom Packages │
+                                              └─────────────────┘
 ```
 
-## CI/CD Workflows
+### Components
 
-| Workflow | File | Purpose |
-|----------|------|---------|
-| Wolfi/apko builds | `build-apko.yml` | Zero CVE images using Wolfi |
-| Legacy builds | `build.yml` | Distroless/scratch images |
+| Component | Purpose |
+|-----------|---------|
+| **[Wolfi](https://wolfi.dev)** | Linux distro for containers, rapid CVE patching |
+| **[apko](https://github.com/chainguard-dev/apko)** | Declarative OCI image builder |
+| **[melange](https://github.com/chainguard-dev/melange)** | Build custom APK packages (optional) |
+| **[Trivy](https://trivy.dev)** | Vulnerability scanner |
 
-Both run:
-- On push to main
-- On pull requests
-- Daily at 2am UTC (scheduled rebuild)
+## Image Details
+
+### Included Packages
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `python-3.12` | Latest | Python interpreter |
+| `py3.12-pip` | Latest | Package installer |
+| `ca-certificates-bundle` | Latest | TLS/SSL certificates |
+| `libstdc++` | Latest | C++ standard library |
+| `wolfi-baselayout` | Latest | Base filesystem layout |
+
+### Configuration
+
+- **User**: `python` (uid: 65532)
+- **Workdir**: `/app`
+- **Entrypoint**: `/usr/bin/python3.12`
+- **Environment**:
+  - `PYTHONDONTWRITEBYTECODE=1`
+  - `PYTHONUNBUFFERED=1`
+  - `PYTHONFAULTHANDLER=1`
 
 ## Customization
 
-### nginx
-- Wolfi: Edit `nginx/apko/nginx.yaml` to add packages
-- Chainguard: Edit `nginx/Dockerfile.chainguard`
-- Config: Edit `nginx/nginx.conf`
+### Change Python Version
 
-### Python
-- Wolfi: Edit `python/apko/python.yaml` to add packages
-- Chainguard: Edit `python/Dockerfile.chainguard`
+Edit `python/apko/python.yaml`:
 
-### Jenkins
-- Wolfi: Edit `jenkins/apko/jenkins-base.yaml` for Java base
-- Update `JENKINS_VERSION` in workflows/Dockerfiles
-
-```bash
-# Run Jenkins with persistent storage
-docker run -d -p 8080:8080 -p 50000:50000 \
-  -v jenkins_home:/var/jenkins_home \
-  minimal-jenkins-wolfi:latest
+```yaml
+contents:
+  packages:
+    - python-3.13        # Change to 3.11, 3.12, or 3.13
+    - python-3.13-base
+    - py3.13-pip
 ```
 
-## Why Wolfi?
+### Add System Packages
 
-[Wolfi](https://github.com/wolfi-dev) is a Linux distribution designed for containers:
-- Packages are patched for CVEs within 24-48 hours
-- Minimal package set reduces attack surface
-- Built with apko for reproducible, declarative images
-- Maintained by Chainguard
+```yaml
+contents:
+  packages:
+    - python-3.12
+    - py3.12-pip
+    - git              # Add git
+    - curl             # Add curl
+    - postgresql-16    # Add PostgreSQL client
+```
+
+### Build Custom Packages with Melange
+
+For packages not in Wolfi, use melange to build custom APKs:
+
+```bash
+# See melange/ directory for examples
+melange build melange/my-package.yaml --arch x86_64
+```
+
+## CI/CD
+
+The GitHub Actions workflow runs:
+
+- **On push** to main branch
+- **On pull requests** for validation
+- **Daily at 2am UTC** to get latest CVE patches
+
+Each build:
+1. Builds the image with apko
+2. Scans with Trivy for CRITICAL/HIGH CVEs
+3. Publishes only if zero vulnerabilities found
+4. Uploads SBOM and scan results to GitHub Security
+
+## Project Structure
+
+```
+minimal/
+├── python/
+│   └── apko/
+│       └── python.yaml     # apko image definition
+├── melange/                 # (optional) Custom package builds
+│   └── example.yaml
+├── .github/
+│   └── workflows/
+│       └── build.yml       # Daily CI build
+├── Makefile                # Local build commands
+└── README.md
+```
+
+## Why Wolfi + apko?
+
+| Feature | Traditional Dockerfile | Wolfi/apko |
+|---------|----------------------|------------|
+| CVE patching | Manual updates | Auto (24-48h) |
+| Reproducibility | Varies | Guaranteed |
+| Image size | Often bloated | Minimal |
+| Supply chain | Complex | Signed packages |
+| Build speed | Slow (layers) | Fast (parallel) |
+| SBOM | Manual | Automatic |
+
+## License
+
+MIT

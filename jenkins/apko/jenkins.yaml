@@ -1,0 +1,57 @@
+# Minimal Jenkins image - custom JRE (jlink) + WAR built with melange
+# Shell-less/distroless, no full JDK, only required Java modules
+# No Dockerfile needed - pure apko assembly
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages
+    - '@local ./packages'
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    - ./melange.rsa.pub
+  packages:
+    # Base filesystem layout
+    - wolfi-baselayout
+    # Our minimal Jenkins (custom JRE + WAR + fonts)
+    - jenkins-minimal@local
+    # Runtime dependencies for the JRE
+    - glibc
+    - libstdc++
+    - zlib
+    # TLS/SSL certificates
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: jenkins
+      gid: 1000
+  users:
+    - username: jenkins
+      uid: 1000
+      gid: 1000
+  run-as: 1000
+
+entrypoint:
+  command: /usr/bin/java -Xmx512m -Djava.awt.headless=true -jar /usr/share/jenkins/jenkins.war
+
+environment:
+  JAVA_HOME: /usr/lib/jvm/java-21-minimal
+  JENKINS_HOME: /var/jenkins_home
+  LANG: C.UTF-8
+
+paths:
+  - path: /var/jenkins_home
+    type: directory
+    uid: 1000
+    gid: 1000
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 1000
+    gid: 1000
+    permissions: 0o1777
+
+archs:
+  - x86_64
+  - aarch64
