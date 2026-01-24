@@ -58,7 +58,7 @@ jobs:
       - name: Build Python from source with melange
         run: |
           melange build python/melange.yaml \
-            --arch x86_64,aarch64 \
+            --arch x86_64 \
             --signing-key melange.rsa \
             --runner docker
 
@@ -67,7 +67,7 @@ jobs:
           apko build python/apko/python.yaml \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }} \
             python.tar \
-            --arch x86_64,aarch64 \
+            --arch x86_64 \
             --keyring-append melange.rsa.pub
           docker load < python.tar
 
@@ -120,7 +120,7 @@ jobs:
         run: |
           apko publish python/apko/python.yaml \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest \
-            --arch x86_64,aarch64 \
+            --arch x86_64 \
             --keyring-append melange.rsa.pub
 
       - name: Sign image with cosign
@@ -167,7 +167,7 @@ jobs:
       - name: Build Jenkins with melange (jlink JRE + WAR)
         run: |
           melange build jenkins/melange.yaml \
-            --arch x86_64,aarch64 \
+            --arch x86_64 \
             --signing-key melange.rsa \
             --runner docker
 
@@ -176,7 +176,7 @@ jobs:
           apko build jenkins/apko/jenkins.yaml \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:${{ github.sha }} \
             jenkins.tar \
-            --arch x86_64,aarch64 \
+            --arch x86_64 \
             --keyring-append melange.rsa.pub
           docker load < jenkins.tar
 
@@ -228,7 +228,7 @@ jobs:
         run: |
           apko publish jenkins/apko/jenkins.yaml \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest \
-            --arch x86_64,aarch64 \
+            --arch x86_64 \
             --keyring-append melange.rsa.pub
 
       - name: Sign image with cosign
