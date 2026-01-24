@@ -35,11 +35,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup melange
-        uses: chainguard-dev/actions/setup-melange@main
-
-      - name: Setup apko
-        uses: chainguard-dev/actions/setup-apko@main
+      - name: Install melange and apko
+        run: |
+          go install chainguard.dev/melange@latest
+          go install chainguard.dev/apko@latest
 
       - name: Setup cosign
         uses: sigstore/cosign-installer@v3
@@ -143,11 +142,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup melange
-        uses: chainguard-dev/actions/setup-melange@main
-
-      - name: Setup apko
-        uses: chainguard-dev/actions/setup-apko@main
+      - name: Install melange and apko
+        run: |
+          go install chainguard.dev/melange@latest
+          go install chainguard.dev/apko@latest
 
       - name: Setup cosign
         uses: sigstore/cosign-installer@v3
