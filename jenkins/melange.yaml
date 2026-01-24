@@ -22,7 +22,7 @@ environment:
       - ca-certificates-bundle
       - curl
       # Full JDK needed for jlink (build-time only)
-      - openjdk-21-jdk
+      - openjdk-21-default-jdk
       # Fonts for Jenkins UI rendering
       - ttf-dejavu
       - fontconfig

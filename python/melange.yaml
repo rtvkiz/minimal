@@ -33,7 +33,7 @@ pipeline:
   - uses: fetch
     with:
       uri: https://www.python.org/ftp/python/${{package.version}}/Python-${{package.version}}.tar.xz
-      expected-sha256: 9cf9427bee9e2242e3877dd0f6b641c1853ca461f39d6503ce260a59c80bf4e1
+      expected-sha256: 9cf9427bee9e2242e3877dd0f6b641c1853ca461f39d6503ce260a59c80bf0d9
 
   # Configure with minimal options
   - runs: |
