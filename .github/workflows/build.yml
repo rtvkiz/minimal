@@ -59,7 +59,8 @@ jobs:
         run: |
           melange build python/melange.yaml \
             --arch x86_64,aarch64 \
-            --signing-key melange.rsa
+            --signing-key melange.rsa \
+            --runner docker
 
       - name: Build Python image with apko
         run: |
@@ -167,7 +168,8 @@ jobs:
         run: |
           melange build jenkins/melange.yaml \
             --arch x86_64,aarch64 \
-            --signing-key melange.rsa
+            --signing-key melange.rsa \
+            --runner docker
 
       - name: Build Jenkins image with apko
         run: |
