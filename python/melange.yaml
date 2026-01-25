@@ -15,6 +15,12 @@ package:
       - python3=${{package.version}}
       - python-3.13=${{package.version}}
       - python-3.13-base=${{package.version}}
+    runtime:
+      - glibc
+      - libffi
+      - zlib
+      - libssl3
+      - libcrypto3
 
 environment:
   contents:

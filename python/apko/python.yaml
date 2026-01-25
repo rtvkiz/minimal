@@ -10,16 +10,11 @@ contents:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
     # Local signing key passed via --keyring-append CLI flag
   packages:
-    # Base filesystem layout
+    # Base filesystem layout (includes glibc)
     - wolfi-baselayout
-    # Our minimal Python built from source  
+    # Our minimal Python built from source
     - python-minimal
-    # Runtime shared library dependencies (libs only, no -dev)
-    - libffi
-    - zlib
-    - libssl3
-    - libcrypto3
-    # TLS/SSL certificates (runtime)
+    # TLS/SSL certificates (runtime) - minimal, no transitive deps
     - ca-certificates-bundle
 
 accounts:
