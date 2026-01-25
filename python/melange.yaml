@@ -61,9 +61,7 @@ pipeline:
         --without-doc-strings \
         --without-static-libpython \
         --disable-ipv6 \
-        --with-ssl-default-suites=openssl \
-        --build=$(uname -m)-linux-musl \
-        --host=$(uname -m)-linux-musl
+        --with-ssl-default-suites=openssl
 
   # Build Python
   - runs: |
