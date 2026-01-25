@@ -22,7 +22,7 @@ package:
       - libssl3
       - libcrypto3
       - readline
-      - ncurses-libs
+      - ncurses
 
 environment:
   contents:

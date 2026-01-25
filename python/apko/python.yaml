@@ -19,7 +19,7 @@ contents:
     - libssl3
     - libcrypto3
     - readline
-    - ncurses-libs
+    - ncurses
     # TLS/SSL certificates (runtime) - minimal, no transitive deps
     - ca-certificates-bundle
 
