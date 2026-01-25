@@ -18,6 +18,10 @@ contents:
     - glibc
     - libstdc++
     - zlib
+    # Font support (required for Jenkins charts/AWT)
+    - fontconfig
+    - libfontconfig1
+    - ttf-dejavu
     # TLS/SSL certificates
     - ca-certificates-bundle
 
