@@ -9,6 +9,11 @@ package:
   description: "Minimal Python runtime built from source"
   copyright:
     - license: PSF-2.0
+  # Declare what this package provides to avoid conflicts
+  provides:
+    - python3=${{package.version}}
+    - python-3.13=${{package.version}}
+    - python-3.13-base=${{package.version}}
 
 environment:
   contents:

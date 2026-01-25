@@ -12,13 +12,14 @@ contents:
   packages:
     # Base filesystem layout
     - wolfi-baselayout
-    # Our minimal Python built from source
+    # Our minimal Python built from source  
     - python-minimal
-    # Runtime shared library dependencies
+    # Runtime shared library dependencies (libs only, no -dev)
     - libffi
     - zlib
-    - openssl
-    # TLS/SSL certificates
+    - libssl3
+    - libcrypto3
+    # TLS/SSL certificates (runtime)
     - ca-certificates-bundle
 
 accounts:
