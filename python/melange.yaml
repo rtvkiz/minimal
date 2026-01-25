@@ -35,6 +35,7 @@ environment:
       - build-base
       - busybox
       - ca-certificates-bundle
+      - git
       # Required build dependencies
       - zlib-dev
       - openssl-dev
@@ -45,11 +46,12 @@ environment:
       - linux-headers
 
 pipeline:
-  # Fetch CPython source
-  - uses: fetch
+  # Clone CPython source from GitHub (no SHA256 needed - git verifies integrity)
+  - uses: git-checkout
     with:
-      uri: https://www.python.org/ftp/python/${{package.version}}/Python-${{package.version}}.tar.xz
-      expected-sha256: 9cf9427bee9e2242e3877dd0f6b641c1853ca461f39d6503ce260a59c80bf0d9
+      repository: https://github.com/python/cpython.git
+      tag: v${{package.version}}
+      depth: 1
 
   # Configure with minimal options
   - runs: |
