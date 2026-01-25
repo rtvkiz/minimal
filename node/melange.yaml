@@ -3,7 +3,7 @@
 
 package:
   name: node-minimal
-  version: 23.6.0
+  version: 22.13.0
   epoch: 0
   description: "Node.js runtime built from source"
   copyright:
@@ -11,7 +11,7 @@ package:
   dependencies:
     provides:
       - nodejs=${{package.version}}
-      - nodejs-23=${{package.version}}
+      - nodejs-22=${{package.version}}
     runtime:
       # Core libraries from SBOM
       - glibc
@@ -112,5 +112,5 @@ update:
   github:
     identifier: nodejs/node
     strip-prefix: v
-    tag-filter: v23
+    tag-filter: v22
     use-tag: true

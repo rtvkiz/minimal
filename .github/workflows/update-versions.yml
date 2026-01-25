@@ -97,9 +97,9 @@ jobs:
           CURRENT_VERSION=$(grep '^  version:' melange.yaml | head -1 | awk '{print $2}' | tr -d '"')
           echo "Current Node version: $CURRENT_VERSION"
           
-          # Check latest release from nodejs.org (tracking v23.x)
-          LATEST_VERSION=$(curl -s https://nodejs.org/dist/index.json | jq -r '.[].version' | grep '^v23\.' | head -1 | sed 's/^v//')
-          echo "Latest Node v23.x version: $LATEST_VERSION"
+          # Check latest release from nodejs.org (tracking v22.x LTS)
+          LATEST_VERSION=$(curl -s https://nodejs.org/dist/index.json | jq -r '.[].version' | grep '^v22\.' | head -1 | sed 's/^v//')
+          echo "Latest Node v22.x version: $LATEST_VERSION"
           
           if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ] && [ -n "$LATEST_VERSION" ]; then
             echo "update_available=true" >> $GITHUB_OUTPUT
