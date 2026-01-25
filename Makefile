@@ -43,6 +43,7 @@ python: python-melange
 		$(REGISTRY)/$(OWNER)/minimal-python:$(VERSION) \
 		python.tar \
 		--arch x86_64 \
+		--repository-append ./packages \
 		--keyring-append melange.rsa.pub
 	docker load < python.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-python:$(VERSION)-amd64 \
@@ -68,6 +69,7 @@ jenkins: jenkins-melange
 		$(REGISTRY)/$(OWNER)/minimal-jenkins:$(VERSION) \
 		jenkins.tar \
 		--arch x86_64 \
+		--repository-append ./packages \
 		--keyring-append melange.rsa.pub
 	docker load < jenkins.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-jenkins:$(VERSION)-amd64 \

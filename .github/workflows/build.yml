@@ -60,6 +60,7 @@ jobs:
           melange build python/melange.yaml \
             --arch x86_64 \
             --signing-key melange.rsa \
+            --out-dir ./packages \
             --runner docker
 
       - name: Build Python image with apko
@@ -68,7 +69,8 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }} \
             python.tar \
             --arch x86_64 \
-            --keyring-append melange.rsa.pub
+            --repository-append ./packages \
+            --keyring-append ${{ github.workspace }}/melange.rsa.pub
           docker load < python.tar
 
       - name: Report image size
@@ -121,7 +123,8 @@ jobs:
           apko publish python/apko/python.yaml \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest \
             --arch x86_64 \
-            --keyring-append melange.rsa.pub
+            --repository-append ./packages \
+            --keyring-append ${{ github.workspace }}/melange.rsa.pub
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
@@ -169,6 +172,7 @@ jobs:
           melange build jenkins/melange.yaml \
             --arch x86_64 \
             --signing-key melange.rsa \
+            --out-dir ./packages \
             --runner docker
 
       - name: Build Jenkins image with apko
@@ -177,7 +181,8 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:${{ github.sha }} \
             jenkins.tar \
             --arch x86_64 \
-            --keyring-append melange.rsa.pub
+            --repository-append ./packages \
+            --keyring-append ${{ github.workspace }}/melange.rsa.pub
           docker load < jenkins.tar
 
       - name: Report image size
@@ -229,7 +234,8 @@ jobs:
           apko publish jenkins/apko/jenkins.yaml \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest \
             --arch x86_64 \
-            --keyring-append melange.rsa.pub
+            --repository-append ./packages \
+            --keyring-append ${{ github.workspace }}/melange.rsa.pub
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
