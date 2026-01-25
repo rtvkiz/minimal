@@ -1,0 +1,77 @@
+# Minimal Node.js image - built from source with melange
+# Feature parity with Chainguard's Node.js image
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+    
+    # Our Node.js built from source
+    - node-minimal
+    
+    # Init system (from SBOM)
+    - dumb-init
+    
+    # Shell (from SBOM - needed for npm scripts)
+    - busybox
+    
+    # Package manager
+    - npm
+    
+    # Core Libraries (from SBOM)
+    - glibc
+    - libstdc++
+    - libgcc
+    - libssl3
+    - libcrypto3
+    - zlib
+    - c-ares
+    - libuv
+    - nghttp2
+    - libbrotlicommon1
+    - libbrotlidec1
+    - libbrotlienc1
+    - libicu78
+    - icu78-data-full
+    
+    # Certs
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/dumb-init -- /usr/bin/node
+
+work-dir: /app
+
+environment:
+  NODE_ENV: production
+  PATH: /usr/bin:/bin
+
+paths:
+  - path: /app
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+archs:
+  - x86_64
+  - aarch64

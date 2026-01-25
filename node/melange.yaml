@@ -1,0 +1,112 @@
+# Melange build configuration for Node.js from source
+# Minimal, distroless-ready Node.js runtime
+
+package:
+  name: node-minimal
+  version: 23.6.0
+  epoch: 0
+  description: "Node.js runtime built from source"
+  copyright:
+    - license: MIT
+  dependencies:
+    provides:
+      - nodejs=${{package.version}}
+      - nodejs-23=${{package.version}}
+    runtime:
+      # Core libraries from SBOM
+      - glibc
+      - ld-linux
+      - libstdc++
+      - libgcc
+      - zlib
+      - libssl3
+      - libcrypto3
+      - c-ares
+      - libuv
+      - nghttp2
+      # Compression
+      - libbrotlicommon1
+      - libbrotlidec1
+      - libbrotlienc1
+      # ICU data for i18n
+      - libicu78
+      - icu78-data-full
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      # Build toolchain
+      - build-base
+      - busybox
+      - ca-certificates-bundle
+      - git
+      - python3
+      - linux-headers
+      # Build dependencies
+      - zlib-dev
+      - openssl-dev
+      - c-ares-dev
+      - libuv-dev
+      - nghttp2-dev
+      - brotli-dev
+      - icu-dev
+
+pipeline:
+  # Fetch Node.js source
+  - uses: fetch
+    with:
+      uri: https://nodejs.org/dist/v${{package.version}}/node-v${{package.version}}.tar.gz
+      expected-sha256: 4ebb932997c009d780287320b92db2cc2aaad9399432607999742490b7933939
+
+  # Configure
+  - runs: |
+      ./configure \
+        --prefix=/usr \
+        --shared-openssl \
+        --shared-zlib \
+        --shared-libuv \
+        --shared-nghttp2 \
+        --shared-cares \
+        --shared-brotli \
+        --with-intl=system-icu
+
+  # Build
+  - runs: |
+      make -j$(nproc)
+
+  # Install
+  - runs: |
+      make install DESTDIR="${{targets.destdir}}"
+
+  # Cleanup and Strip
+  - runs: |
+      cd "${{targets.destdir}}"
+      
+      # Remove include headers (not needed for runtime)
+      rm -rf usr/include
+      
+      # Remove documentation
+      rm -rf usr/share/man
+      rm -rf usr/share/doc
+      rm -rf usr/share/systemtap
+      
+      # Remove stap hooks
+      rm -f usr/bin/node_g
+      
+      # Strip binary
+      strip --strip-unneeded usr/bin/node 2>/dev/null || true
+
+  # Verify
+  - runs: |
+      "${{targets.destdir}}/usr/bin/node" --version
+      "${{targets.destdir}}/usr/bin/node" -e 'console.log("Hello Node")'
+
+# Automated updates
+update:
+  enabled: true
+  release-monitor:
+    identifier: 1776
