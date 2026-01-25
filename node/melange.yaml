@@ -44,9 +44,7 @@ environment:
       # Build toolchain (Use Clang for V8 compatibility)
       - build-base
       - clang
-      - clang-dev
       - llvm
-      - llvm-dev
       - lld
       - busybox
       - ca-certificates-bundle
