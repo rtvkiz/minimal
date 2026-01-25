@@ -29,89 +29,49 @@ jobs:
           go install chainguard.dev/wolfictl@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
-      - name: Check for Python updates
+      - name: Update Python
         id: python-update
         run: |
           cd python
-          echo "Checking for Python updates..."
-          
-          # Get current version
-          CURRENT_VERSION=$(grep '^  version:' melange.yaml | head -1 | awk '{print $2}' | tr -d '"')
-          echo "Current Python version: $CURRENT_VERSION"
-          
-          # Check latest release from GitHub API
-          LATEST_VERSION=$(curl -s "https://api.github.com/repos/python/cpython/tags?per_page=100" | \
-            jq -r '.[].name' | grep '^v3\.13\.' | head -1 | sed 's/^v//')
-          echo "Latest Python 3.13.x version: $LATEST_VERSION"
-          
-          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ] && [ -n "$LATEST_VERSION" ]; then
-            echo "update_available=true" >> $GITHUB_OUTPUT
-            echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-            echo "new_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
-            
-            # Update the version in melange.yaml
-            sed -i "s/version: $CURRENT_VERSION/version: $LATEST_VERSION/" melange.yaml
-            echo "Updated Python to $LATEST_VERSION"
-          else
+          wolfictl update melange.yaml --create-pr=false > update.log 2>&1 || true
+          if git diff --quiet melange.yaml; then
+            echo "No updates for Python"
             echo "update_available=false" >> $GITHUB_OUTPUT
-            echo "Python is already at latest version: $CURRENT_VERSION"
+          else
+            echo "Python updated!"
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            NEW_VER=$(grep '^  version:' melange.yaml | awk '{print $2}')
+            echo "new_version=$NEW_VER" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check for Jenkins updates
+      - name: Update Jenkins
         id: jenkins-update
         run: |
           cd jenkins
-          echo "Checking for Jenkins updates..."
-          
-          # Get current version
-          CURRENT_VERSION=$(grep '^  version:' melange.yaml | head -1 | awk '{print $2}' | tr -d '"')
-          echo "Current Jenkins version: $CURRENT_VERSION"
-          
-          # Extract major.minor for LTS line (e.g., 2.541 from 2.541.1)
-          LTS_LINE=$(echo "$CURRENT_VERSION" | cut -d. -f1,2)
-          
-          # Check latest LTS release from Jenkins update center
-          LATEST_VERSION=$(curl -s "https://updates.jenkins.io/stable/latestCore.txt")
-          echo "Latest Jenkins LTS version: $LATEST_VERSION"
-          
-          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ] && [ -n "$LATEST_VERSION" ]; then
-            echo "update_available=true" >> $GITHUB_OUTPUT
-            echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-            echo "new_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
-            
-            # Update the version in melange.yaml
-            sed -i "s/version: $CURRENT_VERSION/version: $LATEST_VERSION/" melange.yaml
-            echo "Updated Jenkins to $LATEST_VERSION"
-          else
+          wolfictl update melange.yaml --create-pr=false > update.log 2>&1 || true
+          if git diff --quiet melange.yaml; then
+            echo "No updates for Jenkins"
             echo "update_available=false" >> $GITHUB_OUTPUT
-            echo "Jenkins is already at latest version: $CURRENT_VERSION"
+          else
+            echo "Jenkins updated!"
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            NEW_VER=$(grep '^  version:' melange.yaml | awk '{print $2}')
+            echo "new_version=$NEW_VER" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check for Node.js updates
+      - name: Update Node.js
         id: node-update
         run: |
           cd node
-          echo "Checking for Node.js updates..."
-          
-          # Get current version
-          CURRENT_VERSION=$(grep '^  version:' melange.yaml | head -1 | awk '{print $2}' | tr -d '"')
-          echo "Current Node version: $CURRENT_VERSION"
-          
-          # Check latest release from nodejs.org (tracking v22.x LTS)
-          LATEST_VERSION=$(curl -s https://nodejs.org/dist/index.json | jq -r '.[].version' | grep '^v22\.' | head -1 | sed 's/^v//')
-          echo "Latest Node v22.x version: $LATEST_VERSION"
-          
-          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ] && [ -n "$LATEST_VERSION" ]; then
-            echo "update_available=true" >> $GITHUB_OUTPUT
-            echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-            echo "new_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
-            
-            # Update the version in melange.yaml
-            sed -i "s/version: $CURRENT_VERSION/version: $LATEST_VERSION/" melange.yaml
-            echo "Updated Node to $LATEST_VERSION"
-          else
+          wolfictl update melange.yaml --create-pr=false > update.log 2>&1 || true
+          if git diff --quiet melange.yaml; then
+            echo "No updates for Node.js"
             echo "update_available=false" >> $GITHUB_OUTPUT
-            echo "Node is already at latest version: $CURRENT_VERSION"
+          else
+            echo "Node.js updated!"
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            NEW_VER=$(grep '^  version:' melange.yaml | awk '{print $2}')
+            echo "new_version=$NEW_VER" >> $GITHUB_OUTPUT
           fi
 
       - name: Create Pull Request
@@ -120,31 +80,27 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: |
-            chore: update package versions
+            chore: update package versions (daily auto-update)
             
-            ${{ steps.python-update.outputs.update_available == 'true' && format('- Python: {0} → {1}', steps.python-update.outputs.current_version, steps.python-update.outputs.new_version) || '' }}
-            ${{ steps.jenkins-update.outputs.update_available == 'true' && format('- Jenkins: {0} → {1}', steps.jenkins-update.outputs.current_version, steps.jenkins-update.outputs.new_version) || '' }}
-            ${{ steps.node-update.outputs.update_available == 'true' && format('- Node.js: {0} → {1}', steps.node-update.outputs.current_version, steps.node-update.outputs.new_version) || '' }}
+            ${{ steps.python-update.outputs.update_available == 'true' && format('- Python: {0}', steps.python-update.outputs.new_version) || '' }}
+            ${{ steps.jenkins-update.outputs.update_available == 'true' && format('- Jenkins: {0}', steps.jenkins-update.outputs.new_version) || '' }}
+            ${{ steps.node-update.outputs.update_available == 'true' && format('- Node.js: {0}', steps.node-update.outputs.new_version) || '' }}
           branch: auto-update/package-versions
           delete-branch: true
           title: "chore: update package versions"
           body: |
             ## Automated Version Updates
             
-            This PR was automatically generated by the version update workflow.
+            This PR was automatically generated by wolfictl.
             
-            ### Changes
-            ${{ steps.python-update.outputs.update_available == 'true' && format('- **Python**: `{0}` → `{1}`', steps.python-update.outputs.current_version, steps.python-update.outputs.new_version) || '- **Python**: Already up to date' }}
-            ${{ steps.jenkins-update.outputs.update_available == 'true' && format('- **Jenkins**: `{0}` → `{1}`', steps.jenkins-update.outputs.current_version, steps.jenkins-update.outputs.new_version) || '- **Jenkins**: Already up to date' }}
-            ${{ steps.node-update.outputs.update_available == 'true' && format('- **Node.js**: `{0}` → `{1}`', steps.node-update.outputs.current_version, steps.node-update.outputs.new_version) || '- **Node.js**: Already up to date' }}
+            ### Updated Packages
+            ${{ steps.python-update.outputs.update_available == 'true' && format('- **Python**: `{0}`', steps.python-update.outputs.new_version) || '- Python: Up to date' }}
+            ${{ steps.jenkins-update.outputs.update_available == 'true' && format('- **Jenkins**: `{0}`', steps.jenkins-update.outputs.new_version) || '- Jenkins: Up to date' }}
+            ${{ steps.node-update.outputs.update_available == 'true' && format('- **Node.js**: `{0}`', steps.node-update.outputs.new_version) || '- Node.js: Up to date' }}
             
             ### Verification
             - [ ] CI build passes
             - [ ] CVE scan passes
-            - [ ] Images work correctly
-            
-            ---
-            _Merge this PR to update the images, then the daily build will use the new versions._
           labels: |
             dependencies
             automated
