@@ -21,6 +21,8 @@ package:
       - zlib
       - libssl3
       - libcrypto3
+      - readline
+      - ncurses-libs
 
 environment:
   contents:
@@ -37,6 +39,8 @@ environment:
       - zlib-dev
       - openssl-dev
       - libffi-dev
+      - ncurses-dev
+      - readline-dev
       # For optimized builds
       - linux-headers
 
@@ -54,7 +58,6 @@ pipeline:
         --with-lto \
         --disable-test-modules \
         --without-ensurepip \
-        --without-readline \
         --without-doc-strings \
         --without-static-libpython \
         --disable-ipv6 \
