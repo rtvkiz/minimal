@@ -43,10 +43,11 @@ environment:
     packages:
       # Build toolchain (Use Clang for V8 compatibility)
       - build-base
-      - clang-19
-      - clang-19-dev
-      - llvm19
-      - llvm19-dev
+      - clang
+      - clang-dev
+      - llvm
+      - llvm-dev
+      - lld
       - busybox
       - ca-certificates-bundle
       - git
