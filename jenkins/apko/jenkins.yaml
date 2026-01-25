@@ -1,6 +1,5 @@
-# Minimal Jenkins image - custom JRE (jlink) + WAR built with melange
-# Shell-less/distroless, no full JDK, only required Java modules
-# No Dockerfile needed - pure apko assembly
+# Jenkins image - feature parity with Chainguard
+# Includes shell, git, ssh, and standard tools required by Jenkins plugins
 
 contents:
   repositories:
@@ -10,20 +9,58 @@ contents:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
     # Local signing key passed via --keyring-append CLI flag
   packages:
-    # Base filesystem layout
+    # Base filesystem
     - wolfi-baselayout
-    # Our minimal Jenkins (custom JRE + WAR + fonts)
+    
+    # Our Jenkins (custom JRE + WAR)
     - jenkins-minimal
-    # Runtime dependencies for the JRE
+    
+    # Core System Tools (matching Chainguard SBOM)
+    - bash
+    - bash-binsh
+    - coreutils
+    - diffutils
+    - findutils
+    - grep
+    - gzip
+    - less
+    - patch
+    - procps
+    - sed
+    - shadow
+    - unzip
+    - tzdata
+    - tini
+
+    # Network & VCS Tools
+    - curl
+    - libcurl-openssl4
+    - git
+    - git-lfs
+    - openssh-client
+    - openssh-keygen
+    - gnupg
+    - gnutar
+
+    # Libraries
+    - alsa-lib
     - glibc
+    - glibc-locale-en
+    - glibc-locale-posix
     - libstdc++
     - zlib
-    # Font support (required for Jenkins charts/AWT)
+    - sqlite-libs
+    - libexpat1
+    - libffi
+    
+    # Font support
     - fontconfig
     - libfontconfig1
     - ttf-dejavu
+    
     # TLS/SSL certificates
     - ca-certificates-bundle
+    - java-cacerts
 
 accounts:
   groups:
@@ -33,15 +70,17 @@ accounts:
     - username: jenkins
       uid: 1000
       gid: 1000
+      shell: /bin/bash
   run-as: 1000
 
 entrypoint:
-  command: /usr/bin/java -Xmx512m -Djava.awt.headless=true -jar /usr/share/jenkins/jenkins.war
+  command: /sbin/tini -- /usr/bin/java -Xmx512m -Djava.awt.headless=true -jar /usr/share/jenkins/jenkins.war
 
 environment:
   JAVA_HOME: /usr/lib/jvm/java-21-minimal
   JENKINS_HOME: /var/jenkins_home
   LANG: C.UTF-8
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 paths:
   - path: /var/jenkins_home
