@@ -56,11 +56,12 @@ environment:
       - icu-dev
 
 pipeline:
-  # Fetch Node.js source
-  - uses: fetch
+  # Clone Node.js source from GitHub
+  - uses: git-checkout
     with:
-      uri: https://nodejs.org/dist/v${{package.version}}/node-v${{package.version}}.tar.gz
-      expected-sha256: 4ebb932997c009d780287320b92db2cc2aaad9399432607999742490b7933939
+      repository: https://github.com/nodejs/node.git
+      tag: v${{package.version}}
+      depth: 1
 
   # Configure
   - runs: |
@@ -105,8 +106,11 @@ pipeline:
       "${{targets.destdir}}/usr/bin/node" --version
       "${{targets.destdir}}/usr/bin/node" -e 'console.log("Hello Node")'
 
-# Automated updates
+# Automated version updates via wolfictl
 update:
   enabled: true
-  release-monitor:
-    identifier: 1776
+  github:
+    identifier: nodejs/node
+    strip-prefix: v
+    tag-filter: v23
+    use-tag: true
