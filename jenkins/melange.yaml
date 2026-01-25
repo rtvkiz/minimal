@@ -74,9 +74,6 @@ pipeline:
       mkdir -p "${{targets.destdir}}/etc/fonts"
       cp -a /etc/fonts/* "${{targets.destdir}}/etc/fonts/" 2>/dev/null || true
 
-      # Create Jenkins home directory
-      mkdir -p "${{targets.destdir}}/var/jenkins_home"
-
       # Strip native libraries in JRE
       find "${{targets.destdir}}/usr/lib/jvm/java-21-minimal" -name '*.so' \
         -exec strip --strip-unneeded {} + 2>/dev/null || true
