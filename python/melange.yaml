@@ -39,7 +39,6 @@ pipeline:
   - runs: |
       ./configure \
         --prefix=/usr \
-        --enable-optimizations \
         --with-lto \
         --disable-test-modules \
         --without-ensurepip \

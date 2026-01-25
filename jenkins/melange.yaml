@@ -23,6 +23,8 @@ environment:
       - curl
       # Full JDK needed for jlink (build-time only)
       - openjdk-21-default-jdk
+      # jmods package required for jlink to create custom JRE
+      - openjdk-21-jmods
       # Fonts for Jenkins UI rendering
       - ttf-dejavu
       - fontconfig
@@ -41,7 +43,14 @@ pipeline:
   # Create minimal JRE with jlink (only modules Jenkins needs)
   - runs: |
       JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      # Debug: find jmods location
+      echo "Looking for jmods..."
+      find /usr -name "jmods" -type d 2>/dev/null || true
+      find /usr -name "*.jmod" 2>/dev/null | head -5 || true
+      ls -la $JAVA_HOME/ || true
+      
       $JAVA_HOME/bin/jlink \
+        --module-path $JAVA_HOME/jmods \
         --add-modules java.base,java.compiler,java.datatransfer,java.desktop,java.instrument,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.prefs,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.xml,java.xml.crypto,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.httpserver,jdk.management,jdk.net,jdk.security.auth,jdk.unsupported,jdk.zipfs \
         --strip-debug \
         --no-man-pages \
