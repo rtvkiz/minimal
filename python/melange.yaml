@@ -140,7 +140,7 @@ pipeline:
       rm -f usr/bin/idle*
 
       # Compile .pyc files for faster startup
-      "${{targets.destdir}}/usr/bin/python3.13" -m compileall -q \
+      LD_LIBRARY_PATH="${{targets.destdir}}/usr/lib" "${{targets.destdir}}/usr/bin/python3.13" -m compileall -q \
         "${{targets.destdir}}/usr/lib/python3.13" 2>/dev/null || true
 
       # Strip binaries and shared libraries
@@ -153,6 +153,7 @@ pipeline:
 
   # Verify the build (test more modules)
   - runs: |
+      export LD_LIBRARY_PATH="${{targets.destdir}}/usr/lib"
       "${{targets.destdir}}/usr/bin/python3.13" -c "import sys; print(f'Python {sys.version}')"
       "${{targets.destdir}}/usr/bin/python3.13" -c "import ssl; print('SSL OK')"
       "${{targets.destdir}}/usr/bin/python3.13" -c "import json; print('JSON OK')"
