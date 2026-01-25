@@ -65,6 +65,7 @@ pipeline:
 
   # Configure
   - runs: |
+      export CXXFLAGS="-std=gnu++17"
       ./configure \
         --prefix=/usr \
         --shared-openssl \
@@ -77,7 +78,7 @@ pipeline:
 
   # Build
   - runs: |
-      make -j$(nproc)
+      make -j$(nproc) V=1
 
   # Install
   - runs: |
