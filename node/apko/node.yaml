@@ -31,6 +31,8 @@ contents:
     - zlib
     - c-ares
     - libuv
+    - libev
+    - libxcrypt
     - nghttp2
     - libbrotlicommon1
     - libbrotlidec1

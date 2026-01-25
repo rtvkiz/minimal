@@ -3,7 +3,7 @@
 
 package:
   name: node-minimal
-  version: 22.13.0
+  version: 25.4.0
   epoch: 0
   description: "Node.js runtime built from source"
   copyright:
@@ -11,7 +11,7 @@ package:
   dependencies:
     provides:
       - nodejs=${{package.version}}
-      - nodejs-22=${{package.version}}
+      - nodejs-25=${{package.version}}
     runtime:
       # Core libraries from SBOM
       - glibc
@@ -23,6 +23,8 @@ package:
       - libcrypto3
       - c-ares
       - libuv
+      - libev        # Added from SBOM
+      - libxcrypt    # Added from SBOM
       - nghttp2
       # Compression
       - libbrotlicommon1
@@ -54,6 +56,7 @@ environment:
       - nghttp2-dev
       - brotli-dev
       - icu-dev
+      - libev-dev    # Added for linking
 
 pipeline:
   # Clone Node.js source from GitHub
@@ -113,5 +116,5 @@ update:
   github:
     identifier: nodejs/node
     strip-prefix: v
-    tag-filter: v22
+    tag-filter: v25
     use-tag: true
