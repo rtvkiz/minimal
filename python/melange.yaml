@@ -147,3 +147,12 @@ pipeline:
       "${{targets.destdir}}/usr/bin/python3.13" -c "import ssl; print('SSL OK')"
       "${{targets.destdir}}/usr/bin/python3.13" -c "import json; print('JSON OK')"
       "${{targets.destdir}}/usr/bin/python3.13" -c "import hashlib; print('Hashlib OK')"
+
+# Automated version updates via wolfictl
+update:
+  enabled: true
+  github:
+    identifier: python/cpython
+    strip-prefix: v
+    tag-filter: v3.13
+    use-tag: true

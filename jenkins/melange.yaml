@@ -86,3 +86,10 @@ pipeline:
       du -sh "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
       echo "Checking Jenkins WAR..."
       ls -lh "${{targets.destdir}}/usr/share/jenkins/jenkins.war"
+
+# Automated version updates via wolfictl
+# Jenkins LTS uses release-monitor.org (releases don't follow standard GitHub tag pattern)
+update:
+  enabled: true
+  release-monitor:
+    identifier: 7518
