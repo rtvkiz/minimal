@@ -1,6 +1,6 @@
-# Minimal Python image - built from source with melange
-# Shell-less/distroless, no pip, no test suite, no unnecessary modules
-# Only the Python interpreter and essential stdlib
+# Python image - built from source with melange
+# Feature parity with Chainguard's Python image
+# Shell-less/distroless, full stdlib support
 
 contents:
   repositories:
@@ -10,17 +10,34 @@ contents:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
     # Local signing key passed via --keyring-append CLI flag
   packages:
-    # Base filesystem layout (includes glibc)
+    # Base filesystem layout
     - wolfi-baselayout
-    # Our minimal Python built from source
+    # Our Python built from source
     - python-minimal
+    # Core runtime dependencies (matching Chainguard)
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libstdc++
+    # Python module dependencies
     - libffi
     - zlib
     - libssl3
     - libcrypto3
     - readline
     - ncurses
-    # TLS/SSL certificates (runtime) - minimal, no transitive deps
+    - ncurses-terminfo-base
+    # Additional stdlib dependencies
+    - libexpat1
+    - libbz2-1
+    - xz
+    - libzstd1
+    - mpdecimal
+    - sqlite-libs
+    - gdbm
+    - libuuid
+    # TLS/SSL certificates
     - ca-certificates-bundle
 
 accounts:
@@ -42,6 +59,7 @@ environment:
   PYTHONDONTWRITEBYTECODE: "1"
   PYTHONUNBUFFERED: "1"
   PYTHONHASHSEED: random
+  LANG: C.UTF-8
   PATH: /usr/bin:/bin
 
 paths:

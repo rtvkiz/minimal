@@ -1,28 +1,44 @@
-# Melange build configuration for minimal Python from source
-# Produces a stripped-down Python with only essential components
-# No shell, no pip, no test suite, no idle, no tkinter
+# Melange build configuration for Python from source
+# Feature parity with Chainguard's Python image
+# Built from source with full stdlib support
 
 package:
   name: python-minimal
   version: 3.13.1
   epoch: 0
-  description: "Minimal Python runtime built from source"
+  description: "Python runtime built from source (Chainguard-equivalent)"
   copyright:
     - license: PSF-2.0
-  # Declare what this package provides to avoid conflicts
   dependencies:
     provides:
       - python3=${{package.version}}
       - python-3.13=${{package.version}}
       - python-3.13-base=${{package.version}}
     runtime:
+      # Core C library
       - glibc
+      - ld-linux
+      - glibc-locale-posix
+      # C++ support (for some extensions)
+      - libgcc
+      - libstdc++
+      # Python module dependencies
       - libffi
       - zlib
       - libssl3
       - libcrypto3
       - readline
       - ncurses
+      - ncurses-terminfo-base
+      # Additional stdlib dependencies
+      - libexpat1
+      - libbz2-1
+      - xz
+      - libzstd1
+      - mpdecimal
+      - sqlite-libs
+      - gdbm
+      - libuuid
 
 environment:
   contents:
@@ -36,12 +52,20 @@ environment:
       - busybox
       - ca-certificates-bundle
       - git
-      # Required build dependencies
+      # Required build dependencies for full stdlib
       - zlib-dev
       - openssl-dev
       - libffi-dev
       - ncurses-dev
       - readline-dev
+      - expat-dev
+      - bzip2-dev
+      - xz-dev
+      - zstd-dev
+      - mpdecimal-dev
+      - sqlite-dev
+      - gdbm-dev
+      - util-linux-dev
       # For optimized builds
       - linux-headers
 
@@ -53,16 +77,18 @@ pipeline:
       tag: v${{package.version}}
       depth: 1
 
-  # Configure with minimal options
+  # Configure with full stdlib support (matching Chainguard)
   - runs: |
       ./configure \
         --prefix=/usr \
+        --enable-shared \
         --with-lto \
         --disable-test-modules \
         --without-ensurepip \
-        --without-doc-strings \
-        --without-static-libpython \
-        --disable-ipv6 \
+        --with-system-expat \
+        --with-system-libmpdec \
+        --with-dbmliborder=gdbm:ndbm \
+        --enable-loadable-sqlite-extensions \
         --with-ssl-default-suites=openssl
 
   # Build Python
@@ -73,80 +99,69 @@ pipeline:
   - runs: |
       make install DESTDIR="${{targets.destdir}}"
 
-  # Strip and minimize the installation
+  # Clean up unnecessary files (keep stdlib intact)
   - runs: |
       cd "${{targets.destdir}}"
 
-      # Remove unnecessary components
+      # Remove test suites (not needed at runtime)
       rm -rf usr/lib/python3.13/test
       rm -rf usr/lib/python3.13/tests
+      find . -type d -name 'idle_test' -exec rm -rf {} + 2>/dev/null || true
+
+      # Remove IDE and dev tools
       rm -rf usr/lib/python3.13/idlelib
       rm -rf usr/lib/python3.13/tkinter
       rm -rf usr/lib/python3.13/turtledemo
-      rm -rf usr/lib/python3.13/ensurepip
-      rm -rf usr/lib/python3.13/distutils
-      rm -rf usr/lib/python3.13/lib2to3
-      rm -rf usr/lib/python3.13/pydoc_data
-      rm -rf usr/lib/python3.13/unittest
-      rm -rf usr/lib/python3.13/doctest.py
-      rm -rf usr/lib/python3.13/pydoc.py
       rm -rf usr/lib/python3.13/turtle.py
-      rm -rf usr/lib/python3.13/curses
-      rm -rf usr/lib/python3.13/dbm
-      rm -rf usr/lib/python3.13/sqlite3
-      rm -rf usr/lib/python3.13/xmlrpc
-      rm -rf usr/lib/python3.13/msilib
-      rm -rf usr/lib/python3.13/multiprocessing
-      rm -rf usr/lib/python3.13/venv
-      rm -rf usr/lib/python3.13/lib-dynload/_sqlite3*
       rm -rf usr/lib/python3.13/lib-dynload/_tkinter*
-      rm -rf usr/lib/python3.13/lib-dynload/_curses*
-      rm -rf usr/lib/python3.13/lib-dynload/_dbm*
-      rm -rf usr/lib/python3.13/lib-dynload/readline*
-      rm -rf usr/lib/python3.13/lib-dynload/audioop*
-      rm -rf usr/lib/python3.13/lib-dynload/ossaudiodev*
-      rm -rf usr/lib/python3.13/lib-dynload/nis*
 
-      # Remove all __pycache__ directories
-      find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+      # Remove ensurepip (use Wolfi's py3-pip if needed)
+      rm -rf usr/lib/python3.13/ensurepip
 
-      # Remove .pyc files (we'll run without them)
-      find . -name '*.pyc' -delete 2>/dev/null || true
-      find . -name '*.pyo' -delete 2>/dev/null || true
+      # Remove deprecated modules
+      rm -rf usr/lib/python3.13/lib2to3
+      rm -rf usr/lib/python3.13/distutils
 
-      # Remove static libraries and pkg-config
-      rm -rf usr/lib/python3.13/config-3.13-*
+      # Remove static libraries
+      find . -type f -name 'libpython*.a' -delete
       rm -rf usr/lib/pkgconfig
-      rm -f usr/lib/libpython3.13.a
 
       # Remove header files (not needed at runtime)
       rm -rf usr/include
 
-      # Remove share/man documentation
+      # Remove documentation
       rm -rf usr/share/man
       rm -rf usr/share/doc
 
-      # Remove python development tools
+      # Remove dev tools from bin
       rm -f usr/bin/python3.13-config
       rm -f usr/bin/python3-config
       rm -f usr/bin/2to3*
       rm -f usr/bin/idle*
-      rm -f usr/bin/pydoc*
 
-      # Strip all binaries and shared libraries
+      # Compile .pyc files for faster startup
+      "${{targets.destdir}}/usr/bin/python3.13" -m compileall -q \
+        "${{targets.destdir}}/usr/lib/python3.13" 2>/dev/null || true
+
+      # Strip binaries and shared libraries
       find . -type f -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
       strip --strip-unneeded usr/bin/python3.13 2>/dev/null || true
 
-      # Create symlink
+      # Create symlinks
       ln -sf python3.13 usr/bin/python3
       ln -sf python3.13 usr/bin/python
 
-  # Verify the build
+  # Verify the build (test more modules)
   - runs: |
       "${{targets.destdir}}/usr/bin/python3.13" -c "import sys; print(f'Python {sys.version}')"
       "${{targets.destdir}}/usr/bin/python3.13" -c "import ssl; print('SSL OK')"
       "${{targets.destdir}}/usr/bin/python3.13" -c "import json; print('JSON OK')"
       "${{targets.destdir}}/usr/bin/python3.13" -c "import hashlib; print('Hashlib OK')"
+      "${{targets.destdir}}/usr/bin/python3.13" -c "import sqlite3; print('SQLite OK')"
+      "${{targets.destdir}}/usr/bin/python3.13" -c "import xml.etree.ElementTree; print('XML OK')"
+      "${{targets.destdir}}/usr/bin/python3.13" -c "import decimal; print('Decimal OK')"
+      "${{targets.destdir}}/usr/bin/python3.13" -c "import bz2; print('BZ2 OK')"
+      "${{targets.destdir}}/usr/bin/python3.13" -c "import lzma; print('LZMA OK')"
 
 # Automated version updates via wolfictl
 update:
