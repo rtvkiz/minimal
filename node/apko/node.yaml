@@ -36,7 +36,6 @@ contents:
     - libbrotlicommon1
     - libbrotlidec1
     - libbrotlienc1
-    - libicu
     
     # Certs
     - ca-certificates-bundle
