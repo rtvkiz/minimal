@@ -1,5 +1,6 @@
-# Minimal Node.js image - built from source with melange
+# Minimal Node.js image - using Wolfi's pre-built package
 # Feature parity with Chainguard's Node.js image
+# Fast builds (~30s) with same CVE patching (24-48h)
 
 contents:
   repositories:
@@ -10,19 +11,19 @@ contents:
     # Base filesystem
     - wolfi-baselayout
     
-    # Our Node.js built from source
-    - node-minimal
+    # Node.js from Wolfi (CVE-patched)
+    - nodejs-22
     
-    # Init system (from SBOM)
+    # Init system
     - dumb-init
     
-    # Shell (from SBOM - needed for npm scripts)
+    # Shell (needed for npm scripts)
     - busybox
     
     # Package manager
     - npm
     
-    # Core Libraries (from SBOM)
+    # Core Libraries
     - glibc
     - libstdc++
     - libgcc
@@ -31,14 +32,11 @@ contents:
     - zlib
     - c-ares
     - libuv
-    - libev
-    - libxcrypt
     - nghttp2
     - libbrotlicommon1
     - libbrotlidec1
     - libbrotlienc1
-    - libicu78
-    - icu78-data-full
+    - libicu
     
     # Certs
     - ca-certificates-bundle

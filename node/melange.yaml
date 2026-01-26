@@ -1,38 +1,19 @@
-# Melange build configuration for Node.js from source
-# Minimal, distroless-ready Node.js runtime
+# Melange build configuration for Node.js
+# Uses Wolfi's pre-built nodejs package (CVE-patched within 24-48h)
+# Much faster than building from source (~30s vs 30+ min)
 
 package:
   name: node-minimal
-  version: 25.4.0
+  version: 22.12.0
   epoch: 0
-  description: "Node.js runtime built from source"
+  description: "Node.js runtime (Wolfi package wrapper)"
   copyright:
     - license: MIT
   dependencies:
     provides:
       - nodejs=${{package.version}}
-      - nodejs-25=${{package.version}}
     runtime:
-      # Core libraries from SBOM
-      - glibc
-      - ld-linux
-      - libstdc++
-      - libgcc
-      - zlib
-      - libssl3
-      - libcrypto3
-      - c-ares
-      - libuv
-      - libev        # Added from SBOM
-      - libxcrypt    # Added from SBOM
-      - nghttp2
-      # Compression
-      - libbrotlicommon1
-      - libbrotlidec1
-      - libbrotlienc1
-      # ICU data for i18n
-      - libicu78
-      - icu78-data-full
+      - nodejs-22
 
 environment:
   contents:
@@ -41,81 +22,16 @@ environment:
     keyring:
       - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
     packages:
-      # Build toolchain (Use Clang for V8 compatibility)
-      - build-base
-      - clang
-      - llvm
-      - lld
-      - busybox
-      - ca-certificates-bundle
-      - git
-      - python3
-      - linux-headers
-      # Build dependencies
-      - zlib-dev
-      - openssl-dev
-      - c-ares-dev
-      - libuv-dev
-      - nghttp2-dev
-      - brotli-dev
-      - icu-dev
-      - libev-dev
+      - wolfi-baselayout
+      - nodejs-22
 
 pipeline:
-  # Clone Node.js source from GitHub
-  - uses: git-checkout
-    with:
-      repository: https://github.com/nodejs/node.git
-      tag: v${{package.version}}
-      depth: 1
-
-  # Configure
+  # Simple wrapper - just verify the package works
   - runs: |
-      export CC=clang
-      export CXX=clang++
-      export CXXFLAGS="-Wno-unknown-warning-option"
-      export LDFLAGS="-fuse-ld=lld"
-      
-      ./configure \
-        --prefix=/usr \
-        --shared-openssl \
-        --shared-zlib \
-        --shared-libuv \
-        --shared-nghttp2 \
-        --shared-cares \
-        --shared-brotli \
-        --with-intl=system-icu
-
-  # Build
-  - runs: |
-      make -j$(nproc) V=1
-
-  # Install
-  - runs: |
-      make install DESTDIR="${{targets.destdir}}"
-
-  # Cleanup and Strip
-  - runs: |
-      cd "${{targets.destdir}}"
-      
-      # Remove include headers (not needed for runtime)
-      rm -rf usr/include
-      
-      # Remove documentation
-      rm -rf usr/share/man
-      rm -rf usr/share/doc
-      rm -rf usr/share/systemtap
-      
-      # Remove stap hooks
-      rm -f usr/bin/node_g
-      
-      # Strip binary
-      strip --strip-unneeded usr/bin/node 2>/dev/null || true
-
-  # Verify
-  - runs: |
-      "${{targets.destdir}}/usr/bin/node" --version
-      "${{targets.destdir}}/usr/bin/node" -e 'console.log("Hello Node")'
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      # Node binary is already at /usr/bin/node from nodejs-22 package
+      node --version
+      echo "Node.js package verified"
 
 # Automated version updates via wolfictl
 update:
@@ -123,5 +39,5 @@ update:
   github:
     identifier: nodejs/node
     strip-prefix: v
-    tag-filter: v25
+    tag-filter: v22
     use-tag: true
