@@ -84,8 +84,7 @@ pipeline:
         --shared-nghttp2 \
         --shared-cares \
         --shared-brotli \
-        --with-intl=system-icu \
-        --openssl-use-def-content-trust
+        --with-intl=system-icu
 
   # Build
   - runs: |
