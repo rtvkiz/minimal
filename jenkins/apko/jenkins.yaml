@@ -42,25 +42,100 @@ contents:
     - gnupg
     - gnutar
 
-    # Libraries
-    - alsa-lib
+    # Core system libraries
     - glibc
     - glibc-locale-en
     - glibc-locale-posix
+    - ld-linux
+    - libgcc
     - libstdc++
+    - libcrypt1
+    - libxcrypt
     - zlib
-    - sqlite-libs
+    
+    # SSL/TLS libraries
+    - libssl3
+    - libcrypto3
+    - ca-certificates-bundle
+    - java-cacerts
+    - p11-kit
+    - p11-kit-trust
+    
+    # Network libraries
+    - libnghttp2-14
+    - nghttp3
+    - libidn2
+    - libpsl
+    - libtasn1
+    - libunistring
+    
+    # Compression libraries
+    - libbrotlicommon1
+    - libbrotlidec1
+    - libbz2-1
+    
+    # XML/parsing libraries
     - libexpat1
     - libffi
     
-    # Font support
+    # Graphics/font libraries (for Jenkins UI)
+    - alsa-lib
     - fontconfig
     - libfontconfig1
+    - freetype
+    - libpng
+    - libjpeg-turbo
+    - giflib
+    - lcms2
     - ttf-dejavu
     
-    # TLS/SSL certificates
-    - ca-certificates-bundle
-    - java-cacerts
+    # X11 libraries (for headless Java AWT)
+    - libx11
+    - libxau
+    - libxcb
+    - libxdmcp
+    - libxext
+    - libxi
+    - libxrender
+    - libxtst
+    
+    # Authentication/security libraries
+    - cyrus-sasl
+    - heimdal-libs
+    - krb5-libs
+    - krb5-conf
+    - keyutils-libs
+    - libldap-2.6
+    - libverto
+    
+    # System utilities libraries
+    - libacl1
+    - libattr1
+    - libaudit
+    - libbsd
+    - libcap-ng
+    - libcom_err
+    - libedit
+    - libmd
+    - libpcre2-8-0
+    - libproc-2-0
+    - libselinux
+    - libsemanage
+    - libsepol
+    - linux-pam
+    
+    # Database libraries
+    - sqlite-libs
+    - gdbm
+    
+    # Terminal/readline support
+    - ncurses
+    - ncurses-terminfo-base
+    - readline
+    
+    # Additional utilities
+    - debianutils
+    - perl
 
 accounts:
   groups:
