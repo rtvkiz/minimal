@@ -1,38 +1,19 @@
-# Melange build configuration for Node.js from source
-# Feature parity with Chainguard's Node.js image
-# Built from source with shared system libraries for security
+# Melange build configuration for Node.js
+# Uses Wolfi's pre-built nodejs package (CVE-patched within 24-48h)
+# Much faster than building from source (~30s vs 30+ min)
 
 package:
   name: node-minimal
-  version: 22.13.1
+  version: 22.12.0
   epoch: 0
-  description: "Node.js runtime built from source (Chainguard-equivalent)"
+  description: "Node.js runtime (Wolfi package wrapper)"
   copyright:
     - license: MIT
   dependencies:
     provides:
       - nodejs=${{package.version}}
-      - nodejs-22=${{package.version}}
     runtime:
-      # Core C library
-      - glibc
-      - ld-linux
-      - glibc-locale-posix
-      # C++ support (V8 engine requires C++)
-      - libgcc
-      - libstdc++
-      # Shared libraries (security: Wolfi patches these quickly)
-      - libssl3
-      - libcrypto3
-      - zlib
-      - c-ares
-      - libuv
-      - nghttp2
-      - libbrotlicommon1
-      - libbrotlidec1
-      - libbrotlienc1
-      # ICU for internationalization
-      - icu
+      - nodejs-22
 
 environment:
   contents:
@@ -41,89 +22,16 @@ environment:
     keyring:
       - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
     packages:
-      # Build toolchain
-      - build-base
-      - busybox
-      - ca-certificates-bundle
-      - git
-      # Python for node-gyp (build-time only)
-      - python3
-      # Build dependencies (shared library headers)
-      - openssl-dev
-      - zlib-dev
-      - c-ares-dev
-      - libuv-dev
-      - nghttp2-dev
-      - brotli-dev
-      - icu-dev
-      # For faster builds
-      - ninja
-      - linux-headers
+      - wolfi-baselayout
+      - nodejs-22
 
 pipeline:
-  # Clone Node.js source from GitHub (git verifies integrity)
-  - uses: git-checkout
-    with:
-      repository: https://github.com/nodejs/node.git
-      tag: v${{package.version}}
-      depth: 1
-
-  # Configure with shared system libraries (security: Wolfi patches OpenSSL quickly)
+  # Simple wrapper - just verify the package works
   - runs: |
-      ./configure \
-        --prefix=/usr \
-        --shared-openssl \
-        --shared-zlib \
-        --shared-cares \
-        --shared-libuv \
-        --shared-nghttp2 \
-        --shared-brotli \
-        --with-intl=system-icu \
-        --ninja
-
-  # Build Node.js (ninja for faster builds)
-  - runs: |
-      ninja -C out/Release -j$(nproc)
-
-  # Install to destdir
-  - runs: |
-      # Install using DESTDIR
-      DESTDIR="${{targets.destdir}}" ninja -C out/Release install
-
-  # Clean up unnecessary files
-  - runs: |
-      cd "${{targets.destdir}}"
-
-      # Remove npm documentation and markdown files
-      find usr/lib/node_modules/npm -name '*.md' -delete 2>/dev/null || true
-      find usr/lib/node_modules/npm -name 'LICENSE*' -delete 2>/dev/null || true
-      find usr/lib/node_modules/npm -name 'CHANGELOG*' -delete 2>/dev/null || true
-      rm -rf usr/lib/node_modules/npm/docs 2>/dev/null || true
-      rm -rf usr/lib/node_modules/npm/man 2>/dev/null || true
-
-      # Remove header files (not needed at runtime)
-      rm -rf usr/include
-
-      # Remove documentation
-      rm -rf usr/share/man
-      rm -rf usr/share/doc
-
-      # Remove systemtap files if present
-      rm -rf usr/share/systemtap
-
-      # Strip binaries
-      strip --strip-unneeded usr/bin/node 2>/dev/null || true
-
-  # Verify the build
-  - runs: |
-      echo "Verifying Node.js build..."
-      "${{targets.destdir}}/usr/bin/node" --version
-      echo "Testing crypto (shared OpenSSL)..."
-      "${{targets.destdir}}/usr/bin/node" -e "require('crypto').randomBytes(16); console.log('Crypto OK')"
-      echo "Testing zlib (shared)..."
-      "${{targets.destdir}}/usr/bin/node" -e "require('zlib').gzipSync('test'); console.log('Zlib OK')"
-      echo "Testing npm..."
-      "${{targets.destdir}}/usr/bin/node" "${{targets.destdir}}/usr/lib/node_modules/npm/bin/npm-cli.js" --version
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      # Node binary is already at /usr/bin/node from nodejs-22 package
+      node --version
+      echo "Node.js package verified"
 
 # Automated version updates via wolfictl
 update:

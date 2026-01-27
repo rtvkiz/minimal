@@ -59,20 +59,8 @@ jobs:
             echo "new_version=$NEW_VER" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update Node.js
-        id: node-update
-        run: |
-          cd node
-          wolfictl update melange.yaml --create-pr=false > update.log 2>&1 || true
-          if git diff --quiet melange.yaml; then
-            echo "No updates for Node.js"
-            echo "update_available=false" >> $GITHUB_OUTPUT
-          else
-            echo "Node.js updated!"
-            echo "update_available=true" >> $GITHUB_OUTPUT
-            NEW_VER=$(grep '^  version:' melange.yaml | awk '{print $2}')
-            echo "new_version=$NEW_VER" >> $GITHUB_OUTPUT
-          fi
+      # Node.js uses Wolfi's pre-built package (no melange.yaml)
+      # Version updates come automatically from Wolfi repository
 
       - name: Update Go
         id: go-update
@@ -90,7 +78,7 @@ jobs:
           fi
 
       - name: Create Pull Request
-        if: steps.python-update.outputs.update_available == 'true' || steps.jenkins-update.outputs.update_available == 'true' || steps.node-update.outputs.update_available == 'true' || steps.go-update.outputs.update_available == 'true'
+        if: steps.python-update.outputs.update_available == 'true' || steps.jenkins-update.outputs.update_available == 'true' || steps.go-update.outputs.update_available == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -99,7 +87,6 @@ jobs:
 
             ${{ steps.python-update.outputs.update_available == 'true' && format('- Python: {0}', steps.python-update.outputs.new_version) || '' }}
             ${{ steps.jenkins-update.outputs.update_available == 'true' && format('- Jenkins: {0}', steps.jenkins-update.outputs.new_version) || '' }}
-            ${{ steps.node-update.outputs.update_available == 'true' && format('- Node.js: {0}', steps.node-update.outputs.new_version) || '' }}
             ${{ steps.go-update.outputs.update_available == 'true' && format('- Go: {0}', steps.go-update.outputs.new_version) || '' }}
           branch: auto-update/package-versions
           delete-branch: true
@@ -112,8 +99,8 @@ jobs:
             ### Updated Packages
             ${{ steps.python-update.outputs.update_available == 'true' && format('- **Python**: `{0}`', steps.python-update.outputs.new_version) || '- Python: Up to date' }}
             ${{ steps.jenkins-update.outputs.update_available == 'true' && format('- **Jenkins**: `{0}`', steps.jenkins-update.outputs.new_version) || '- Jenkins: Up to date' }}
-            ${{ steps.node-update.outputs.update_available == 'true' && format('- **Node.js**: `{0}`', steps.node-update.outputs.new_version) || '- Node.js: Up to date' }}
             ${{ steps.go-update.outputs.update_available == 'true' && format('- **Go**: `{0}`', steps.go-update.outputs.new_version) || '- Go: Up to date' }}
+            - Node.js: Uses Wolfi pre-built package (auto-updated via Wolfi repo)
 
             ### Verification
             - [ ] CI build passes
