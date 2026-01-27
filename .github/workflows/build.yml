@@ -258,7 +258,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest
 
   #----------------------------------------------------------------------------
-  # NODE.JS IMAGE (Wolfi package + apko) - Fast build using pre-built package
+  # NODE.JS IMAGE (melange from source + apko, with shared system libraries)
   #----------------------------------------------------------------------------
   build-node:
     runs-on: ubuntu-latest
@@ -272,8 +272,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko
+      - name: Install melange and apko
         run: |
+          go install chainguard.dev/melange@latest
           go install chainguard.dev/apko@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
@@ -288,12 +289,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Generate melange signing key
+        run: melange keygen
+
+      - name: Build Node.js from source with melange
+        run: |
+          melange build node/melange.yaml \
+            --arch x86_64 \
+            --signing-key melange.rsa \
+            --out-dir ./packages \
+            --runner docker
+
       - name: Build Node.js image with apko
         run: |
           apko build node/apko/node.yaml \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:${{ github.sha }} \
             node.tar \
-            --arch x86_64
+            --arch x86_64 \
+            --repository-append ./packages \
+            --keyring-append ${{ github.workspace }}/melange.rsa.pub
           docker load < node.tar
           LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-node | head -1)
           docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:${{ github.sha }}
@@ -337,6 +351,10 @@ jobs:
           docker run --rm "$IMAGE" --version
           echo "Testing simple script..."
           docker run --rm "$IMAGE" -e 'console.log("Hello minimal node")'
+          echo "Testing crypto (shared OpenSSL)..."
+          docker run --rm "$IMAGE" -e "require('crypto').randomBytes(16); console.log('Crypto OK')"
+          echo "Testing zlib (shared)..."
+          docker run --rm "$IMAGE" -e "require('zlib').gzipSync('test'); console.log('Zlib OK')"
           echo "Testing npm..."
           docker run --rm --entrypoint /usr/bin/npm "$IMAGE" --version
 
@@ -345,7 +363,9 @@ jobs:
         run: |
           apko publish node/apko/node.yaml \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:latest \
-            --arch x86_64
+            --arch x86_64 \
+            --repository-append ./packages \
+            --keyring-append ${{ github.workspace }}/melange.rsa.pub
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
