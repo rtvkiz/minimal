@@ -4,7 +4,7 @@
 
 package:
   name: go-minimal
-  version: 1.24.3
+  version: 1.24.11
   epoch: 0
   description: "Go runtime built from source (Chainguard-equivalent)"
   copyright:
