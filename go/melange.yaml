@@ -4,7 +4,7 @@
 
 package:
   name: go-minimal
-  version: 1.25.6
+  version: 1.24.3
   epoch: 0
   description: "Go runtime built from source (Chainguard-equivalent)"
   copyright:
@@ -12,7 +12,6 @@ package:
   dependencies:
     provides:
       - go=${{package.version}}
-      - go-1.25=${{package.version}}
     runtime:
       # Core C library
       - glibc
@@ -32,13 +31,11 @@ package:
       - nghttp3
       - libidn2
       - libpsl
-      - libtasn1
       - libunistring
       - libbrotlicommon1
       - libbrotlidec1
       - libzstd1
       - libexpat1
-      - libffi
       - cyrus-sasl
       - heimdal-libs
       - krb5-libs
@@ -82,14 +79,13 @@ environment:
       - git
       - curl
       # Go bootstrap (needed to build Go from source)
-      - go-1.25
+      - go
       # Build dependencies for cgo
       - glibc-dev
       - libstdc++-dev
       - libxcrypt-dev
       - zlib-dev
       - openssl-dev
-      - libffi-dev
       - ncurses-dev
       - readline-dev
       - expat-dev
@@ -104,13 +100,14 @@ pipeline:
   - runs: |
       mkdir -p /home/build/go
       cd /home/build/go
-      curl -fsSL "https://go.dev/dl/go${{package.version}}.src.tar.gz" \
-        -o go${{package.version}.src.tar.gz
-      curl -fsSL "https://go.dev/dl/go${{package.version}}.src.tar.gz.sha256" \
-        -o go${{package.version}.src.tar.gz.sha256
-      sha256sum -c go${{package.version}.src.tar.gz.sha256
-      tar -xzf go${{package.version}.src.tar.gz
-      rm -f go${{package.version}.src.tar.gz go${{package.version}.src.tar.gz.sha256
+      VERSION="${{package.version}}"
+      curl -fsSL "https://go.dev/dl/go${VERSION}.src.tar.gz" \
+        -o "go${VERSION}.src.tar.gz"
+      curl -fsSL "https://go.dev/dl/go${VERSION}.src.tar.gz.sha256" \
+        -o "go${VERSION}.src.tar.gz.sha256"
+      sha256sum -c "go${VERSION}.src.tar.gz.sha256"
+      tar -xzf "go${VERSION}.src.tar.gz"
+      rm -f "go${VERSION}.src.tar.gz" "go${VERSION}.src.tar.gz.sha256"
 
   # Build Go from source
   - runs: |
@@ -129,7 +126,7 @@ pipeline:
       cd /home/build/go/go
       mkdir -p "${{targets.destdir}}/usr/lib/go"
       mkdir -p "${{targets.destdir}}/usr/bin"
-      
+
       # Copy Go installation
       cp -a bin "${{targets.destdir}}/usr/lib/go/"
       cp -a pkg "${{targets.destdir}}/usr/lib/go/"
@@ -144,40 +141,25 @@ pipeline:
       cp -a PATENTS "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
       cp -a README.md "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
       cp -a VERSION "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
-      
+
       # Create symlinks for go and gofmt
       ln -sf /usr/lib/go/bin/go "${{targets.destdir}}/usr/bin/go"
       ln -sf /usr/lib/go/bin/gofmt "${{targets.destdir}}/usr/bin/gofmt"
-      
-      # Create symlinks for all cmd tools
-      for cmd in asm cgo compile cover link preprofile vet; do
-        if [ -f "${{targets.destdir}}/usr/lib/go/bin/$cmd" ]; then
-          ln -sf /usr/lib/go/bin/$cmd "${{targets.destdir}}/usr/bin/$cmd" 2>/dev/null || true
-        fi
-      done
 
-  # Clean up unnecessary files
+  # Strip binaries for smaller size
   - runs: |
-      cd "${{targets.destdir}}"
-      
-      # Remove test files (not needed at runtime)
-      find usr/lib/go -name '*_test.go' -delete 2>/dev/null || true
-      find usr/lib/go -name 'testdata' -type d -exec rm -rf {} + 2>/dev/null || true
-      
-      # Remove documentation (optional - can keep if needed)
-      rm -rf usr/lib/go/doc 2>/dev/null || true
-      
-      # Strip binaries
-      find usr/lib/go/bin -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true
+      # Strip native libraries (Go binaries are statically linked, but tool binaries may have deps)
+      find "${{targets.destdir}}/usr/lib/go" -name '*.so' \
+        -exec strip --strip-unneeded {} + 2>/dev/null || true
 
   # Verify the build
   - runs: |
-      export GOROOT="${{targets.destdir}}/usr/lib/go"
-      export PATH="${{targets.destdir}}/usr/lib/go/bin:$PATH"
-      "${{targets.destdir}}/usr/bin/go" version
-      "${{targets.destdir}}/usr/bin/go" env GOROOT
-      echo "Checking Go installation..."
-      ls -lh "${{targets.destdir}}/usr/lib/go/bin"
+      echo "Verifying Go build..."
+      "${{targets.destdir}}/usr/lib/go/bin/go" version
+      echo "Checking Go tools..."
+      ls -la "${{targets.destdir}}/usr/lib/go/bin/"
+      echo "Checking pkg/tool directory (cmd tools)..."
+      ls -la "${{targets.destdir}}/usr/lib/go/pkg/tool/linux_"* 2>/dev/null || true
 
 # Automated version updates via wolfictl
 update:
@@ -185,5 +167,5 @@ update:
   github:
     identifier: golang/go
     strip-prefix: go
-    tag-filter: go1.25
+    tag-filter: go1.24
     use-tag: true

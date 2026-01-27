@@ -12,14 +12,14 @@ contents:
   packages:
     # Base filesystem
     - wolfi-baselayout
-    
+
     # Our Go (built from source with melange)
     # Includes: go, gofmt, and all cmd tools (asm, cgo, compile, cover, link, preprofile, vet)
     - go-minimal
-    
+
     # Shell
     - bash
-    
+
     # Build tools
     - binutils
     - build-base
@@ -27,11 +27,11 @@ contents:
     - make
     - pkgconf
     - posix-cc-wrappers
-    
+
     # Core system utilities
     - busybox
     - ca-certificates-bundle
-    
+
     # Core system libraries
     - glibc
     - glibc-dev
@@ -44,29 +44,27 @@ contents:
     - libxcrypt
     - libxcrypt-dev
     - zlib
-    
+
     # SSL/TLS libraries
     - libssl3
     - libcrypto3
-    
+
     # Network libraries
     - libcurl-openssl4
     - libnghttp2-14
     - nghttp3
     - libidn2
     - libpsl
-    - libtasn1
     - libunistring
-    
+
     # Compression libraries
     - libbrotlicommon1
     - libbrotlidec1
     - libzstd1
-    
+
     # XML/parsing libraries
     - libexpat1
-    - libffi
-    
+
     # Authentication/security libraries
     - cyrus-sasl
     - heimdal-libs
@@ -75,23 +73,23 @@ contents:
     - keyutils-libs
     - libldap-2.6
     - libverto
-    
+
     # System utilities libraries
     - libcom_err
     - libedit
     - libpcre2-8-0
     - libselinux
     - libsepol
-    
+
     # Database libraries
     - sqlite-libs
     - gdbm
-    
+
     # Terminal/readline support
     - ncurses
     - ncurses-terminfo-base
     - readline
-    
+
     # GCC dependencies
     - libatomic
     - libgomp
@@ -100,19 +98,19 @@ contents:
     - isl
     - mpc
     - mpfr
-    
+
     # System headers
     - linux-headers
-    
+
     # Network tools
     - openssh-client
-    
+
     # Version control
     - git
-    
+
     # Security hardening
     - openssf-compiler-options
-    
+
     # System database
     - nss-db
     - nss-hesiod
