@@ -120,28 +120,25 @@ pipeline:
       mkdir -p "${{targets.destdir}}/usr/lib/go"
       mkdir -p "${{targets.destdir}}/usr/bin"
 
-      # Copy Go installation
+      # Copy essential Go installation (skip misc/test/doc to avoid FreeBSD binaries)
       cp -a bin "${{targets.destdir}}/usr/lib/go/"
       cp -a pkg "${{targets.destdir}}/usr/lib/go/"
       cp -a src "${{targets.destdir}}/usr/lib/go/"
       cp -a lib "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
-      cp -a misc "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
-      cp -a api "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
-      cp -a doc "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
-      cp -a test "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
-      cp -a CONTRIBUTING.md "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
       cp -a LICENSE "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
-      cp -a PATENTS "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
-      cp -a README.md "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
       cp -a VERSION "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
 
       # Create symlinks for go and gofmt
       ln -sf /usr/lib/go/bin/go "${{targets.destdir}}/usr/bin/go"
       ln -sf /usr/lib/go/bin/gofmt "${{targets.destdir}}/usr/bin/gofmt"
 
-  # Strip binaries for smaller size
+  # Clean up non-Linux files that might cause dependency issues
   - runs: |
-      # Strip native libraries (Go binaries are statically linked, but tool binaries may have deps)
+      # Remove any non-Linux platform tools if they exist
+      find "${{targets.destdir}}/usr/lib/go/pkg/tool" -mindepth 1 -maxdepth 1 \
+        ! -name 'linux_*' -type d -exec rm -rf {} + 2>/dev/null || true
+
+      # Strip native libraries
       find "${{targets.destdir}}/usr/lib/go" -name '*.so' \
         -exec strip --strip-unneeded {} + 2>/dev/null || true
 
