@@ -9,6 +9,10 @@ package:
   description: "Go runtime built from source (Chainguard-equivalent)"
   copyright:
     - license: BSD-3-Clause
+  options:
+    # Disable automatic dependency scanning - Go src/ contains FreeBSD test binaries
+    # that cause false so:ld-elf.so.1 dependencies. We explicitly list all runtime deps.
+    no-depends: true
   dependencies:
     provides:
       - go=${{package.version}}
