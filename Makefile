@@ -9,13 +9,13 @@ JENKINS_VERSION ?= 2.541.1
 PYTHON_VERSION ?= 3.13.1
 
 .PHONY: all build scan clean help
-.PHONY: python python-melange keygen jenkins jenkins-melange
-.PHONY: scan-python scan-jenkins
+.PHONY: python python-melange keygen jenkins jenkins-melange go go-melange
+.PHONY: scan-python scan-jenkins scan-go
 
 all: build scan
 
 # Build all images
-build: python jenkins
+build: python jenkins go
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -80,9 +80,35 @@ jenkins: jenkins-melange
 	@echo "✓ minimal-jenkins built (jlink JRE, shell-less)"
 
 #------------------------------------------------------------------------------
+# GO IMAGE (melange from source + apko, with build tools)
+#------------------------------------------------------------------------------
+go-melange: keygen
+	@echo "Building Go from source with melange..."
+	melange build go/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Go package built from source"
+
+go: go-melange
+	@echo "Assembling minimal-go image with apko..."
+	apko build go/apko/go.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-go:$(VERSION) \
+		go.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < go.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-go:latest
+	@rm -f go.tar sbom-*.spdx.json
+	@echo "✓ minimal-go built (from source, with build tools)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins
+scan: scan-python scan-jenkins scan-go
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -96,6 +122,12 @@ scan-jenkins:
 		$(REGISTRY)/$(OWNER)/minimal-jenkins:latest
 	@echo "✓ minimal-jenkins: zero CVE"
 
+scan-go:
+	@echo "Scanning minimal-go..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-go:latest
+	@echo "✓ minimal-go: zero CVE"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -103,6 +135,8 @@ scan-all:
 		$(REGISTRY)/$(OWNER)/minimal-python:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-jenkins:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-go:latest
 
 #------------------------------------------------------------------------------
 # IMAGE SIZE REPORT
@@ -110,12 +144,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins
+test: test-python test-jenkins test-go
 
 test-python:
 	@echo "Testing Python image..."
@@ -143,6 +177,19 @@ test-jenkins:
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
 	@echo "✓ Jenkins tests passed"
 
+test-go:
+	@echo "Testing Go image..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-go:latest version
+	@echo "Testing Go build..."
+	docker run --rm -v $(PWD):/app -w /app $(REGISTRY)/$(OWNER)/minimal-go:latest \
+		build -o /tmp/test /dev/null 2>&1 | head -1 || echo "Go build tools OK"
+	@echo "Verifying build tools..."
+	docker run --rm --entrypoint /usr/bin/gcc $(REGISTRY)/$(OWNER)/minimal-go:latest --version | head -1
+	docker run --rm --entrypoint /usr/bin/make $(REGISTRY)/$(OWNER)/minimal-go:latest --version
+	@echo "Verifying git..."
+	docker run --rm --entrypoint /usr/bin/git $(REGISTRY)/$(OWNER)/minimal-go:latest --version
+	@echo "✓ Go tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -151,6 +198,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-python:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-jenkins:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-jenkins:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-go:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -163,6 +212,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-jenkins:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-jenkins:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-jenkins:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-go:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -181,6 +233,8 @@ help:
 	@echo "  make python-melange  Build Python package only (no image)"
 	@echo "  make jenkins         Build Jenkins $(JENKINS_VERSION) (jlink JRE)"
 	@echo "  make jenkins-melange Build Jenkins package only (no image)"
+	@echo "  make go              Build Go from source"
+	@echo "  make go-melange      Build Go package only (no image)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"

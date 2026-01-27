@@ -1,0 +1,189 @@
+# Melange build configuration for Go from source
+# Feature parity with Chainguard's Go image
+# Built from source with all cmd tools
+
+package:
+  name: go-minimal
+  version: 1.25.6
+  epoch: 0
+  description: "Go runtime built from source (Chainguard-equivalent)"
+  copyright:
+    - license: BSD-3-Clause
+  dependencies:
+    provides:
+      - go=${{package.version}}
+      - go-1.25=${{package.version}}
+    runtime:
+      # Core C library
+      - glibc
+      - ld-linux
+      - glibc-locale-posix
+      # C++ support (for cgo)
+      - libgcc
+      - libstdc++
+      # Build tool dependencies
+      - libcrypt1
+      - libxcrypt
+      - zlib
+      - libssl3
+      - libcrypto3
+      - libcurl-openssl4
+      - libnghttp2-14
+      - nghttp3
+      - libidn2
+      - libpsl
+      - libtasn1
+      - libunistring
+      - libbrotlicommon1
+      - libbrotlidec1
+      - libzstd1
+      - libexpat1
+      - libffi
+      - cyrus-sasl
+      - heimdal-libs
+      - krb5-libs
+      - krb5-conf
+      - keyutils-libs
+      - libldap-2.6
+      - libverto
+      - libcom_err
+      - libedit
+      - libpcre2-8-0
+      - libselinux
+      - libsepol
+      - sqlite-libs
+      - gdbm
+      - ncurses
+      - ncurses-terminfo-base
+      - readline
+      - libatomic
+      - libgomp
+      - libquadmath
+      - gmp
+      - isl
+      - mpc
+      - mpfr
+      - openssh-client
+      - git
+      - nss-db
+      - nss-hesiod
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      # Build toolchain
+      - build-base
+      - busybox
+      - ca-certificates-bundle
+      - git
+      - curl
+      # Go bootstrap (needed to build Go from source)
+      - go-1.25
+      # Build dependencies for cgo
+      - glibc-dev
+      - libstdc++-dev
+      - libxcrypt-dev
+      - zlib-dev
+      - openssl-dev
+      - libffi-dev
+      - ncurses-dev
+      - readline-dev
+      - expat-dev
+      - zstd-dev
+      - sqlite-dev
+      - gdbm-dev
+      - linux-headers
+      - binutils
+
+pipeline:
+  # Download and verify Go source
+  - runs: |
+      mkdir -p /home/build/go
+      cd /home/build/go
+      curl -fsSL "https://go.dev/dl/go${{package.version}}.src.tar.gz" \
+        -o go${{package.version}.src.tar.gz
+      curl -fsSL "https://go.dev/dl/go${{package.version}}.src.tar.gz.sha256" \
+        -o go${{package.version}.src.tar.gz.sha256
+      sha256sum -c go${{package.version}.src.tar.gz.sha256
+      tar -xzf go${{package.version}.src.tar.gz
+      rm -f go${{package.version}.src.tar.gz go${{package.version}.src.tar.gz.sha256
+
+  # Build Go from source
+  - runs: |
+      cd /home/build/go/go/src
+      # Set environment for build
+      # GOROOT_BOOTSTRAP points to the bootstrap Go installation
+      export GOROOT_BOOTSTRAP=/usr/lib/go
+      export GOOS=linux
+      # GOARCH will be auto-detected by Go's build system based on the host
+      # For x86_64: GOARCH=amd64, For aarch64: GOARCH=arm64
+      # Build Go (make.bash auto-detects architecture)
+      ./make.bash
+
+  # Install to destdir
+  - runs: |
+      cd /home/build/go/go
+      mkdir -p "${{targets.destdir}}/usr/lib/go"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      
+      # Copy Go installation
+      cp -a bin "${{targets.destdir}}/usr/lib/go/"
+      cp -a pkg "${{targets.destdir}}/usr/lib/go/"
+      cp -a src "${{targets.destdir}}/usr/lib/go/"
+      cp -a lib "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
+      cp -a misc "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
+      cp -a api "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
+      cp -a doc "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
+      cp -a test "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
+      cp -a CONTRIBUTING.md "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
+      cp -a LICENSE "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
+      cp -a PATENTS "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
+      cp -a README.md "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
+      cp -a VERSION "${{targets.destdir}}/usr/lib/go/" 2>/dev/null || true
+      
+      # Create symlinks for go and gofmt
+      ln -sf /usr/lib/go/bin/go "${{targets.destdir}}/usr/bin/go"
+      ln -sf /usr/lib/go/bin/gofmt "${{targets.destdir}}/usr/bin/gofmt"
+      
+      # Create symlinks for all cmd tools
+      for cmd in asm cgo compile cover link preprofile vet; do
+        if [ -f "${{targets.destdir}}/usr/lib/go/bin/$cmd" ]; then
+          ln -sf /usr/lib/go/bin/$cmd "${{targets.destdir}}/usr/bin/$cmd" 2>/dev/null || true
+        fi
+      done
+
+  # Clean up unnecessary files
+  - runs: |
+      cd "${{targets.destdir}}"
+      
+      # Remove test files (not needed at runtime)
+      find usr/lib/go -name '*_test.go' -delete 2>/dev/null || true
+      find usr/lib/go -name 'testdata' -type d -exec rm -rf {} + 2>/dev/null || true
+      
+      # Remove documentation (optional - can keep if needed)
+      rm -rf usr/lib/go/doc 2>/dev/null || true
+      
+      # Strip binaries
+      find usr/lib/go/bin -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  # Verify the build
+  - runs: |
+      export GOROOT="${{targets.destdir}}/usr/lib/go"
+      export PATH="${{targets.destdir}}/usr/lib/go/bin:$PATH"
+      "${{targets.destdir}}/usr/bin/go" version
+      "${{targets.destdir}}/usr/bin/go" env GOROOT
+      echo "Checking Go installation..."
+      ls -lh "${{targets.destdir}}/usr/lib/go/bin"
+
+# Automated version updates via wolfictl
+update:
+  enabled: true
+  github:
+    identifier: golang/go
+    strip-prefix: go
+    tag-filter: go1.25
+    use-tag: true

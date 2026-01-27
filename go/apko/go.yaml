@@ -1,0 +1,161 @@
+# Minimal Go image - built from source with melange
+# Feature parity with Chainguard's Go image
+# Includes all build tools and dependencies for Go development
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+    
+    # Our Go (built from source with melange)
+    # Includes: go, gofmt, and all cmd tools (asm, cgo, compile, cover, link, preprofile, vet)
+    - go-minimal
+    
+    # Shell
+    - bash
+    
+    # Build tools
+    - binutils
+    - build-base
+    - gcc
+    - make
+    - pkgconf
+    - posix-cc-wrappers
+    
+    # Core system utilities
+    - busybox
+    - ca-certificates-bundle
+    
+    # Core system libraries
+    - glibc
+    - glibc-dev
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libstdc++
+    - libstdc++-dev
+    - libcrypt1
+    - libxcrypt
+    - libxcrypt-dev
+    - zlib
+    
+    # SSL/TLS libraries
+    - libssl3
+    - libcrypto3
+    
+    # Network libraries
+    - libcurl-openssl4
+    - libnghttp2-14
+    - nghttp3
+    - libidn2
+    - libpsl
+    - libtasn1
+    - libunistring
+    
+    # Compression libraries
+    - libbrotlicommon1
+    - libbrotlidec1
+    - libzstd1
+    
+    # XML/parsing libraries
+    - libexpat1
+    - libffi
+    
+    # Authentication/security libraries
+    - cyrus-sasl
+    - heimdal-libs
+    - krb5-libs
+    - krb5-conf
+    - keyutils-libs
+    - libldap-2.6
+    - libverto
+    
+    # System utilities libraries
+    - libcom_err
+    - libedit
+    - libpcre2-8-0
+    - libselinux
+    - libsepol
+    
+    # Database libraries
+    - sqlite-libs
+    - gdbm
+    
+    # Terminal/readline support
+    - ncurses
+    - ncurses-terminfo-base
+    - readline
+    
+    # GCC dependencies
+    - libatomic
+    - libgomp
+    - libquadmath
+    - gmp
+    - isl
+    - mpc
+    - mpfr
+    
+    # System headers
+    - linux-headers
+    
+    # Network tools
+    - openssh-client
+    
+    # Version control
+    - git
+    
+    # Security hardening
+    - openssf-compiler-options
+    
+    # System database
+    - nss-db
+    - nss-hesiod
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/go
+
+work-dir: /app
+
+environment:
+  CGO_ENABLED: "1"
+  GOOS: linux
+  PATH: /usr/bin:/bin
+  GOROOT: /usr/lib/go
+  GOPATH: /go
+
+paths:
+  - path: /app
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /go
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+archs:
+  - x86_64
+  - aarch64

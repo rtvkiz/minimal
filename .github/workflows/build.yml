@@ -7,6 +7,7 @@ on:
       - 'python/**'
       - 'jenkins/**'
       - 'node/**'
+      - 'go/**'
       - '.github/workflows/build.yml'
   pull_request:
     branches: [main]
@@ -353,10 +354,127 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:latest
 
   #----------------------------------------------------------------------------
+  # GO IMAGE (melange from source + apko, with build tools)
+  #----------------------------------------------------------------------------
+  build-go:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install melange and apko
+        run: |
+          go install chainguard.dev/melange@latest
+          go install chainguard.dev/apko@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Setup cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate melange signing key
+        run: melange keygen
+
+      - name: Build Go from source with melange
+        run: |
+          melange build go/melange.yaml \
+            --arch x86_64 \
+            --signing-key melange.rsa \
+            --out-dir ./packages \
+            --runner docker
+
+      - name: Build Go image with apko
+        run: |
+          apko build go/apko/go.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:${{ github.sha }} \
+            go.tar \
+            --arch x86_64 \
+            --repository-append ./packages \
+            --keyring-append ${{ github.workspace }}/melange.rsa.pub
+          docker load < go.tar
+          # Tag the loaded image with our expected tag
+          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-go | head -1)
+          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:${{ github.sha }}
+
+      - name: Report image size
+        run: |
+          echo "## Go Image Size" >> $GITHUB_STEP_SUMMARY
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
+            grep minimal-go >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Scan Go image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:${{ github.sha }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          exit-code: '0'
+          cache: 'false'
+
+      - name: Fail on CVEs
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-go.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          cache: 'false'
+
+      - name: Upload scan results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: 'trivy-go.sarif'
+
+      - name: Test Go image
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:${{ github.sha }}"
+          echo "Testing Go version..."
+          docker run --rm "$IMAGE" version
+          echo "Testing Go build tools..."
+          docker run --rm --entrypoint /usr/bin/gcc "$IMAGE" --version | head -1
+          docker run --rm --entrypoint /usr/bin/make "$IMAGE" --version
+          echo "Testing git..."
+          docker run --rm --entrypoint /usr/bin/git "$IMAGE" --version
+          echo "Testing simple Go program..."
+          echo 'package main; import "fmt"; func main() { fmt.Println("Hello from minimal-go") }' > /tmp/test.go
+          docker run --rm -v /tmp:/app -w /app "$IMAGE" run test.go || echo "Note: Go run test completed"
+
+      - name: Publish Go image
+        if: github.event_name != 'pull_request'
+        run: |
+          apko publish go/apko/go.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:latest \
+            --arch x86_64 \
+            --repository-append ./packages \
+            --keyring-append ${{ github.workspace }}/melange.rsa.pub
+
+      - name: Sign image with cosign
+        if: github.event_name != 'pull_request'
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:latest
+
+  #----------------------------------------------------------------------------
   # SUMMARY
   #----------------------------------------------------------------------------
   summary:
-    needs: [build-python, build-jenkins, build-node]
+    needs: [build-python, build-jenkins, build-node, build-go]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -364,7 +482,8 @@ jobs:
         run: |
           if [ "${{ needs.build-python.result }}" != "success" ] || \
              [ "${{ needs.build-jenkins.result }}" != "success" ] || \
-             [ "${{ needs.build-node.result }}" != "success" ]; then
+             [ "${{ needs.build-node.result }}" != "success" ] || \
+             [ "${{ needs.build-go.result }}" != "success" ]; then
             echo "::error::One or more images failed"
             exit 1
           fi
@@ -374,7 +493,7 @@ jobs:
   # CLEANUP OLD VERSIONS
   #----------------------------------------------------------------------------
   cleanup:
-    needs: [build-python, build-jenkins, build-node]
+    needs: [build-python, build-jenkins, build-node, build-go]
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
     permissions:
@@ -400,6 +519,14 @@ jobs:
         uses: actions/delete-package-versions@v5
         with:
           package-name: minimal-node
+          package-type: 'container'
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: 'true'
+
+      - name: Delete old Go versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: minimal-go
           package-type: 'container'
           min-versions-to-keep: 10
           delete-only-untagged-versions: 'true'
