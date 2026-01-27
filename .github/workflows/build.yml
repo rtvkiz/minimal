@@ -135,9 +135,13 @@ jobs:
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
-        run: |
-          cosign sign --yes \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            cosign sign --yes \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest
 
   #----------------------------------------------------------------------------
   # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -253,9 +257,13 @@ jobs:
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
-        run: |
-          cosign sign --yes \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            cosign sign --yes \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest
 
   #----------------------------------------------------------------------------
   # NODE.JS IMAGE (melange from source + apko, with shared system libraries)
@@ -369,9 +377,13 @@ jobs:
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
-        run: |
-          cosign sign --yes \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:latest
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            cosign sign --yes \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:latest
 
   #----------------------------------------------------------------------------
   # GO IMAGE (melange from source + apko, with build tools)
@@ -486,9 +498,13 @@ jobs:
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
-        run: |
-          cosign sign --yes \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:latest
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            cosign sign --yes \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:latest
 
   #----------------------------------------------------------------------------
   # SUMMARY
