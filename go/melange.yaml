@@ -96,22 +96,17 @@ environment:
       - binutils
 
 pipeline:
-  # Download and verify Go source
-  - runs: |
-      mkdir -p /home/build/go
-      cd /home/build/go
-      VERSION="${{package.version}}"
-      curl -fsSL "https://go.dev/dl/go${VERSION}.src.tar.gz" \
-        -o "go${VERSION}.src.tar.gz"
-      curl -fsSL "https://go.dev/dl/go${VERSION}.src.tar.gz.sha256" \
-        -o "go${VERSION}.src.tar.gz.sha256"
-      sha256sum -c "go${VERSION}.src.tar.gz.sha256"
-      tar -xzf "go${VERSION}.src.tar.gz"
-      rm -f "go${VERSION}.src.tar.gz" "go${VERSION}.src.tar.gz.sha256"
+  # Clone Go source from GitHub (git verifies integrity)
+  - uses: git-checkout
+    with:
+      repository: https://github.com/golang/go.git
+      tag: go${{package.version}}
+      depth: 1
+      destination: /home/build/go
 
   # Build Go from source
   - runs: |
-      cd /home/build/go/go/src
+      cd /home/build/go/src
       # Set environment for build
       # GOROOT_BOOTSTRAP points to the bootstrap Go installation
       export GOROOT_BOOTSTRAP=/usr/lib/go
@@ -123,7 +118,7 @@ pipeline:
 
   # Install to destdir
   - runs: |
-      cd /home/build/go/go
+      cd /home/build/go
       mkdir -p "${{targets.destdir}}/usr/lib/go"
       mkdir -p "${{targets.destdir}}/usr/bin"
 
