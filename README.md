@@ -10,6 +10,7 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **minimal-node** | ~50MB | Yes | Node.js applications, npm-based builds |
 | **minimal-go** | ~300MB | Yes | Go development, CGO-enabled builds |
 | **minimal-jenkins** | ~250MB | Yes | CI/CD automation, Jenkins controller |
+| **minimal-httpd** | ~30MB | Yes* | Apache HTTPD for static sites and reverse proxies |
 
 ## Why This Matters
 
@@ -44,6 +45,10 @@ docker run --rm -v $(pwd):/app -w /app ghcr.io/rtvkiz/minimal-go:latest build -o
 
 # Jenkins - start controller
 docker run -p 8080:8080 ghcr.io/rtvkiz/minimal-jenkins:latest
+
+# HTTPD - serve static content
+docker run -d -p 8080:80 ghcr.io/rtvkiz/minimal-httpd:latest
+# then: curl http://localhost:8080
 ```
 
 ## Image Details
@@ -132,6 +137,25 @@ docker run -d -p 8080:8080 -v jenkins_home:/var/jenkins_home \
   ghcr.io/rtvkiz/minimal-jenkins:latest
 ```
 
+### HTTPD (`minimal-httpd`)
+
+Minimal Apache HTTPD image using Wolfi's pre-built package.
+
+| Property | Value |
+|----------|-------|
+| HTTPD | 2.4.x (Wolfi) |
+| User | `www-data` (65532) |
+| Workdir | `/var/www/localhost/htdocs` |
+| Entrypoint | `/usr/sbin/httpd -DFOREGROUND` |
+| Shell | Minimal `/bin/sh` may be present via dependencies* |
+
+**Included:** Apache HTTPD, SSL/TLS, common HTTPD modules, `/var/www/localhost/htdocs` as default docroot.
+
+```dockerfile
+FROM ghcr.io/rtvkiz/minimal-httpd:latest
+COPY --chown=www-data:www-data ./public /var/www/localhost/htdocs
+```
+
 ## How Images Are Built
 
 ```
@@ -176,7 +200,7 @@ docker run -d -p 8080:8080 -v jenkins_home:/var/jenkins_home \
 | Node.js | Wolfi pre-built package | ~30 sec |
 | HTTPD | Wolfi pre-built package | ~30 sec |
 
-**Note on `minimal-httpd` and `/bin/sh`:** depending on upstream Wolfi package dependencies, Apache HTTPD images may include a minimal `/bin/sh`. Our CI gates `minimal-httpd` on **CVE scan + successful startup**, and treats shell presence as **informational** (unlike images that are explicitly intended to be shell-less).
+**Note on `minimal-httpd` and `/bin/sh`:** depending on upstream Wolfi package dependencies, Apache HTTPD images may include a minimal `/bin/sh`. Our CI gates `minimal-httpd` on **CVE scan + successful startup**, and treats shell presence as **informational** (unlike images that are explicitly intended to be shell-less). This is what the `Shell` column `Yes*` refers to above.
 
 ### Update Schedule
 
@@ -206,6 +230,7 @@ make python
 make node
 make go
 make jenkins
+make httpd
 
 # Scan for CVEs
 make scan
@@ -229,6 +254,8 @@ minimal/
 ├── jenkins/
 │   ├── apko/jenkins.yaml
 │   └── melange.yaml
+├── httpd/
+│   └── apko/httpd.yaml         # HTTPD image definition (Wolfi pkg)
 ├── .github/workflows/
 │   └── build.yml             # Daily CI pipeline
 └── Makefile
