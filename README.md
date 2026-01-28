@@ -174,6 +174,9 @@ docker run -d -p 8080:8080 -v jenkins_home:/var/jenkins_home \
 | Go | Built from source via melange | ~20 min |
 | Jenkins | jlink JRE + WAR via melange | ~10 min |
 | Node.js | Wolfi pre-built package | ~30 sec |
+| HTTPD | Wolfi pre-built package | ~30 sec |
+
+**Note on `minimal-httpd` and `/bin/sh`:** depending on upstream Wolfi package dependencies, Apache HTTPD images may include a minimal `/bin/sh`. Our CI gates `minimal-httpd` on **CVE scan + successful startup**, and treats shell presence as **informational** (unlike images that are explicitly intended to be shell-less).
 
 ### Update Schedule
 
