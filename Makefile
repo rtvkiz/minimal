@@ -8,15 +8,16 @@ VERSION ?= $(shell date +%Y%m%d)
 JENKINS_VERSION ?= 2.541.1
 PYTHON_VERSION ?= 3.13.1
 NGINX_VERSION ?= 1.29.4
+HTTPD_VERSION ?= 2.4.66
 
 .PHONY: all build scan clean help
-.PHONY: python python-melange keygen jenkins jenkins-melange go go-melange nginx
-.PHONY: scan-python scan-jenkins scan-go scan-nginx
+.PHONY: python python-melange keygen jenkins jenkins-melange go go-melange nginx httpd
+.PHONY: scan-python scan-jenkins scan-go scan-nginx scan-httpd
 
 all: build scan
 
 # Build all images
-build: python jenkins go nginx
+build: python jenkins go nginx httpd
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -124,9 +125,26 @@ nginx:
 	@echo "✓ minimal-nginx built (Wolfi package, shell-less)"
 
 #------------------------------------------------------------------------------
+# HTTPD IMAGE (Wolfi pre-built package, shell-less)
+#------------------------------------------------------------------------------
+httpd:
+	@echo "Assembling minimal-httpd image with apko..."
+	apko build httpd/apko/httpd.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION) \
+		httpd.tar \
+		--arch x86_64
+	docker load < httpd.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-httpd:latest
+	@rm -f httpd.tar sbom-*.spdx.json
+	@echo "✓ minimal-httpd built (Wolfi package, shell-less)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-nginx
+scan: scan-python scan-jenkins scan-go scan-nginx scan-httpd
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -152,6 +170,12 @@ scan-nginx:
 		$(REGISTRY)/$(OWNER)/minimal-nginx:latest
 	@echo "✓ minimal-nginx: zero CVE"
 
+scan-httpd:
+	@echo "Scanning minimal-httpd..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-httpd:latest
+	@echo "✓ minimal-httpd: zero CVE"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -163,6 +187,8 @@ scan-all:
 		$(REGISTRY)/$(OWNER)/minimal-go:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-nginx:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-httpd:latest
 
 #------------------------------------------------------------------------------
 # IMAGE SIZE REPORT
@@ -175,7 +201,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node test-nginx
+test: test-python test-jenkins test-go test-node test-nginx test-httpd
 
 test-python:
 	@echo "Testing Python image..."
@@ -248,6 +274,25 @@ test-nginx:
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
 	@echo "✓ Nginx tests passed"
 
+test-httpd:
+	@echo "Testing HTTPD image..."
+	@docker run -d --name httpd-test $(REGISTRY)/$(OWNER)/minimal-httpd:latest
+	@sleep 2
+	@if docker ps | grep -q httpd-test; then \
+		echo "HTTPD is running"; \
+		docker logs httpd-test; \
+		docker stop httpd-test && docker rm httpd-test; \
+	else \
+		echo "HTTPD failed to start, checking logs..."; \
+		docker logs httpd-test 2>&1 || true; \
+		docker rm httpd-test 2>/dev/null || true; \
+		exit 1; \
+	fi
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-httpd:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ HTTPD tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -260,6 +305,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-go:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-nginx:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-httpd:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -278,6 +325,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-nginx:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-httpd:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -299,6 +349,7 @@ help:
 	@echo "  make go              Build Go from source"
 	@echo "  make go-melange      Build Go package only (no image)"
 	@echo "  make nginx           Build Nginx $(NGINX_VERSION) (Wolfi package)"
+	@echo "  make httpd           Build HTTPD $(HTTPD_VERSION) (Wolfi package)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"
@@ -316,5 +367,6 @@ help:
 	@echo "  PYTHON_VERSION=$(PYTHON_VERSION)"
 	@echo "  JENKINS_VERSION=$(JENKINS_VERSION)"
 	@echo "  NGINX_VERSION=$(NGINX_VERSION)"
+	@echo "  HTTPD_VERSION=$(HTTPD_VERSION)"
 	@echo "  REGISTRY=$(REGISTRY)"
 	@echo "  OWNER=$(OWNER)"

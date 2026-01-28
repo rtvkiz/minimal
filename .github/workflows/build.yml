@@ -9,6 +9,7 @@ on:
       - 'node/**'
       - 'go/**'
       - 'nginx/**'
+      - 'httpd/**'
       - '.github/workflows/build.yml'
   pull_request:
     branches: [main]
@@ -607,10 +608,121 @@ jobs:
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:latest
 
   #----------------------------------------------------------------------------
+  # HTTPD IMAGE (Wolfi package + apko, shell-less)
+  #----------------------------------------------------------------------------
+  build-httpd:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install apko
+        run: |
+          go install chainguard.dev/apko@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Setup cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build HTTPD image with apko
+        run: |
+          apko build httpd/apko/httpd.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:${{ github.sha }} \
+            httpd.tar \
+            --arch x86_64
+          docker load < httpd.tar
+          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-httpd | head -1)
+          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:${{ github.sha }}
+
+      - name: Report image size
+        run: |
+          echo "## HTTPD Image Size" >> $GITHUB_STEP_SUMMARY
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
+            grep minimal-httpd >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Scan HTTPD image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:${{ github.sha }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          exit-code: '0'
+          cache: 'false'
+
+      - name: Fail on CVEs
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-httpd.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          cache: 'false'
+
+      - name: Upload scan results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: 'trivy-httpd.sarif'
+
+      - name: Test HTTPD image
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:${{ github.sha }}"
+          echo "Testing HTTPD starts..."
+          docker run -d --name httpd-test "$IMAGE"
+          sleep 2
+          if docker ps | grep -q httpd-test; then
+            echo "HTTPD is running"
+            docker logs httpd-test
+            docker stop httpd-test && docker rm httpd-test
+          else
+            echo "HTTPD failed to start, checking logs..."
+            docker logs httpd-test 2>&1 || true
+            docker rm httpd-test 2>/dev/null || true
+            exit 1
+          fi
+          echo "Verifying no shell..."
+          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
+            && echo "::error::Shell found in image!" && exit 1 \
+            || echo "No shell confirmed"
+
+      - name: Publish HTTPD image
+        if: github.event_name != 'pull_request'
+        run: |
+          apko publish httpd/apko/httpd.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:latest \
+            --arch x86_64
+
+      - name: Sign image with cosign
+        if: github.event_name != 'pull_request'
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            cosign sign --yes \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:latest
+
+  #----------------------------------------------------------------------------
   # SUMMARY
   #----------------------------------------------------------------------------
   summary:
-    needs: [build-python, build-jenkins, build-node, build-go, build-nginx]
+    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -620,7 +732,8 @@ jobs:
              [ "${{ needs.build-jenkins.result }}" != "success" ] || \
              [ "${{ needs.build-node.result }}" != "success" ] || \
              [ "${{ needs.build-go.result }}" != "success" ] || \
-             [ "${{ needs.build-nginx.result }}" != "success" ]; then
+             [ "${{ needs.build-nginx.result }}" != "success" ] || \
+             [ "${{ needs.build-httpd.result }}" != "success" ]; then
             echo "::error::One or more images failed"
             exit 1
           fi
@@ -630,7 +743,7 @@ jobs:
   # CLEANUP OLD VERSIONS
   #----------------------------------------------------------------------------
   cleanup:
-    needs: [build-python, build-jenkins, build-node, build-go, build-nginx]
+    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd]
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
     permissions:
@@ -672,6 +785,14 @@ jobs:
         uses: actions/delete-package-versions@v5
         with:
           package-name: minimal-nginx
+          package-type: 'container'
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: 'true'
+
+      - name: Delete old HTTPD versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: minimal-httpd
           package-type: 'container'
           min-versions-to-keep: 10
           delete-only-untagged-versions: 'true'

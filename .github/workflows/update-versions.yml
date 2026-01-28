@@ -85,8 +85,23 @@ jobs:
             echo "new_version=$NEW_VER" >> $GITHUB_OUTPUT
           fi
 
+      - name: Update HTTPD
+        id: httpd-update
+        run: |
+          cd httpd
+          wolfictl update melange.yaml --create-pr=false > update.log 2>&1 || true
+          if git diff --quiet melange.yaml; then
+            echo "No updates for HTTPD"
+            echo "update_available=false" >> $GITHUB_OUTPUT
+          else
+            echo "HTTPD updated!"
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            NEW_VER=$(grep '^  version:' melange.yaml | awk '{print $2}')
+            echo "new_version=$NEW_VER" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create Pull Request
-        if: steps.python-update.outputs.update_available == 'true' || steps.jenkins-update.outputs.update_available == 'true' || steps.go-update.outputs.update_available == 'true' || steps.nginx-update.outputs.update_available == 'true'
+        if: steps.python-update.outputs.update_available == 'true' || steps.jenkins-update.outputs.update_available == 'true' || steps.go-update.outputs.update_available == 'true' || steps.nginx-update.outputs.update_available == 'true' || steps.httpd-update.outputs.update_available == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -97,6 +112,7 @@ jobs:
             ${{ steps.jenkins-update.outputs.update_available == 'true' && format('- Jenkins: {0}', steps.jenkins-update.outputs.new_version) || '' }}
             ${{ steps.go-update.outputs.update_available == 'true' && format('- Go: {0}', steps.go-update.outputs.new_version) || '' }}
             ${{ steps.nginx-update.outputs.update_available == 'true' && format('- Nginx: {0}', steps.nginx-update.outputs.new_version) || '' }}
+            ${{ steps.httpd-update.outputs.update_available == 'true' && format('- HTTPD: {0}', steps.httpd-update.outputs.new_version) || '' }}
           branch: auto-update/package-versions
           delete-branch: true
           title: "chore: update package versions"
@@ -110,6 +126,7 @@ jobs:
             ${{ steps.jenkins-update.outputs.update_available == 'true' && format('- **Jenkins**: `{0}`', steps.jenkins-update.outputs.new_version) || '- Jenkins: Up to date' }}
             ${{ steps.go-update.outputs.update_available == 'true' && format('- **Go**: `{0}`', steps.go-update.outputs.new_version) || '- Go: Up to date' }}
             ${{ steps.nginx-update.outputs.update_available == 'true' && format('- **Nginx**: `{0}`', steps.nginx-update.outputs.new_version) || '- Nginx: Up to date' }}
+            ${{ steps.httpd-update.outputs.update_available == 'true' && format('- **HTTPD**: `{0}`', steps.httpd-update.outputs.new_version) || '- HTTPD: Up to date' }}
             - Node.js: Uses Wolfi pre-built package (auto-updated via Wolfi repo)
 
             ### Verification
