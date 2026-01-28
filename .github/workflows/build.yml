@@ -684,7 +684,15 @@ jobs:
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:${{ github.sha }}"
           echo "Testing HTTPD starts..."
-          docker run -d --name httpd-test "$IMAGE"
+          # httpd may try to write its PID under a non-writable default runtime dir
+          # (e.g. /usr/local/apache2/var/run/apache2). Override PID file to /tmp for the test.
+          # Also set ServerName to suppress noisy startup warning.
+          docker run -d --name httpd-test \
+            --entrypoint /usr/sbin/httpd \
+            "$IMAGE" \
+            -DFOREGROUND \
+            -C "ServerName localhost" \
+            -C "PidFile /tmp/httpd.pid"
           sleep 2
           if docker ps | grep -q httpd-test; then
             echo "HTTPD is running"
