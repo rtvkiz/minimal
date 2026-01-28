@@ -1,4 +1,4 @@
-# Minimal Zero-CVE Container Images Build System
+# Minimal Hardened Container Images Build System
 # Uses Chainguard melange (build from source) + apko (assemble image)
 # All images are shell-less/distroless for security
 
@@ -150,31 +150,31 @@ scan-python:
 	@echo "Scanning minimal-python..."
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-python:latest
-	@echo "✓ minimal-python: zero CVE"
+	@echo "✓ minimal-python: scan passed"
 
 scan-jenkins:
 	@echo "Scanning minimal-jenkins..."
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-jenkins:latest
-	@echo "✓ minimal-jenkins: zero CVE"
+	@echo "✓ minimal-jenkins: scan passed"
 
 scan-go:
 	@echo "Scanning minimal-go..."
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-go:latest
-	@echo "✓ minimal-go: zero CVE"
+	@echo "✓ minimal-go: scan passed"
 
 scan-nginx:
 	@echo "Scanning minimal-nginx..."
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-nginx:latest
-	@echo "✓ minimal-nginx: zero CVE"
+	@echo "✓ minimal-nginx: scan passed"
 
 scan-httpd:
 	@echo "Scanning minimal-httpd..."
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-httpd:latest
-	@echo "✓ minimal-httpd: zero CVE"
+	@echo "✓ minimal-httpd: scan passed"
 
 # Full scan with all severities
 scan-all:
@@ -337,7 +337,7 @@ clean:
 #------------------------------------------------------------------------------
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo "  Minimal Zero-CVE Container Images (Shell-less)"
+	@echo "  Minimal Hardened Container Images (Shell-less)"
 	@echo "  Using melange (source build) + apko (image assembly)"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""

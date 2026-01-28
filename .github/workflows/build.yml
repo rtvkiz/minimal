@@ -1,4 +1,4 @@
-name: Build Zero-CVE Images
+name: Build Hardened Images
 
 on:
   push:
@@ -737,7 +737,7 @@ jobs:
             echo "::error::One or more images failed"
             exit 1
           fi
-          echo "All images built with zero CVEs!"
+          echo "All hardened images built successfully!"
 
   #----------------------------------------------------------------------------
   # CLEANUP OLD VERSIONS
