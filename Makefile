@@ -224,8 +224,6 @@ test-node:
 	docker run --rm $(REGISTRY)/$(OWNER)/minimal-node:latest --version
 	@echo "Testing simple script..."
 	docker run --rm $(REGISTRY)/$(OWNER)/minimal-node:latest -e 'console.log("Hello minimal node")'
-	@echo "Testing npm..."
-	docker run --rm --entrypoint /usr/bin/npm $(REGISTRY)/$(OWNER)/minimal-node:latest --version
 	@echo "Verifying no shell..."
 	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-node:latest \
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"

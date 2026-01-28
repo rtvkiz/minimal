@@ -17,9 +17,6 @@ contents:
     # Init system
     - dumb-init
 
-    # Package manager
-    - npm
-
     # Core Libraries
     - glibc
     - libstdc++

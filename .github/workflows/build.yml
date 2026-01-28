@@ -348,8 +348,6 @@ jobs:
           docker run --rm "$IMAGE" --version
           echo "Testing simple script..."
           docker run --rm "$IMAGE" -e 'console.log("Hello minimal node")'
-          echo "Testing npm..."
-          docker run --rm --entrypoint /usr/bin/npm "$IMAGE" --version
           echo "Verifying no shell..."
           docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
             && echo "::error::Shell found in image!" && exit 1 \
