@@ -59,7 +59,37 @@ paths:
     uid: 65532
     gid: 65532
     permissions: 0o755
+  - path: /var/lib/nginx/client_body_temp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/nginx/proxy_temp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/nginx/fastcgi_temp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/nginx/uwsgi_temp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/nginx/scgi_temp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
   - path: /var/log/nginx
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/run/nginx
     type: directory
     uid: 65532
     gid: 65532

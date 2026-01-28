@@ -218,10 +218,18 @@ test-go:
 
 test-nginx:
 	@echo "Testing Nginx image..."
-	@docker run --rm -d --name nginx-test $(REGISTRY)/$(OWNER)/minimal-nginx:latest && \
-		sleep 2 && \
-		docker exec nginx-test wget -q -O /dev/null http://localhost:80 2>/dev/null || true && \
-		docker stop nginx-test >/dev/null 2>&1 || true
+	@docker run -d --name nginx-test $(REGISTRY)/$(OWNER)/minimal-nginx:latest
+	@sleep 2
+	@if docker ps | grep -q nginx-test; then \
+		echo "Nginx is running"; \
+		docker logs nginx-test; \
+		docker stop nginx-test && docker rm nginx-test; \
+	else \
+		echo "Nginx failed to start, checking logs..."; \
+		docker logs nginx-test 2>&1 || true; \
+		docker rm nginx-test 2>/dev/null || true; \
+		exit 1; \
+	fi
 	@echo "Verifying no shell..."
 	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-nginx:latest \
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
