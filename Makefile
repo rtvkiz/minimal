@@ -276,12 +276,7 @@ test-nginx:
 
 test-httpd:
 	@echo "Testing HTTPD image..."
-	@docker run -d --name httpd-test \
-		--entrypoint /usr/sbin/httpd \
-		$(REGISTRY)/$(OWNER)/minimal-httpd:latest \
-		-DFOREGROUND \
-		-C "ServerName localhost" \
-		-C "PidFile /tmp/httpd.pid"
+	@docker run -d --name httpd-test $(REGISTRY)/$(OWNER)/minimal-httpd:latest
 	@sleep 2
 	@if docker ps | grep -q httpd-test; then \
 		echo "HTTPD is running"; \
