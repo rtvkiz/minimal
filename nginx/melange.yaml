@@ -1,0 +1,42 @@
+# Melange build configuration for Nginx
+# Uses Wolfi's pre-built nginx-mainline package (CVE-patched within 24-48h)
+# This file enables wolfictl version tracking for daily updates
+
+package:
+  name: nginx-minimal
+  version: 1.29.4
+  epoch: 0
+  description: "Nginx web server (Wolfi package wrapper)"
+  copyright:
+    - license: BSD-2-Clause
+  dependencies:
+    provides:
+      - nginx=${{package.version}}
+    runtime:
+      - nginx-mainline
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - wolfi-baselayout
+      - nginx-mainline
+
+pipeline:
+  # Simple wrapper - just verify the package works
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/sbin"
+      # Nginx binary is already at /usr/sbin/nginx from nginx-mainline package
+      nginx -v
+      echo "Nginx package verified"
+
+# Automated version updates via wolfictl
+update:
+  enabled: true
+  github:
+    identifier: nginx/nginx
+    strip-prefix: release-
+    use-tag: true

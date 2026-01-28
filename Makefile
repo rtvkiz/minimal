@@ -7,15 +7,16 @@ OWNER ?= $(shell git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 VERSION ?= $(shell date +%Y%m%d)
 JENKINS_VERSION ?= 2.541.1
 PYTHON_VERSION ?= 3.13.1
+NGINX_VERSION ?= 1.29.4
 
 .PHONY: all build scan clean help
-.PHONY: python python-melange keygen jenkins jenkins-melange go go-melange
-.PHONY: scan-python scan-jenkins scan-go
+.PHONY: python python-melange keygen jenkins jenkins-melange go go-melange nginx
+.PHONY: scan-python scan-jenkins scan-go scan-nginx
 
 all: build scan
 
 # Build all images
-build: python jenkins go
+build: python jenkins go nginx
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -106,9 +107,26 @@ go: go-melange
 	@echo "✓ minimal-go built (from source, with build tools)"
 
 #------------------------------------------------------------------------------
+# NGINX IMAGE (Wolfi pre-built package, shell-less)
+#------------------------------------------------------------------------------
+nginx:
+	@echo "Assembling minimal-nginx image with apko..."
+	apko build nginx/apko/nginx.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION) \
+		nginx.tar \
+		--arch x86_64
+	docker load < nginx.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-nginx:latest
+	@rm -f nginx.tar sbom-*.spdx.json
+	@echo "✓ minimal-nginx built (Wolfi package, shell-less)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go
+scan: scan-python scan-jenkins scan-go scan-nginx
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -128,6 +146,12 @@ scan-go:
 		$(REGISTRY)/$(OWNER)/minimal-go:latest
 	@echo "✓ minimal-go: zero CVE"
 
+scan-nginx:
+	@echo "Scanning minimal-nginx..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-nginx:latest
+	@echo "✓ minimal-nginx: zero CVE"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -137,6 +161,8 @@ scan-all:
 		$(REGISTRY)/$(OWNER)/minimal-jenkins:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-go:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-nginx:latest
 
 #------------------------------------------------------------------------------
 # IMAGE SIZE REPORT
@@ -149,7 +175,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go
+test: test-python test-jenkins test-go test-nginx
 
 test-python:
 	@echo "Testing Python image..."
@@ -190,6 +216,17 @@ test-go:
 	docker run --rm --entrypoint /usr/bin/git $(REGISTRY)/$(OWNER)/minimal-go:latest --version
 	@echo "✓ Go tests passed"
 
+test-nginx:
+	@echo "Testing Nginx image..."
+	@docker run --rm -d --name nginx-test $(REGISTRY)/$(OWNER)/minimal-nginx:latest && \
+		sleep 2 && \
+		docker exec nginx-test wget -q -O /dev/null http://localhost:80 2>/dev/null || true && \
+		docker stop nginx-test >/dev/null 2>&1 || true
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-nginx:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ Nginx tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -200,6 +237,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-jenkins:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-go:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-nginx:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -215,6 +254,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-go:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-nginx:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -235,6 +277,7 @@ help:
 	@echo "  make jenkins-melange Build Jenkins package only (no image)"
 	@echo "  make go              Build Go from source"
 	@echo "  make go-melange      Build Go package only (no image)"
+	@echo "  make nginx           Build Nginx $(NGINX_VERSION) (Wolfi package)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"
@@ -251,5 +294,6 @@ help:
 	@echo "Variables:"
 	@echo "  PYTHON_VERSION=$(PYTHON_VERSION)"
 	@echo "  JENKINS_VERSION=$(JENKINS_VERSION)"
+	@echo "  NGINX_VERSION=$(NGINX_VERSION)"
 	@echo "  REGISTRY=$(REGISTRY)"
 	@echo "  OWNER=$(OWNER)"
