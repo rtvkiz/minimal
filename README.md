@@ -1,6 +1,6 @@
-# Minimal: Zero-CVE Container Images
+# Minimal: Hardened Container Images
 
-A collection of production-ready container images with **zero known CVEs**, rebuilt daily using [Chainguard's apko](https://github.com/chainguard-dev/apko) and [Wolfi](https://github.com/wolfi-dev) packages.
+A collection of production-ready container images with **minimal CVEs**, rebuilt daily using [Chainguard's apko](https://github.com/chainguard-dev/apko) and [Wolfi](https://github.com/wolfi-dev) packages. By including only required packages, these images maintain a reduced attack surface and typically have zero or near-zero known vulnerabilities.
 
 ## Available Images
 
@@ -19,7 +19,7 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 Traditional images:     Your containers:
 ┌──────────────────┐    ┌──────────────────┐
 │ debian:latest    │    │ minimal-python   │
-│ 127 CVEs         │    │ 0 CVEs           │
+│ 127 CVEs         │    │ 0-5 CVEs         │
 │ Patched: ~30 days│    │ Patched: <48 hrs │
 └──────────────────┘    └──────────────────┘
 ```
@@ -155,7 +155,7 @@ docker run -d -p 8080:8080 -v jenkins_home:/var/jenkins_home \
 │                                                    ▼               │
 │                                           ┌────────────────┐       │
 │                                           │  Trivy Scan    │       │
-│                                           │  (0 CVE gate)  │       │
+│                                           │  (CVE gate)    │       │
 │                                           └────────┬───────┘       │
 │                                                    │               │
 │                                                    ▼               │
@@ -185,7 +185,7 @@ Images are rebuilt automatically:
 | **Push** | On merge to `main` | Deploy configuration changes |
 | **Manual** | Workflow dispatch | Emergency rebuilds |
 
-All builds must pass a zero-CVE gate (CRITICAL/HIGH severity) before publishing.
+All builds must pass a CVE gate (no CRITICAL/HIGH severity vulnerabilities) before publishing.
 
 ## Build Locally
 
@@ -236,7 +236,7 @@ minimal/
 | Feature | Debian/Ubuntu | Alpine | Distroless | Chainguard | **Minimal** |
 |---------|--------------|--------|------------|------------|-------------|
 | CVE patch time | ~30 days | ~14 days | ~7 days | <48 hours | <48 hours |
-| Typical CVE count | 50-200 | 10-50 | 0-10 | 0 | 0 |
+| Typical CVE count | 50-200 | 10-50 | 0-10 | 0-5 | 0-5 |
 | Image size | Large | Small | Small | Small | Small |
 | Cost | Free | Free | Free | Paid | Free |
 | Signed images | No | No | Yes | Yes | Yes |
@@ -245,7 +245,7 @@ minimal/
 
 ## Security Features
 
-- **Zero CVE policy** - Builds fail if any CRITICAL/HIGH vulnerabilities detected
+- **CVE gate** - Builds fail if any CRITICAL/HIGH vulnerabilities detected
 - **Signed images** - All images signed with [cosign](https://github.com/sigstore/cosign) keyless signing
 - **SBOM generation** - Full software bill of materials in SPDX format
 - **Non-root users** - All images run as non-root by default
