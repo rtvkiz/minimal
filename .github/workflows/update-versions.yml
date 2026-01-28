@@ -19,15 +19,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-
       - name: Install wolfictl
-        run: |
-          go install github.com/wolfi-dev/wolfictl@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
+        uses: wolfi-dev/actions/install-wolfictl@main
 
       - name: Update Python
         id: python-update
