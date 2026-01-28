@@ -240,8 +240,10 @@ jobs:
           echo "Testing Jenkins WAR..."
           docker run --rm --entrypoint /usr/bin/java "$IMAGE" \
             -jar /usr/share/jenkins/jenkins.war --version
-          echo "Verifying shell (bash) is present..."
-          docker run --rm --entrypoint /bin/bash "$IMAGE" --version
+          echo "Verifying no shell..."
+          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
+            && echo "::error::Shell found in image!" && exit 1 \
+            || echo "No shell confirmed"
           echo "Verifying git is present..."
           docker run --rm --entrypoint /usr/bin/git "$IMAGE" --version
           echo "Verifying core utils..."
@@ -348,6 +350,10 @@ jobs:
           docker run --rm "$IMAGE" -e 'console.log("Hello minimal node")'
           echo "Testing npm..."
           docker run --rm --entrypoint /usr/bin/npm "$IMAGE" --version
+          echo "Verifying no shell..."
+          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
+            && echo "::error::Shell found in image!" && exit 1 \
+            || echo "No shell confirmed"
 
       - name: Publish Node.js image
         if: github.event_name != 'pull_request'
@@ -467,6 +473,10 @@ jobs:
           echo "Testing simple Go program..."
           echo 'package main; import "fmt"; func main() { fmt.Println("Hello from minimal-go") }' > /tmp/test.go
           docker run --rm -v /tmp:/app -w /app "$IMAGE" run test.go || echo "Note: Go run test completed"
+          echo "Verifying no shell..."
+          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
+            && echo "::error::Shell found in image!" && exit 1 \
+            || echo "No shell confirmed"
 
       - name: Publish Go image
         if: github.event_name != 'pull_request'

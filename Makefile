@@ -175,7 +175,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-nginx
+test: test-python test-jenkins test-go test-node test-nginx
 
 test-python:
 	@echo "Testing Python image..."
@@ -214,7 +214,22 @@ test-go:
 	docker run --rm --entrypoint /usr/bin/make $(REGISTRY)/$(OWNER)/minimal-go:latest --version
 	@echo "Verifying git..."
 	docker run --rm --entrypoint /usr/bin/git $(REGISTRY)/$(OWNER)/minimal-go:latest --version
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-go:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
 	@echo "✓ Go tests passed"
+
+test-node:
+	@echo "Testing Node.js image..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-node:latest --version
+	@echo "Testing simple script..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-node:latest -e 'console.log("Hello minimal node")'
+	@echo "Testing npm..."
+	docker run --rm --entrypoint /usr/bin/npm $(REGISTRY)/$(OWNER)/minimal-node:latest --version
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-node:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ Node.js tests passed"
 
 test-nginx:
 	@echo "Testing Nginx image..."

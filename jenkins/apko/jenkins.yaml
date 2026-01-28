@@ -16,8 +16,6 @@ contents:
     - jenkins-minimal
     
     # Core System Tools (matching Chainguard SBOM)
-    - bash
-    - bash-binsh
     - coreutils
     - diffutils
     - findutils
@@ -145,7 +143,6 @@ accounts:
     - username: jenkins
       uid: 1000
       gid: 1000
-      shell: /bin/bash
   run-as: 1000
 
 entrypoint:

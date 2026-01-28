@@ -17,9 +17,6 @@ contents:
     # Init system
     - dumb-init
 
-    # Shell (needed for npm scripts)
-    - busybox
-
     # Package manager
     - npm
 

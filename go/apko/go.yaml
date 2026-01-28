@@ -17,9 +17,6 @@ contents:
     # Includes: go, gofmt, and all cmd tools (asm, cgo, compile, cover, link, preprofile, vet)
     - go-minimal
 
-    # Shell
-    - bash
-
     # Build tools
     - binutils
     - build-base
@@ -29,7 +26,6 @@ contents:
     - posix-cc-wrappers
 
     # Core system utilities
-    - busybox
     - ca-certificates-bundle
 
     # Core system libraries
