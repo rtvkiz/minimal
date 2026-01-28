@@ -26,7 +26,7 @@ jobs:
 
       - name: Install wolfictl
         run: |
-          go install chainguard.dev/wolfictl@latest
+          go install github.com/wolfi-dev/wolfictl@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Update Python
