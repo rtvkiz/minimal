@@ -81,11 +81,7 @@ accounts:
   run-as: 65532
 
 entrypoint:
-  # Run httpd in the foreground, with a deterministic ServerName and a PID file
-  # in a writable runtime directory owned by www-data. This avoids the default
-  # /usr/local/apache2/var/run/apache2/httpd.pid path, which is not writable
-  # in this hardened, non-root container.
-  command: /usr/sbin/httpd -DFOREGROUND -C "ServerName localhost" -C "PidFile /run/apache2/httpd.pid"
+  command: /usr/sbin/httpd -DFOREGROUND
 
 environment:
   PATH: /usr/sbin:/usr/bin:/bin
