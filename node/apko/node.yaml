@@ -12,7 +12,7 @@ contents:
     - wolfi-baselayout
 
     # Node.js from Wolfi (CVE-patched)
-    - nodejs-22
+    - nodejs-25
 
     # Init system
     - dumb-init
