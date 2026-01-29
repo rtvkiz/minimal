@@ -81,7 +81,10 @@ accounts:
   run-as: 65532
 
 entrypoint:
-  command: /usr/sbin/httpd -DFOREGROUND
+  # Run httpd in the foreground with:
+  # - ServerName: prevents "could not reliably determine" warning
+  # - PidFile: writes to /run/apache2/ which is writable by www-data
+  command: /usr/sbin/httpd -DFOREGROUND -C "ServerName localhost" -C "PidFile /run/apache2/httpd.pid"
 
 environment:
   PATH: /usr/sbin:/usr/bin:/bin
