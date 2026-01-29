@@ -1,0 +1,103 @@
+name: Update Jenkins Version
+
+on:
+  schedule:
+    # Check daily at 6am UTC (after nightly builds)
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new Jenkins LTS version
+        id: check
+        run: |
+          # Get latest LTS version from Jenkins update center
+          LATEST=$(curl -sS https://updates.jenkins.io/stable/latestCore.txt)
+
+          if [ -z "$LATEST" ]; then
+            echo "::error::Failed to fetch latest Jenkins version"
+            exit 1
+          fi
+
+          # Get current version from melange.yaml
+          CURRENT=$(grep '^  version:' jenkins/melange.yaml | awk '{print $2}')
+
+          echo "Current version: $CURRENT"
+          echo "Latest version: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+            echo "Update available: $CURRENT -> $LATEST"
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            echo "Already up to date"
+          fi
+
+      - name: Update version in all files
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          echo "Updating to Jenkins $VERSION"
+
+          # Update jenkins/melange.yaml
+          sed -i "s/^  version: .*/  version: $VERSION/" jenkins/melange.yaml
+
+          # Update .github/workflows/build.yml
+          sed -i "s/JENKINS_VERSION: .*/JENKINS_VERSION: \"$VERSION\"/" .github/workflows/build.yml
+
+          # Update Makefile
+          sed -i "s/JENKINS_VERSION ?= .*/JENKINS_VERSION ?= $VERSION/" Makefile
+
+          # Verify changes
+          echo "=== jenkins/melange.yaml ==="
+          grep 'version:' jenkins/melange.yaml | head -1
+          echo "=== .github/workflows/build.yml ==="
+          grep 'JENKINS_VERSION:' .github/workflows/build.yml
+          echo "=== Makefile ==="
+          grep 'JENKINS_VERSION' Makefile
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(jenkins): bump to ${{ steps.check.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates Jenkins LTS from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+            ## Changes
+
+            - `jenkins/melange.yaml` - package version
+            - `.github/workflows/build.yml` - JENKINS_VERSION env var
+            - `Makefile` - JENKINS_VERSION variable
+
+            ## Links
+
+            - [Jenkins LTS Changelog](https://www.jenkins.io/changelog-stable/)
+            - [Release Notes for ${{ steps.check.outputs.new_version }}](https://www.jenkins.io/changelog-stable/#v${{ steps.check.outputs.new_version }})
+
+            ---
+
+            This PR was automatically created by the [update-jenkins](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-jenkins.yml) workflow.
+          branch: update-jenkins-${{ steps.check.outputs.new_version }}
+          commit-message: |
+            chore(jenkins): bump to ${{ steps.check.outputs.new_version }}
+
+            Updates Jenkins LTS from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
+          delete-branch: true
+          labels: |
+            dependencies
+            jenkins

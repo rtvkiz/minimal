@@ -55,7 +55,7 @@ docker run -d -p 8080:80 ghcr.io/rtvkiz/minimal-httpd:latest
 
 ### Python (`minimal-python`)
 
-Shell-less/distroless Python image built from source.
+Shell-less/distroless Python image using Wolfi's pre-built package.
 
 | Property | Value |
 |----------|-------|
@@ -97,7 +97,7 @@ CMD ["index.js"]
 
 ### Go (`minimal-go`)
 
-Full Go development image with build tools, built from source.
+Full Go development image with build tools, using Wolfi's pre-built package.
 
 | Property | Value |
 |----------|-------|
@@ -163,30 +163,22 @@ COPY --chown=www-data:www-data ./public /var/www/localhost/htdocs
 │                         BUILD PIPELINE                              │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│  Source Code          Package Build           Image Assembly        │
-│  ────────────         ─────────────           ──────────────        │
+│  Package Source            Image Assembly           Verification    │
+│  ──────────────           ──────────────           ──────────────   │
 │                                                                     │
-│  ┌─────────┐         ┌───────────┐           ┌────────────┐        │
-│  │ Python  │──────▶  │  melange  │──────────▶│            │        │
-│  │ Go      │  build  │ (APK pkg) │   assemble│    apko    │        │
-│  │ Jenkins │  source └───────────┘           │ (OCI image)│        │
-│  └─────────┘              │                  │            │        │
-│                           ▼                  │            │        │
-│  ┌─────────┐         ┌───────────┐           │            │        │
-│  │ Node.js │─────────│   Wolfi   │──────────▶│            │        │
-│  └─────────┘  use    │ (pre-built)│          └─────┬──────┘        │
-│               pkg    └───────────┘                 │               │
-│                                                    ▼               │
-│                                           ┌────────────────┐       │
-│                                           │  Trivy Scan    │       │
-│                                           │  (CVE gate)    │       │
-│                                           └────────┬───────┘       │
-│                                                    │               │
-│                                                    ▼               │
-│                                           ┌────────────────┐       │
-│                                           │ cosign + SBOM  │       │
-│                                           │ (sign & publish)│      │
-│                                           └────────────────┘       │
+│  ┌─────────────┐          ┌────────────┐          ┌────────────┐   │
+│  │   Wolfi     │─────────▶│    apko    │─────────▶│   Trivy    │   │
+│  │ (pre-built) │  install │ (OCI image)│  scan    │ (CVE gate) │   │
+│  │ Python, Go, │          │            │          │            │   │
+│  │ Node, etc.  │          │            │          │            │   │
+│  └─────────────┘          └─────┬──────┘          └─────┬──────┘   │
+│                                 │                       │          │
+│  ┌─────────────┐                │                       ▼          │
+│  │   melange   │────────────────┘              ┌────────────────┐  │
+│  │ (Jenkins    │  build from                   │ cosign + SBOM  │  │
+│  │  only)      │  source                       │ (sign & publish│  │
+│  └─────────────┘                               └────────────────┘  │
+│                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -194,11 +186,11 @@ COPY --chown=www-data:www-data ./public /var/www/localhost/htdocs
 
 | Image | Source | Build Time |
 |-------|--------|------------|
-| Python | Built from source via melange | ~15 min |
-| Go | Built from source via melange | ~20 min |
-| Jenkins | jlink JRE + WAR via melange | ~10 min |
+| Python | Wolfi pre-built package | ~30 sec |
+| Go | Wolfi pre-built package | ~30 sec |
 | Node.js | Wolfi pre-built package | ~30 sec |
 | HTTPD | Wolfi pre-built package | ~30 sec |
+| Jenkins | jlink JRE + WAR via melange | ~10 min |
 
 **Note on `minimal-httpd` and `/bin/sh`:** depending on upstream Wolfi package dependencies, Apache HTTPD images may include a minimal `/bin/sh`. Our CI gates `minimal-httpd` on **CVE scan + successful startup**, and treats shell presence as **informational** (unlike images that are explicitly intended to be shell-less). This is what the `Shell` column `Yes*` refers to above.
 
@@ -219,7 +211,7 @@ All builds must pass a CVE gate (no CRITICAL/HIGH severity vulnerabilities) befo
 ```bash
 # Prerequisites
 go install chainguard.dev/apko@latest
-go install chainguard.dev/melange@latest
+go install chainguard.dev/melange@latest  # only needed for Jenkins
 brew install trivy  # or: apt install trivy
 
 # Build all images
@@ -244,18 +236,16 @@ make test
 ```
 minimal/
 ├── python/
-│   ├── apko/python.yaml      # Image definition
-│   └── melange.yaml          # Source build recipe
+│   └── apko/python.yaml      # Image definition (uses Wolfi pkg)
 ├── node/
 │   └── apko/node.yaml        # Image definition (uses Wolfi pkg)
 ├── go/
-│   ├── apko/go.yaml
-│   └── melange.yaml
+│   └── apko/go.yaml          # Image definition (uses Wolfi pkg)
 ├── jenkins/
 │   ├── apko/jenkins.yaml
-│   └── melange.yaml
+│   └── melange.yaml          # Source build recipe (jlink JRE)
 ├── httpd/
-│   └── apko/httpd.yaml         # HTTPD image definition (Wolfi pkg)
+│   └── apko/httpd.yaml       # Image definition (uses Wolfi pkg)
 ├── .github/workflows/
 │   └── build.yml             # Daily CI pipeline
 └── Makefile

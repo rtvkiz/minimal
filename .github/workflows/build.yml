@@ -21,11 +21,10 @@ on:
 env:
   REGISTRY: ghcr.io
   JENKINS_VERSION: "2.541.1"
-  PYTHON_VERSION: "3.13.1"
 
 jobs:
   #----------------------------------------------------------------------------
-  # PYTHON IMAGE (melange from source + apko, shell-less)
+  # PYTHON IMAGE (Wolfi package + apko, shell-less)
   #----------------------------------------------------------------------------
   build-python:
     runs-on: ubuntu-latest
@@ -39,9 +38,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install melange and apko
+      - name: Install apko
         run: |
-          go install chainguard.dev/melange@latest
           go install chainguard.dev/apko@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
@@ -56,27 +54,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate melange signing key
-        run: melange keygen
-
-      - name: Build Python from source with melange
-        run: |
-          melange build python/melange.yaml \
-            --arch x86_64 \
-            --signing-key melange.rsa \
-            --out-dir ./packages \
-            --runner docker
-
       - name: Build Python image with apko
         run: |
           apko build python/apko/python.yaml \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }} \
             python.tar \
-            --arch x86_64 \
-            --repository-append ./packages \
-            --keyring-append ${{ github.workspace }}/melange.rsa.pub
+            --arch x86_64
           docker load < python.tar
-          # Tag the loaded image with our expected tag
           LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-python | head -1)
           docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }}
 
@@ -131,9 +115,7 @@ jobs:
         run: |
           apko publish python/apko/python.yaml \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest \
-            --arch x86_64 \
-            --repository-append ./packages \
-            --keyring-append ${{ github.workspace }}/melange.rsa.pub
+            --arch x86_64
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
@@ -372,7 +354,7 @@ jobs:
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:latest
 
   #----------------------------------------------------------------------------
-  # GO IMAGE (melange from source + apko, with build tools)
+  # GO IMAGE (Wolfi package + apko, with build tools)
   #----------------------------------------------------------------------------
   build-go:
     runs-on: ubuntu-latest
@@ -386,9 +368,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install melange and apko
+      - name: Install apko
         run: |
-          go install chainguard.dev/melange@latest
           go install chainguard.dev/apko@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
@@ -403,27 +384,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate melange signing key
-        run: melange keygen
-
-      - name: Build Go from source with melange
-        run: |
-          melange build go/melange.yaml \
-            --arch x86_64 \
-            --signing-key melange.rsa \
-            --out-dir ./packages \
-            --runner docker
-
       - name: Build Go image with apko
         run: |
           apko build go/apko/go.yaml \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:${{ github.sha }} \
             go.tar \
-            --arch x86_64 \
-            --repository-append ./packages \
-            --keyring-append ${{ github.workspace }}/melange.rsa.pub
+            --arch x86_64
           docker load < go.tar
-          # Tag the loaded image with our expected tag
           LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-go | head -1)
           docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:${{ github.sha }}
 
@@ -482,9 +449,7 @@ jobs:
         run: |
           apko publish go/apko/go.yaml \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:latest \
-            --arch x86_64 \
-            --repository-append ./packages \
-            --keyring-append ${{ github.workspace }}/melange.rsa.pub
+            --arch x86_64
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'

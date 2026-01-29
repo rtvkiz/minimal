@@ -1,25 +1,26 @@
-# Python image - built from source with melange
+# Minimal Python image - using Wolfi's pre-built package
 # Feature parity with Chainguard's Python image
-# Shell-less/distroless, full stdlib support
+# Fast builds (~30s) with same CVE patching (24-48h)
 
 contents:
   repositories:
     - https://packages.wolfi.dev/os
-    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
-    # Local signing key passed via --keyring-append CLI flag
   packages:
     # Base filesystem layout
     - wolfi-baselayout
-    # Our Python built from source
-    - python-minimal
-    # Core runtime dependencies (matching Chainguard)
+
+    # Python from Wolfi (CVE-patched)
+    - python-3.13
+
+    # Core runtime dependencies
     - glibc
     - glibc-locale-posix
     - ld-linux
     - libgcc
     - libstdc++
+
     # Python module dependencies
     - libffi
     - zlib
@@ -28,6 +29,7 @@ contents:
     - readline
     - ncurses
     - ncurses-terminfo-base
+
     # Additional stdlib dependencies
     - libexpat1
     - libbz2-1
@@ -37,6 +39,7 @@ contents:
     - sqlite-libs
     - gdbm
     - libuuid
+
     # TLS/SSL certificates
     - ca-certificates-bundle
 

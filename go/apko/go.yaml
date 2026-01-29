@@ -1,21 +1,18 @@
-# Minimal Go image - built from source with melange
+# Minimal Go image - using Wolfi's pre-built package
 # Feature parity with Chainguard's Go image
-# Includes all build tools and dependencies for Go development
+# Fast builds (~30s) with same CVE patching (24-48h)
 
 contents:
   repositories:
     - https://packages.wolfi.dev/os
-    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
-    # Local signing key passed via --keyring-append CLI flag
   packages:
     # Base filesystem
     - wolfi-baselayout
 
-    # Our Go (built from source with melange)
-    # Includes: go, gofmt, and all cmd tools (asm, cgo, compile, cover, link, preprofile, vet)
-    - go-minimal
+    # Go from Wolfi (CVE-patched)
+    - go-1.24
 
     # Build tools
     - binutils

@@ -6,12 +6,11 @@ REGISTRY ?= ghcr.io
 OWNER ?= $(shell git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 VERSION ?= $(shell date +%Y%m%d)
 JENKINS_VERSION ?= 2.541.1
-PYTHON_VERSION ?= 3.13.1
 NGINX_VERSION ?= 1.29.4
 HTTPD_VERSION ?= 2.4.66
 
 .PHONY: all build scan clean help
-.PHONY: python python-melange keygen jenkins jenkins-melange go go-melange nginx httpd
+.PHONY: python jenkins jenkins-melange go nginx httpd keygen
 .PHONY: scan-python scan-jenkins scan-go scan-nginx scan-httpd
 
 all: build scan
@@ -30,30 +29,21 @@ keygen:
 	fi
 
 #------------------------------------------------------------------------------
-# PYTHON IMAGE (melange from source + apko, shell-less, no pip)
+# PYTHON IMAGE (Wolfi pre-built package, shell-less)
 #------------------------------------------------------------------------------
-python-melange: keygen
-	@echo "Building Python $(PYTHON_VERSION) from source with melange..."
-	melange build python/melange.yaml \
-		--arch x86_64,aarch64 \
-		--signing-key melange.rsa
-	@echo "✓ Python package built from source"
-
-python: python-melange
+python:
 	@echo "Assembling minimal-python image with apko..."
 	apko build python/apko/python.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-python:$(VERSION) \
 		python.tar \
-		--arch x86_64 \
-		--repository-append ./packages \
-		--keyring-append melange.rsa.pub
+		--arch x86_64
 	docker load < python.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-python:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-python:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-python:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-python:latest
 	@rm -f python.tar sbom-*.spdx.json
-	@echo "✓ minimal-python built (from source, shell-less, ~25MB)"
+	@echo "✓ minimal-python built (Wolfi package, shell-less)"
 
 #------------------------------------------------------------------------------
 # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -82,30 +72,21 @@ jenkins: jenkins-melange
 	@echo "✓ minimal-jenkins built (jlink JRE, shell-less)"
 
 #------------------------------------------------------------------------------
-# GO IMAGE (melange from source + apko, with build tools)
+# GO IMAGE (Wolfi pre-built package, with build tools)
 #------------------------------------------------------------------------------
-go-melange: keygen
-	@echo "Building Go from source with melange..."
-	melange build go/melange.yaml \
-		--arch x86_64,aarch64 \
-		--signing-key melange.rsa
-	@echo "✓ Go package built from source"
-
-go: go-melange
+go:
 	@echo "Assembling minimal-go image with apko..."
 	apko build go/apko/go.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-go:$(VERSION) \
 		go.tar \
-		--arch x86_64 \
-		--repository-append ./packages \
-		--keyring-append melange.rsa.pub
+		--arch x86_64
 	docker load < go.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-go:latest
 	@rm -f go.tar sbom-*.spdx.json
-	@echo "✓ minimal-go built (from source, with build tools)"
+	@echo "✓ minimal-go built (Wolfi package, with build tools)"
 
 #------------------------------------------------------------------------------
 # NGINX IMAGE (Wolfi pre-built package, shell-less)
@@ -339,16 +320,14 @@ clean:
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "  Minimal Hardened Container Images (Shell-less)"
-	@echo "  Using melange (source build) + apko (image assembly)"
+	@echo "  Using apko (image assembly) + Wolfi packages"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
 	@echo "Images:"
-	@echo "  make python          Build Python $(PYTHON_VERSION) from source"
-	@echo "  make python-melange  Build Python package only (no image)"
+	@echo "  make python          Build Python (Wolfi package)"
+	@echo "  make go              Build Go (Wolfi package)"
 	@echo "  make jenkins         Build Jenkins $(JENKINS_VERSION) (jlink JRE)"
 	@echo "  make jenkins-melange Build Jenkins package only (no image)"
-	@echo "  make go              Build Go from source"
-	@echo "  make go-melange      Build Go package only (no image)"
 	@echo "  make nginx           Build Nginx $(NGINX_VERSION) (Wolfi package)"
 	@echo "  make httpd           Build HTTPD $(HTTPD_VERSION) (Wolfi package)"
 	@echo "  make build           Build all images"
@@ -365,7 +344,6 @@ help:
 	@echo "  make clean          Remove local images + packages"
 	@echo ""
 	@echo "Variables:"
-	@echo "  PYTHON_VERSION=$(PYTHON_VERSION)"
 	@echo "  JENKINS_VERSION=$(JENKINS_VERSION)"
 	@echo "  NGINX_VERSION=$(NGINX_VERSION)"
 	@echo "  HTTPD_VERSION=$(HTTPD_VERSION)"
