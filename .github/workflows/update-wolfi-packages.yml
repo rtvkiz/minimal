@@ -1,0 +1,235 @@
+name: Check Wolfi Package Updates
+
+on:
+  schedule:
+    # Check weekly on Mondays at 7am UTC
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and parse Wolfi APKINDEX
+        id: check
+        run: |
+          set -e
+
+          # Download Wolfi package index
+          curl -sS https://packages.wolfi.dev/os/x86_64/APKINDEX.tar.gz -o /tmp/APKINDEX.tar.gz
+          tar -xzf /tmp/APKINDEX.tar.gz -C /tmp
+
+          # Parse APKINDEX to find available packages
+          # Format: P:package-name followed by V:version
+          awk '/^P:/{pkg=$0} /^V:/{print pkg, $0}' /tmp/APKINDEX | \
+            sed 's/P://; s/V://' > /tmp/packages.txt
+
+          echo "=== Checking for updates ==="
+
+          # --- Python ---
+          CURRENT_PYTHON=$(grep -oP 'python-\d+\.\d+' python/apko/python.yaml | head -1)
+          echo "Current Python package: $CURRENT_PYTHON"
+
+          # Find all python-3.x packages (not python-3.x-base, python-3.x-dev, etc.)
+          LATEST_PYTHON=$(grep -E "^python-3\.[0-9]+ " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t. -k2 -n | tail -1)
+          echo "Latest Python package: $LATEST_PYTHON"
+
+          if [ -n "$LATEST_PYTHON" ] && [ "$LATEST_PYTHON" != "$CURRENT_PYTHON" ]; then
+            echo "python_update=true" >> $GITHUB_OUTPUT
+            echo "python_current=$CURRENT_PYTHON" >> $GITHUB_OUTPUT
+            echo "python_latest=$LATEST_PYTHON" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_PYTHON -> $LATEST_PYTHON"
+          else
+            echo "  -> Up to date"
+          fi
+
+          # --- Go ---
+          CURRENT_GO=$(grep -oP 'go-\d+\.\d+' go/apko/go.yaml | head -1)
+          echo "Current Go package: $CURRENT_GO"
+
+          # Find all go-1.x packages
+          LATEST_GO=$(grep -E "^go-1\.[0-9]+ " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t. -k2 -n | tail -1)
+          echo "Latest Go package: $LATEST_GO"
+
+          if [ -n "$LATEST_GO" ] && [ "$LATEST_GO" != "$CURRENT_GO" ]; then
+            echo "go_update=true" >> $GITHUB_OUTPUT
+            echo "go_current=$CURRENT_GO" >> $GITHUB_OUTPUT
+            echo "go_latest=$LATEST_GO" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_GO -> $LATEST_GO"
+          else
+            echo "  -> Up to date"
+          fi
+
+          # --- Node.js ---
+          CURRENT_NODE=$(grep -oP 'nodejs-\d+' node/apko/node.yaml | head -1)
+          echo "Current Node.js package: $CURRENT_NODE"
+
+          # Find all nodejs-XX packages (LTS versions are even numbers)
+          LATEST_NODE=$(grep -E "^nodejs-[0-9]+ " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t- -k2 -n | tail -1)
+          echo "Latest Node.js package: $LATEST_NODE"
+
+          if [ -n "$LATEST_NODE" ] && [ "$LATEST_NODE" != "$CURRENT_NODE" ]; then
+            echo "node_update=true" >> $GITHUB_OUTPUT
+            echo "node_current=$CURRENT_NODE" >> $GITHUB_OUTPUT
+            echo "node_latest=$LATEST_NODE" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_NODE -> $LATEST_NODE"
+          else
+            echo "  -> Up to date"
+          fi
+
+          # Summary
+          echo ""
+          echo "=== Summary ==="
+          if [ -n "$LATEST_PYTHON" ] && [ "$LATEST_PYTHON" != "$CURRENT_PYTHON" ]; then
+            echo "Python: $CURRENT_PYTHON -> $LATEST_PYTHON"
+          fi
+          if [ -n "$LATEST_GO" ] && [ "$LATEST_GO" != "$CURRENT_GO" ]; then
+            echo "Go: $CURRENT_GO -> $LATEST_GO"
+          fi
+          if [ -n "$LATEST_NODE" ] && [ "$LATEST_NODE" != "$CURRENT_NODE" ]; then
+            echo "Node.js: $CURRENT_NODE -> $LATEST_NODE"
+          fi
+
+      # --- Python PR ---
+      - name: Update Python version
+        if: steps.check.outputs.python_update == 'true'
+        run: |
+          OLD="${{ steps.check.outputs.python_current }}"
+          NEW="${{ steps.check.outputs.python_latest }}"
+          sed -i "s/$OLD/$NEW/g" python/apko/python.yaml
+          echo "Updated python/apko/python.yaml: $OLD -> $NEW"
+
+      - name: Create Python PR
+        if: steps.check.outputs.python_update == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(python): upgrade to ${{ steps.check.outputs.python_latest }}"
+          body: |
+            ## Summary
+
+            Upgrades Python from `${{ steps.check.outputs.python_current }}` to `${{ steps.check.outputs.python_latest }}`.
+
+            This is a **minor/major version upgrade** detected from Wolfi's package repository.
+
+            ## Changes
+
+            - `python/apko/python.yaml` - updated package reference
+
+            ## Before Merging
+
+            - [ ] Review [Python changelog](https://docs.python.org/3/whatsnew/)
+            - [ ] Verify CI passes (image builds and tests succeed)
+            - [ ] Check for breaking changes that may affect users
+
+            ---
+
+            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
+          branch: update-python-${{ steps.check.outputs.python_latest }}
+          commit-message: "chore(python): upgrade to ${{ steps.check.outputs.python_latest }}"
+          delete-branch: true
+          labels: |
+            dependencies
+            python
+
+      - name: Reset for next PR
+        if: steps.check.outputs.python_update == 'true'
+        run: git checkout -- .
+
+      # --- Go PR ---
+      - name: Update Go version
+        if: steps.check.outputs.go_update == 'true'
+        run: |
+          OLD="${{ steps.check.outputs.go_current }}"
+          NEW="${{ steps.check.outputs.go_latest }}"
+          sed -i "s/$OLD/$NEW/g" go/apko/go.yaml
+          echo "Updated go/apko/go.yaml: $OLD -> $NEW"
+
+      - name: Create Go PR
+        if: steps.check.outputs.go_update == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(go): upgrade to ${{ steps.check.outputs.go_latest }}"
+          body: |
+            ## Summary
+
+            Upgrades Go from `${{ steps.check.outputs.go_current }}` to `${{ steps.check.outputs.go_latest }}`.
+
+            This is a **minor/major version upgrade** detected from Wolfi's package repository.
+
+            ## Changes
+
+            - `go/apko/go.yaml` - updated package reference
+
+            ## Before Merging
+
+            - [ ] Review [Go release notes](https://go.dev/doc/devel/release)
+            - [ ] Verify CI passes (image builds and tests succeed)
+            - [ ] Check for breaking changes that may affect users
+
+            ---
+
+            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
+          branch: update-go-${{ steps.check.outputs.go_latest }}
+          commit-message: "chore(go): upgrade to ${{ steps.check.outputs.go_latest }}"
+          delete-branch: true
+          labels: |
+            dependencies
+            go
+
+      - name: Reset for next PR
+        if: steps.check.outputs.go_update == 'true'
+        run: git checkout -- .
+
+      # --- Node.js PR ---
+      - name: Update Node.js version
+        if: steps.check.outputs.node_update == 'true'
+        run: |
+          OLD="${{ steps.check.outputs.node_current }}"
+          NEW="${{ steps.check.outputs.node_latest }}"
+          sed -i "s/$OLD/$NEW/g" node/apko/node.yaml
+          echo "Updated node/apko/node.yaml: $OLD -> $NEW"
+
+      - name: Create Node.js PR
+        if: steps.check.outputs.node_update == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(node): upgrade to ${{ steps.check.outputs.node_latest }}"
+          body: |
+            ## Summary
+
+            Upgrades Node.js from `${{ steps.check.outputs.node_current }}` to `${{ steps.check.outputs.node_latest }}`.
+
+            This is a **minor/major version upgrade** detected from Wolfi's package repository.
+
+            ## Changes
+
+            - `node/apko/node.yaml` - updated package reference
+
+            ## Before Merging
+
+            - [ ] Review [Node.js changelog](https://nodejs.org/en/blog/)
+            - [ ] Verify CI passes (image builds and tests succeed)
+            - [ ] Check for breaking changes that may affect users
+
+            ---
+
+            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
+          branch: update-node-${{ steps.check.outputs.node_latest }}
+          commit-message: "chore(node): upgrade to ${{ steps.check.outputs.node_latest }}"
+          delete-branch: true
+          labels: |
+            dependencies
+            nodejs

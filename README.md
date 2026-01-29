@@ -7,8 +7,9 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | Image | Size | Shell | Use Case |
 |-------|------|-------|----------|
 | **minimal-python** | ~25MB | No | Python applications, microservices, Lambda-style workloads |
-| **minimal-node** | ~50MB | Yes | Node.js applications, npm-based builds |
-| **minimal-go** | ~300MB | Yes | Go development, CGO-enabled builds |
+| **minimal-node** | ~50MB | No | Node.js applications, npm-based builds |
+| **minimal-go** | ~300MB | No | Go development, CGO-enabled builds |
+| **minimal-nginx** | ~15MB | No | Reverse proxy, static file serving, load balancing |
 | **minimal-jenkins** | ~250MB | Yes | CI/CD automation, Jenkins controller |
 | **minimal-httpd** | ~30MB | Yes* | Apache HTTPD for static sites and reverse proxies |
 
@@ -43,12 +44,14 @@ docker run --rm -v $(pwd):/app -w /app ghcr.io/rtvkiz/minimal-node:latest index.
 # Go - build and run
 docker run --rm -v $(pwd):/app -w /app ghcr.io/rtvkiz/minimal-go:latest build -o /tmp/app .
 
+# Nginx - reverse proxy
+docker run -d -p 8080:80 ghcr.io/rtvkiz/minimal-nginx:latest
+
 # Jenkins - start controller
 docker run -p 8080:8080 ghcr.io/rtvkiz/minimal-jenkins:latest
 
 # HTTPD - serve static content
 docker run -d -p 8080:80 ghcr.io/rtvkiz/minimal-httpd:latest
-# then: curl http://localhost:8080
 ```
 
 ## Image Details
@@ -75,7 +78,7 @@ CMD ["/app/app.py"]
 
 ### Node.js (`minimal-node`)
 
-Lightweight Node.js image using Wolfi's pre-built package.
+Shell-less Node.js image using Wolfi's pre-built package.
 
 | Property | Value |
 |----------|-------|
@@ -83,21 +86,19 @@ Lightweight Node.js image using Wolfi's pre-built package.
 | User | `nonroot` (65532) |
 | Workdir | `/app` |
 | Entrypoint | `/usr/bin/dumb-init -- /usr/bin/node` |
-| Shell | busybox |
+| Shell | None (distroless) |
 
-**Included:** npm, dumb-init (proper signal handling), SSL/TLS.
+**Included:** dumb-init (proper signal handling), SSL/TLS. **Not included:** npm (use multi-stage builds), shell.
 
 ```dockerfile
 FROM ghcr.io/rtvkiz/minimal-node:latest
-COPY --chown=nonroot:nonroot package*.json /app/
-RUN npm ci --only=production
-COPY --chown=nonroot:nonroot . /app/
+COPY --chown=nonroot:nonroot dist/ /app/
 CMD ["index.js"]
 ```
 
 ### Go (`minimal-go`)
 
-Full Go development image with build tools, using Wolfi's pre-built package.
+Shell-less Go development image with build tools, using Wolfi's pre-built package.
 
 | Property | Value |
 |----------|-------|
@@ -106,8 +107,9 @@ Full Go development image with build tools, using Wolfi's pre-built package.
 | Workdir | `/app` |
 | Entrypoint | `/usr/bin/go` |
 | CGO | Enabled |
+| Shell | None (distroless) |
 
-**Included:** gcc, make, git, openssh-client, linux-headers.
+**Included:** gcc, make, git, openssh-client, linux-headers. **Not included:** shell.
 
 ```dockerfile
 FROM ghcr.io/rtvkiz/minimal-go:latest AS builder
@@ -119,9 +121,29 @@ COPY --from=builder /app/myapp /usr/local/bin/
 CMD ["/usr/local/bin/myapp"]
 ```
 
+### Nginx (`minimal-nginx`)
+
+Shell-less Nginx image using Wolfi's pre-built package.
+
+| Property | Value |
+|----------|-------|
+| Nginx | mainline (Wolfi) |
+| User | `nginx` (65532) |
+| Workdir | `/` |
+| Entrypoint | `/usr/sbin/nginx -g "daemon off;"` |
+| Shell | None (distroless) |
+
+**Included:** Nginx mainline, SSL/TLS, PCRE, common modules.
+
+```dockerfile
+FROM ghcr.io/rtvkiz/minimal-nginx:latest
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY --chown=nginx:nginx html/ /var/lib/nginx/html/
+```
+
 ### Jenkins (`minimal-jenkins`)
 
-Full-featured Jenkins controller with custom jlink JRE.
+Full-featured Jenkins controller with custom jlink JRE. **Includes shell** for plugin compatibility.
 
 | Property | Value |
 |----------|-------|
@@ -129,6 +151,7 @@ Full-featured Jenkins controller with custom jlink JRE.
 | Java | 21 (custom jlink JRE) |
 | User | `jenkins` (1000) |
 | Workdir | `/var/jenkins_home` |
+| Shell | Yes (coreutils, sed, grep, perl) |
 
 **Included:** git, git-lfs, openssh, curl, bash, coreutils, gnupg.
 
@@ -147,14 +170,16 @@ Minimal Apache HTTPD image using Wolfi's pre-built package.
 | User | `www-data` (65532) |
 | Workdir | `/var/www/localhost/htdocs` |
 | Entrypoint | `/usr/sbin/httpd -DFOREGROUND` |
-| Shell | Minimal `/bin/sh` may be present via dependencies* |
+| Shell | Maybe* (see note below) |
 
-**Included:** Apache HTTPD, SSL/TLS, common HTTPD modules, `/var/www/localhost/htdocs` as default docroot.
+**Included:** Apache HTTPD, SSL/TLS, common modules, `/var/www/localhost/htdocs` as default docroot.
 
 ```dockerfile
 FROM ghcr.io/rtvkiz/minimal-httpd:latest
 COPY --chown=www-data:www-data ./public /var/www/localhost/htdocs
 ```
+
+**Note on `minimal-httpd` and `/bin/sh`:** Depending on upstream Wolfi package dependencies, Apache HTTPD images may include a minimal `/bin/sh`. Our CI gates `minimal-httpd` on **CVE scan + successful startup**, and treats shell presence as **informational**. This is what the `Shell` column `Yes*` refers to above.
 
 ## How Images Are Built
 
@@ -189,10 +214,9 @@ COPY --chown=www-data:www-data ./public /var/www/localhost/htdocs
 | Python | Wolfi pre-built package | ~30 sec |
 | Go | Wolfi pre-built package | ~30 sec |
 | Node.js | Wolfi pre-built package | ~30 sec |
+| Nginx | Wolfi pre-built package | ~30 sec |
 | HTTPD | Wolfi pre-built package | ~30 sec |
 | Jenkins | jlink JRE + WAR via melange | ~10 min |
-
-**Note on `minimal-httpd` and `/bin/sh`:** depending on upstream Wolfi package dependencies, Apache HTTPD images may include a minimal `/bin/sh`. Our CI gates `minimal-httpd` on **CVE scan + successful startup**, and treats shell presence as **informational** (unlike images that are explicitly intended to be shell-less). This is what the `Shell` column `Yes*` refers to above.
 
 ### Update Schedule
 
@@ -205,6 +229,14 @@ Images are rebuilt automatically:
 | **Manual** | Workflow dispatch | Emergency rebuilds |
 
 All builds must pass a CVE gate (no CRITICAL/HIGH severity vulnerabilities) before publishing.
+
+### Version Updates
+
+| Type | Frequency | Action |
+|------|-----------|--------|
+| **Patch versions** | Automatic (daily rebuild) | Wolfi packages updated automatically |
+| **Minor/major versions** | Weekly check | PR opened for review (Python, Go, Node.js) |
+| **Jenkins LTS** | Daily check | PR opened for review |
 
 ## Build Locally
 
@@ -221,6 +253,7 @@ make build
 make python
 make node
 make go
+make nginx
 make jenkins
 make httpd
 
@@ -241,13 +274,17 @@ minimal/
 │   └── apko/node.yaml        # Image definition (uses Wolfi pkg)
 ├── go/
 │   └── apko/go.yaml          # Image definition (uses Wolfi pkg)
+├── nginx/
+│   └── apko/nginx.yaml       # Image definition (uses Wolfi pkg)
 ├── jenkins/
 │   ├── apko/jenkins.yaml
 │   └── melange.yaml          # Source build recipe (jlink JRE)
 ├── httpd/
 │   └── apko/httpd.yaml       # Image definition (uses Wolfi pkg)
 ├── .github/workflows/
-│   └── build.yml             # Daily CI pipeline
+│   ├── build.yml             # Daily CI pipeline
+│   ├── update-jenkins.yml    # Jenkins version updates
+│   └── update-wolfi-packages.yml  # Wolfi package updates
 └── Makefile
 ```
 
@@ -270,6 +307,7 @@ minimal/
 - **SBOM generation** - Full software bill of materials in SPDX format
 - **Non-root users** - All images run as non-root by default
 - **Minimal attack surface** - Only essential packages included
+- **Shell-less images** - Python, Node.js, Go, and Nginx have no shell
 - **Reproducible builds** - Declarative apko configurations
 
 ## License
