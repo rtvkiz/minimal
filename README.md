@@ -13,6 +13,7 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **minimal-jenkins** | ~250MB | Yes (same as chainguard) | CI/CD automation, Jenkins controller |
 | **minimal-httpd** | ~30MB | Yes (same as chainguard) | Apache HTTPD for static sites and reverse proxies |
 | **minimal-redis-slim** | ~15MB | No | Redis in-memory data store, caching, message broker |
+| **minimal-postgres-slim** | ~150MB | No | PostgreSQL relational database |
 
 ## Why This Matters
 
@@ -56,6 +57,9 @@ docker run -d -p 8080:80 ghcr.io/rtvkiz/minimal-httpd:latest
 
 # Redis - in-memory data store
 docker run -d -p 6379:6379 ghcr.io/rtvkiz/minimal-redis-slim:latest
+
+# PostgreSQL - relational database
+docker run -d -p 5432:5432 ghcr.io/rtvkiz/minimal-postgres-slim:latest
 ```
 
 ## Image Details
@@ -185,9 +189,28 @@ COPY --chown=www-data:www-data ./public /var/www/localhost/htdocs
 
 **Note on `minimal-httpd` and `/bin/sh`:** Depending on upstream Wolfi package dependencies, Apache HTTPD images may include a minimal `/bin/sh`. Our CI gates `minimal-httpd` on **CVE scan + successful startup**, and treats shell presence as **informational**. This is what the `Shell` column `Yes*` refers to above.
 
+### Postgres Slim (`minimal-postgres-slim`)
+
+Minimal PostgreSQL image using Wolfi's pre-built package.
+
+| Property | Value |
+|----------|-------|
+| PostgreSQL | 18.x (Wolfi) |
+| User | `postgres` (70) |
+| Workdir | `/` |
+| Entrypoint | `/usr/bin/postgres` |
+| Shell | No |
+
+**Included:** PostgreSQL server, psql client, contrib extensions, pgaudit, ICU, LLVM JIT, SSL/TLS.
+
+```bash
+docker run -d -p 5432:5432 -v pgdata:/var/lib/postgresql/data \
+  ghcr.io/rtvkiz/minimal-postgres-slim:latest
+```
+
 ### Redis Slim (`minimal-redis-slim`)
 
-Minimal Redis image using Wolfi's pre-built package.
+Minimal Redis image built from source via melange.
 
 | Property | Value |
 |----------|-------|
@@ -239,6 +262,7 @@ docker run -d -p 6379:6379 -v redis_data:/data \
 | Node.js | Wolfi pre-built package | ~30 sec |
 | Nginx | Wolfi pre-built package | ~30 sec |
 | HTTPD | Wolfi pre-built package | ~30 sec |
+| Postgres Slim | Wolfi pre-built package | ~30 sec |
 | Redis Slim | Source build via melange | ~5 min |
 | Jenkins | jlink JRE + WAR via melange | ~10 min |
 
@@ -281,6 +305,7 @@ make nginx
 make jenkins
 make httpd
 make redis-slim
+make postgres-slim
 
 # Scan for CVEs
 make scan
@@ -309,6 +334,8 @@ minimal/
 ├── redis-slim/
 │   ├── apko/redis.yaml        # Image definition
 │   └── melange.yaml           # Source build recipe (Redis)
+├── postgres-slim/
+│   └── apko/postgres.yaml     # Image definition (uses Wolfi pkg)
 ├── .github/workflows/
 │   ├── build.yml             # Daily CI pipeline
 │   ├── update-jenkins.yml    # Jenkins version updates
@@ -316,18 +343,6 @@ minimal/
 │   └── update-wolfi-packages.yml  # Wolfi package updates
 └── Makefile
 ```
-
-## Comparison with Alternatives
-
-| Feature | Debian/Ubuntu | Alpine | Distroless | Chainguard | **Minimal** |
-|---------|--------------|--------|------------|------------|-------------|
-| CVE patch time | ~30 days | ~14 days | ~7 days | <48 hours | <48 hours |
-| Typical CVE count | 50-200 | 10-50 | 0-10 | 0-5 | 0-5 |
-| Image size | Large | Small | Small | Small | Small |
-| Cost | Free | Free | Free | Paid | Free |
-| Signed images | No | No | Yes | Yes | Yes |
-| SBOM | Manual | Manual | Yes | Yes | Yes |
-| Customizable | Limited | Limited | No | Limited | Full |
 
 ## Security Features
 

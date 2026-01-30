@@ -87,6 +87,24 @@ jobs:
             echo "  -> Up to date"
           fi
 
+          # --- PostgreSQL ---
+          CURRENT_PG=$(grep -oP 'postgresql-\d+' postgres-slim/apko/postgres.yaml | head -1)
+          echo "Current PostgreSQL package: $CURRENT_PG"
+
+          # Find all postgresql-XX packages
+          LATEST_PG=$(grep -E "^postgresql-[0-9]+ " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t- -k2 -n | tail -1)
+          echo "Latest PostgreSQL package: $LATEST_PG"
+
+          if [ -n "$LATEST_PG" ] && [ "$LATEST_PG" != "$CURRENT_PG" ]; then
+            echo "pg_update=true" >> $GITHUB_OUTPUT
+            echo "pg_current=$CURRENT_PG" >> $GITHUB_OUTPUT
+            echo "pg_latest=$LATEST_PG" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_PG -> $LATEST_PG"
+          else
+            echo "  -> Up to date"
+          fi
+
           # Summary
           echo ""
           echo "=== Summary ==="
@@ -98,6 +116,9 @@ jobs:
           fi
           if [ -n "$LATEST_NODE" ] && [ "$LATEST_NODE" != "$CURRENT_NODE" ]; then
             echo "Node.js: $CURRENT_NODE -> $LATEST_NODE"
+          fi
+          if [ -n "$LATEST_PG" ] && [ "$LATEST_PG" != "$CURRENT_PG" ]; then
+            echo "PostgreSQL: $CURRENT_PG -> $LATEST_PG"
           fi
 
       # --- Python PR ---
@@ -233,3 +254,49 @@ jobs:
           labels: |
             dependencies
             nodejs
+
+      - name: Reset for next PR
+        if: steps.check.outputs.node_update == 'true'
+        run: git checkout -- .
+
+      # --- PostgreSQL PR ---
+      - name: Update PostgreSQL version
+        if: steps.check.outputs.pg_update == 'true'
+        run: |
+          OLD="${{ steps.check.outputs.pg_current }}"
+          NEW="${{ steps.check.outputs.pg_latest }}"
+          sed -i "s/$OLD/$NEW/g" postgres-slim/apko/postgres.yaml
+          echo "Updated postgres-slim/apko/postgres.yaml: $OLD -> $NEW"
+
+      - name: Create PostgreSQL PR
+        if: steps.check.outputs.pg_update == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(postgres): upgrade to ${{ steps.check.outputs.pg_latest }}"
+          body: |
+            ## Summary
+
+            Upgrades PostgreSQL from `${{ steps.check.outputs.pg_current }}` to `${{ steps.check.outputs.pg_latest }}`.
+
+            This is a **minor/major version upgrade** detected from Wolfi's package repository.
+
+            ## Changes
+
+            - `postgres-slim/apko/postgres.yaml` - updated package references
+
+            ## Before Merging
+
+            - [ ] Review [PostgreSQL release notes](https://www.postgresql.org/docs/release/)
+            - [ ] Verify CI passes (image builds and tests succeed)
+            - [ ] Check for breaking changes that may affect users
+
+            ---
+
+            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
+          branch: update-postgres-${{ steps.check.outputs.pg_latest }}
+          commit-message: "chore(postgres): upgrade to ${{ steps.check.outputs.pg_latest }}"
+          delete-branch: true
+          labels: |
+            dependencies
+            postgresql

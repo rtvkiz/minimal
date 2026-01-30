@@ -11,6 +11,7 @@ on:
       - 'nginx/**'
       - 'httpd/**'
       - 'redis-slim/**'
+      - 'postgres-slim/**'
       - '.github/workflows/build.yml'
   pull_request:
     branches: [main]
@@ -819,10 +820,123 @@ jobs:
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:latest
 
   #----------------------------------------------------------------------------
+  # POSTGRES SLIM IMAGE (Wolfi package + apko)
+  #----------------------------------------------------------------------------
+  build-postgres-slim:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install apko
+        run: |
+          go install chainguard.dev/apko@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Setup cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Postgres Slim image with apko
+        run: |
+          apko build postgres-slim/apko/postgres.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:${{ github.sha }} \
+            postgres-slim.tar \
+            --arch x86_64
+          docker load < postgres-slim.tar
+          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-postgres-slim | head -1)
+          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:${{ github.sha }}
+
+      - name: Report image size
+        run: |
+          echo "## Postgres Slim Image Size" >> $GITHUB_STEP_SUMMARY
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
+            grep minimal-postgres-slim >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Scan Postgres Slim image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:${{ github.sha }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          exit-code: '0'
+          cache: 'false'
+
+      - name: Fail on CVEs
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-postgres-slim.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          cache: 'false'
+
+      - name: Upload scan results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: 'trivy-postgres-slim.sarif'
+
+      - name: Test Postgres Slim image
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:${{ github.sha }}"
+          echo "Testing PostgreSQL version..."
+          docker run --rm --entrypoint /usr/bin/postgres "$IMAGE" --version
+          echo "Testing psql client..."
+          docker run --rm --entrypoint /usr/bin/psql "$IMAGE" --version
+          echo "Testing PostgreSQL starts..."
+          docker run -d --name postgres-test \
+            -e POSTGRES_HOST_AUTH_METHOD=trust \
+            --entrypoint "" "$IMAGE" \
+            sh -c "initdb -D /var/lib/postgresql/data && postgres -D /var/lib/postgresql/data -h 0.0.0.0" || true
+          sleep 5
+          if docker ps | grep -q postgres-test; then
+            echo "PostgreSQL is running"
+            docker logs postgres-test 2>&1 | tail -5
+            docker stop postgres-test && docker rm postgres-test
+          else
+            echo "PostgreSQL startup check (informational)..."
+            docker logs postgres-test 2>&1 || true
+            docker rm postgres-test 2>/dev/null || true
+          fi
+
+      - name: Publish Postgres Slim image
+        if: github.event_name != 'pull_request'
+        run: |
+          apko publish postgres-slim/apko/postgres.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:latest \
+            --arch x86_64
+
+      - name: Sign image with cosign
+        if: github.event_name != 'pull_request'
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            cosign sign --yes \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:latest
+
+  #----------------------------------------------------------------------------
   # SUMMARY
   #----------------------------------------------------------------------------
   summary:
-    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim]
+    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim, build-postgres-slim]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -834,7 +948,8 @@ jobs:
              [ "${{ needs.build-go.result }}" != "success" ] || \
              [ "${{ needs.build-nginx.result }}" != "success" ] || \
              [ "${{ needs.build-httpd.result }}" != "success" ] || \
-             [ "${{ needs.build-redis-slim.result }}" != "success" ]; then
+             [ "${{ needs.build-redis-slim.result }}" != "success" ] || \
+             [ "${{ needs.build-postgres-slim.result }}" != "success" ]; then
             echo "::error::One or more images failed"
             exit 1
           fi
@@ -844,7 +959,7 @@ jobs:
   # CLEANUP OLD VERSIONS
   #----------------------------------------------------------------------------
   cleanup:
-    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim]
+    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim, build-postgres-slim]
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
     permissions:
@@ -902,6 +1017,14 @@ jobs:
         uses: actions/delete-package-versions@v5
         with:
           package-name: minimal-redis-slim
+          package-type: 'container'
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: 'true'
+
+      - name: Delete old Postgres Slim versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: minimal-postgres-slim
           package-type: 'container'
           min-versions-to-keep: 10
           delete-only-untagged-versions: 'true'

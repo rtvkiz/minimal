@@ -11,13 +11,13 @@ HTTPD_VERSION ?= 2.4.66
 REDIS_VERSION ?= 8.4.0
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go nginx httpd redis-slim redis-slim-melange keygen
-.PHONY: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim
+.PHONY: python jenkins jenkins-melange go nginx httpd redis-slim redis-slim-melange postgres-slim keygen
+.PHONY: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim scan-postgres-slim
 
 all: build scan
 
 # Build all images
-build: python jenkins go nginx httpd redis-slim
+build: python jenkins go nginx httpd redis-slim postgres-slim
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -150,9 +150,26 @@ redis-slim: redis-slim-melange
 	@echo "✓ minimal-redis-slim built (source build)"
 
 #------------------------------------------------------------------------------
+# POSTGRES SLIM IMAGE (Wolfi pre-built package)
+#------------------------------------------------------------------------------
+postgres-slim:
+	@echo "Assembling minimal-postgres-slim image with apko..."
+	apko build postgres-slim/apko/postgres.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION) \
+		postgres-slim.tar \
+		--arch x86_64
+	docker load < postgres-slim.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
+	@rm -f postgres-slim.tar sbom-*.spdx.json
+	@echo "✓ minimal-postgres-slim built (Wolfi package)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim
+scan: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim scan-postgres-slim
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -190,6 +207,12 @@ scan-redis-slim:
 		$(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
 	@echo "✓ minimal-redis-slim: scan passed"
 
+scan-postgres-slim:
+	@echo "Scanning minimal-postgres-slim..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
+	@echo "✓ minimal-postgres-slim: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -205,6 +228,8 @@ scan-all:
 		$(REGISTRY)/$(OWNER)/minimal-httpd:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
 
 #------------------------------------------------------------------------------
 # IMAGE SIZE REPORT
@@ -212,12 +237,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-redis-slim)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-redis-slim|minimal-postgres-slim)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node test-nginx test-httpd test-redis-slim
+test: test-python test-jenkins test-go test-node test-nginx test-httpd test-redis-slim test-postgres-slim
 
 test-python:
 	@echo "Testing Python image..."
@@ -326,6 +351,14 @@ test-redis-slim:
 	fi
 	@echo "✓ Redis Slim tests passed"
 
+test-postgres-slim:
+	@echo "Testing Postgres Slim image..."
+	docker run --rm --entrypoint /usr/bin/postgres \
+		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest --version
+	docker run --rm --entrypoint /usr/bin/psql \
+		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest --version
+	@echo "✓ Postgres Slim tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -342,6 +375,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-httpd:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -366,6 +401,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-redis-slim:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -387,6 +425,7 @@ help:
 	@echo "  make nginx           Build Nginx $(NGINX_VERSION) (Wolfi package)"
 	@echo "  make httpd           Build HTTPD $(HTTPD_VERSION) (Wolfi package)"
 	@echo "  make redis-slim      Build Redis Slim $(REDIS_VERSION) (source build)"
+	@echo "  make postgres-slim   Build Postgres Slim (Wolfi package)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"

@@ -1,0 +1,129 @@
+# Minimal PostgreSQL image - using Wolfi's pre-built package
+# CVE patching within 24-48h via Wolfi
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # PostgreSQL from Wolfi (CVE-patched)
+    - postgresql-18
+    - postgresql-18-base
+    - postgresql-18-client
+    - postgresql-18-client-base
+    - postgresql-18-contrib
+    - ecpg-18
+    - libpq-18
+    - pgaudit-18
+
+    # Core libraries
+    - glibc
+    - glibc-locale-posix
+    - glibc-locale-en
+    - ld-linux
+    - libgcc
+    - libstdc++
+    - libcrypt1
+    - libxcrypt
+
+    # SSL/TLS libraries
+    - libssl3
+    - libcrypto3
+
+    # ICU (internationalization)
+    - libicu78
+    - icu78-data-full
+
+    # Authentication/security libraries
+    - cyrus-sasl
+    - heimdal-libs
+    - krb5-libs
+    - krb5-conf
+    - keyutils-libs
+    - libldap-2.6
+    - libverto
+    - linux-pam
+    - libselinux
+    - libsepol
+
+    # XML/XSLT
+    - libxml2-16
+    - libxslt
+
+    # LLVM (for JIT)
+    - libllvm-19
+
+    # Compression
+    - liblz4-1
+    - libzstd1
+    - zlib
+
+    # Database/utility libraries
+    - libedit
+    - libffi
+    - libpcre2-8-0
+    - libuuid
+    - libcom_err
+    - sqlite-libs
+    - gdbm
+
+    # Terminal
+    - ncurses
+    - ncurses-terminfo-base
+    - readline
+
+    # Locale and timezone
+    - localedef
+    - tzdata
+
+    # Certificates
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: postgres
+      gid: 70
+  users:
+    - username: postgres
+      uid: 70
+      gid: 70
+      shell: /bin/false
+  run-as: 70
+
+entrypoint:
+  command: /usr/bin/postgres
+
+environment:
+  PGDATA: /var/lib/postgresql/data
+  LANG: en_US.UTF-8
+  PATH: /usr/lib/postgresql18/bin:/usr/bin:/bin
+
+paths:
+  - path: /var/lib/postgresql
+    type: directory
+    uid: 70
+    gid: 70
+    permissions: 0o700
+  - path: /var/lib/postgresql/data
+    type: directory
+    uid: 70
+    gid: 70
+    permissions: 0o700
+  - path: /var/run/postgresql
+    type: directory
+    uid: 70
+    gid: 70
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 70
+    gid: 70
+    permissions: 0o1777
+
+archs:
+  - x86_64
+  - aarch64
