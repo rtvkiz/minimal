@@ -7,11 +7,12 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | Image | Size | Shell | Use Case |
 |-------|------|-------|----------|
 | **minimal-python** | ~25MB | No | Python applications, microservices, Lambda-style workloads |
-| **minimal-node** | ~50MB | No | Node.js applications, npm-based builds |
+| **minimal-node** | ~50MB | Yes (same as chainguard)| Node.js applications, npm-based builds,  |
 | **minimal-go** | ~300MB | No | Go development, CGO-enabled builds |
 | **minimal-nginx** | ~15MB | No | Reverse proxy, static file serving, load balancing |
-| **minimal-jenkins** | ~250MB | Yes | CI/CD automation, Jenkins controller |
-| **minimal-httpd** | ~30MB | Yes* | Apache HTTPD for static sites and reverse proxies |
+| **minimal-jenkins** | ~250MB | Yes (same as chainguard) | CI/CD automation, Jenkins controller |
+| **minimal-httpd** | ~30MB | Yes (same as chainguard) | Apache HTTPD for static sites and reverse proxies |
+| **minimal-redis-slim** | ~15MB | No | Redis in-memory data store, caching, message broker |
 
 ## Why This Matters
 
@@ -52,6 +53,9 @@ docker run -p 8080:8080 ghcr.io/rtvkiz/minimal-jenkins:latest
 
 # HTTPD - serve static content
 docker run -d -p 8080:80 ghcr.io/rtvkiz/minimal-httpd:latest
+
+# Redis - in-memory data store
+docker run -d -p 6379:6379 ghcr.io/rtvkiz/minimal-redis-slim:latest
 ```
 
 ## Image Details
@@ -181,6 +185,25 @@ COPY --chown=www-data:www-data ./public /var/www/localhost/htdocs
 
 **Note on `minimal-httpd` and `/bin/sh`:** Depending on upstream Wolfi package dependencies, Apache HTTPD images may include a minimal `/bin/sh`. Our CI gates `minimal-httpd` on **CVE scan + successful startup**, and treats shell presence as **informational**. This is what the `Shell` column `Yes*` refers to above.
 
+### Redis Slim (`minimal-redis-slim`)
+
+Minimal Redis image using Wolfi's pre-built package.
+
+| Property | Value |
+|----------|-------|
+| Redis | 8.4.x (Wolfi) |
+| User | `redis` (65532) |
+| Workdir | `/` |
+| Entrypoint | `/usr/bin/redis-server` |
+| Shell | No |
+
+**Included:** Redis server, redis-cli, SSL/TLS.
+
+```bash
+docker run -d -p 6379:6379 -v redis_data:/data \
+  ghcr.io/rtvkiz/minimal-redis-slim:latest
+```
+
 ## How Images Are Built
 
 ```
@@ -216,6 +239,7 @@ COPY --chown=www-data:www-data ./public /var/www/localhost/htdocs
 | Node.js | Wolfi pre-built package | ~30 sec |
 | Nginx | Wolfi pre-built package | ~30 sec |
 | HTTPD | Wolfi pre-built package | ~30 sec |
+| Redis Slim | Wolfi pre-built package | ~30 sec |
 | Jenkins | jlink JRE + WAR via melange | ~10 min |
 
 ### Update Schedule
@@ -256,6 +280,7 @@ make go
 make nginx
 make jenkins
 make httpd
+make redis-slim
 
 # Scan for CVEs
 make scan
@@ -281,6 +306,8 @@ minimal/
 │   └── melange.yaml          # Source build recipe (jlink JRE)
 ├── httpd/
 │   └── apko/httpd.yaml       # Image definition (uses Wolfi pkg)
+├── redis-slim/
+│   └── apko/redis.yaml       # Image definition (uses Wolfi pkg)
 ├── .github/workflows/
 │   ├── build.yml             # Daily CI pipeline
 │   ├── update-jenkins.yml    # Jenkins version updates

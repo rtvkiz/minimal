@@ -10,13 +10,13 @@ NGINX_VERSION ?= 1.29.4
 HTTPD_VERSION ?= 2.4.66
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go nginx httpd keygen
-.PHONY: scan-python scan-jenkins scan-go scan-nginx scan-httpd
+.PHONY: python jenkins jenkins-melange go nginx httpd redis-slim keygen
+.PHONY: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim
 
 all: build scan
 
 # Build all images
-build: python jenkins go nginx httpd
+build: python jenkins go nginx httpd redis-slim
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -123,9 +123,26 @@ httpd:
 	@echo "✓ minimal-httpd built (Wolfi package, shell-less)"
 
 #------------------------------------------------------------------------------
+# REDIS SLIM IMAGE (Wolfi pre-built package)
+#------------------------------------------------------------------------------
+redis-slim:
+	@echo "Assembling minimal-redis-slim image with apko..."
+	apko build redis-slim/apko/redis.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION) \
+		redis-slim.tar \
+		--arch x86_64
+	docker load < redis-slim.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
+	@rm -f redis-slim.tar sbom-*.spdx.json
+	@echo "✓ minimal-redis-slim built (Wolfi package)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-nginx scan-httpd
+scan: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -157,6 +174,12 @@ scan-httpd:
 		$(REGISTRY)/$(OWNER)/minimal-httpd:latest
 	@echo "✓ minimal-httpd: scan passed"
 
+scan-redis-slim:
+	@echo "Scanning minimal-redis-slim..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
+	@echo "✓ minimal-redis-slim: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -170,6 +193,8 @@ scan-all:
 		$(REGISTRY)/$(OWNER)/minimal-nginx:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-httpd:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
 
 #------------------------------------------------------------------------------
 # IMAGE SIZE REPORT
@@ -177,12 +202,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-redis-slim)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node test-nginx test-httpd
+test: test-python test-jenkins test-go test-node test-nginx test-httpd test-redis-slim
 
 test-python:
 	@echo "Testing Python image..."
@@ -275,6 +300,22 @@ test-httpd:
 		|| echo "✓ No /bin/sh found (shell-less)"
 	@echo "✓ HTTPD tests passed"
 
+test-redis-slim:
+	@echo "Testing Redis Slim image..."
+	@docker run -d --name redis-test $(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
+	@sleep 2
+	@if docker ps | grep -q redis-test; then \
+		echo "Redis is running"; \
+		docker logs redis-test; \
+		docker stop redis-test && docker rm redis-test; \
+	else \
+		echo "Redis failed to start, checking logs..."; \
+		docker logs redis-test 2>&1 || true; \
+		docker rm redis-test 2>/dev/null || true; \
+		exit 1; \
+	fi
+	@echo "✓ Redis Slim tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -289,6 +330,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-nginx:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-httpd:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -310,6 +353,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-httpd:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-redis-slim:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -330,6 +376,7 @@ help:
 	@echo "  make jenkins-melange Build Jenkins package only (no image)"
 	@echo "  make nginx           Build Nginx $(NGINX_VERSION) (Wolfi package)"
 	@echo "  make httpd           Build HTTPD $(HTTPD_VERSION) (Wolfi package)"
+	@echo "  make redis-slim      Build Redis Slim (Wolfi package)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"
