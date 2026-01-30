@@ -40,9 +40,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko
+      - name: Install apko and crane
         run: |
           go install chainguard.dev/apko@latest
+          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -129,6 +130,12 @@ jobs:
             cosign sign --yes \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest
 
+      - name: Tag dated version
+        if: github.event_name != 'pull_request'
+        run: |
+          DATE_TAG=$(date +%Y%m%d)
+          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest "$DATE_TAG"
+
   #----------------------------------------------------------------------------
   # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
   #----------------------------------------------------------------------------
@@ -144,10 +151,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install melange and apko
+      - name: Install melange, apko, and crane
         run: |
           go install chainguard.dev/melange@latest
           go install chainguard.dev/apko@latest
+          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -253,6 +261,12 @@ jobs:
             cosign sign --yes \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest
 
+      - name: Tag dated version
+        if: github.event_name != 'pull_request'
+        run: |
+          DATE_TAG=$(date +%Y%m%d)
+          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest "$DATE_TAG"
+
   #----------------------------------------------------------------------------
   # NODE.JS IMAGE (Wolfi package + apko) - Fast build using pre-built package
   #----------------------------------------------------------------------------
@@ -268,9 +282,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko
+      - name: Install apko and crane
         run: |
           go install chainguard.dev/apko@latest
+          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -355,6 +370,12 @@ jobs:
             cosign sign --yes \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:latest
 
+      - name: Tag dated version
+        if: github.event_name != 'pull_request'
+        run: |
+          DATE_TAG=$(date +%Y%m%d)
+          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:latest "$DATE_TAG"
+
   #----------------------------------------------------------------------------
   # GO IMAGE (Wolfi package + apko, with build tools)
   #----------------------------------------------------------------------------
@@ -370,9 +391,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko
+      - name: Install apko and crane
         run: |
           go install chainguard.dev/apko@latest
+          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -463,6 +485,12 @@ jobs:
             cosign sign --yes \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:latest
 
+      - name: Tag dated version
+        if: github.event_name != 'pull_request'
+        run: |
+          DATE_TAG=$(date +%Y%m%d)
+          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:latest "$DATE_TAG"
+
   #----------------------------------------------------------------------------
   # NGINX IMAGE (Wolfi package + apko, shell-less)
   #----------------------------------------------------------------------------
@@ -478,9 +506,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko
+      - name: Install apko and crane
         run: |
           go install chainguard.dev/apko@latest
+          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -574,6 +603,12 @@ jobs:
             cosign sign --yes \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:latest
 
+      - name: Tag dated version
+        if: github.event_name != 'pull_request'
+        run: |
+          DATE_TAG=$(date +%Y%m%d)
+          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:latest "$DATE_TAG"
+
   #----------------------------------------------------------------------------
   # HTTPD IMAGE (Wolfi package + apko, shell-less)
   #----------------------------------------------------------------------------
@@ -589,9 +624,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko
+      - name: Install apko and crane
         run: |
           go install chainguard.dev/apko@latest
+          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -691,6 +727,12 @@ jobs:
             cosign sign --yes \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:latest
 
+      - name: Tag dated version
+        if: github.event_name != 'pull_request'
+        run: |
+          DATE_TAG=$(date +%Y%m%d)
+          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:latest "$DATE_TAG"
+
   #----------------------------------------------------------------------------
   # REDIS SLIM IMAGE (melange source build + apko)
   #----------------------------------------------------------------------------
@@ -706,10 +748,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install melange and apko
+      - name: Install melange, apko, and crane
         run: |
           go install chainguard.dev/melange@latest
           go install chainguard.dev/apko@latest
+          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -819,6 +862,12 @@ jobs:
             cosign sign --yes \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:latest
 
+      - name: Tag dated version
+        if: github.event_name != 'pull_request'
+        run: |
+          DATE_TAG=$(date +%Y%m%d)
+          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:latest "$DATE_TAG"
+
   #----------------------------------------------------------------------------
   # POSTGRES SLIM IMAGE (Wolfi package + apko)
   #----------------------------------------------------------------------------
@@ -834,9 +883,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko
+      - name: Install apko and crane
         run: |
           go install chainguard.dev/apko@latest
+          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -931,6 +981,12 @@ jobs:
           command: |
             cosign sign --yes \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:latest
+
+      - name: Tag dated version
+        if: github.event_name != 'pull_request'
+        run: |
+          DATE_TAG=$(date +%Y%m%d)
+          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:latest "$DATE_TAG"
 
   #----------------------------------------------------------------------------
   # SUMMARY
