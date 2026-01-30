@@ -354,6 +354,19 @@ minimal/
 - **Shell-less images** - Python, Node.js, Go, and Nginx have no shell
 - **Reproducible builds** - Declarative apko configurations
 
+## Verify Image Signatures
+
+All images are signed with [cosign](https://github.com/sigstore/cosign) keyless signing via Sigstore. To verify:
+
+```bash
+cosign verify \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-identity-regexp https://github.com/rtvkiz/minimal/ \
+  ghcr.io/rtvkiz/minimal-python:latest
+```
+
+Replace `minimal-python` with any image name. A successful output confirms the image was built by this repository's CI pipeline and hasn't been tampered with.
+
 ## License
 
 MIT

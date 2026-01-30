@@ -1021,6 +1021,23 @@ jobs:
     permissions:
       packages: write
     steps:
+      - name: Delete .sig tagged versions
+        run: |
+          # Get all container packages for this user
+          gh api "/users/${{ github.repository_owner }}/packages?package_type=container" \
+            --paginate --jq '.[].name' 2>/dev/null | \
+          while read -r pkg; do
+            echo "Cleaning .sig versions from $pkg..."
+            gh api "/users/${{ github.repository_owner }}/packages/container/$pkg/versions" \
+              --paginate --jq '.[] | select(.metadata.container.tags | any(endswith(".sig"))) | .id' 2>/dev/null | \
+            while read -r id; do
+              echo "  Deleting version $id"
+              gh api --method DELETE "/users/${{ github.repository_owner }}/packages/container/$pkg/versions/$id" 2>/dev/null || true
+            done
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Delete old Python versions
         uses: actions/delete-package-versions@v5
         with:
