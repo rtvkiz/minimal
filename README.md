@@ -239,7 +239,7 @@ docker run -d -p 6379:6379 -v redis_data:/data \
 | Node.js | Wolfi pre-built package | ~30 sec |
 | Nginx | Wolfi pre-built package | ~30 sec |
 | HTTPD | Wolfi pre-built package | ~30 sec |
-| Redis Slim | Wolfi pre-built package | ~30 sec |
+| Redis Slim | Source build via melange | ~5 min |
 | Jenkins | jlink JRE + WAR via melange | ~10 min |
 
 ### Update Schedule
@@ -307,10 +307,12 @@ minimal/
 ├── httpd/
 │   └── apko/httpd.yaml       # Image definition (uses Wolfi pkg)
 ├── redis-slim/
-│   └── apko/redis.yaml       # Image definition (uses Wolfi pkg)
+│   ├── apko/redis.yaml        # Image definition
+│   └── melange.yaml           # Source build recipe (Redis)
 ├── .github/workflows/
 │   ├── build.yml             # Daily CI pipeline
 │   ├── update-jenkins.yml    # Jenkins version updates
+│   ├── update-redis.yml      # Redis version updates
 │   └── update-wolfi-packages.yml  # Wolfi package updates
 └── Makefile
 ```

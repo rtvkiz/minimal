@@ -1,0 +1,74 @@
+# Melange build configuration for minimal Redis
+# Builds Redis from source with only server + CLI
+# No modules, no Sentinel, minimal footprint
+
+package:
+  name: redis-minimal
+  version: 8.4.0
+  epoch: 0
+  description: "Minimal Redis server and CLI built from source"
+  copyright:
+    - license: SSPL-1.0
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - linux-headers
+      - openssl-dev
+      - jemalloc-dev
+
+pipeline:
+  # Download and verify Redis source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://github.com/redis/redis/archive/refs/tags/${{package.version}}.tar.gz" \
+        -o /home/build/redis.tar.gz
+      cd /home/build
+      tar xzf redis.tar.gz
+      rm redis.tar.gz
+
+  # Build Redis from source
+  - runs: |
+      cd /home/build/redis-${{package.version}}
+      make -j$(nproc) \
+        BUILD_TLS=yes \
+        USE_SYSTEMD=no \
+        MALLOC=jemalloc
+      make install PREFIX=/home/build/redis-install
+
+  # Install to destdir
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/redis-install/bin/redis-server "${{targets.destdir}}/usr/bin/"
+      cp /home/build/redis-install/bin/redis-cli "${{targets.destdir}}/usr/bin/"
+
+      # Strip binaries
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/redis-server"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/redis-cli"
+
+      # Create data directory
+      mkdir -p "${{targets.destdir}}/data"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying Redis build..."
+      "${{targets.destdir}}/usr/bin/redis-server" --version
+      "${{targets.destdir}}/usr/bin/redis-cli" --version
+      echo "Checking binary sizes..."
+      ls -lh "${{targets.destdir}}/usr/bin/redis-server"
+      ls -lh "${{targets.destdir}}/usr/bin/redis-cli"
+
+update:
+  enabled: true
+  github:
+    identifier: redis/redis
+    use-tag: true
+    tag-filter: "8."

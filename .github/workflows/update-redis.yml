@@ -1,0 +1,98 @@
+name: Update Redis Version
+
+on:
+  schedule:
+    # Check daily at 6:30am UTC
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new Redis stable version
+        id: check
+        run: |
+          # Get latest stable 8.x release from GitHub
+          LATEST=$(curl -sS https://api.github.com/repos/redis/redis/releases/latest | \
+            jq -r '.tag_name')
+
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "::error::Failed to fetch latest Redis version"
+            exit 1
+          fi
+
+          # Get current version from melange.yaml
+          CURRENT=$(grep '^  version:' redis-slim/melange.yaml | awk '{print $2}')
+
+          echo "Current version: $CURRENT"
+          echo "Latest version: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+            echo "Update available: $CURRENT -> $LATEST"
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            echo "Already up to date"
+          fi
+
+      - name: Update version in all files
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          echo "Updating to Redis $VERSION"
+
+          # Update redis-slim/melange.yaml
+          sed -i "s/^  version: .*/  version: $VERSION/" redis-slim/melange.yaml
+
+          # Update Makefile
+          sed -i "s/REDIS_VERSION ?= .*/REDIS_VERSION ?= $VERSION/" Makefile
+
+          # Verify changes
+          echo "=== redis-slim/melange.yaml ==="
+          grep 'version:' redis-slim/melange.yaml | head -1
+          echo "=== Makefile ==="
+          grep 'REDIS_VERSION' Makefile
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(redis): bump to ${{ steps.check.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates Redis from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+            ## Changes
+
+            - `redis-slim/melange.yaml` - package version
+            - `Makefile` - REDIS_VERSION variable
+
+            ## Links
+
+            - [Redis Releases](https://github.com/redis/redis/releases)
+            - [Release Notes for ${{ steps.check.outputs.new_version }}](https://github.com/redis/redis/releases/tag/${{ steps.check.outputs.new_version }})
+
+            ---
+
+            This PR was automatically created by the [update-redis](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-redis.yml) workflow.
+          branch: update-redis-${{ steps.check.outputs.new_version }}
+          commit-message: |
+            chore(redis): bump to ${{ steps.check.outputs.new_version }}
+
+            Updates Redis from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
+          delete-branch: true
+          labels: |
+            dependencies
+            redis

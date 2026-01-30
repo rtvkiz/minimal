@@ -1,18 +1,19 @@
-# Minimal Redis image - using Wolfi's pre-built package
-# CVE patching within 24-48h via Wolfi
+# Minimal Redis image - built from source via melange
+# CVE patching via daily rebuilds from upstream source
 
 contents:
   repositories:
     - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
   packages:
     # Base filesystem
     - wolfi-baselayout
 
-    # Redis from Wolfi (CVE-patched)
-    - redis-8.4
-    - redis-cli-8.4
+    # Our Redis (built from source via melange)
+    - redis-minimal
 
     # Core libraries
     - glibc
@@ -24,6 +25,9 @@ contents:
     # SSL/TLS libraries
     - libssl3
     - libcrypto3
+
+    # Memory allocator
+    - libjemalloc2
 
     # Certificates
     - ca-certificates-bundle

@@ -8,9 +8,10 @@ VERSION ?= $(shell date +%Y%m%d)
 JENKINS_VERSION ?= 2.541.1
 NGINX_VERSION ?= 1.29.4
 HTTPD_VERSION ?= 2.4.66
+REDIS_VERSION ?= 8.4.0
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go nginx httpd redis-slim keygen
+.PHONY: python jenkins jenkins-melange go nginx httpd redis-slim redis-slim-melange keygen
 .PHONY: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim
 
 all: build scan
@@ -123,21 +124,30 @@ httpd:
 	@echo "✓ minimal-httpd built (Wolfi package, shell-less)"
 
 #------------------------------------------------------------------------------
-# REDIS SLIM IMAGE (Wolfi pre-built package)
+# REDIS SLIM IMAGE (melange source build + apko)
 #------------------------------------------------------------------------------
-redis-slim:
+redis-slim-melange: keygen
+	@echo "Building Redis $(REDIS_VERSION) from source via melange..."
+	melange build redis-slim/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Redis package built from source"
+
+redis-slim: redis-slim-melange
 	@echo "Assembling minimal-redis-slim image with apko..."
 	apko build redis-slim/apko/redis.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION) \
 		redis-slim.tar \
-		--arch x86_64
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
 	docker load < redis-slim.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
 	@rm -f redis-slim.tar sbom-*.spdx.json
-	@echo "✓ minimal-redis-slim built (Wolfi package)"
+	@echo "✓ minimal-redis-slim built (source build)"
 
 #------------------------------------------------------------------------------
 # CVE SCANNING
@@ -376,7 +386,7 @@ help:
 	@echo "  make jenkins-melange Build Jenkins package only (no image)"
 	@echo "  make nginx           Build Nginx $(NGINX_VERSION) (Wolfi package)"
 	@echo "  make httpd           Build HTTPD $(HTTPD_VERSION) (Wolfi package)"
-	@echo "  make redis-slim      Build Redis Slim (Wolfi package)"
+	@echo "  make redis-slim      Build Redis Slim $(REDIS_VERSION) (source build)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"
@@ -394,5 +404,6 @@ help:
 	@echo "  JENKINS_VERSION=$(JENKINS_VERSION)"
 	@echo "  NGINX_VERSION=$(NGINX_VERSION)"
 	@echo "  HTTPD_VERSION=$(HTTPD_VERSION)"
+	@echo "  REDIS_VERSION=$(REDIS_VERSION)"
 	@echo "  REGISTRY=$(REGISTRY)"
 	@echo "  OWNER=$(OWNER)"
