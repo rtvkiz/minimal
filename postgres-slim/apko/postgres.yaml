@@ -54,9 +54,6 @@ contents:
     - libxml2-16
     - libxslt
 
-    # LLVM (for JIT)
-    - libllvm-19
-
     # Compression
     - liblz4-1
     - libzstd1
