@@ -126,7 +126,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes --registry-referrers-mode=oci-1-1 \
+            COSIGN_EXPERIMENTAL=1 cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest
 
 
@@ -251,7 +251,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes --registry-referrers-mode=oci-1-1 \
+            COSIGN_EXPERIMENTAL=1 cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest
 
 
@@ -354,7 +354,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes --registry-referrers-mode=oci-1-1 \
+            COSIGN_EXPERIMENTAL=1 cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:latest
 
 
@@ -463,7 +463,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes --registry-referrers-mode=oci-1-1 \
+            COSIGN_EXPERIMENTAL=1 cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:latest
 
 
@@ -575,7 +575,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes --registry-referrers-mode=oci-1-1 \
+            COSIGN_EXPERIMENTAL=1 cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:latest
 
 
@@ -693,7 +693,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes --registry-referrers-mode=oci-1-1 \
+            COSIGN_EXPERIMENTAL=1 cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:latest
 
 
@@ -822,7 +822,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes --registry-referrers-mode=oci-1-1 \
+            COSIGN_EXPERIMENTAL=1 cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:latest
 
 
@@ -936,7 +936,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes --registry-referrers-mode=oci-1-1 \
+            COSIGN_EXPERIMENTAL=1 cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:latest
 
 
