@@ -11,13 +11,13 @@ HTTPD_VERSION ?= 2.4.66
 REDIS_VERSION ?= 8.4.0
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go nginx httpd redis-slim redis-slim-melange postgres-slim keygen
-.PHONY: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim scan-postgres-slim
+.PHONY: python jenkins jenkins-melange go nginx httpd redis-slim redis-slim-melange postgres-slim bun keygen
+.PHONY: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun
 
 all: build scan
 
 # Build all images
-build: python jenkins go nginx httpd redis-slim postgres-slim
+build: python jenkins go nginx httpd redis-slim postgres-slim bun
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -167,9 +167,26 @@ postgres-slim:
 	@echo "✓ minimal-postgres-slim built (Wolfi package)"
 
 #------------------------------------------------------------------------------
+# BUN IMAGE (Wolfi pre-built package, shell-less)
+#------------------------------------------------------------------------------
+bun:
+	@echo "Assembling minimal-bun image with apko..."
+	apko build bun/apko/bun.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION) \
+		bun.tar \
+		--arch x86_64
+	docker load < bun.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-bun:latest
+	@rm -f bun.tar sbom-*.spdx.json
+	@echo "✓ minimal-bun built (Wolfi package, shell-less)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim scan-postgres-slim
+scan: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -213,6 +230,12 @@ scan-postgres-slim:
 		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
 	@echo "✓ minimal-postgres-slim: scan passed"
 
+scan-bun:
+	@echo "Scanning minimal-bun..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-bun:latest
+	@echo "✓ minimal-bun: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -230,6 +253,8 @@ scan-all:
 		$(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-bun:latest
 
 #------------------------------------------------------------------------------
 # IMAGE SIZE REPORT
@@ -237,12 +262,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-redis-slim|minimal-postgres-slim)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-redis-slim|minimal-postgres-slim|minimal-bun)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node test-nginx test-httpd test-redis-slim test-postgres-slim
+test: test-python test-jenkins test-go test-node test-nginx test-httpd test-redis-slim test-postgres-slim test-bun
 
 test-python:
 	@echo "Testing Python image..."
@@ -359,6 +384,16 @@ test-postgres-slim:
 		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest --version
 	@echo "✓ Postgres Slim tests passed"
 
+test-bun:
+	@echo "Testing Bun image..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-bun:latest --version
+	@echo "Testing simple script..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-bun:latest -e 'console.log("Hello minimal bun")'
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-bun:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ Bun tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -377,6 +412,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-bun:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -404,6 +441,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-bun:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -426,6 +466,7 @@ help:
 	@echo "  make httpd           Build HTTPD $(HTTPD_VERSION) (Wolfi package)"
 	@echo "  make redis-slim      Build Redis Slim $(REDIS_VERSION) (source build)"
 	@echo "  make postgres-slim   Build Postgres Slim (Wolfi package)"
+	@echo "  make bun             Build Bun (Wolfi package)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"

@@ -12,6 +12,7 @@ on:
       - 'httpd/**'
       - 'redis-slim/**'
       - 'postgres-slim/**'
+      - 'bun/**'
       - '.github/workflows/build.yml'
   pull_request:
     branches: [main]
@@ -939,12 +940,113 @@ jobs:
             COSIGN_EXPERIMENTAL=1 cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:latest
 
+  #----------------------------------------------------------------------------
+  # BUN IMAGE (Wolfi package + apko, shell-less)
+  #----------------------------------------------------------------------------
+  build-bun:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install apko
+        run: |
+          go install chainguard.dev/apko@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Setup cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Bun image with apko
+        run: |
+          apko build bun/apko/bun.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:${{ github.sha }} \
+            bun.tar \
+            --arch x86_64
+          docker load < bun.tar
+          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-bun | head -1)
+          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:${{ github.sha }}
+
+      - name: Report image size
+        run: |
+          echo "## Bun Image Size" >> $GITHUB_STEP_SUMMARY
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
+            grep minimal-bun >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Scan Bun image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:${{ github.sha }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          exit-code: '0'
+          cache: 'false'
+
+      - name: Fail on CVEs
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-bun.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          cache: 'false'
+
+      - name: Upload scan results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: 'trivy-bun.sarif'
+
+      - name: Test Bun image
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:${{ github.sha }}"
+          echo "Testing Bun version..."
+          docker run --rm "$IMAGE" --version
+          echo "Testing simple script..."
+          docker run --rm "$IMAGE" -e 'console.log("Hello minimal bun")'
+          echo "Verifying no shell..."
+          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
+            && echo "::error::Shell found in image!" && exit 1 \
+            || echo "No shell confirmed"
+
+      - name: Publish Bun image
+        if: github.event_name != 'pull_request'
+        run: |
+          apko publish bun/apko/bun.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:latest \
+            --arch x86_64
+
+      - name: Sign image with cosign
+        if: github.event_name != 'pull_request'
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            cosign sign --yes \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:latest
 
   #----------------------------------------------------------------------------
   # SUMMARY
   #----------------------------------------------------------------------------
   summary:
-    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim, build-postgres-slim]
+    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim, build-postgres-slim, build-bun]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -957,7 +1059,8 @@ jobs:
              [ "${{ needs.build-nginx.result }}" != "success" ] || \
              [ "${{ needs.build-httpd.result }}" != "success" ] || \
              [ "${{ needs.build-redis-slim.result }}" != "success" ] || \
-             [ "${{ needs.build-postgres-slim.result }}" != "success" ]; then
+             [ "${{ needs.build-postgres-slim.result }}" != "success" ] || \
+             [ "${{ needs.build-bun.result }}" != "success" ]; then
             echo "::error::One or more images failed"
             exit 1
           fi
@@ -967,7 +1070,7 @@ jobs:
   # CLEANUP OLD VERSIONS
   #----------------------------------------------------------------------------
   cleanup:
-    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim, build-postgres-slim]
+    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim, build-postgres-slim, build-bun]
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
     permissions:
