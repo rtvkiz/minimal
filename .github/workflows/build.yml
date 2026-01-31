@@ -40,10 +40,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko and crane
+      - name: Install apko
         run: |
           go install chainguard.dev/apko@latest
-          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -127,14 +126,9 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes \
+            cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest
 
-      - name: Tag dated version
-        if: github.event_name != 'pull_request'
-        run: |
-          DATE_TAG=$(date +%Y%m%d)
-          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest "$DATE_TAG"
 
   #----------------------------------------------------------------------------
   # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -151,11 +145,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install melange, apko, and crane
+      - name: Install melange and apko
         run: |
           go install chainguard.dev/melange@latest
           go install chainguard.dev/apko@latest
-          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -258,14 +251,9 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes \
+            cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest
 
-      - name: Tag dated version
-        if: github.event_name != 'pull_request'
-        run: |
-          DATE_TAG=$(date +%Y%m%d)
-          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest "$DATE_TAG"
 
   #----------------------------------------------------------------------------
   # NODE.JS IMAGE (Wolfi package + apko) - Fast build using pre-built package
@@ -282,10 +270,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko and crane
+      - name: Install apko
         run: |
           go install chainguard.dev/apko@latest
-          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -367,14 +354,9 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes \
+            cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:latest
 
-      - name: Tag dated version
-        if: github.event_name != 'pull_request'
-        run: |
-          DATE_TAG=$(date +%Y%m%d)
-          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:latest "$DATE_TAG"
 
   #----------------------------------------------------------------------------
   # GO IMAGE (Wolfi package + apko, with build tools)
@@ -391,10 +373,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko and crane
+      - name: Install apko
         run: |
           go install chainguard.dev/apko@latest
-          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -482,14 +463,9 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes \
+            cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:latest
 
-      - name: Tag dated version
-        if: github.event_name != 'pull_request'
-        run: |
-          DATE_TAG=$(date +%Y%m%d)
-          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:latest "$DATE_TAG"
 
   #----------------------------------------------------------------------------
   # NGINX IMAGE (Wolfi package + apko, shell-less)
@@ -506,10 +482,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko and crane
+      - name: Install apko
         run: |
           go install chainguard.dev/apko@latest
-          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -600,14 +575,9 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes \
+            cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:latest
 
-      - name: Tag dated version
-        if: github.event_name != 'pull_request'
-        run: |
-          DATE_TAG=$(date +%Y%m%d)
-          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:latest "$DATE_TAG"
 
   #----------------------------------------------------------------------------
   # HTTPD IMAGE (Wolfi package + apko, shell-less)
@@ -624,10 +594,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko and crane
+      - name: Install apko
         run: |
           go install chainguard.dev/apko@latest
-          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -724,14 +693,9 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes \
+            cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:latest
 
-      - name: Tag dated version
-        if: github.event_name != 'pull_request'
-        run: |
-          DATE_TAG=$(date +%Y%m%d)
-          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:latest "$DATE_TAG"
 
   #----------------------------------------------------------------------------
   # REDIS SLIM IMAGE (melange source build + apko)
@@ -748,11 +712,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install melange, apko, and crane
+      - name: Install melange and apko
         run: |
           go install chainguard.dev/melange@latest
           go install chainguard.dev/apko@latest
-          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -859,14 +822,9 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes \
+            cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:latest
 
-      - name: Tag dated version
-        if: github.event_name != 'pull_request'
-        run: |
-          DATE_TAG=$(date +%Y%m%d)
-          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:latest "$DATE_TAG"
 
   #----------------------------------------------------------------------------
   # POSTGRES SLIM IMAGE (Wolfi package + apko)
@@ -883,10 +841,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install apko and crane
+      - name: Install apko
         run: |
           go install chainguard.dev/apko@latest
-          go install github.com/google/go-containerregistry/cmd/crane@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -979,14 +936,9 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes \
+            cosign sign --yes --registry-referrers-mode=oci-1-1 \
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:latest
 
-      - name: Tag dated version
-        if: github.event_name != 'pull_request'
-        run: |
-          DATE_TAG=$(date +%Y%m%d)
-          crane tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:latest "$DATE_TAG"
 
   #----------------------------------------------------------------------------
   # SUMMARY
@@ -1021,15 +973,14 @@ jobs:
     permissions:
       packages: write
     steps:
-      - name: Delete .sig tagged versions
+      - name: Delete old untagged versions
         run: |
-          # Get all container packages for this user
           gh api "/users/${{ github.repository_owner }}/packages?package_type=container" \
             --paginate --jq '.[].name' 2>/dev/null | \
           while read -r pkg; do
-            echo "Cleaning .sig versions from $pkg..."
+            echo "Cleaning old versions from $pkg..."
             gh api "/users/${{ github.repository_owner }}/packages/container/$pkg/versions" \
-              --paginate --jq '.[] | select(.metadata.container.tags | any(endswith(".sig"))) | .id' 2>/dev/null | \
+              --paginate --jq '[.[] | select(.metadata.container.tags | length == 0)] | sort_by(.created_at) | reverse | .[10:] | .[].id' 2>/dev/null | \
             while read -r id; do
               echo "  Deleting version $id"
               gh api --method DELETE "/users/${{ github.repository_owner }}/packages/container/$pkg/versions/$id" 2>/dev/null || true
@@ -1037,67 +988,3 @@ jobs:
           done
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Delete old Python versions
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: minimal-python
-          package-type: 'container'
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
-
-      - name: Delete old Jenkins versions
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: minimal-jenkins
-          package-type: 'container'
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
-
-      - name: Delete old Node versions
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: minimal-node
-          package-type: 'container'
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
-
-      - name: Delete old Go versions
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: minimal-go
-          package-type: 'container'
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
-
-      - name: Delete old Nginx versions
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: minimal-nginx
-          package-type: 'container'
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
-
-      - name: Delete old HTTPD versions
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: minimal-httpd
-          package-type: 'container'
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
-
-      - name: Delete old Redis Slim versions
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: minimal-redis-slim
-          package-type: 'container'
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
-
-      - name: Delete old Postgres Slim versions
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: minimal-postgres-slim
-          package-type: 'container'
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
