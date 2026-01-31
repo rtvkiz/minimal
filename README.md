@@ -16,7 +16,7 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **Redis** | `docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest` | No | In-memory data store |
 | **PostgreSQL** | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
 
-*\*HTTPD,Jenkins,Node may include `/bin/sh` via transitive Wolfi dependencies. CI treats shell presence as informational.*
+*\*HTTPD, Jenkins,Node.js may include shell(sh,busybox) via transitive Wolfi dependencies. CI treats shell presence as informational.*
 
 ## Why This Matters
 
