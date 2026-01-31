@@ -4,16 +4,19 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 
 ## Available Images
 
-| Image | Size | Shell | Use Case |
-|-------|------|-------|----------|
-| **minimal-python** | ~25MB | No | Python applications, microservices, Lambda-style workloads |
-| **minimal-node** | ~50MB | Yes (same as chainguard)| Node.js applications, npm-based builds,  |
-| **minimal-go** | ~300MB | No | Go development, CGO-enabled builds |
-| **minimal-nginx** | ~15MB | No | Reverse proxy, static file serving, load balancing |
-| **minimal-jenkins** | ~250MB | Yes (same as chainguard) | CI/CD automation, Jenkins controller |
-| **minimal-httpd** | ~30MB | Yes (same as chainguard) | Apache HTTPD for static sites and reverse proxies |
-| **minimal-redis-slim** | ~15MB | No | Redis in-memory data store, caching, message broker |
-| **minimal-postgres-slim** | ~150MB | No | PostgreSQL relational database |
+| Image | Pull Command | Shell | Use Case |
+|-------|--------------|-------|----------|
+| **Python** | `docker pull ghcr.io/rtvkiz/minimal-python:latest` | No | Python apps, microservices |
+| **Node.js** | `docker pull ghcr.io/rtvkiz/minimal-node:latest` | Yes | Node.js apps, JavaScript |
+| **Bun** | `docker pull ghcr.io/rtvkiz/minimal-bun:latest` | No | Fast JavaScript/TypeScript runtime |
+| **Go** | `docker pull ghcr.io/rtvkiz/minimal-go:latest` | No | Go development, CGO builds |
+| **Nginx** | `docker pull ghcr.io/rtvkiz/minimal-nginx:latest` | No | Reverse proxy, static files |
+| **HTTPD** | `docker pull ghcr.io/rtvkiz/minimal-httpd:latest` | Maybe* | Apache web server |
+| **Jenkins** | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
+| **Redis** | `docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest` | No | In-memory data store |
+| **PostgreSQL** | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
+
+*\*HTTPD,Jenkins,Node may include `/bin/sh` via transitive Wolfi dependencies. CI treats shell presence as informational.*
 
 ## Why This Matters
 
@@ -43,189 +46,41 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-python:latest /app/main.py
 # Node.js - run your app
 docker run --rm -v $(pwd):/app -w /app ghcr.io/rtvkiz/minimal-node:latest index.js
 
-# Go - build and run
+# Bun - fast JavaScript runtime
+docker run --rm ghcr.io/rtvkiz/minimal-bun:latest --version
+
+# Go - build your app
 docker run --rm -v $(pwd):/app -w /app ghcr.io/rtvkiz/minimal-go:latest build -o /tmp/app .
 
 # Nginx - reverse proxy
 docker run -d -p 8080:80 ghcr.io/rtvkiz/minimal-nginx:latest
 
-# Jenkins - start controller
-docker run -p 8080:8080 ghcr.io/rtvkiz/minimal-jenkins:latest
-
 # HTTPD - serve static content
 docker run -d -p 8080:80 ghcr.io/rtvkiz/minimal-httpd:latest
+
+# Jenkins - CI/CD controller
+docker run -d -p 8080:8080 -v jenkins_home:/var/jenkins_home ghcr.io/rtvkiz/minimal-jenkins:latest
 
 # Redis - in-memory data store
 docker run -d -p 6379:6379 ghcr.io/rtvkiz/minimal-redis-slim:latest
 
 # PostgreSQL - relational database
-docker run -d -p 5432:5432 ghcr.io/rtvkiz/minimal-postgres-slim:latest
+docker run -d -p 5432:5432 -v pgdata:/var/lib/postgresql/data ghcr.io/rtvkiz/minimal-postgres-slim:latest
 ```
 
-## Image Details
+## Image Specifications
 
-### Python (`minimal-python`)
-
-Shell-less/distroless Python image using Wolfi's pre-built package.
-
-| Property | Value |
-|----------|-------|
-| Python | 3.13.x (latest) |
-| User | `nonroot` (65532) |
-| Workdir | `/app` |
-| Entrypoint | `/usr/bin/python3` |
-| Shell | None (distroless) |
-
-**Included:** Full stdlib, SSL/TLS, sqlite, zlib, bz2, lzma. **Not included:** pip, shell, package managers.
-
-```dockerfile
-FROM ghcr.io/rtvkiz/minimal-python:latest
-COPY --chown=nonroot:nonroot app.py /app/
-CMD ["/app/app.py"]
-```
-
-### Node.js (`minimal-node`)
-
-Shell-less Node.js image using Wolfi's pre-built package.
-
-| Property | Value |
-|----------|-------|
-| Node.js | 22.x (LTS) |
-| User | `nonroot` (65532) |
-| Workdir | `/app` |
-| Entrypoint | `/usr/bin/dumb-init -- /usr/bin/node` |
-| Shell | *Maybe through transitive dependencies|
-
-**Included:** dumb-init (proper signal handling), SSL/TLS. **Not included:** npm (use multi-stage builds), shell.
-
-```dockerfile
-FROM ghcr.io/rtvkiz/minimal-node:latest
-COPY --chown=nonroot:nonroot dist/ /app/
-CMD ["index.js"]
-```
-
-### Go (`minimal-go`)
-
-Shell-less Go development image with build tools, using Wolfi's pre-built package.
-
-| Property | Value |
-|----------|-------|
-| Go | 1.24.x (latest) |
-| User | `nonroot` (65532) |
-| Workdir | `/app` |
-| Entrypoint | `/usr/bin/go` |
-| CGO | Enabled |
-| Shell | None (distroless) |
-
-**Included:** gcc, make, git, openssh-client, linux-headers. **Not included:** shell.
-
-```dockerfile
-FROM ghcr.io/rtvkiz/minimal-go:latest AS builder
-COPY . /app/
-RUN go build -o /app/myapp .
-
-FROM ghcr.io/rtvkiz/minimal-python:latest  # or scratch
-COPY --from=builder /app/myapp /usr/local/bin/
-CMD ["/usr/local/bin/myapp"]
-```
-
-### Nginx (`minimal-nginx`)
-
-Shell-less Nginx image using Wolfi's pre-built package.
-
-| Property | Value |
-|----------|-------|
-| Nginx | mainline (Wolfi) |
-| User | `nginx` (65532) |
-| Workdir | `/` |
-| Entrypoint | `/usr/sbin/nginx -g "daemon off;"` |
-| Shell | None (distroless) |
-
-**Included:** Nginx mainline, SSL/TLS, PCRE, common modules.
-
-```dockerfile
-FROM ghcr.io/rtvkiz/minimal-nginx:latest
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY --chown=nginx:nginx html/ /var/lib/nginx/html/
-```
-
-### Jenkins (`minimal-jenkins`)
-
-Full-featured Jenkins controller with custom jlink JRE. **Includes shell** for plugin compatibility.
-
-| Property | Value |
-|----------|-------|
-| Jenkins | 2.541.x (LTS) |
-| Java | 21 (custom jlink JRE) |
-| User | `jenkins` (1000) |
-| Workdir | `/var/jenkins_home` |
-| Shell | Yes (coreutils, sed, grep, perl) |
-
-**Included:** git, git-lfs, openssh, curl, bash, coreutils, gnupg.
-
-```bash
-docker run -d -p 8080:8080 -v jenkins_home:/var/jenkins_home \
-  ghcr.io/rtvkiz/minimal-jenkins:latest
-```
-
-### HTTPD (`minimal-httpd`)
-
-Minimal Apache HTTPD image using Wolfi's pre-built package.
-
-| Property | Value |
-|----------|-------|
-| HTTPD | 2.4.x (Wolfi) |
-| User | `www-data` (65532) |
-| Workdir | `/var/www/localhost/htdocs` |
-| Entrypoint | `/usr/sbin/httpd -DFOREGROUND` |
-| Shell | Maybe* (see note below) |
-
-**Included:** Apache HTTPD, SSL/TLS, common modules, `/var/www/localhost/htdocs` as default docroot.
-
-```dockerfile
-FROM ghcr.io/rtvkiz/minimal-httpd:latest
-COPY --chown=www-data:www-data ./public /var/www/localhost/htdocs
-```
-
-**Note on `minimal-httpd` and `/bin/sh`:** Depending on upstream Wolfi package dependencies, Apache HTTPD images may include a minimal `/bin/sh`. Our CI gates `minimal-httpd` on **CVE scan + successful startup**, and treats shell presence as **informational**. This is what the `Shell` column `Yes*` refers to above.
-
-### Postgres Slim (`minimal-postgres-slim`)
-
-Minimal PostgreSQL image using Wolfi's pre-built package.
-
-| Property | Value |
-|----------|-------|
-| PostgreSQL | 18.x (Wolfi) |
-| User | `postgres` (70) |
-| Workdir | `/` |
-| Entrypoint | `/usr/bin/postgres` |
-| Shell | No |
-
-**Included:** PostgreSQL server, psql client, contrib extensions, pgaudit, ICU, LLVM JIT, SSL/TLS.
-
-```bash
-docker run -d -p 5432:5432 -v pgdata:/var/lib/postgresql/data \
-  ghcr.io/rtvkiz/minimal-postgres-slim:latest
-```
-
-### Redis Slim (`minimal-redis-slim`)
-
-Minimal Redis image built from source via melange.
-
-| Property | Value |
-|----------|-------|
-| Redis | 8.4.x (Wolfi) |
-| User | `redis` (65532) |
-| Workdir | `/` |
-| Entrypoint | `/usr/bin/redis-server` |
-| Shell | No |
-
-**Included:** Redis server, redis-cli, SSL/TLS.
-
-```bash
-docker run -d -p 6379:6379 -v redis_data:/data \
-  ghcr.io/rtvkiz/minimal-redis-slim:latest
-```
+| Image | Version | User | Entrypoint | Workdir |
+|-------|---------|------|------------|---------|
+| Python | 3.13.x | nonroot (65532) | `/usr/bin/python3` | `/app` |
+| Node.js | 22.x LTS | nonroot (65532) | `/usr/bin/dumb-init -- /usr/bin/node` | `/app` |
+| Bun | latest | nonroot (65532) | `/usr/bin/bun` | `/app` |
+| Go | 1.25.x | nonroot (65532) | `/usr/bin/go` | `/app` |
+| Nginx | mainline | nginx (65532) | `/usr/sbin/nginx -g "daemon off;"` | `/` |
+| HTTPD | 2.4.x | www-data (65532) | `/usr/sbin/httpd -DFOREGROUND` | `/var/www/localhost/htdocs` |
+| Jenkins | 2.541.x LTS | jenkins (1000) | `tini -- java -jar jenkins.war` | `/var/jenkins_home` |
+| Redis | 8.4.x | redis (65532) | `/usr/bin/redis-server` | `/` |
+| PostgreSQL | 18.x | postgres (70) | `/usr/bin/postgres` | `/` |
 
 ## How Images Are Built
 
@@ -246,29 +101,14 @@ docker run -d -p 6379:6379 -v redis_data:/data \
 │                                 │                       │          │
 │  ┌─────────────┐                │                       ▼          │
 │  │   melange   │────────────────┘              ┌────────────────┐  │
-│  │ (Jenkins    │  build from                   │ cosign + SBOM  │  │
-│  │  only)      │  source                       │ (sign & publish│  │
+│  │ (Jenkins,   │  build from                   │ cosign + SBOM  │  │
+│  │  Redis)     │  source                       │ (sign & publish│  │
 │  └─────────────┘                               └────────────────┘  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Package Sources
-
-| Image | Source | Build Time |
-|-------|--------|------------|
-| Python | Wolfi pre-built package | ~30 sec |
-| Go | Wolfi pre-built package | ~30 sec |
-| Node.js | Wolfi pre-built package | ~30 sec |
-| Nginx | Wolfi pre-built package | ~30 sec |
-| HTTPD | Wolfi pre-built package | ~30 sec |
-| Postgres Slim | Wolfi pre-built package | ~30 sec |
-| Redis Slim | Source build via melange | ~5 min |
-| Jenkins | jlink JRE + WAR via melange | ~10 min |
-
 ### Update Schedule
-
-Images are rebuilt automatically:
 
 | Trigger | When | Purpose |
 |---------|------|---------|
@@ -278,20 +118,12 @@ Images are rebuilt automatically:
 
 All builds must pass a CVE gate (no CRITICAL/HIGH severity vulnerabilities) before publishing.
 
-### Version Updates
-
-| Type | Frequency | Action |
-|------|-----------|--------|
-| **Patch versions** | Automatic (daily rebuild) | Wolfi packages updated automatically |
-| **Minor/major versions** | Weekly check | PR opened for review (Python, Go, Node.js) |
-| **Jenkins LTS** | Daily check | PR opened for review |
-
 ## Build Locally
 
 ```bash
 # Prerequisites
 go install chainguard.dev/apko@latest
-go install chainguard.dev/melange@latest  # only needed for Jenkins
+go install chainguard.dev/melange@latest  # needed for Jenkins, Redis
 brew install trivy  # or: apt install trivy
 
 # Build all images
@@ -300,10 +132,11 @@ make build
 # Build specific image
 make python
 make node
+make bun
 make go
 make nginx
-make jenkins
 make httpd
+make jenkins
 make redis-slim
 make postgres-slim
 
@@ -318,30 +151,26 @@ make test
 
 ```
 minimal/
-├── python/
-│   └── apko/python.yaml      # Image definition (uses Wolfi pkg)
-├── node/
-│   └── apko/node.yaml        # Image definition (uses Wolfi pkg)
-├── go/
-│   └── apko/go.yaml          # Image definition (uses Wolfi pkg)
-├── nginx/
-│   └── apko/nginx.yaml       # Image definition (uses Wolfi pkg)
+├── python/apko/python.yaml       # Python image (Wolfi pkg)
+├── node/apko/node.yaml           # Node.js image (Wolfi pkg)
+├── bun/apko/bun.yaml             # Bun image (Wolfi pkg)
+├── go/apko/go.yaml               # Go image (Wolfi pkg)
+├── nginx/apko/nginx.yaml         # Nginx image (Wolfi pkg)
+├── httpd/apko/httpd.yaml         # HTTPD image (Wolfi pkg)
 ├── jenkins/
-│   ├── apko/jenkins.yaml
-│   └── melange.yaml          # Source build recipe (jlink JRE)
-├── httpd/
-│   └── apko/httpd.yaml       # Image definition (uses Wolfi pkg)
+│   ├── apko/jenkins.yaml         # Jenkins image
+│   └── melange.yaml              # jlink JRE build
 ├── redis-slim/
-│   ├── apko/redis.yaml        # Image definition
-│   └── melange.yaml           # Source build recipe (Redis)
-├── postgres-slim/
-│   └── apko/postgres.yaml     # Image definition (uses Wolfi pkg)
+│   ├── apko/redis.yaml           # Redis image
+│   └── melange.yaml              # Redis source build
+├── postgres-slim/apko/postgres.yaml  # PostgreSQL image (Wolfi pkg)
 ├── .github/workflows/
-│   ├── build.yml             # Daily CI pipeline
-│   ├── update-jenkins.yml    # Jenkins version updates
-│   ├── update-redis.yml      # Redis version updates
-│   └── update-wolfi-packages.yml  # Wolfi package updates
-└── Makefile
+│   ├── build.yml                 # Daily CI pipeline
+│   ├── update-jenkins.yml        # Jenkins version updates
+│   ├── update-redis.yml          # Redis version updates
+│   └── update-wolfi-packages.yml # Wolfi package updates
+├── Makefile
+└── LICENSE
 ```
 
 ## Security Features
@@ -351,7 +180,7 @@ minimal/
 - **SBOM generation** - Full software bill of materials in SPDX format
 - **Non-root users** - All images run as non-root by default
 - **Minimal attack surface** - Only essential packages included
-- **Shell-less images** - Python, Node.js, Go, and Nginx have no shell
+- **Shell-less images** - Most images have no shell
 - **Reproducible builds** - Declarative apko configurations
 
 ## Verify Image Signatures
