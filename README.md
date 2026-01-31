@@ -94,7 +94,7 @@ Shell-less Node.js image using Wolfi's pre-built package.
 | User | `nonroot` (65532) |
 | Workdir | `/app` |
 | Entrypoint | `/usr/bin/dumb-init -- /usr/bin/node` |
-| Shell | None (distroless) |
+| Shell | *Maybe through transitive dependencies|
 
 **Included:** dumb-init (proper signal handling), SSL/TLS. **Not included:** npm (use multi-stage builds), shell.
 
