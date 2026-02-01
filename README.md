@@ -72,8 +72,8 @@ docker run -d -p 5432:5432 -v pgdata:/var/lib/postgresql/data ghcr.io/rtvkiz/min
 
 | Image | Version | User | Entrypoint | Workdir |
 |-------|---------|------|------------|---------|
-| Python | 3.13.x | nonroot (65532) | `/usr/bin/python3` | `/app` |
-| Node.js | 22.x LTS | nonroot (65532) | `/usr/bin/dumb-init -- /usr/bin/node` | `/app` |
+| Python | 3.14.x | nonroot (65532) | `/usr/bin/python3` | `/app` |
+| Node.js | 25.x | nonroot (65532) | `/usr/bin/dumb-init -- /usr/bin/node` | `/app` |
 | Bun | latest | nonroot (65532) | `/usr/bin/bun` | `/app` |
 | Go | 1.25.x | nonroot (65532) | `/usr/bin/go` | `/app` |
 | Nginx | mainline | nginx (65532) | `/usr/sbin/nginx -g "daemon off;"` | `/` |
