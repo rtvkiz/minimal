@@ -25,11 +25,11 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 
 ```
 Traditional images:     Your containers:
-┌──────────────────┐    ┌──────────────────┐
-│ debian:latest    │    │ minimal-python   │
-│ 127 CVEs         │    │ 0-5 CVEs         │
-│ Patched: ~30 days│    │ Patched: <48 hrs │
-└──────────────────┘    └──────────────────┘
+┌───────────────────┐    ┌──────────────────┐
+│ debian:latest     │    │ minimal-python   │
+│ 127 CVEs          │    │ 0-5 CVEs         │
+│ Patched: ~30 days │    │ Patched: <48 hrs │
+└───────────────────┘    └──────────────────┘
 ```
 
 **Impact:**
@@ -97,18 +97,18 @@ docker run --rm -v $(pwd):/data ghcr.io/rtvkiz/minimal-sqlite:latest /data/mydb.
 │  Package Source            Image Assembly           Verification    │
 │  ──────────────           ──────────────           ──────────────   │
 │                                                                     │
-│  ┌─────────────┐          ┌────────────┐          ┌────────────┐   │
-│  │   Wolfi     │─────────▶│    apko    │─────────▶│   Trivy    │   │
-│  │ (pre-built) │  install │ (OCI image)│  scan    │ (CVE gate) │   │
-│  │ Python, Go, │          │            │          │            │   │
-│  │ Node, etc.  │          │            │          │            │   │
-│  └─────────────┘          └─────┬──────┘          └─────┬──────┘   │
-│                                 │                       │          │
-│  ┌─────────────┐                │                       ▼          │
-│  │   melange   │────────────────┘              ┌────────────────┐  │
-│  │ (Jenkins,   │  build from                   │ cosign + SBOM  │  │
-│  │  Redis)     │  source                       │ (sign & publish│  │
-│  └─────────────┘                               └────────────────┘  │
+│  ┌─────────────┐          ┌────────────┐          ┌─────────────┐   │
+│  │   Wolfi     │─────────▶│    apko    │─────────▶│   Trivy     │   │
+│  │ (pre-built) │  install │ (OCI image)│  scan    │ (CVE gate)  │   │
+│  │ Python, Go, │          │            │          │             │   │
+│  │ Node, etc.  │          │            │          │             │   │
+│  └─────────────┘          └─────┬──────┘          └─────┬───────┘   │
+│                                 │                       │           │
+│  ┌─────────────┐                │                       ▼           │
+│  │   melange   │────────────────┘              ┌─────────────────┐  │
+│  │ (Jenkins,   │  build from                   │ cosign + SBOM   │  │
+│  │  Redis)     │  source                       │ (sign & publish │  │
+│  └─────────────┘                               └─────────────────┘  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
