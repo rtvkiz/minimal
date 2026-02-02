@@ -15,6 +15,7 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **Jenkins** | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
 | **Redis-slim** | `docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest` | No | In-memory data store |
 | **PostgreSQL-slim** | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
+| **SQLite** | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
 
 *\*HTTPD, Jenkins,Node.js may include shell(sh,busybox) via transitive Wolfi dependencies. CI treats shell presence as informational.*
 
@@ -66,6 +67,9 @@ docker run -d -p 6379:6379 ghcr.io/rtvkiz/minimal-redis-slim:latest
 
 # PostgreSQL - relational database
 docker run -d -p 5432:5432 -v pgdata:/var/lib/postgresql/data ghcr.io/rtvkiz/minimal-postgres-slim:latest
+
+# SQLite - embedded SQL database
+docker run --rm -v $(pwd):/data ghcr.io/rtvkiz/minimal-sqlite:latest /data/mydb.sqlite "SELECT sqlite_version();"
 ```
 
 ## Image Specifications
@@ -81,6 +85,7 @@ docker run -d -p 5432:5432 -v pgdata:/var/lib/postgresql/data ghcr.io/rtvkiz/min
 | Jenkins | 2.541.x LTS | jenkins (1000) | `tini -- java -jar jenkins.war` | `/var/jenkins_home` |
 | Redis | 8.4.x | redis (65532) | `/usr/bin/redis-server` | `/` |
 | PostgreSQL | 18.x | postgres (70) | `/usr/bin/postgres` | `/` |
+| SQLite | 3.51.x | nonroot (65532) | `/usr/bin/sqlite3` | `/data` |
 
 ## How Images Are Built
 
@@ -139,6 +144,7 @@ make httpd
 make jenkins
 make redis-slim
 make postgres-slim
+make sqlite
 
 # Scan for CVEs
 make scan
@@ -164,6 +170,7 @@ minimal/
 │   ├── apko/redis.yaml           # Redis image
 │   └── melange.yaml              # Redis source build
 ├── postgres-slim/apko/postgres.yaml  # PostgreSQL image (Wolfi pkg)
+├── sqlite/apko/sqlite.yaml          # SQLite image (Wolfi pkg)
 ├── .github/workflows/
 │   ├── build.yml                 # Daily CI pipeline
 │   ├── update-jenkins.yml        # Jenkins version updates

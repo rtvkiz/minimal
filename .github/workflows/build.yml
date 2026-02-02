@@ -13,6 +13,7 @@ on:
       - 'redis-slim/**'
       - 'postgres-slim/**'
       - 'bun/**'
+      - 'sqlite/**'
       - '.github/workflows/build.yml'
   pull_request:
     branches: [main]
@@ -1043,10 +1044,114 @@ jobs:
               ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:latest
 
   #----------------------------------------------------------------------------
+  # SQLITE IMAGE (Wolfi package + apko, shell-less)
+  #----------------------------------------------------------------------------
+  build-sqlite:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install apko
+        run: |
+          go install chainguard.dev/apko@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Setup cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build SQLite image with apko
+        run: |
+          apko build sqlite/apko/sqlite.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:${{ github.sha }} \
+            sqlite.tar \
+            --arch x86_64
+          docker load < sqlite.tar
+          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-sqlite | head -1)
+          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:${{ github.sha }}
+
+      - name: Report image size
+        run: |
+          echo "## SQLite Image Size" >> $GITHUB_STEP_SUMMARY
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
+            grep minimal-sqlite >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Scan SQLite image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:${{ github.sha }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          exit-code: '0'
+          cache: 'false'
+
+      - name: Fail on CVEs
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-sqlite.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          cache: 'false'
+
+      - name: Upload scan results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: 'trivy-sqlite.sarif'
+
+      - name: Test SQLite image
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:${{ github.sha }}"
+          echo "Testing SQLite version..."
+          docker run --rm "$IMAGE" --version
+          echo "Testing in-memory query..."
+          docker run --rm "$IMAGE" :memory: "SELECT 1;"
+          echo "Testing file-based DB..."
+          docker run --rm "$IMAGE" /tmp/test.db "CREATE TABLE t(x); INSERT INTO t VALUES(1); SELECT * FROM t;"
+          echo "Verifying no shell..."
+          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
+            && echo "::error::Shell found in image!" && exit 1 \
+            || echo "No shell confirmed"
+
+      - name: Publish SQLite image
+        if: github.event_name != 'pull_request'
+        run: |
+          apko publish sqlite/apko/sqlite.yaml \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:latest \
+            --arch x86_64
+
+      - name: Sign image with cosign
+        if: github.event_name != 'pull_request'
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            cosign sign --yes \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:latest
+
+  #----------------------------------------------------------------------------
   # SUMMARY
   #----------------------------------------------------------------------------
   summary:
-    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim, build-postgres-slim, build-bun]
+    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim, build-postgres-slim, build-bun, build-sqlite]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -1060,7 +1165,8 @@ jobs:
              [ "${{ needs.build-httpd.result }}" != "success" ] || \
              [ "${{ needs.build-redis-slim.result }}" != "success" ] || \
              [ "${{ needs.build-postgres-slim.result }}" != "success" ] || \
-             [ "${{ needs.build-bun.result }}" != "success" ]; then
+             [ "${{ needs.build-bun.result }}" != "success" ] || \
+             [ "${{ needs.build-sqlite.result }}" != "success" ]; then
             echo "::error::One or more images failed"
             exit 1
           fi
@@ -1070,7 +1176,7 @@ jobs:
   # CLEANUP OLD VERSIONS
   #----------------------------------------------------------------------------
   cleanup:
-    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim, build-postgres-slim, build-bun]
+    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim, build-postgres-slim, build-bun, build-sqlite]
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
     permissions:

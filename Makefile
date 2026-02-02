@@ -11,13 +11,13 @@ HTTPD_VERSION ?= 2.4.66
 REDIS_VERSION ?= 8.4.0
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go nginx httpd redis-slim redis-slim-melange postgres-slim bun keygen
-.PHONY: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun
+.PHONY: python jenkins jenkins-melange go nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite keygen
+.PHONY: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite
 
 all: build scan
 
 # Build all images
-build: python jenkins go nginx httpd redis-slim postgres-slim bun
+build: python jenkins go nginx httpd redis-slim postgres-slim bun sqlite
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -184,9 +184,26 @@ bun:
 	@echo "✓ minimal-bun built (Wolfi package, shell-less)"
 
 #------------------------------------------------------------------------------
+# SQLITE IMAGE (Wolfi pre-built package, shell-less)
+#------------------------------------------------------------------------------
+sqlite:
+	@echo "Assembling minimal-sqlite image with apko..."
+	apko build sqlite/apko/sqlite.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-sqlite:$(VERSION) \
+		sqlite.tar \
+		--arch x86_64
+	docker load < sqlite.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-sqlite:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-sqlite:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-sqlite:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-sqlite:latest
+	@rm -f sqlite.tar sbom-*.spdx.json
+	@echo "✓ minimal-sqlite built (Wolfi package, shell-less)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun
+scan: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -236,6 +253,12 @@ scan-bun:
 		$(REGISTRY)/$(OWNER)/minimal-bun:latest
 	@echo "✓ minimal-bun: scan passed"
 
+scan-sqlite:
+	@echo "Scanning minimal-sqlite..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-sqlite:latest
+	@echo "✓ minimal-sqlite: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -255,6 +278,8 @@ scan-all:
 		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-bun:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-sqlite:latest
 
 #------------------------------------------------------------------------------
 # IMAGE SIZE REPORT
@@ -262,12 +287,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-redis-slim|minimal-postgres-slim|minimal-bun)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-redis-slim|minimal-postgres-slim|minimal-bun|minimal-sqlite)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node test-nginx test-httpd test-redis-slim test-postgres-slim test-bun
+test: test-python test-jenkins test-go test-node test-nginx test-httpd test-redis-slim test-postgres-slim test-bun test-sqlite
 
 test-python:
 	@echo "Testing Python image..."
@@ -394,6 +419,19 @@ test-bun:
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
 	@echo "✓ Bun tests passed"
 
+test-sqlite:
+	@echo "Testing SQLite image..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-sqlite:latest --version
+	@echo "Testing in-memory query..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-sqlite:latest :memory: "SELECT 1;"
+	@echo "Testing file-based DB..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-sqlite:latest /tmp/test.db \
+		"CREATE TABLE t(x); INSERT INTO t VALUES(1); SELECT * FROM t;"
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-sqlite:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ SQLite tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -414,6 +452,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-bun:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-sqlite:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-sqlite:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -444,6 +484,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-bun:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-sqlite:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-sqlite:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-sqlite:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -467,6 +510,7 @@ help:
 	@echo "  make redis-slim      Build Redis Slim $(REDIS_VERSION) (source build)"
 	@echo "  make postgres-slim   Build Postgres Slim (Wolfi package)"
 	@echo "  make bun             Build Bun (Wolfi package)"
+	@echo "  make sqlite          Build SQLite (Wolfi package)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"
