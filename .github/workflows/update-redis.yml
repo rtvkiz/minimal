@@ -45,21 +45,32 @@ jobs:
             echo "Already up to date"
           fi
 
-      - name: Update version in all files
+      - name: Update version and checksum in all files
         if: steps.check.outputs.update_available == 'true'
         run: |
           VERSION="${{ steps.check.outputs.new_version }}"
           echo "Updating to Redis $VERSION"
 
-          # Update redis-slim/melange.yaml
+          # Download tarball and compute SHA256 checksum
+          echo "Downloading Redis $VERSION tarball..."
+          curl -fsSL "https://github.com/redis/redis/archive/refs/tags/${VERSION}.tar.gz" \
+            -o /tmp/redis.tar.gz
+          SHA256=$(sha256sum /tmp/redis.tar.gz | awk '{print $1}')
+          rm /tmp/redis.tar.gz
+          echo "SHA256: $SHA256"
+
+          # Update redis-slim/melange.yaml - version
           sed -i "s/^  version: .*/  version: $VERSION/" redis-slim/melange.yaml
+
+          # Update redis-slim/melange.yaml - checksum
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" redis-slim/melange.yaml
 
           # Update Makefile
           sed -i "s/REDIS_VERSION ?= .*/REDIS_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== redis-slim/melange.yaml ==="
-          grep 'version:' redis-slim/melange.yaml | head -1
+          grep -E '(version:|sha256:)' redis-slim/melange.yaml | head -2
           echo "=== Makefile ==="
           grep 'REDIS_VERSION' Makefile
 
@@ -76,7 +87,7 @@ jobs:
 
             ## Changes
 
-            - `redis-slim/melange.yaml` - package version
+            - `redis-slim/melange.yaml` - package version and SHA256 checksum
             - `Makefile` - REDIS_VERSION variable
 
             ## Links

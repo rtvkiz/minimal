@@ -11,13 +11,13 @@ HTTPD_VERSION ?= 2.4.66
 REDIS_VERSION ?= 8.4.0
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite keygen
-.PHONY: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite
+.PHONY: python jenkins jenkins-melange go node nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite keygen
+.PHONY: scan-python scan-jenkins scan-go scan-node scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite
 
 all: build scan
 
 # Build all images
-build: python jenkins go nginx httpd redis-slim postgres-slim bun sqlite
+build: python jenkins go node nginx httpd redis-slim postgres-slim bun sqlite
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -88,6 +88,23 @@ go:
 		$(REGISTRY)/$(OWNER)/minimal-go:latest
 	@rm -f go.tar sbom-*.spdx.json
 	@echo "✓ minimal-go built (Wolfi package, with build tools)"
+
+#------------------------------------------------------------------------------
+# NODE.JS IMAGE (Wolfi pre-built package)
+#------------------------------------------------------------------------------
+node:
+	@echo "Assembling minimal-node image with apko..."
+	apko build node/apko/node.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-node:$(VERSION) \
+		node.tar \
+		--arch x86_64
+	docker load < node.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-node:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-node:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-node:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-node:latest
+	@rm -f node.tar sbom-*.spdx.json
+	@echo "✓ minimal-node built (Wolfi package)"
 
 #------------------------------------------------------------------------------
 # NGINX IMAGE (Wolfi pre-built package, shell-less)
@@ -203,7 +220,7 @@ sqlite:
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite
+scan: scan-python scan-jenkins scan-go scan-node scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -222,6 +239,12 @@ scan-go:
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-go:latest
 	@echo "✓ minimal-go: scan passed"
+
+scan-node:
+	@echo "Scanning minimal-node..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-node:latest
+	@echo "✓ minimal-node: scan passed"
 
 scan-nginx:
 	@echo "Scanning minimal-nginx..."
@@ -269,6 +292,8 @@ scan-all:
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-go:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-node:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-nginx:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-httpd:latest
@@ -287,7 +312,7 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-redis-slim|minimal-postgres-slim|minimal-bun|minimal-sqlite)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-postgres-slim|minimal-bun|minimal-sqlite)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
@@ -442,6 +467,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-jenkins:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-go:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-node:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-node:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-nginx:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION)
@@ -469,6 +496,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-go:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-node:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-node:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-node:latest 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-nginx:latest 2>/dev/null || true
@@ -503,6 +533,7 @@ help:
 	@echo "Images:"
 	@echo "  make python          Build Python (Wolfi package)"
 	@echo "  make go              Build Go (Wolfi package)"
+	@echo "  make node            Build Node.js (Wolfi package)"
 	@echo "  make jenkins         Build Jenkins $(JENKINS_VERSION) (jlink JRE)"
 	@echo "  make jenkins-melange Build Jenkins package only (no image)"
 	@echo "  make nginx           Build Nginx $(NGINX_VERSION) (Wolfi package)"
