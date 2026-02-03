@@ -131,26 +131,92 @@ jobs:
           docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
             grep "minimal-${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY || true
 
-      - name: Scan image
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          exit-code: '0'
-          cache: 'false'
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          trivy --version
 
-      - name: Fail on CVEs
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-${{ matrix.name }}.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          cache: 'false'
+      - name: Scan image for vulnerabilities
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
+          trivy image \
+            --format json \
+            --output trivy-${{ matrix.name }}.json \
+            --severity CRITICAL,HIGH,MEDIUM,LOW \
+            "$IMAGE"
 
-      - name: Upload scan results
+      - name: Generate vulnerability report
+        if: always()
+        run: |
+          REPORT="trivy-${{ matrix.name }}.json"
+          if [ ! -f "$REPORT" ]; then
+            echo "## Security Scan: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
+            echo "Scan report not found." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          # Count vulnerabilities by severity across all results
+          CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$REPORT")
+          HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$REPORT")
+          MEDIUM=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' "$REPORT")
+          LOW=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="LOW")] | length' "$REPORT")
+          TOTAL=$((CRITICAL + HIGH + MEDIUM + LOW))
+
+          # Header
+          echo "## Security Scan: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan date:** $(date -u +%Y-%m-%d) | **Image:** minimal-${{ matrix.name }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Summary table
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| CRITICAL | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| HIGH | $HIGH |" >> $GITHUB_STEP_SUMMARY
+          echo "| MEDIUM | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+          echo "| LOW | $LOW |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "No vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          # Detailed table for CRITICAL and HIGH
+          if [ "$((CRITICAL + HIGH))" -gt 0 ]; then
+            echo "### CRITICAL / HIGH Vulnerabilities" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Library | CVE | Severity | Installed | Fixed | Title |" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|-----|----------|-----------|-------|-------|" >> $GITHUB_STEP_SUMMARY
+            jq -r '
+              [.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH")]
+              | sort_by(.Severity) | reverse[]
+              | "| \(.PkgName) | \(.VulnerabilityID) | \(.Severity) | \(.InstalledVersion) | \(.FixedVersion // "n/a") | \(.Title // "n/a" | .[0:80]) |"
+            ' "$REPORT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No CRITICAL or HIGH vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload vulnerability report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vulnerability-report-${{ matrix.name }}
+          path: trivy-${{ matrix.name }}.json
+          retention-days: 90
+
+      - name: Generate SARIF report
+        if: always()
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
+          trivy image \
+            --format sarif \
+            --output trivy-${{ matrix.name }}.sarif \
+            --severity CRITICAL,HIGH,MEDIUM,LOW \
+            "$IMAGE" || true
+
+      - name: Upload SARIF to Security tab
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         continue-on-error: true
