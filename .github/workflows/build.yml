@@ -4,16 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'python/**'
-      - 'jenkins/**'
-      - 'node/**'
-      - 'go/**'
-      - 'nginx/**'
-      - 'httpd/**'
-      - 'redis-slim/**'
-      - 'postgres-slim/**'
-      - 'bun/**'
-      - 'sqlite/**'
+      - '*/apko/*.yaml'
+      - '*/melange.yaml'
+      - '*/test.sh'
       - '.github/workflows/build.yml'
   pull_request:
     branches: [main]
@@ -22,21 +15,63 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   JENKINS_VERSION: "2.541.1"
 
 jobs:
   #----------------------------------------------------------------------------
-  # PYTHON IMAGE (Wolfi package + apko, shell-less)
+  # BUILD ALL IMAGES (matrix-driven)
   #----------------------------------------------------------------------------
-  build-python:
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
       security-events: write
       id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: python
+            apko_config: python/apko/python.yaml
+            build_type: apko
+          - name: jenkins
+            apko_config: jenkins/apko/jenkins.yaml
+            melange_config: jenkins/melange.yaml
+            build_type: melange
+          - name: node
+            apko_config: node/apko/node.yaml
+            build_type: apko
+          - name: go
+            apko_config: go/apko/go.yaml
+            build_type: apko
+          - name: nginx
+            apko_config: nginx/apko/nginx.yaml
+            build_type: apko
+          - name: httpd
+            apko_config: httpd/apko/httpd.yaml
+            build_type: apko
+          - name: redis-slim
+            apko_config: redis-slim/apko/redis.yaml
+            melange_config: redis-slim/melange.yaml
+            build_type: melange
+          - name: postgres-slim
+            apko_config: postgres-slim/apko/postgres.yaml
+            build_type: apko
+          - name: bun
+            apko_config: bun/apko/bun.yaml
+            build_type: apko
+          - name: sqlite
+            apko_config: sqlite/apko/sqlite.yaml
+            build_type: apko
 
     steps:
       - name: Checkout repository
@@ -47,111 +82,9 @@ jobs:
           go install chainguard.dev/apko@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
-      - name: Setup cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Python image with apko
-        run: |
-          apko build python/apko/python.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }} \
-            python.tar \
-            --arch x86_64
-          docker load < python.tar
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-python | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }}
-
-      - name: Report image size
-        run: |
-          echo "## Python Image Size" >> $GITHUB_STEP_SUMMARY
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep minimal-python >> $GITHUB_STEP_SUMMARY || true
-
-      - name: Scan Python image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }}
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          exit-code: '0'
-          cache: 'false'
-
-      - name: Fail on CVEs
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-python.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          cache: 'false'
-
-      - name: Upload scan results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        continue-on-error: true
-        with:
-          sarif_file: 'trivy-python.sarif'
-
-      - name: Test Python image
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:${{ github.sha }}"
-          echo "Testing Python interpreter..."
-          docker run --rm "$IMAGE" -c "import sys; print(f'Python {sys.version}')"
-          echo "Testing TLS/SSL..."
-          docker run --rm "$IMAGE" -c "import ssl; print('TLS OK:', ssl.OPENSSL_VERSION)"
-          echo "Testing stdlib modules..."
-          docker run --rm "$IMAGE" -c "import json, hashlib, http.client; print('stdlib OK')"
-          echo "Verifying no shell..."
-          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
-            && echo "::error::Shell found in image!" && exit 1 \
-            || echo "No shell confirmed"
-
-      - name: Publish Python image
-        if: github.event_name != 'pull_request'
-        run: |
-          apko publish python/apko/python.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest \
-            --arch x86_64
-
-      - name: Sign image with cosign
-        if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          command: |
-            cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-python:latest
-
-
-  #----------------------------------------------------------------------------
-  # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
-  #----------------------------------------------------------------------------
-  build-jenkins:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install melange and apko
-        run: |
-          go install chainguard.dev/melange@latest
-          go install chainguard.dev/apko@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
+      - name: Install melange
+        if: matrix.build_type == 'melange'
+        run: go install chainguard.dev/melange@latest
 
       - name: Setup cosign
         uses: sigstore/cosign-installer@v3
@@ -165,616 +98,54 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate melange signing key
+        if: matrix.build_type == 'melange'
         run: melange keygen
 
-      - name: Build Jenkins with melange (jlink JRE + WAR)
+      - name: Build package with melange
+        if: matrix.build_type == 'melange'
         run: |
-          melange build jenkins/melange.yaml \
+          melange build ${{ matrix.melange_config }} \
             --arch x86_64 \
             --signing-key melange.rsa \
             --out-dir ./packages \
             --runner docker
 
-      - name: Build Jenkins image with apko
+      - name: Build image with apko
         run: |
-          apko build jenkins/apko/jenkins.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:${{ github.sha }} \
-            jenkins.tar \
-            --arch x86_64 \
-            --repository-append ./packages \
-            --keyring-append ${{ github.workspace }}/melange.rsa.pub
-          docker load < jenkins.tar
-          # Tag the loaded image with our expected tag
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-jenkins | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:${{ github.sha }}
-
-      - name: Report image size
-        run: |
-          echo "## Jenkins Image Size" >> $GITHUB_STEP_SUMMARY
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep minimal-jenkins >> $GITHUB_STEP_SUMMARY || true
-
-      - name: Scan Jenkins image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:${{ github.sha }}
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          exit-code: '0'
-          cache: 'false'
-
-      - name: Fail on CVEs
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-jenkins.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          cache: 'false'
-
-      - name: Upload scan results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        continue-on-error: true
-        with:
-          sarif_file: 'trivy-jenkins.sarif'
-
-      - name: Test Jenkins image
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:${{ github.sha }}"
-          echo "Testing Java version..."
-          docker run --rm --entrypoint /usr/bin/java "$IMAGE" -version
-          echo "Testing Jenkins WAR..."
-          docker run --rm --entrypoint /usr/bin/java "$IMAGE" \
-            -jar /usr/share/jenkins/jenkins.war --version
-          echo "Verifying no shell..."
-          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
-            && echo "::error::Shell found in image!" && exit 1 \
-            || echo "No shell confirmed"
-          echo "Verifying git is present..."
-          docker run --rm --entrypoint /usr/bin/git "$IMAGE" --version
-          echo "Verifying core utils..."
-          docker run --rm --entrypoint /bin/ls "$IMAGE" /usr/bin/java
-
-      - name: Publish Jenkins image
-        if: github.event_name != 'pull_request'
-        run: |
-          apko publish jenkins/apko/jenkins.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest \
-            --arch x86_64 \
-            --repository-append ./packages \
-            --keyring-append ${{ github.workspace }}/melange.rsa.pub
-
-      - name: Sign image with cosign
-        if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          command: |
-            cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-jenkins:latest
-
-
-  #----------------------------------------------------------------------------
-  # NODE.JS IMAGE (Wolfi package + apko) - Fast build using pre-built package
-  #----------------------------------------------------------------------------
-  build-node:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install apko
-        run: |
-          go install chainguard.dev/apko@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-
-      - name: Setup cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Node.js image with apko
-        run: |
-          apko build node/apko/node.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:${{ github.sha }} \
-            node.tar \
-            --arch x86_64
-          docker load < node.tar
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-node | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:${{ github.sha }}
-
-      - name: Report image size
-        run: |
-          echo "## Node Image Size" >> $GITHUB_STEP_SUMMARY
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep minimal-node >> $GITHUB_STEP_SUMMARY || true
-
-      - name: Scan Node.js image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:${{ github.sha }}
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          exit-code: '0'
-          cache: 'false'
-
-      - name: Fail on CVEs
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-node.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          cache: 'false'
-
-      - name: Upload scan results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        continue-on-error: true
-        with:
-          sarif_file: 'trivy-node.sarif'
-
-      - name: Test Node.js image
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:${{ github.sha }}"
-          echo "Testing Node version..."
-          docker run --rm "$IMAGE" --version
-          echo "Testing simple script..."
-          docker run --rm "$IMAGE" -e 'console.log("Hello minimal node")'
-          echo "Verifying no shell..."
-          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
-            && echo "::error::Shell found in image!" && exit 1 \
-            || echo "No shell confirmed"
-
-      - name: Publish Node.js image
-        if: github.event_name != 'pull_request'
-        run: |
-          apko publish node/apko/node.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:latest \
-            --arch x86_64
-
-      - name: Sign image with cosign
-        if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          command: |
-            cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-node:latest
-
-
-  #----------------------------------------------------------------------------
-  # GO IMAGE (Wolfi package + apko, with build tools)
-  #----------------------------------------------------------------------------
-  build-go:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install apko
-        run: |
-          go install chainguard.dev/apko@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-
-      - name: Setup cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Go image with apko
-        run: |
-          apko build go/apko/go.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:${{ github.sha }} \
-            go.tar \
-            --arch x86_64
-          docker load < go.tar
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-go | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:${{ github.sha }}
-
-      - name: Report image size
-        run: |
-          echo "## Go Image Size" >> $GITHUB_STEP_SUMMARY
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep minimal-go >> $GITHUB_STEP_SUMMARY || true
-
-      - name: Scan Go image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:${{ github.sha }}
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          exit-code: '0'
-          cache: 'false'
-
-      - name: Fail on CVEs
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-go.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          cache: 'false'
-
-      - name: Upload scan results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        continue-on-error: true
-        with:
-          sarif_file: 'trivy-go.sarif'
-
-      - name: Test Go image
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:${{ github.sha }}"
-          echo "Testing Go version..."
-          docker run --rm "$IMAGE" version
-          echo "Testing Go build tools..."
-          docker run --rm --entrypoint /usr/bin/gcc "$IMAGE" --version | head -1
-          docker run --rm --entrypoint /usr/bin/make "$IMAGE" --version
-          echo "Testing git..."
-          docker run --rm --entrypoint /usr/bin/git "$IMAGE" --version
-          echo "Testing simple Go program..."
-          echo 'package main; import "fmt"; func main() { fmt.Println("Hello from minimal-go") }' > /tmp/test.go
-          docker run --rm -v /tmp:/app -w /app "$IMAGE" run test.go || echo "Note: Go run test completed"
-          echo "Verifying no shell..."
-          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
-            && echo "::error::Shell found in image!" && exit 1 \
-            || echo "No shell confirmed"
-
-      - name: Publish Go image
-        if: github.event_name != 'pull_request'
-        run: |
-          apko publish go/apko/go.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:latest \
-            --arch x86_64
-
-      - name: Sign image with cosign
-        if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          command: |
-            cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-go:latest
-
-
-  #----------------------------------------------------------------------------
-  # NGINX IMAGE (Wolfi package + apko, shell-less)
-  #----------------------------------------------------------------------------
-  build-nginx:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install apko
-        run: |
-          go install chainguard.dev/apko@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-
-      - name: Setup cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Nginx image with apko
-        run: |
-          apko build nginx/apko/nginx.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:${{ github.sha }} \
-            nginx.tar \
-            --arch x86_64
-          docker load < nginx.tar
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-nginx | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:${{ github.sha }}
-
-      - name: Report image size
-        run: |
-          echo "## Nginx Image Size" >> $GITHUB_STEP_SUMMARY
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep minimal-nginx >> $GITHUB_STEP_SUMMARY || true
-
-      - name: Scan Nginx image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:${{ github.sha }}
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          exit-code: '0'
-          cache: 'false'
-
-      - name: Fail on CVEs
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-nginx.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          cache: 'false'
-
-      - name: Upload scan results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        continue-on-error: true
-        with:
-          sarif_file: 'trivy-nginx.sarif'
-
-      - name: Test Nginx image
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:${{ github.sha }}"
-          echo "Testing Nginx starts..."
-          docker run -d --name nginx-test "$IMAGE"
-          sleep 2
-          if docker ps | grep -q nginx-test; then
-            echo "Nginx is running"
-            docker logs nginx-test
-            docker stop nginx-test && docker rm nginx-test
-          else
-            echo "Nginx failed to start, checking logs..."
-            docker logs nginx-test 2>&1 || true
-            docker rm nginx-test 2>/dev/null || true
-            exit 1
+          EXTRA_ARGS=""
+          if [ "${{ matrix.build_type }}" = "melange" ]; then
+            EXTRA_ARGS="--repository-append ./packages --keyring-append ${{ github.workspace }}/melange.rsa.pub"
           fi
-          echo "Verifying no shell..."
-          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
-            && echo "::error::Shell found in image!" && exit 1 \
-            || echo "No shell confirmed"
-
-      - name: Publish Nginx image
-        if: github.event_name != 'pull_request'
-        run: |
-          apko publish nginx/apko/nginx.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:latest \
-            --arch x86_64
-
-      - name: Sign image with cosign
-        if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          command: |
-            cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-nginx:latest
-
-
-  #----------------------------------------------------------------------------
-  # HTTPD IMAGE (Wolfi package + apko, shell-less)
-  #----------------------------------------------------------------------------
-  build-httpd:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install apko
-        run: |
-          go install chainguard.dev/apko@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-
-      - name: Setup cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build HTTPD image with apko
-        run: |
-          apko build httpd/apko/httpd.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:${{ github.sha }} \
-            httpd.tar \
-            --arch x86_64
-          docker load < httpd.tar
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-httpd | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:${{ github.sha }}
-
-      - name: Report image size
-        run: |
-          echo "## HTTPD Image Size" >> $GITHUB_STEP_SUMMARY
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep minimal-httpd >> $GITHUB_STEP_SUMMARY || true
-
-      - name: Scan HTTPD image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:${{ github.sha }}
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          exit-code: '0'
-          cache: 'false'
-
-      - name: Fail on CVEs
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-httpd.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          cache: 'false'
-
-      - name: Upload scan results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        continue-on-error: true
-        with:
-          sarif_file: 'trivy-httpd.sarif'
-
-      - name: Test HTTPD image
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:${{ github.sha }}"
-          echo "Testing HTTPD starts..."
-          # The image entrypoint already sets ServerName and a writable PidFile.
-          # Just start the container and verify it comes up.
-          docker run -d --name httpd-test "$IMAGE"
-          sleep 2
-          if docker ps | grep -q httpd-test; then
-            echo "HTTPD is running"
-            docker logs httpd-test
-            docker stop httpd-test && docker rm httpd-test
-          else
-            echo "HTTPD failed to start, checking logs..."
-            docker logs httpd-test 2>&1 || true
-            docker rm httpd-test 2>/dev/null || true
-            exit 1
-          fi
-          # Some httpd/Wolfi dependency chains can bring a minimal /bin/sh.
-          # We treat shell presence as informational for httpd (we still gate on CVEs + startup).
-          echo "Checking for shell presence (informational)..."
-          if docker run --rm --entrypoint /bin/sh "$IMAGE" -c "true" 2>/dev/null; then
-            echo "::notice::/bin/sh is present in minimal-httpd (not treated as failure)"
-          else
-            echo "No /bin/sh found (shell-less)"
-          fi
-
-      - name: Publish HTTPD image
-        if: github.event_name != 'pull_request'
-        run: |
-          apko publish httpd/apko/httpd.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:latest \
-            --arch x86_64
-
-      - name: Sign image with cosign
-        if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          command: |
-            cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-httpd:latest
-
-
-  #----------------------------------------------------------------------------
-  # REDIS SLIM IMAGE (melange source build + apko)
-  #----------------------------------------------------------------------------
-  build-redis-slim:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install melange and apko
-        run: |
-          go install chainguard.dev/melange@latest
-          go install chainguard.dev/apko@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-
-      - name: Setup cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Generate melange signing key
-        run: melange keygen
-
-      - name: Build Redis with melange (from source)
-        run: |
-          melange build redis-slim/melange.yaml \
+          apko build ${{ matrix.apko_config }} \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }} \
+            ${{ matrix.name }}.tar \
             --arch x86_64 \
-            --signing-key melange.rsa \
-            --out-dir ./packages \
-            --runner docker
-
-      - name: Build Redis Slim image with apko
-        run: |
-          apko build redis-slim/apko/redis.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:${{ github.sha }} \
-            redis-slim.tar \
-            --arch x86_64 \
-            --repository-append ./packages \
-            --keyring-append ${{ github.workspace }}/melange.rsa.pub
-          docker load < redis-slim.tar
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-redis-slim | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:${{ github.sha }}
+            $EXTRA_ARGS
+          docker load < ${{ matrix.name }}.tar
+          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "minimal-${{ matrix.name }}" | head -1)
+          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}
 
       - name: Report image size
         run: |
-          echo "## Redis Slim Image Size" >> $GITHUB_STEP_SUMMARY
+          echo "## ${{ matrix.name }} Image Size" >> $GITHUB_STEP_SUMMARY
           docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep minimal-redis-slim >> $GITHUB_STEP_SUMMARY || true
+            grep "minimal-${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY || true
 
-      - name: Scan Redis Slim image
-        uses: aquasecurity/trivy-action@master
+      - name: Scan image
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:${{ github.sha }}
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}
           format: 'table'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
           exit-code: '0'
           cache: 'false'
 
       - name: Fail on CVEs
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:${{ github.sha }}
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}
           format: 'sarif'
-          output: 'trivy-redis-slim.sarif'
+          output: 'trivy-${{ matrix.name }}.sarif'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
           cache: 'false'
@@ -784,38 +155,24 @@ jobs:
         if: always()
         continue-on-error: true
         with:
-          sarif_file: 'trivy-redis-slim.sarif'
+          sarif_file: 'trivy-${{ matrix.name }}.sarif'
 
-      - name: Test Redis Slim image
+      - name: Test image
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:${{ github.sha }}"
-          echo "Testing Redis starts..."
-          docker run -d --name redis-test "$IMAGE"
-          sleep 2
-          if docker ps | grep -q redis-test; then
-            echo "Redis is running"
-            docker logs redis-test
-            docker stop redis-test && docker rm redis-test
-          else
-            echo "Redis failed to start, checking logs..."
-            docker logs redis-test 2>&1 || true
-            docker rm redis-test 2>/dev/null || true
-            exit 1
+          export IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
+          ./${{ matrix.name }}/test.sh
+
+      - name: Publish image
+        if: github.event_name != 'pull_request'
+        run: |
+          EXTRA_ARGS=""
+          if [ "${{ matrix.build_type }}" = "melange" ]; then
+            EXTRA_ARGS="--repository-append ./packages --keyring-append ${{ github.workspace }}/melange.rsa.pub"
           fi
-          echo "Testing Redis CLI..."
-          docker run -d --name redis-cli-test "$IMAGE"
-          sleep 2
-          docker run --rm --link redis-cli-test:redis --entrypoint /usr/bin/redis-cli "$IMAGE" -h redis PING
-          docker stop redis-cli-test && docker rm redis-cli-test
-
-      - name: Publish Redis Slim image
-        if: github.event_name != 'pull_request'
-        run: |
-          apko publish redis-slim/apko/redis.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:latest \
+          apko publish ${{ matrix.apko_config }} \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
             --arch x86_64 \
-            --repository-append ./packages \
-            --keyring-append ${{ github.workspace }}/melange.rsa.pub
+            $EXTRA_ARGS
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
@@ -825,348 +182,19 @@ jobs:
           max_attempts: 3
           command: |
             cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-redis-slim:latest
-
-
-  #----------------------------------------------------------------------------
-  # POSTGRES SLIM IMAGE (Wolfi package + apko)
-  #----------------------------------------------------------------------------
-  build-postgres-slim:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install apko
-        run: |
-          go install chainguard.dev/apko@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-
-      - name: Setup cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Postgres Slim image with apko
-        run: |
-          apko build postgres-slim/apko/postgres.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:${{ github.sha }} \
-            postgres-slim.tar \
-            --arch x86_64
-          docker load < postgres-slim.tar
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-postgres-slim | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:${{ github.sha }}
-
-      - name: Report image size
-        run: |
-          echo "## Postgres Slim Image Size" >> $GITHUB_STEP_SUMMARY
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep minimal-postgres-slim >> $GITHUB_STEP_SUMMARY || true
-
-      - name: Scan Postgres Slim image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:${{ github.sha }}
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          exit-code: '0'
-          cache: 'false'
-
-      - name: Fail on CVEs
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-postgres-slim.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          cache: 'false'
-
-      - name: Upload scan results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        continue-on-error: true
-        with:
-          sarif_file: 'trivy-postgres-slim.sarif'
-
-      - name: Test Postgres Slim image
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:${{ github.sha }}"
-          echo "Testing PostgreSQL version..."
-          docker run --rm --entrypoint /usr/bin/postgres "$IMAGE" --version
-          echo "Testing psql client..."
-          docker run --rm --entrypoint /usr/bin/psql "$IMAGE" --version
-          echo "Testing PostgreSQL starts..."
-          docker run -d --name postgres-test \
-            -e POSTGRES_HOST_AUTH_METHOD=trust \
-            --entrypoint "" "$IMAGE" \
-            sh -c "initdb -D /var/lib/postgresql/data && postgres -D /var/lib/postgresql/data -h 0.0.0.0" || true
-          sleep 5
-          if docker ps | grep -q postgres-test; then
-            echo "PostgreSQL is running"
-            docker logs postgres-test 2>&1 | tail -5
-            docker stop postgres-test && docker rm postgres-test
-          else
-            echo "PostgreSQL startup check (informational)..."
-            docker logs postgres-test 2>&1 || true
-            docker rm postgres-test 2>/dev/null || true
-          fi
-
-      - name: Publish Postgres Slim image
-        if: github.event_name != 'pull_request'
-        run: |
-          apko publish postgres-slim/apko/postgres.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:latest \
-            --arch x86_64
-
-      - name: Sign image with cosign
-        if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          command: |
-            cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-postgres-slim:latest
-
-  #----------------------------------------------------------------------------
-  # BUN IMAGE (Wolfi package + apko, shell-less)
-  #----------------------------------------------------------------------------
-  build-bun:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install apko
-        run: |
-          go install chainguard.dev/apko@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-
-      - name: Setup cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Bun image with apko
-        run: |
-          apko build bun/apko/bun.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:${{ github.sha }} \
-            bun.tar \
-            --arch x86_64
-          docker load < bun.tar
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-bun | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:${{ github.sha }}
-
-      - name: Report image size
-        run: |
-          echo "## Bun Image Size" >> $GITHUB_STEP_SUMMARY
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep minimal-bun >> $GITHUB_STEP_SUMMARY || true
-
-      - name: Scan Bun image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:${{ github.sha }}
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          exit-code: '0'
-          cache: 'false'
-
-      - name: Fail on CVEs
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-bun.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          cache: 'false'
-
-      - name: Upload scan results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        continue-on-error: true
-        with:
-          sarif_file: 'trivy-bun.sarif'
-
-      - name: Test Bun image
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:${{ github.sha }}"
-          echo "Testing Bun version..."
-          docker run --rm "$IMAGE" --version
-          echo "Testing simple script..."
-          docker run --rm "$IMAGE" -e 'console.log("Hello minimal bun")'
-          echo "Verifying no shell..."
-          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
-            && echo "::error::Shell found in image!" && exit 1 \
-            || echo "No shell confirmed"
-
-      - name: Publish Bun image
-        if: github.event_name != 'pull_request'
-        run: |
-          apko publish bun/apko/bun.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:latest \
-            --arch x86_64
-
-      - name: Sign image with cosign
-        if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          command: |
-            cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-bun:latest
-
-  #----------------------------------------------------------------------------
-  # SQLITE IMAGE (Wolfi package + apko, shell-less)
-  #----------------------------------------------------------------------------
-  build-sqlite:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install apko
-        run: |
-          go install chainguard.dev/apko@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-
-      - name: Setup cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build SQLite image with apko
-        run: |
-          apko build sqlite/apko/sqlite.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:${{ github.sha }} \
-            sqlite.tar \
-            --arch x86_64
-          docker load < sqlite.tar
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep minimal-sqlite | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:${{ github.sha }}
-
-      - name: Report image size
-        run: |
-          echo "## SQLite Image Size" >> $GITHUB_STEP_SUMMARY
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep minimal-sqlite >> $GITHUB_STEP_SUMMARY || true
-
-      - name: Scan SQLite image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:${{ github.sha }}
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          exit-code: '0'
-          cache: 'false'
-
-      - name: Fail on CVEs
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-sqlite.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          cache: 'false'
-
-      - name: Upload scan results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        continue-on-error: true
-        with:
-          sarif_file: 'trivy-sqlite.sarif'
-
-      - name: Test SQLite image
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:${{ github.sha }}"
-          echo "Testing SQLite version..."
-          docker run --rm "$IMAGE" --version
-          echo "Testing in-memory query..."
-          docker run --rm "$IMAGE" :memory: "SELECT 1;"
-          echo "Testing file-based DB..."
-          docker run --rm "$IMAGE" /tmp/test.db "CREATE TABLE t(x); INSERT INTO t VALUES(1); SELECT * FROM t;"
-          echo "Verifying no shell..."
-          docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \
-            && echo "::error::Shell found in image!" && exit 1 \
-            || echo "No shell confirmed"
-
-      - name: Publish SQLite image
-        if: github.event_name != 'pull_request'
-        run: |
-          apko publish sqlite/apko/sqlite.yaml \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:latest \
-            --arch x86_64
-
-      - name: Sign image with cosign
-        if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          command: |
-            cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-sqlite:latest
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest
 
   #----------------------------------------------------------------------------
   # SUMMARY
   #----------------------------------------------------------------------------
   summary:
-    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim, build-postgres-slim, build-bun, build-sqlite]
+    needs: [build]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check results
         run: |
-          if [ "${{ needs.build-python.result }}" != "success" ] || \
-             [ "${{ needs.build-jenkins.result }}" != "success" ] || \
-             [ "${{ needs.build-node.result }}" != "success" ] || \
-             [ "${{ needs.build-go.result }}" != "success" ] || \
-             [ "${{ needs.build-nginx.result }}" != "success" ] || \
-             [ "${{ needs.build-httpd.result }}" != "success" ] || \
-             [ "${{ needs.build-redis-slim.result }}" != "success" ] || \
-             [ "${{ needs.build-postgres-slim.result }}" != "success" ] || \
-             [ "${{ needs.build-bun.result }}" != "success" ] || \
-             [ "${{ needs.build-sqlite.result }}" != "success" ]; then
+          if [ "${{ needs.build.result }}" != "success" ]; then
             echo "::error::One or more images failed"
             exit 1
           fi
@@ -1176,7 +204,7 @@ jobs:
   # CLEANUP OLD VERSIONS
   #----------------------------------------------------------------------------
   cleanup:
-    needs: [build-python, build-jenkins, build-node, build-go, build-nginx, build-httpd, build-redis-slim, build-postgres-slim, build-bun, build-sqlite]
+    needs: [build]
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
     permissions:
