@@ -16,6 +16,7 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **Redis-slim** | `docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest` | No | In-memory data store |
 | **PostgreSQL-slim** | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
 | **SQLite** | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
+| **.NET Runtime** | `docker pull ghcr.io/rtvkiz/minimal-dotnet:latest` | No | .NET 10 runtime for apps |
 
 *\*HTTPD, Jenkins,Node.js may include shell(sh,busybox) via transitive Wolfi dependencies. CI treats shell presence as informational.*
 
@@ -70,6 +71,9 @@ docker run -d -p 5432:5432 -v pgdata:/var/lib/postgresql/data ghcr.io/rtvkiz/min
 
 # SQLite - embedded SQL database
 docker run --rm -v $(pwd):/data ghcr.io/rtvkiz/minimal-sqlite:latest /data/mydb.sqlite "SELECT sqlite_version();"
+
+# .NET - run your app
+docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-dotnet:latest /app/myapp.dll
 ```
 
 ## Image Specifications
@@ -86,6 +90,7 @@ docker run --rm -v $(pwd):/data ghcr.io/rtvkiz/minimal-sqlite:latest /data/mydb.
 | Redis | 8.4.x | redis (65532) | `/usr/bin/redis-server` | `/` |
 | PostgreSQL | 18.x | postgres (70) | `/usr/bin/postgres` | `/` |
 | SQLite | 3.51.x | nonroot (65532) | `/usr/bin/sqlite3` | `/data` |
+| .NET Runtime | 10.x | nonroot (65532) | `/usr/bin/dotnet` | `/app` |
 
 ## How Images Are Built
 
@@ -145,6 +150,7 @@ make jenkins
 make redis-slim
 make postgres-slim
 make sqlite
+make dotnet
 
 # Scan for CVEs
 make scan
@@ -171,6 +177,7 @@ minimal/
 │   └── melange.yaml              # Redis source build
 ├── postgres-slim/apko/postgres.yaml  # PostgreSQL image (Wolfi pkg)
 ├── sqlite/apko/sqlite.yaml          # SQLite image (Wolfi pkg)
+├── dotnet/apko/dotnet.yaml          # .NET Runtime image (Wolfi pkg)
 ├── .github/workflows/
 │   ├── build.yml                 # Daily CI pipeline
 │   ├── update-jenkins.yml        # Jenkins version updates

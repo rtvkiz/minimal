@@ -1,0 +1,78 @@
+# Minimal .NET Runtime image - using Wolfi's pre-built package
+# Feature parity with Chainguard's dotnet-runtime image
+# Fast builds (~30s) with same CVE patching (24-48h)
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem layout
+    - wolfi-baselayout
+
+    # .NET Runtime from Wolfi (CVE-patched)
+    - dotnet-10-runtime
+
+    # Core runtime dependencies
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libstdc++
+
+    # .NET specific dependencies
+    - icu
+    - libunwind
+    - lttng-ust
+    - libxcrypt
+
+    # TLS/SSL
+    - libssl3
+    - libcrypto3
+    - ca-certificates-bundle
+
+    # Compression
+    - zlib
+    - xz
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/dotnet
+
+work-dir: /app
+
+environment:
+  # Disable telemetry
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  # Enable globalization invariant mode if ICU issues occur
+  # DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
+  LANG: C.UTF-8
+  PATH: /usr/bin:/bin
+  # .NET runtime settings
+  DOTNET_RUNNING_IN_CONTAINER: "true"
+
+paths:
+  - path: /app
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+archs:
+  - x86_64
+  - aarch64

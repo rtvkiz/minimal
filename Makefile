@@ -11,13 +11,13 @@ HTTPD_VERSION ?= 2.4.66
 REDIS_VERSION ?= 8.4.0
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go node nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite keygen
-.PHONY: scan-python scan-jenkins scan-go scan-node scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite
+.PHONY: python jenkins jenkins-melange go node nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite dotnet keygen
+.PHONY: scan-python scan-jenkins scan-go scan-node scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet
 
 all: build scan
 
 # Build all images
-build: python jenkins go node nginx httpd redis-slim postgres-slim bun sqlite
+build: python jenkins go node nginx httpd redis-slim postgres-slim bun sqlite dotnet
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -218,9 +218,26 @@ sqlite:
 	@echo "✓ minimal-sqlite built (Wolfi package, shell-less)"
 
 #------------------------------------------------------------------------------
+# DOTNET RUNTIME IMAGE (Wolfi pre-built package)
+#------------------------------------------------------------------------------
+dotnet:
+	@echo "Assembling minimal-dotnet image with apko..."
+	apko build dotnet/apko/dotnet.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION) \
+		dotnet.tar \
+		--arch x86_64
+	docker load < dotnet.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-dotnet:latest
+	@rm -f dotnet.tar sbom-*.spdx.json
+	@echo "✓ minimal-dotnet built (Wolfi package)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite
+scan: scan-python scan-jenkins scan-go scan-node scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -282,6 +299,12 @@ scan-sqlite:
 		$(REGISTRY)/$(OWNER)/minimal-sqlite:latest
 	@echo "✓ minimal-sqlite: scan passed"
 
+scan-dotnet:
+	@echo "Scanning minimal-dotnet..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-dotnet:latest
+	@echo "✓ minimal-dotnet: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -305,6 +328,8 @@ scan-all:
 		$(REGISTRY)/$(OWNER)/minimal-bun:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-sqlite:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-dotnet:latest
 
 #------------------------------------------------------------------------------
 # IMAGE SIZE REPORT
@@ -312,12 +337,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-postgres-slim|minimal-bun|minimal-sqlite)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node test-nginx test-httpd test-redis-slim test-postgres-slim test-bun test-sqlite
+test: test-python test-jenkins test-go test-node test-nginx test-httpd test-redis-slim test-postgres-slim test-bun test-sqlite test-dotnet
 
 test-python:
 	@echo "Testing Python image..."
@@ -457,6 +482,16 @@ test-sqlite:
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
 	@echo "✓ SQLite tests passed"
 
+test-dotnet:
+	@echo "Testing .NET Runtime image..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-dotnet:latest --info
+	@echo "Checking runtime list..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-dotnet:latest --list-runtimes
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-dotnet:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ .NET Runtime tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -481,6 +516,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-bun:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-sqlite:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-sqlite:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-dotnet:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -517,6 +554,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-sqlite:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-sqlite:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-sqlite:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-dotnet:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -542,6 +582,7 @@ help:
 	@echo "  make postgres-slim   Build Postgres Slim (Wolfi package)"
 	@echo "  make bun             Build Bun (Wolfi package)"
 	@echo "  make sqlite          Build SQLite (Wolfi package)"
+	@echo "  make dotnet          Build .NET Runtime (Wolfi package)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"

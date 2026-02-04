@@ -72,6 +72,9 @@ jobs:
           - name: sqlite
             apko_config: sqlite/apko/sqlite.yaml
             build_type: apko
+          - name: dotnet
+            apko_config: dotnet/apko/dotnet.yaml
+            build_type: apko
 
     steps:
       - name: Checkout repository
