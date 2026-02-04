@@ -1,4 +1,4 @@
-# Minimal Node.js image - using Wolfi's pre-built package
+# Minimal Node.js slim image - using Wolfi's pre-built package (shell-less)
 # Feature parity with Chainguard's Node.js image
 # Fast builds (~30s) with same CVE patching (24-48h)
 

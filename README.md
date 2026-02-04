@@ -7,7 +7,7 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | Image | Pull Command | Shell | Use Case |
 |-------|--------------|-------|----------|
 | **Python** | `docker pull ghcr.io/rtvkiz/minimal-python:latest` | No | Python apps, microservices |
-| **Node.js** | `docker pull ghcr.io/rtvkiz/minimal-node:latest` | Yes | Node.js apps, JavaScript |
+| **Node.js-slim** | `docker pull ghcr.io/rtvkiz/minimal-node-slim:latest` | No | Node.js apps, JavaScript |
 | **Bun** | `docker pull ghcr.io/rtvkiz/minimal-bun:latest` | No | Fast JavaScript/TypeScript runtime |
 | **Go** | `docker pull ghcr.io/rtvkiz/minimal-go:latest` | No | Go development, CGO builds |
 | **Nginx** | `docker pull ghcr.io/rtvkiz/minimal-nginx:latest` | No | Reverse proxy, static files |
@@ -18,7 +18,7 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **SQLite** | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
 | **.NET Runtime** | `docker pull ghcr.io/rtvkiz/minimal-dotnet:latest` | No | .NET 10 runtime for apps |
 
-*\*HTTPD, Jenkins,Node.js may include shell(sh,busybox) via transitive Wolfi dependencies. CI treats shell presence as informational.*
+*\*HTTPD, Jenkins may include shell(sh,busybox) via transitive Wolfi dependencies. CI treats shell presence as informational.*
 
 ## Why This Matters
 
@@ -46,7 +46,7 @@ Traditional images:     Your containers:
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-python:latest /app/main.py
 
 # Node.js - run your app
-docker run --rm -v $(pwd):/app -w /app ghcr.io/rtvkiz/minimal-node:latest index.js
+docker run --rm -v $(pwd):/app -w /app ghcr.io/rtvkiz/minimal-node-slim:latest index.js
 
 # Bun - fast JavaScript runtime
 docker run --rm ghcr.io/rtvkiz/minimal-bun:latest --version
@@ -81,7 +81,7 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-dotnet:latest /app/myapp.d
 | Image | Version | User | Entrypoint | Workdir |
 |-------|---------|------|------------|---------|
 | Python | 3.14.x | nonroot (65532) | `/usr/bin/python3` | `/app` |
-| Node.js | 25.x | nonroot (65532) | `/usr/bin/dumb-init -- /usr/bin/node` | `/app` |
+| Node.js-slim | 25.x | nonroot (65532) | `/usr/bin/dumb-init -- /usr/bin/node` | `/app` |
 | Bun | latest | nonroot (65532) | `/usr/bin/bun` | `/app` |
 | Go | 1.25.x | nonroot (65532) | `/usr/bin/go` | `/app` |
 | Nginx | mainline | nginx (65532) | `/usr/sbin/nginx -g "daemon off;"` | `/` |
@@ -141,7 +141,7 @@ make build
 
 # Build specific image
 make python
-make node
+make node-slim
 make bun
 make go
 make nginx
@@ -164,7 +164,7 @@ make test
 ```
 minimal/
 ├── python/apko/python.yaml       # Python image (Wolfi pkg)
-├── node/apko/node.yaml           # Node.js image (Wolfi pkg)
+├── node-slim/apko/node.yaml      # Node.js slim image (Wolfi pkg, shell-less)
 ├── bun/apko/bun.yaml             # Bun image (Wolfi pkg)
 ├── go/apko/go.yaml               # Go image (Wolfi pkg)
 ├── nginx/apko/nginx.yaml         # Nginx image (Wolfi pkg)

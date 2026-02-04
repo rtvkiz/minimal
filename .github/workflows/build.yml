@@ -47,8 +47,8 @@ jobs:
             apko_config: jenkins/apko/jenkins.yaml
             melange_config: jenkins/melange.yaml
             build_type: melange
-          - name: node
-            apko_config: node/apko/node.yaml
+          - name: node-slim
+            apko_config: node-slim/apko/node.yaml
             build_type: apko
           - name: go
             apko_config: go/apko/go.yaml

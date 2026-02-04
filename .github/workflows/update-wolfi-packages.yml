@@ -70,7 +70,7 @@ jobs:
           fi
 
           # --- Node.js ---
-          CURRENT_NODE=$(grep -oP 'nodejs-\d+' node/apko/node.yaml | head -1)
+          CURRENT_NODE=$(grep -oP 'nodejs-\d+' node-slim/apko/node.yaml | head -1)
           echo "Current Node.js package: $CURRENT_NODE"
 
           # Find all nodejs-XX packages (LTS versions are even numbers)
@@ -83,6 +83,24 @@ jobs:
             echo "node_current=$CURRENT_NODE" >> $GITHUB_OUTPUT
             echo "node_latest=$LATEST_NODE" >> $GITHUB_OUTPUT
             echo "  -> Update available: $CURRENT_NODE -> $LATEST_NODE"
+          else
+            echo "  -> Up to date"
+          fi
+
+          # --- .NET Runtime ---
+          CURRENT_DOTNET=$(grep -oP 'dotnet-\d+-runtime' dotnet/apko/dotnet.yaml | head -1)
+          echo "Current .NET package: $CURRENT_DOTNET"
+
+          # Find all dotnet-XX-runtime packages
+          LATEST_DOTNET=$(grep -E "^dotnet-[0-9]+-runtime " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t- -k2 -n | tail -1)
+          echo "Latest .NET package: $LATEST_DOTNET"
+
+          if [ -n "$LATEST_DOTNET" ] && [ "$LATEST_DOTNET" != "$CURRENT_DOTNET" ]; then
+            echo "dotnet_update=true" >> $GITHUB_OUTPUT
+            echo "dotnet_current=$CURRENT_DOTNET" >> $GITHUB_OUTPUT
+            echo "dotnet_latest=$LATEST_DOTNET" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_DOTNET -> $LATEST_DOTNET"
           else
             echo "  -> Up to date"
           fi
@@ -116,6 +134,9 @@ jobs:
           fi
           if [ -n "$LATEST_NODE" ] && [ "$LATEST_NODE" != "$CURRENT_NODE" ]; then
             echo "Node.js: $CURRENT_NODE -> $LATEST_NODE"
+          fi
+          if [ -n "$LATEST_DOTNET" ] && [ "$LATEST_DOTNET" != "$CURRENT_DOTNET" ]; then
+            echo ".NET: $CURRENT_DOTNET -> $LATEST_DOTNET"
           fi
           if [ -n "$LATEST_PG" ] && [ "$LATEST_PG" != "$CURRENT_PG" ]; then
             echo "PostgreSQL: $CURRENT_PG -> $LATEST_PG"
@@ -219,8 +240,8 @@ jobs:
         run: |
           OLD="${{ steps.check.outputs.node_current }}"
           NEW="${{ steps.check.outputs.node_latest }}"
-          sed -i "s/$OLD/$NEW/g" node/apko/node.yaml
-          echo "Updated node/apko/node.yaml: $OLD -> $NEW"
+          sed -i "s/$OLD/$NEW/g" node-slim/apko/node.yaml
+          echo "Updated node-slim/apko/node.yaml: $OLD -> $NEW"
 
       - name: Create Node.js PR
         if: steps.check.outputs.node_update == 'true'
@@ -237,7 +258,7 @@ jobs:
 
             ## Changes
 
-            - `node/apko/node.yaml` - updated package reference
+            - `node-slim/apko/node.yaml` - updated package reference
 
             ## Before Merging
 
@@ -257,6 +278,52 @@ jobs:
 
       - name: Reset for next PR
         if: steps.check.outputs.node_update == 'true'
+        run: git checkout -- .
+
+      # --- .NET PR ---
+      - name: Update .NET version
+        if: steps.check.outputs.dotnet_update == 'true'
+        run: |
+          OLD="${{ steps.check.outputs.dotnet_current }}"
+          NEW="${{ steps.check.outputs.dotnet_latest }}"
+          sed -i "s/$OLD/$NEW/g" dotnet/apko/dotnet.yaml
+          echo "Updated dotnet/apko/dotnet.yaml: $OLD -> $NEW"
+
+      - name: Create .NET PR
+        if: steps.check.outputs.dotnet_update == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(dotnet): upgrade to ${{ steps.check.outputs.dotnet_latest }}"
+          body: |
+            ## Summary
+
+            Upgrades .NET Runtime from `${{ steps.check.outputs.dotnet_current }}` to `${{ steps.check.outputs.dotnet_latest }}`.
+
+            This is a **major version upgrade** detected from Wolfi's package repository.
+
+            ## Changes
+
+            - `dotnet/apko/dotnet.yaml` - updated package reference
+
+            ## Before Merging
+
+            - [ ] Review [.NET release notes](https://learn.microsoft.com/en-us/dotnet/core/whats-new/)
+            - [ ] Verify CI passes (image builds and tests succeed)
+            - [ ] Check for breaking changes that may affect users
+
+            ---
+
+            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
+          branch: update-dotnet-${{ steps.check.outputs.dotnet_latest }}
+          commit-message: "chore(dotnet): upgrade to ${{ steps.check.outputs.dotnet_latest }}"
+          delete-branch: true
+          labels: |
+            dependencies
+            dotnet
+
+      - name: Reset for next PR
+        if: steps.check.outputs.dotnet_update == 'true'
         run: git checkout -- .
 
       # --- PostgreSQL PR ---
