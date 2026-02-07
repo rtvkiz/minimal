@@ -25,9 +25,68 @@ env:
 
 jobs:
   #----------------------------------------------------------------------------
-  # BUILD ALL IMAGES (matrix-driven)
+  # BUILD MELANGE PACKAGES (native runners per architecture)
   #----------------------------------------------------------------------------
-  build:
+  melange-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Jenkins builds
+          - name: jenkins
+            melange_config: jenkins/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: jenkins
+            melange_config: jenkins/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+          # Redis builds
+          - name: redis-slim
+            melange_config: redis-slim/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: redis-slim
+            melange_config: redis-slim/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install melange
+        run: |
+          go install chainguard.dev/melange@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Generate melange signing key
+        run: melange keygen
+
+      - name: Build package with melange
+        run: |
+          melange build ${{ matrix.melange_config }} \
+            --arch ${{ matrix.arch }} \
+            --signing-key melange.rsa \
+            --out-dir ./packages \
+            --runner docker
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.name }}-${{ matrix.arch }}
+          path: |
+            packages/
+            melange.rsa.pub
+          retention-days: 1
+
+  #----------------------------------------------------------------------------
+  # BUILD APKO-ONLY IMAGES (no melange dependency)
+  #----------------------------------------------------------------------------
+  build-apko:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -42,39 +101,22 @@ jobs:
         include:
           - name: python
             apko_config: python/apko/python.yaml
-            build_type: apko
-          - name: jenkins
-            apko_config: jenkins/apko/jenkins.yaml
-            melange_config: jenkins/melange.yaml
-            build_type: melange
           - name: node-slim
             apko_config: node-slim/apko/node.yaml
-            build_type: apko
           - name: go
             apko_config: go/apko/go.yaml
-            build_type: apko
           - name: nginx
             apko_config: nginx/apko/nginx.yaml
-            build_type: apko
           - name: httpd
             apko_config: httpd/apko/httpd.yaml
-            build_type: apko
-          - name: redis-slim
-            apko_config: redis-slim/apko/redis.yaml
-            melange_config: redis-slim/melange.yaml
-            build_type: melange
           - name: postgres-slim
             apko_config: postgres-slim/apko/postgres.yaml
-            build_type: apko
           - name: bun
             apko_config: bun/apko/bun.yaml
-            build_type: apko
           - name: sqlite
             apko_config: sqlite/apko/sqlite.yaml
-            build_type: apko
           - name: dotnet
             apko_config: dotnet/apko/dotnet.yaml
-            build_type: apko
 
     steps:
       - name: Checkout repository
@@ -84,10 +126,6 @@ jobs:
         run: |
           go install chainguard.dev/apko@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
-
-      - name: Install melange
-        if: matrix.build_type == 'melange'
-        run: go install chainguard.dev/melange@latest
 
       - name: Setup cosign
         uses: sigstore/cosign-installer@v3
@@ -100,36 +138,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up QEMU
-        if: matrix.build_type == 'melange'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
-      - name: Generate melange signing key
-        if: matrix.build_type == 'melange'
-        run: melange keygen
-
-      - name: Build package with melange
-        if: matrix.build_type == 'melange'
-        run: |
-          melange build ${{ matrix.melange_config }} \
-            --arch x86_64,aarch64 \
-            --signing-key melange.rsa \
-            --out-dir ./packages \
-            --runner docker
-
       - name: Build image with apko
         run: |
-          EXTRA_ARGS=""
-          if [ "${{ matrix.build_type }}" = "melange" ]; then
-            EXTRA_ARGS="--repository-append ./packages --keyring-append ${{ github.workspace }}/melange.rsa.pub"
-          fi
           apko build ${{ matrix.apko_config }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }} \
             ${{ matrix.name }}.tar \
-            --arch x86_64 \
-            $EXTRA_ARGS
+            --arch x86_64
           docker load < ${{ matrix.name }}.tar
           LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "minimal-${{ matrix.name }}" | head -1)
           docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}
@@ -240,14 +254,210 @@ jobs:
       - name: Publish image
         if: github.event_name != 'pull_request'
         run: |
-          EXTRA_ARGS=""
-          if [ "${{ matrix.build_type }}" = "melange" ]; then
-            EXTRA_ARGS="--repository-append ./packages --keyring-append ${{ github.workspace }}/melange.rsa.pub"
+          apko publish ${{ matrix.apko_config }} \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
+            --arch x86_64,aarch64
+
+      - name: Sign image with cosign
+        if: github.event_name != 'pull_request'
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            cosign sign --yes \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest
+
+  #----------------------------------------------------------------------------
+  # BUILD MELANGE-BASED IMAGES (needs packages from melange-build)
+  #----------------------------------------------------------------------------
+  build-melange:
+    needs: [melange-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: jenkins
+            apko_config: jenkins/apko/jenkins.yaml
+          - name: redis-slim
+            apko_config: redis-slim/apko/redis.yaml
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install apko
+        run: |
+          go install chainguard.dev/apko@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Setup cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download x86_64 packages
+        uses: actions/download-artifact@v4
+        with:
+          name: packages-${{ matrix.name }}-x86_64
+          path: ./packages-x86_64
+
+      - name: Download aarch64 packages
+        uses: actions/download-artifact@v4
+        with:
+          name: packages-${{ matrix.name }}-aarch64
+          path: ./packages-aarch64
+
+      - name: Merge packages
+        run: |
+          mkdir -p ./packages
+          # Copy x86_64 packages
+          cp -r ./packages-x86_64/packages/* ./packages/ 2>/dev/null || true
+          # Copy aarch64 packages (merge into same structure)
+          cp -r ./packages-aarch64/packages/* ./packages/ 2>/dev/null || true
+          # Use signing key from either (they're the same content, different builds)
+          cp ./packages-x86_64/melange.rsa.pub ./melange.rsa.pub
+
+          echo "Merged package structure:"
+          find ./packages -type f -name "*.apk" | head -20
+
+      - name: Build image with apko
+        run: |
+          apko build ${{ matrix.apko_config }} \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }} \
+            ${{ matrix.name }}.tar \
+            --arch x86_64 \
+            --repository-append ./packages \
+            --keyring-append ./melange.rsa.pub
+          docker load < ${{ matrix.name }}.tar
+          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "minimal-${{ matrix.name }}" | head -1)
+          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}
+
+      - name: Report image size
+        run: |
+          echo "## ${{ matrix.name }} Image Size" >> $GITHUB_STEP_SUMMARY
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
+            grep "minimal-${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          trivy --version
+
+      - name: Scan image for vulnerabilities
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
+          trivy image \
+            --format json \
+            --output trivy-${{ matrix.name }}.json \
+            --severity CRITICAL,HIGH,MEDIUM,LOW \
+            "$IMAGE"
+
+      - name: Generate vulnerability report
+        if: always()
+        run: |
+          REPORT="trivy-${{ matrix.name }}.json"
+          if [ ! -f "$REPORT" ]; then
+            echo "## Security Scan: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
+            echo "Scan report not found." >> $GITHUB_STEP_SUMMARY
+            exit 0
           fi
+
+          # Count vulnerabilities by severity across all results
+          CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$REPORT")
+          HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$REPORT")
+          MEDIUM=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' "$REPORT")
+          LOW=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="LOW")] | length' "$REPORT")
+          TOTAL=$((CRITICAL + HIGH + MEDIUM + LOW))
+
+          # Header
+          echo "## Security Scan: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan date:** $(date -u +%Y-%m-%d) | **Image:** minimal-${{ matrix.name }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Summary table
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| CRITICAL | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| HIGH | $HIGH |" >> $GITHUB_STEP_SUMMARY
+          echo "| MEDIUM | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+          echo "| LOW | $LOW |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "No vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          # Detailed table for CRITICAL and HIGH
+          if [ "$((CRITICAL + HIGH))" -gt 0 ]; then
+            echo "### CRITICAL / HIGH Vulnerabilities" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Library | CVE | Severity | Installed | Fixed | Title |" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|-----|----------|-----------|-------|-------|" >> $GITHUB_STEP_SUMMARY
+            jq -r '
+              [.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH")]
+              | sort_by(.Severity) | reverse[]
+              | "| \(.PkgName) | \(.VulnerabilityID) | \(.Severity) | \(.InstalledVersion) | \(.FixedVersion // "n/a") | \(.Title // "n/a" | .[0:80]) |"
+            ' "$REPORT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No CRITICAL or HIGH vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload vulnerability report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vulnerability-report-${{ matrix.name }}
+          path: trivy-${{ matrix.name }}.json
+          retention-days: 90
+
+      - name: Generate SARIF report
+        if: always()
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
+          trivy image \
+            --format sarif \
+            --output trivy-${{ matrix.name }}.sarif \
+            --severity CRITICAL,HIGH,MEDIUM,LOW \
+            "$IMAGE" || true
+
+      - name: Upload SARIF to Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: 'trivy-${{ matrix.name }}.sarif'
+
+      - name: Test image
+        run: |
+          export IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
+          ./${{ matrix.name }}/test.sh
+
+      - name: Publish image
+        if: github.event_name != 'pull_request'
+        run: |
           apko publish ${{ matrix.apko_config }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
             --arch x86_64,aarch64 \
-            $EXTRA_ARGS
+            --repository-append ./packages \
+            --keyring-append ./melange.rsa.pub
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
@@ -263,13 +473,13 @@ jobs:
   # SUMMARY
   #----------------------------------------------------------------------------
   summary:
-    needs: [build]
+    needs: [build-apko, build-melange]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check results
         run: |
-          if [ "${{ needs.build.result }}" != "success" ]; then
+          if [ "${{ needs.build-apko.result }}" != "success" ] || [ "${{ needs.build-melange.result }}" != "success" ]; then
             echo "::error::One or more images failed"
             exit 1
           fi
@@ -279,7 +489,7 @@ jobs:
   # CLEANUP OLD VERSIONS
   #----------------------------------------------------------------------------
   cleanup:
-    needs: [build]
+    needs: [build-apko, build-melange]
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
     permissions:
