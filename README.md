@@ -17,6 +17,7 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **PostgreSQL-slim** | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
 | **SQLite** | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
 | **.NET Runtime** | `docker pull ghcr.io/rtvkiz/minimal-dotnet:latest` | No | .NET 10 runtime for apps |
+| **PHP** | `docker pull ghcr.io/rtvkiz/minimal-php:latest` | No | PHP 8.5 CLI (built from source) |
 
 *\*HTTPD, Jenkins may include shell(sh,busybox) via transitive Wolfi dependencies. CI treats shell presence as informational.*
 
@@ -74,6 +75,9 @@ docker run --rm -v $(pwd):/data ghcr.io/rtvkiz/minimal-sqlite:latest /data/mydb.
 
 # .NET - run your app
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-dotnet:latest /app/myapp.dll
+
+# PHP - run your app
+docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-php:latest /app/index.php
 ```
 
 ## Image Specifications
@@ -91,6 +95,7 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-dotnet:latest /app/myapp.d
 | PostgreSQL | 18.x | postgres (70) | `/usr/bin/postgres` | `/` |
 | SQLite | 3.51.x | nonroot (65532) | `/usr/bin/sqlite3` | `/data` |
 | .NET Runtime | 10.x | nonroot (65532) | `/usr/bin/dotnet` | `/app` |
+| PHP | 8.5.x | nonroot (65532) | `/usr/bin/php` | `/app` |
 
 ## How Images Are Built
 
@@ -106,7 +111,7 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-dotnet:latest /app/myapp.d
 │                              │                                              │
 │                              ▼                                              │
 │  ┌─────────────────────────────┐    ┌─────────────────────────────────────┐ │
-│  │     melange-build (4 jobs)  │    │      build-apko (9 jobs)            │ │
+│  │     melange-build (6 jobs)  │    │      build-apko (9 jobs)           │ │
 │  │     Native ARM64 runners    │    │      Wolfi pre-built packages       │ │
 │  │  ┌────────┐  ┌────────────┐ │    │  Python, Node, Go, Nginx, HTTPD,    │ │
 │  │  │ x86_64 │  │  aarch64   │ │    │  PostgreSQL, Bun, SQLite, .NET      │ │
@@ -122,8 +127,8 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-dotnet:latest /app/myapp.d
 │  └────────────│────────────────┘                               │            │
 │               ▼                                                │            │
 │  ┌─────────────────────────────┐                               │            │
-│  │  build-melange (2 jobs)     │                               │            │
-│  │  Jenkins, Redis             │                               │            │
+│  │  build-melange (3 jobs)     │                               │            │
+│  │  Jenkins, Redis, PHP        │                               │            │
 │  │  ┌─────────┐ ┌────────────┐ │                               │            │
 │  │  │  merge  │▶│   apko     │─┼───────────────────────────────┤            │
 │  │  │ packages│ │  publish   │ │                               │            │
@@ -151,14 +156,27 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-dotnet:latest /app/myapp.d
 | **Push** | On merge to `main` | Deploy configuration changes |
 | **Manual** | Workflow dispatch | Emergency rebuilds |
 
-All builds must pass a CVE gate (no CRITICAL/HIGH severity vulnerabilities) before publishing.
+Every build is scanned for vulnerabilities; results appear in the job summary and Security tab. We rely on Wolfi's fast CVE patching—images may temporarily include known issues from upstream until fixes are available.
+
+### Automated Version Updates
+
+Source-built packages (Jenkins, Redis, PHP) and Wolfi-based packages are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
+
+| Workflow | Watches | What It Does |
+|----------|---------|--------------|
+| `update-jenkins.yml` | Jenkins LTS releases | Updates version in melange config, Makefile, build.yml |
+| `update-redis.yml` | Redis GitHub releases | Updates version and SHA256 in melange config |
+| `update-php.yml` | php.net releases API | Updates version and SHA256; opens issue for new minor/major series |
+| `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, PostgreSQL package versions |
+
+Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g. PHP 8.5 → 8.6) create a GitHub Issue with a manual upgrade checklist, since configure flags or APIs may change.
 
 ## Build Locally
 
 ```bash
 # Prerequisites
 go install chainguard.dev/apko@latest
-go install chainguard.dev/melange@latest  # needed for Jenkins, Redis
+go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, PHP
 brew install trivy  # or: apt install trivy
 
 # Build all images
@@ -176,6 +194,7 @@ make redis-slim
 make postgres-slim
 make sqlite
 make dotnet
+make php
 
 # Scan for CVEs
 make scan
@@ -203,9 +222,13 @@ minimal/
 ├── postgres-slim/apko/postgres.yaml  # PostgreSQL image (Wolfi pkg)
 ├── sqlite/apko/sqlite.yaml          # SQLite image (Wolfi pkg)
 ├── dotnet/apko/dotnet.yaml          # .NET Runtime image (Wolfi pkg)
+├── php/
+│   ├── apko/php.yaml                # PHP image
+│   └── melange.yaml                 # PHP from source (php.net)
 ├── .github/workflows/
 │   ├── build.yml                 # Daily CI pipeline
 │   ├── update-jenkins.yml        # Jenkins version updates
+│   ├── update-php.yml            # PHP version updates (from php.net)
 │   ├── update-redis.yml          # Redis version updates
 │   └── update-wolfi-packages.yml # Wolfi package updates
 ├── Makefile
@@ -225,7 +248,7 @@ Docker and container runtimes automatically pull the correct architecture for yo
 
 ## Security Features
 
-- **CVE gate** - Builds fail if any CRITICAL/HIGH vulnerabilities detected
+- **Vulnerability visibility** - Every build is scanned (Trivy); results in job summary and Security tab; we rely on Wolfi for fast upstream patches
 - **Signed images** - All images signed with [cosign](https://github.com/sigstore/cosign) keyless signing
 - **SBOM generation** - Full software bill of materials in SPDX format
 - **Non-root users** - All images run as non-root by default

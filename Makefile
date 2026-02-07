@@ -11,13 +11,13 @@ HTTPD_VERSION ?= 2.4.66
 REDIS_VERSION ?= 8.4.0
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite dotnet keygen
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet
+.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite dotnet php php-melange keygen
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-php
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim postgres-slim bun sqlite dotnet
+build: python jenkins go node-slim nginx httpd redis-slim postgres-slim bun sqlite dotnet php
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -235,9 +235,35 @@ dotnet:
 	@echo "✓ minimal-dotnet built (Wolfi package)"
 
 #------------------------------------------------------------------------------
+# PHP IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+php-melange: keygen
+	@echo "Building PHP from source via melange..."
+	melange build php/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ PHP package built from source"
+
+php: php-melange
+	@echo "Assembling minimal-php image with apko..."
+	apko build php/apko/php.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-php:$(VERSION) \
+		php.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < php.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-php:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-php:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-php:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-php:latest
+	@rm -f php.tar sbom-*.spdx.json
+	@echo "✓ minimal-php built (source build)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-php
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -304,6 +330,12 @@ scan-dotnet:
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-dotnet:latest
 	@echo "✓ minimal-dotnet: scan passed"
+
+scan-php:
+	@echo "Scanning minimal-php..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-php:latest
+	@echo "✓ minimal-php: scan passed"
 
 # Full scan with all severities
 scan-all:
@@ -583,6 +615,7 @@ help:
 	@echo "  make bun             Build Bun (Wolfi package)"
 	@echo "  make sqlite          Build SQLite (Wolfi package)"
 	@echo "  make dotnet          Build .NET Runtime (Wolfi package)"
+	@echo "  make php             Build PHP (melange source build)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"

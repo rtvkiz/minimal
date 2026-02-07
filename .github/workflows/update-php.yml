@@ -1,0 +1,232 @@
+name: Update PHP Version
+
+on:
+  schedule:
+    # Check daily at 7am UTC
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new PHP patch release
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Get current version and series from melange.yaml
+          CURRENT=$(awk '/^  version:/ {print $2}' php/melange.yaml)
+          SERIES=$(echo "$CURRENT" | cut -d. -f1,2)
+
+          if [ -z "$CURRENT" ]; then
+            echo "::error::Failed to read current version from melange.yaml"
+            exit 1
+          fi
+
+          echo "Current version: $CURRENT"
+          echo "Current series: $SERIES"
+
+          # --- Patch update check (e.g. 8.5.2 -> 8.5.3) ---
+          RELEASE_JSON=$(curl -fsSL "https://www.php.net/releases/?json&version=$SERIES")
+
+          LATEST=$(echo "$RELEASE_JSON" | jq -r '.version')
+
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "::error::Failed to fetch latest PHP $SERIES version from php.net"
+            exit 1
+          fi
+
+          # Validate version format
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid PHP version received: $LATEST"
+            exit 1
+          fi
+
+          echo "Latest in $SERIES series: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            # Get SHA256 for .tar.gz from PHP releases API
+            SHA256=$(echo "$RELEASE_JSON" | jq -r '.source[] | select(.filename | endswith(".tar.gz")) | .sha256')
+
+            if [ -z "$SHA256" ] || [ "$SHA256" = "null" ]; then
+              echo "::error::Failed to get SHA256 for PHP $LATEST"
+              exit 1
+            fi
+
+            # Validate SHA256 format (64 hex chars)
+            if ! [[ "$SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "::error::Invalid SHA256 format: $SHA256"
+              exit 1
+            fi
+
+            {
+              echo "update_available=true"
+              echo "new_version=$LATEST"
+              echo "current_version=$CURRENT"
+              echo "sha256=$SHA256"
+              echo "series=$SERIES"
+            } >> "$GITHUB_OUTPUT"
+
+            echo "Patch update available: $CURRENT → $LATEST (sha256: $SHA256)"
+          else
+            echo "update_available=false" >> "$GITHUB_OUTPUT"
+            echo "Already up to date for $SERIES series"
+          fi
+
+          # --- Minor/major series check (e.g. 8.5 -> 8.6 or 9.0) ---
+          CURRENT_MAJOR=$(echo "$SERIES" | cut -d. -f1)
+          CURRENT_MINOR=$(echo "$SERIES" | cut -d. -f2)
+          NEXT_MINOR="$CURRENT_MAJOR.$((CURRENT_MINOR + 1))"
+          NEXT_MAJOR="$((CURRENT_MAJOR + 1)).0"
+
+          echo ""
+          echo "Checking for new series..."
+
+          NEW_SERIES=""
+          # Check next minor (e.g. 8.6)
+          MINOR_CHECK=$(curl -fsSL "https://www.php.net/releases/?json&version=$NEXT_MINOR" 2>/dev/null || echo "{}")
+          MINOR_VERSION=$(echo "$MINOR_CHECK" | jq -r '.version // empty' 2>/dev/null || true)
+          if [ -n "$MINOR_VERSION" ]; then
+            echo "New minor series available: PHP $NEXT_MINOR (latest: $MINOR_VERSION)"
+            NEW_SERIES="$NEXT_MINOR"
+          fi
+
+          # Check next major (e.g. 9.0)
+          MAJOR_CHECK=$(curl -fsSL "https://www.php.net/releases/?json&version=$NEXT_MAJOR" 2>/dev/null || echo "{}")
+          MAJOR_VERSION=$(echo "$MAJOR_CHECK" | jq -r '.version // empty' 2>/dev/null || true)
+          if [ -n "$MAJOR_VERSION" ]; then
+            echo "New major series available: PHP $NEXT_MAJOR (latest: $MAJOR_VERSION)"
+            NEW_SERIES="$NEXT_MAJOR"
+          fi
+
+          if [ -n "$NEW_SERIES" ]; then
+            echo "new_series=$NEW_SERIES" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update version and checksum
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          SHA256="${{ steps.check.outputs.sha256 }}"
+          echo "Updating to PHP $VERSION"
+
+          # Update php/melange.yaml - version
+          sed -i "s/^  version: .*/  version: $VERSION/" php/melange.yaml
+
+          # Update php/melange.yaml - sha256
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" php/melange.yaml
+
+          # Reset epoch to 0 for new upstream version
+          sed -i "s/^  epoch: .*/  epoch: 0/" php/melange.yaml
+
+          # Verify changes
+          echo "=== php/melange.yaml ==="
+          grep -E '(version:|sha256:|epoch:)' php/melange.yaml | head -3
+
+      - name: Create patch update PR
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(php): bump to ${{ steps.check.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates PHP from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+            ## Changes
+
+            - `php/melange.yaml` - package version, SHA256 checksum, epoch reset
+
+            ## Verification
+
+            The CI pipeline will build PHP from source and run tests automatically.
+
+            - **Source**: https://www.php.net/distributions/php-${{ steps.check.outputs.new_version }}.tar.gz
+            - **SHA256**: `${{ steps.check.outputs.sha256 }}`
+
+            ## Links
+
+            - [PHP ChangeLog](https://www.php.net/ChangeLog-${{ steps.check.outputs.series }}.php)
+            - [PHP Downloads](https://www.php.net/downloads)
+
+            ---
+
+            This PR was automatically created by the [update-php](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-php.yml) workflow.
+          branch: update-php-${{ steps.check.outputs.new_version }}
+          commit-message: |
+            chore(php): bump to ${{ steps.check.outputs.new_version }}
+
+            Updates PHP from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
+            SHA256: ${{ steps.check.outputs.sha256 }}
+          delete-branch: true
+          labels: |
+            dependencies
+            php
+
+      - name: Create new series issue
+        if: steps.check.outputs.new_series != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const series = '${{ steps.check.outputs.new_series }}';
+            const current = '${{ steps.check.outputs.series }}';
+            const title = `chore(php): new series available — PHP ${series}`;
+
+            // Check if issue already exists
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'php,dependencies',
+            });
+
+            const exists = issues.some(i => i.title.includes(`PHP ${series}`));
+            if (exists) {
+              console.log(`Issue for PHP ${series} already exists, skipping`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: [
+                `## New PHP Series Available`,
+                ``,
+                `PHP **${series}** is now available. We are currently on **${current}**.`,
+                ``,
+                `### Upgrade Checklist`,
+                ``,
+                `- [ ] Review [PHP migration guide](https://www.php.net/manual/en/migration${series.replace('.', '')}.php)`,
+                `- [ ] Check \`./configure\` flags for added/removed/renamed options`,
+                `- [ ] Update \`php/melange.yaml\`:`,
+                `  - \`version\` to latest ${series}.x`,
+                `  - \`sha256\` (from php.net releases API)`,
+                `  - \`tag-filter\` from \`"php-${current}."\` to \`"php-${series}."\``,
+                `- [ ] Update \`README.md\` if PHP version is mentioned`,
+                `- [ ] Build and test locally (\`make php\`)`,
+                `- [ ] Verify CI passes`,
+                ``,
+                `### Why Manual?`,
+                ``,
+                `Minor/major version bumps can change configure flags, drop extensions, or break`,
+                `API compatibility. Patch updates (${current}.x) are auto-PR'd; series upgrades`,
+                `require review.`,
+                ``,
+                `---`,
+                ``,
+                `Automatically created by the [update-php](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/workflows/update-php.yml) workflow.`,
+              ].join('\n'),
+              labels: ['dependencies', 'php'],
+            });
+          github-token: ${{ secrets.GITHUB_TOKEN }}

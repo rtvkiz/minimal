@@ -1,0 +1,84 @@
+# Melange build configuration for minimal PHP
+# Builds PHP from source (php.net) - minimal CLI with openssl, libxml, curl, zlib
+# You control version and security patches; no dependency on Wolfi's php-8.5 package
+
+package:
+  name: php-minimal
+  version: 8.5.2
+  epoch: 0
+  description: "Minimal PHP CLI built from source"
+  copyright:
+    - license: PHP-3.01
+
+vars:
+  # SHA256 from https://www.php.net/releases/?json&version=8.5
+  sha256: 379ccccefcc85f28286444cf01bc0db017c79d513417267f5bb1d804b8428c22
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - linux-headers
+      - libxml2-dev
+      - openssl-dev
+      - zlib-dev
+      - curl-dev
+      - oniguruma-dev
+      - pkgconf
+
+pipeline:
+  # Download and verify PHP source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://www.php.net/distributions/php-${{package.version}}.tar.gz" \
+        -o /home/build/php.tar.gz
+      echo "${{vars.sha256}}  /home/build/php.tar.gz" | sha256sum -c -
+      cd /home/build
+      tar xzf php.tar.gz
+      rm php.tar.gz
+
+  # Configure and build PHP (minimal CLI only)
+  - runs: |
+      cd /home/build/php-${{package.version}}
+      ./configure \
+        --prefix=/usr \
+        --disable-all \
+        --enable-cli \
+        --with-openssl \
+        --with-zlib \
+        --enable-libxml \
+        --with-libxml \
+        --with-curl \
+        --enable-mbstring \
+        --enable-opcache \
+        --without-sqlite3 \
+        --without-pdo-sqlite
+      make -j$(nproc)
+
+  # Install to destdir (manual copy like Redis)
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+
+      cp /home/build/php-${{package.version}}/sapi/cli/php "${{targets.destdir}}/usr/bin/php"
+      cp /home/build/php-${{package.version}}/sapi/cgi/php-cgi "${{targets.destdir}}/usr/bin/php-cgi"
+
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/php"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/php-cgi"
+
+      echo "Verifying PHP build..."
+      ls -lh "${{targets.destdir}}/usr/bin/php"
+      ls -lh "${{targets.destdir}}/usr/bin/php-cgi"
+
+update:
+  enabled: true
+  github:
+    identifier: php/php-src
+    use-tag: true
+    tag-filter: "php-8.5."
