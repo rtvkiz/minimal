@@ -187,6 +187,17 @@ minimal/
 └── LICENSE
 ```
 
+## Supported Architectures
+
+All images are published as multi-architecture manifests supporting:
+
+| Architecture | Platform | Status |
+|--------------|----------|--------|
+| `x86_64` | `linux/amd64` | Supported |
+| `aarch64` | `linux/arm64` | Supported |
+
+Docker and container runtimes automatically pull the correct architecture for your platform.
+
 ## Security Features
 
 - **CVE gate** - Builds fail if any CRITICAL/HIGH vulnerabilities detected
@@ -196,6 +207,7 @@ minimal/
 - **Minimal attack surface** - Only essential packages included
 - **Shell-less images** - Most images have no shell
 - **Reproducible builds** - Declarative apko configurations
+- **Multi-architecture** - Native support for AMD64 and ARM64
 
 ## Verify Image Signatures
 

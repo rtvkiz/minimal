@@ -108,7 +108,7 @@ jobs:
         if: matrix.build_type == 'melange'
         run: |
           melange build ${{ matrix.melange_config }} \
-            --arch x86_64 \
+            --arch x86_64,aarch64 \
             --signing-key melange.rsa \
             --out-dir ./packages \
             --runner docker
@@ -240,7 +240,7 @@ jobs:
           fi
           apko publish ${{ matrix.apko_config }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
-            --arch x86_64 \
+            --arch x86_64,aarch64 \
             $EXTRA_ARGS
 
       - name: Sign image with cosign
