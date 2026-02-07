@@ -95,27 +95,52 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-dotnet:latest /app/myapp.d
 ## How Images Are Built
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         BUILD PIPELINE                              │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  Package Source            Image Assembly           Verification    │
-│  ──────────────           ──────────────           ──────────────   │
-│                                                                     │
-│  ┌─────────────┐          ┌────────────┐          ┌─────────────┐   │
-│  │   Wolfi     │─────────▶│    apko    │─────────▶│   Trivy     │   │
-│  │ (pre-built) │  install │ (OCI image)│  scan    │ (CVE gate)  │   │
-│  │ Python, Go, │          │            │          │             │   │
-│  │ Node, etc.  │          │            │          │             │   │
-│  └─────────────┘          └─────┬──────┘          └─────┬───────┘   │
-│                                 │                       │           │
-│  ┌─────────────┐                │                       ▼           │
-│  │   melange   │────────────────┘              ┌─────────────────┐  │
-│  │ (Jenkins,   │  build from                   │ cosign + SBOM   │  │
-│  │  Redis)     │  source                       │ (sign & publish │  │
-│  └─────────────┘                               └─────────────────┘  │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            BUILD PIPELINE                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Signing Keys:                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  PRs: keygen job (ephemeral) │ Main: repository secrets (persistent)│    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                              │                                              │
+│                              ▼                                              │
+│  ┌─────────────────────────────┐    ┌─────────────────────────────────────┐ │
+│  │     melange-build (4 jobs)  │    │      build-apko (9 jobs)            │ │
+│  │     Native ARM64 runners    │    │      Wolfi pre-built packages       │ │
+│  │  ┌────────┐  ┌────────────┐ │    │  Python, Node, Go, Nginx, HTTPD,    │ │
+│  │  │ x86_64 │  │  aarch64   │ │    │  PostgreSQL, Bun, SQLite, .NET      │ │
+│  │  │ ubuntu │  │ ubuntu-arm │ │    │                                     │ │
+│  │  └────┬───┘  └─────┬──────┘ │    │  ┌─────────┐     ┌───────────────┐  │ │
+│  │       │            │        │    │  │  Wolfi  │────▶│ apko publish  │  │ │
+│  │       └─────┬──────┘        │    │  │ packages│     │ (multi-arch)  │  │ │
+│  │             ▼               │    │  └─────────┘     └───────┬───────┘  │ │
+│  │     ┌──────────────┐        │    │                          │          │ │
+│  │     │   artifacts  │        │    └──────────────────────────│──────────┘ │
+│  │     │ (x86+arm64)  │        │                               │            │
+│  │     └──────┬───────┘        │                               │            │
+│  └────────────│────────────────┘                               │            │
+│               ▼                                                │            │
+│  ┌─────────────────────────────┐                               │            │
+│  │  build-melange (2 jobs)     │                               │            │
+│  │  Jenkins, Redis             │                               │            │
+│  │  ┌─────────┐ ┌────────────┐ │                               │            │
+│  │  │  merge  │▶│   apko     │─┼───────────────────────────────┤            │
+│  │  │ packages│ │  publish   │ │                               │            │
+│  │  └─────────┘ └────────────┘ │                               │            │
+│  └─────────────────────────────┘                               │            │
+│                                                                ▼            │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                        Verification & Publish                        │   │
+│  │  ┌─────────────┐     ┌─────────────┐     ┌─────────────────────────┐ │   │
+│  │  │   Trivy     │────▶│    Test     │────▶│  cosign sign + SBOM     │ │   │
+│  │  │  CVE scan   │     │   image     │     │  (keyless signing)      │ │   │
+│  │  └─────────────┘     └─────────────┘     └─────────────────────────┘ │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  Note: PRs build and test but do not publish. Only main branch publishes.  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Update Schedule
@@ -187,6 +212,17 @@ minimal/
 └── LICENSE
 ```
 
+## Supported Architectures
+
+All images are published as multi-architecture manifests supporting:
+
+| Architecture | Platform | Status |
+|--------------|----------|--------|
+| `x86_64` | `linux/amd64` | Supported |
+| `aarch64` | `linux/arm64` | Supported |
+
+Docker and container runtimes automatically pull the correct architecture for your platform.
+
 ## Security Features
 
 - **CVE gate** - Builds fail if any CRITICAL/HIGH vulnerabilities detected
@@ -196,6 +232,7 @@ minimal/
 - **Minimal attack surface** - Only essential packages included
 - **Shell-less images** - Most images have no shell
 - **Reproducible builds** - Declarative apko configurations
+- **Multi-architecture** - Native support for AMD64 and ARM64
 
 ## Verify Image Signatures
 
