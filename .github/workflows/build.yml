@@ -328,6 +328,8 @@ jobs:
   #----------------------------------------------------------------------------
   build-melange:
     needs: [melange-build]
+    # Always run (keygen ancestor may be skipped), but only if melange-build succeeded
+    if: always() && needs.melange-build.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
