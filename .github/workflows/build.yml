@@ -121,16 +121,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: packages-${{ matrix.name }}-${{ matrix.arch }}
-          path: packages/
-          retention-days: 1
-
-      # Upload public key for PR builds (needed by build-melange)
-      - name: Upload public key (PR)
-        if: github.event_name == 'pull_request' && matrix.arch == 'x86_64'
-        uses: actions/upload-artifact@v4
-        with:
-          name: melange-pubkey-${{ matrix.name }}
-          path: melange.rsa.pub
+          path: |
+            packages/
+            melange.rsa.pub
           retention-days: 1
 
   #----------------------------------------------------------------------------
@@ -364,39 +357,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # For PRs: download ephemeral public key
-      - name: Download ephemeral public key (PR)
-        if: github.event_name == 'pull_request'
-        uses: actions/download-artifact@v4
-        with:
-          name: melange-pubkey-${{ matrix.name }}
-          path: .
-
-      # For push/schedule: use repository secret
-      - name: Setup signing key (protected branch)
-        if: github.event_name != 'pull_request'
-        run: |
-          echo "${{ secrets.MELANGE_SIGNING_KEY_PUB }}" > melange.rsa.pub
-
       - name: Download x86_64 packages
         uses: actions/download-artifact@v4
         with:
           name: packages-${{ matrix.name }}-x86_64
-          path: ./packages
+          path: ./packages-x86_64
 
       - name: Download aarch64 packages
         uses: actions/download-artifact@v4
         with:
           name: packages-${{ matrix.name }}-aarch64
-          path: ./packages
+          path: ./packages-aarch64
 
-      - name: Verify package structure
+      - name: Merge packages
         run: |
-          echo "Package structure:"
-          find ./packages -type f -name "*.apk" | sort
-          echo ""
-          echo "APKINDEX files:"
-          find ./packages -name "APKINDEX.tar.gz" | sort
+          mkdir -p ./packages
+          # Copy x86_64 packages
+          cp -r ./packages-x86_64/packages/* ./packages/ 2>/dev/null || true
+          # Copy aarch64 packages (merge into same structure)
+          cp -r ./packages-aarch64/packages/* ./packages/ 2>/dev/null || true
+          # Use signing key from either (they're the same content, different builds)
+          cp ./packages-x86_64/melange.rsa.pub ./melange.rsa.pub
+
+          echo "Merged package structure:"
+          find ./packages -type f -name "*.apk" | head -20
+
+      # For push/schedule: overwrite with repository public key (for publishing)
+      - name: Setup signing key (protected branch)
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.MELANGE_SIGNING_KEY_PUB }}" > melange.rsa.pub
 
       - name: Build image with apko
         run: |
