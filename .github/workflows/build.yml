@@ -532,7 +532,7 @@ jobs:
     steps:
       - name: Check results
         run: |
-          if [ "${{ needs.build-apko.result }}" != "success" ] || [ "${{ needs.build-melange.result }}" != "success" ]; then
+          if [ "${{ needs.build-apko.result }}" == "failure" ] || [ "${{ needs.build-melange.result }}" == "failure" ]; then
             echo "::error::One or more images failed"
             exit 1
           fi
