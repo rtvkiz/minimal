@@ -115,6 +115,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           echo "${{ secrets.MELANGE_SIGNING_KEY }}" > melange.rsa
+          echo "${{ secrets.MELANGE_SIGNING_KEY_PUB }}" > melange.rsa.pub
           chmod 600 melange.rsa
 
       - name: Build package with melange
