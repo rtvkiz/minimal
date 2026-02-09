@@ -8,7 +8,7 @@ VERSION ?= $(shell date +%Y%m%d)
 JENKINS_VERSION ?= 2.541.1
 NGINX_VERSION ?= 1.29.4
 HTTPD_VERSION ?= 2.4.66
-REDIS_VERSION ?= 8.4.0
+REDIS_VERSION ?= 8.4.1
 
 .PHONY: all build scan clean help
 .PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite dotnet php php-melange keygen
