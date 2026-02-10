@@ -1,0 +1,244 @@
+name: Update Rails Version
+
+on:
+  schedule:
+    # Check daily at 7:30am UTC
+    - cron: '30 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-rails-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new Rails gem version
+        id: check-rails
+        run: |
+          set -euo pipefail
+
+          # Get current Rails version from melange.yaml
+          CURRENT=$(grep 'rails_version:' rails/melange.yaml | awk '{print $2}')
+
+          if [ -z "$CURRENT" ]; then
+            echo "::error::Failed to read current Rails version from melange.yaml"
+            exit 1
+          fi
+
+          echo "Current Rails version: $CURRENT"
+
+          # Query RubyGems API for latest Rails version
+          LATEST=$(curl -fsSL "https://rubygems.org/api/v1/versions/rails/latest.json" | jq -r '.version')
+
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "::error::Failed to fetch latest Rails version from RubyGems"
+            exit 1
+          fi
+
+          # Validate version format
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Rails version received: $LATEST"
+            exit 1
+          fi
+
+          echo "Latest Rails version: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            {
+              echo "update_available=true"
+              echo "new_version=$LATEST"
+              echo "current_version=$CURRENT"
+            } >> "$GITHUB_OUTPUT"
+            echo "Rails update available: $CURRENT -> $LATEST"
+          else
+            echo "update_available=false" >> "$GITHUB_OUTPUT"
+            echo "Rails is up to date"
+          fi
+
+      - name: Update Rails version
+        if: steps.check-rails.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check-rails.outputs.new_version }}"
+          echo "Updating Rails to $VERSION"
+
+          # Update rails_version in melange.yaml
+          sed -i "s/^  rails_version: .*/  rails_version: $VERSION/" rails/melange.yaml
+
+          # Verify changes
+          echo "=== rails/melange.yaml ==="
+          grep 'rails_version:' rails/melange.yaml
+
+      - name: Create Rails update PR
+        if: steps.check-rails.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(rails): bump Rails gem to ${{ steps.check-rails.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates Rails gem from `${{ steps.check-rails.outputs.current_version }}` to `${{ steps.check-rails.outputs.new_version }}`.
+
+            ## Changes
+
+            - `rails/melange.yaml` - rails_version variable
+
+            ## Links
+
+            - [Rails Releases](https://rubyonrails.org/category/releases)
+            - [RubyGems](https://rubygems.org/gems/rails)
+
+            ---
+
+            This PR was automatically created by the [update-rails](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-rails.yml) workflow.
+          branch: update-rails-gem-${{ steps.check-rails.outputs.new_version }}
+          commit-message: |
+            chore(rails): bump Rails gem to ${{ steps.check-rails.outputs.new_version }}
+
+            Updates Rails from ${{ steps.check-rails.outputs.current_version }} to ${{ steps.check-rails.outputs.new_version }}.
+          delete-branch: true
+          labels: |
+            dependencies
+            rails
+
+  check-ruby-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new Ruby version
+        id: check-ruby
+        run: |
+          set -euo pipefail
+
+          # Get current Ruby version from melange.yaml
+          CURRENT=$(grep 'ruby_version:' rails/melange.yaml | awk '{print $2}')
+
+          if [ -z "$CURRENT" ]; then
+            echo "::error::Failed to read current Ruby version from melange.yaml"
+            exit 1
+          fi
+
+          SERIES=$(echo "$CURRENT" | cut -d. -f1,2)
+          echo "Current Ruby version: $CURRENT (series: $SERIES)"
+
+          # Query GitHub tags API for latest stable in the current series
+          LATEST=$(curl -fsSL "https://api.github.com/repos/ruby/ruby/tags" | \
+            jq -r --arg series "v${SERIES//./_}_" \
+            '[.[] | select(.name | startswith($series)) | .name] | sort | last // empty' | \
+            sed 's/^v//; s/_/./g')
+
+          if [ -z "$LATEST" ]; then
+            echo "::error::Failed to determine latest Ruby $SERIES.x version"
+            exit 1
+          fi
+
+          # Validate version format
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Ruby version: $LATEST"
+            exit 1
+          fi
+
+          echo "Latest Ruby in $SERIES series: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            # Download tarball and compute SHA256
+            echo "Downloading Ruby $LATEST tarball..."
+            curl -fsSL "https://cache.ruby-lang.org/pub/ruby/$SERIES/ruby-$LATEST.tar.gz" \
+              -o /tmp/ruby.tar.gz
+            SHA256=$(sha256sum /tmp/ruby.tar.gz | awk '{print $1}')
+            rm /tmp/ruby.tar.gz
+            echo "SHA256: $SHA256"
+
+            {
+              echo "update_available=true"
+              echo "new_version=$LATEST"
+              echo "current_version=$CURRENT"
+              echo "sha256=$SHA256"
+              echo "series=$SERIES"
+            } >> "$GITHUB_OUTPUT"
+            echo "Ruby update available: $CURRENT -> $LATEST"
+          else
+            echo "update_available=false" >> "$GITHUB_OUTPUT"
+            echo "Ruby is up to date"
+          fi
+
+      - name: Update Ruby version and checksum
+        if: steps.check-ruby.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check-ruby.outputs.new_version }}"
+          SHA256="${{ steps.check-ruby.outputs.sha256 }}"
+          echo "Updating Ruby to $VERSION"
+
+          # Update ruby_version in melange.yaml
+          sed -i "s/^  ruby_version: .*/  ruby_version: $VERSION/" rails/melange.yaml
+
+          # Update package version in melange.yaml
+          sed -i "s/^  version: .*/  version: $VERSION/" rails/melange.yaml
+
+          # Update sha256 in melange.yaml
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" rails/melange.yaml
+
+          # Reset epoch to 0 for new upstream version
+          sed -i "s/^  epoch: .*/  epoch: 0/" rails/melange.yaml
+
+          # Update Makefile
+          sed -i "s/RUBY_VERSION ?= .*/RUBY_VERSION ?= $VERSION/" Makefile
+
+          # Verify changes
+          echo "=== rails/melange.yaml ==="
+          grep -E '(version:|ruby_version:|sha256:|epoch:)' rails/melange.yaml | head -4
+          echo "=== Makefile ==="
+          grep 'RUBY_VERSION' Makefile
+
+      - name: Create Ruby update PR
+        if: steps.check-ruby.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(rails): bump Ruby to ${{ steps.check-ruby.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates Ruby from `${{ steps.check-ruby.outputs.current_version }}` to `${{ steps.check-ruby.outputs.new_version }}`.
+
+            ## Changes
+
+            - `rails/melange.yaml` - package version, ruby_version, SHA256 checksum, epoch reset
+            - `Makefile` - RUBY_VERSION variable
+
+            ## Verification
+
+            The CI pipeline will build Ruby from source and run tests automatically.
+
+            - **Source**: https://cache.ruby-lang.org/pub/ruby/${{ steps.check-ruby.outputs.series }}/ruby-${{ steps.check-ruby.outputs.new_version }}.tar.gz
+            - **SHA256**: `${{ steps.check-ruby.outputs.sha256 }}`
+
+            ## Links
+
+            - [Ruby Releases](https://www.ruby-lang.org/en/downloads/)
+            - [Ruby News](https://www.ruby-lang.org/en/news/)
+
+            ---
+
+            This PR was automatically created by the [update-rails](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-rails.yml) workflow.
+          branch: update-rails-ruby-${{ steps.check-ruby.outputs.new_version }}
+          commit-message: |
+            chore(rails): bump Ruby to ${{ steps.check-ruby.outputs.new_version }}
+
+            Updates Ruby from ${{ steps.check-ruby.outputs.current_version }} to ${{ steps.check-ruby.outputs.new_version }}.
+            SHA256: ${{ steps.check-ruby.outputs.sha256 }}
+          delete-branch: true
+          labels: |
+            dependencies
+            rails

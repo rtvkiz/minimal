@@ -89,6 +89,15 @@ jobs:
             melange_config: php/melange.yaml
             arch: aarch64
             runner: ubuntu-24.04-arm
+          # Rails builds
+          - name: rails
+            melange_config: rails/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: rails
+            melange_config: rails/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
@@ -349,6 +358,8 @@ jobs:
             apko_config: redis-slim/apko/redis.yaml
           - name: php
             apko_config: php/apko/php.yaml
+          - name: rails
+            apko_config: rails/apko/rails.yaml
 
     steps:
       - name: Checkout repository

@@ -9,15 +9,17 @@ JENKINS_VERSION ?= 2.541.1
 NGINX_VERSION ?= 1.29.4
 HTTPD_VERSION ?= 2.4.66
 REDIS_VERSION ?= 8.4.1
+RUBY_VERSION ?= 4.0.1
+RAILS_VERSION ?= 8.1.2
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite dotnet php php-melange keygen
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-php
+.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite dotnet php php-melange rails rails-melange keygen
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-php scan-rails
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim postgres-slim bun sqlite dotnet php
+build: python jenkins go node-slim nginx httpd redis-slim postgres-slim bun sqlite dotnet php rails
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -261,9 +263,35 @@ php: php-melange
 	@echo "✓ minimal-php built (source build)"
 
 #------------------------------------------------------------------------------
+# RAILS IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+rails-melange: keygen
+	@echo "Building Ruby $(RUBY_VERSION) + Rails $(RAILS_VERSION) from source via melange..."
+	melange build rails/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Rails package built from source"
+
+rails: rails-melange
+	@echo "Assembling minimal-rails image with apko..."
+	apko build rails/apko/rails.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION) \
+		rails.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < rails.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-rails:latest
+	@rm -f rails.tar sbom-*.spdx.json
+	@echo "✓ minimal-rails built (source build)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-php
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-php scan-rails
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -337,6 +365,12 @@ scan-php:
 		$(REGISTRY)/$(OWNER)/minimal-php:latest
 	@echo "✓ minimal-php: scan passed"
 
+scan-rails:
+	@echo "Scanning minimal-rails..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-rails:latest
+	@echo "✓ minimal-rails: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -369,12 +403,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-rails)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-postgres-slim test-bun test-sqlite test-dotnet
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-postgres-slim test-bun test-sqlite test-dotnet test-rails
 
 test-python:
 	@echo "Testing Python image..."
@@ -524,6 +558,23 @@ test-dotnet:
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
 	@echo "✓ .NET Runtime tests passed"
 
+test-rails:
+	@echo "Testing Rails image..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-rails:latest -v
+	@echo "Testing Rails version..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-rails:latest \
+		-e "require 'rails'; puts Rails.version"
+	@echo "Testing Bundler..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-rails:latest \
+		-e "require 'bundler'; puts Bundler::VERSION"
+	@echo "Testing core libraries..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-rails:latest \
+		-e "require 'openssl'; require 'yaml'; require 'json'; puts 'Core libs OK'"
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-rails:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ Rails tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -550,6 +601,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-sqlite:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-dotnet:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-rails:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -589,6 +642,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-dotnet:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -616,6 +672,7 @@ help:
 	@echo "  make sqlite          Build SQLite (Wolfi package)"
 	@echo "  make dotnet          Build .NET Runtime (Wolfi package)"
 	@echo "  make php             Build PHP (melange source build)"
+	@echo "  make rails           Build Rails (Ruby $(RUBY_VERSION) + Rails $(RAILS_VERSION), source build)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"
@@ -634,5 +691,7 @@ help:
 	@echo "  NGINX_VERSION=$(NGINX_VERSION)"
 	@echo "  HTTPD_VERSION=$(HTTPD_VERSION)"
 	@echo "  REDIS_VERSION=$(REDIS_VERSION)"
+	@echo "  RUBY_VERSION=$(RUBY_VERSION)"
+	@echo "  RAILS_VERSION=$(RAILS_VERSION)"
 	@echo "  REGISTRY=$(REGISTRY)"
 	@echo "  OWNER=$(OWNER)"

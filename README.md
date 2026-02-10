@@ -18,6 +18,7 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **SQLite** | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
 | **.NET Runtime** | `docker pull ghcr.io/rtvkiz/minimal-dotnet:latest` | No | .NET 10 runtime for apps |
 | **PHP** | `docker pull ghcr.io/rtvkiz/minimal-php:latest` | No | PHP 8.5 CLI (built from source) |
+| **Rails** | `docker pull ghcr.io/rtvkiz/minimal-rails:latest` | No | Ruby 4.0 + Rails 8.1 (built from source) |
 
 *\*HTTPD, Jenkins may include shell(sh,busybox) via transitive Wolfi dependencies. CI treats shell presence as informational.*
 
@@ -78,6 +79,9 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-dotnet:latest /app/myapp.d
 
 # PHP - run your app
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-php:latest /app/index.php
+
+# Rails - run your app
+docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require 'rails'; puts Rails.version"
 ```
 
 ## Image Specifications
@@ -96,6 +100,7 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-php:latest /app/index.php
 | SQLite | 3.51.x | nonroot (65532) | `/usr/bin/sqlite3` | `/data` |
 | .NET Runtime | 10.x | nonroot (65532) | `/usr/bin/dotnet` | `/app` |
 | PHP | 8.5.x | nonroot (65532) | `/usr/bin/php` | `/app` |
+| Rails | Ruby 4.0.x + Rails 8.1.x | nonroot (65532) | `/usr/bin/ruby` | `/app` |
 
 ## How Images Are Built
 
@@ -111,7 +116,7 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-php:latest /app/index.php
 │                              │                                              │
 │                              ▼                                              │
 │  ┌─────────────────────────────┐    ┌─────────────────────────────────────┐ │
-│  │     melange-build (6 jobs)  │    │      build-apko (9 jobs)           │ │
+│  │     melange-build (8 jobs)  │    │      build-apko (9 jobs)           │ │
 │  │     Native ARM64 runners    │    │      Wolfi pre-built packages       │ │
 │  │  ┌────────┐  ┌────────────┐ │    │  Python, Node, Go, Nginx, HTTPD,    │ │
 │  │  │ x86_64 │  │  aarch64   │ │    │  PostgreSQL, Bun, SQLite, .NET      │ │
@@ -127,8 +132,8 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-php:latest /app/index.php
 │  └────────────│────────────────┘                               │            │
 │               ▼                                                │            │
 │  ┌─────────────────────────────┐                               │            │
-│  │  build-melange (3 jobs)     │                               │            │
-│  │  Jenkins, Redis, PHP        │                               │            │
+│  │  build-melange (4 jobs)     │                               │            │
+│  │  Jenkins, Redis, PHP, Rails │                               │            │
 │  │  ┌─────────┐ ┌────────────┐ │                               │            │
 │  │  │  merge  │▶│   apko     │─┼───────────────────────────────┤            │
 │  │  │ packages│ │  publish   │ │                               │            │
@@ -160,13 +165,14 @@ Every build is scanned for vulnerabilities; results appear in the job summary an
 
 ### Automated Version Updates
 
-Source-built packages (Jenkins, Redis, PHP) and Wolfi-based packages are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
+Source-built packages (Jenkins, Redis, PHP, Rails) and Wolfi-based packages are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
 
 | Workflow | Watches | What It Does |
 |----------|---------|--------------|
 | `update-jenkins.yml` | Jenkins LTS releases | Updates version in melange config, Makefile, build.yml |
 | `update-redis.yml` | Redis GitHub releases | Updates version and SHA256 in melange config |
 | `update-php.yml` | php.net releases API | Updates version and SHA256; opens issue for new minor/major series |
+| `update-rails.yml` | RubyGems API + Ruby GitHub tags | Updates Rails gem and Ruby source versions independently |
 | `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, PostgreSQL package versions |
 
 Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g. PHP 8.5 → 8.6) create a GitHub Issue with a manual upgrade checklist, since configure flags or APIs may change.
@@ -176,7 +182,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 ```bash
 # Prerequisites
 go install chainguard.dev/apko@latest
-go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, PHP
+go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, PHP, Rails
 brew install trivy  # or: apt install trivy
 
 # Build all images
@@ -195,6 +201,7 @@ make postgres-slim
 make sqlite
 make dotnet
 make php
+make rails
 
 # Scan for CVEs
 make scan
@@ -225,10 +232,14 @@ minimal/
 ├── php/
 │   ├── apko/php.yaml                # PHP image
 │   └── melange.yaml                 # PHP from source (php.net)
+├── rails/
+│   ├── apko/rails.yaml              # Rails image
+│   └── melange.yaml                 # Ruby from source + Rails gem
 ├── .github/workflows/
 │   ├── build.yml                 # Daily CI pipeline
 │   ├── update-jenkins.yml        # Jenkins version updates
 │   ├── update-php.yml            # PHP version updates (from php.net)
+│   ├── update-rails.yml          # Rails/Ruby version updates
 │   ├── update-redis.yml          # Redis version updates
 │   └── update-wolfi-packages.yml # Wolfi package updates
 ├── Makefile

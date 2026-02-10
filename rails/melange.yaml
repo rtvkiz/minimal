@@ -1,0 +1,107 @@
+# Melange build configuration for minimal Rails
+# Builds Ruby from source + installs Rails gem
+# You control version and security patches; no dependency on Wolfi's ruby package
+
+package:
+  name: rails-minimal
+  version: 4.0.1
+  epoch: 0
+  description: "Minimal Ruby + Rails built from source"
+  copyright:
+    - license: Ruby AND MIT
+  options:
+    no-depends: true
+
+vars:
+  ruby_version: 4.0.1
+  rails_version: 8.1.2
+  # SHA256 from https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.1.tar.gz
+  sha256: 3924be2d05db30f4e35f859bf028be85f4b7dd01714142fd823e4af5de2faf9d
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - linux-headers
+      - openssl-dev
+      - zlib-dev
+      - yaml-dev
+      - libffi-dev
+      - readline-dev
+      - gdbm-dev
+
+pipeline:
+  # Download and verify Ruby source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://cache.ruby-lang.org/pub/ruby/4.0/ruby-${{vars.ruby_version}}.tar.gz" \
+        -o /home/build/ruby.tar.gz
+      echo "${{vars.sha256}}  /home/build/ruby.tar.gz" | sha256sum -c -
+      cd /home/build
+      tar xzf ruby.tar.gz
+      rm ruby.tar.gz
+
+  # Configure and build Ruby
+  - runs: |
+      cd /home/build/ruby-${{vars.ruby_version}}
+      ./configure \
+        --prefix=/usr \
+        --disable-install-doc \
+        --disable-install-rdoc \
+        --with-openssl-dir=/usr \
+        --with-readline-dir=/usr \
+        --enable-shared \
+        --disable-jit-support
+      make -j$(nproc)
+
+  # Install Ruby to system (so shared libs are findable for gem install)
+  - runs: |
+      cd /home/build/ruby-${{vars.ruby_version}}
+      make install
+
+      ruby -v
+      echo "✓ Ruby installed to system"
+
+  # Install Rails and Bundler gems (using system Ruby)
+  - runs: |
+      gem install --no-document rails:${{vars.rails_version}} bundler
+
+      rails --version
+      bundler --version
+      echo "✓ Gems installed"
+
+  # Copy everything to destdir for packaging
+  - runs: |
+      cd /home/build/ruby-${{vars.ruby_version}}
+      make install DESTDIR="${{targets.destdir}}"
+
+      # Copy installed gems to destdir
+      cp -a /usr/lib/ruby/gems "${{targets.destdir}}/usr/lib/ruby/"
+
+      # Copy gem bin wrappers
+      for cmd in rails bundler bundle rake; do
+        if [ -f /usr/bin/$cmd ]; then
+          cp /usr/bin/$cmd "${{targets.destdir}}/usr/bin/$cmd"
+        fi
+      done
+
+      # Strip binaries
+      find "${{targets.destdir}}/usr" -type f -name "*.so" -exec strip --strip-unneeded {} \; 2>/dev/null || true
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/ruby" 2>/dev/null || true
+
+      echo "Verifying Ruby build..."
+      ls -lh "${{targets.destdir}}/usr/bin/ruby"
+
+update:
+  enabled: true
+  github:
+    identifier: ruby/ruby
+    use-tag: true
+    tag-filter: "v4_0_"
