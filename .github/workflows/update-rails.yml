@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
 
     steps:
       - name: Checkout repository
@@ -30,7 +31,8 @@ jobs:
             exit 1
           fi
 
-          echo "Current Rails version: $CURRENT"
+          SERIES=$(echo "$CURRENT" | cut -d. -f1,2)
+          echo "Current Rails version: $CURRENT (series: $SERIES)"
 
           # Query RubyGems API for latest Rails version
           LATEST=$(curl -fsSL "https://rubygems.org/api/v1/versions/rails/latest.json" | jq -r '.version')
@@ -46,15 +48,22 @@ jobs:
             exit 1
           fi
 
-          echo "Latest Rails version: $LATEST"
+          LATEST_SERIES=$(echo "$LATEST" | cut -d. -f1,2)
+          echo "Latest Rails version: $LATEST (series: $LATEST_SERIES)"
 
-          if [ "$LATEST" != "$CURRENT" ]; then
+          if [ "$LATEST_SERIES" != "$SERIES" ]; then
+            # Major or minor version change — needs manual review
+            echo "new_series=$LATEST_SERIES" >> "$GITHUB_OUTPUT"
+            echo "current_series=$SERIES" >> "$GITHUB_OUTPUT"
+            echo "New Rails series available: $SERIES -> $LATEST_SERIES"
+          elif [ "$LATEST" != "$CURRENT" ]; then
+            # Patch update within same series — auto-PR
             {
               echo "update_available=true"
               echo "new_version=$LATEST"
               echo "current_version=$CURRENT"
             } >> "$GITHUB_OUTPUT"
-            echo "Rails update available: $CURRENT -> $LATEST"
+            echo "Rails patch update available: $CURRENT -> $LATEST"
           else
             echo "update_available=false" >> "$GITHUB_OUTPUT"
             echo "Rails is up to date"
@@ -73,7 +82,7 @@ jobs:
           echo "=== rails/melange.yaml ==="
           grep 'rails_version:' rails/melange.yaml
 
-      - name: Create Rails update PR
+      - name: Create Rails patch update PR
         if: steps.check-rails.outputs.update_available == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
@@ -106,11 +115,69 @@ jobs:
             dependencies
             rails
 
+      - name: Create new Rails series issue
+        if: steps.check-rails.outputs.new_series != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const newSeries = '${{ steps.check-rails.outputs.new_series }}';
+            const currentSeries = '${{ steps.check-rails.outputs.current_series }}';
+            const title = `chore(rails): new series available — Rails ${newSeries}`;
+
+            // Check if issue already exists
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'rails,dependencies',
+            });
+
+            const exists = issues.some(i => i.title.includes(`Rails ${newSeries}`));
+            if (exists) {
+              console.log(`Issue for Rails ${newSeries} already exists, skipping`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: [
+                `## New Rails Series Available`,
+                ``,
+                `Rails **${newSeries}** is now available. We are currently on **${currentSeries}**.`,
+                ``,
+                `### Upgrade Checklist`,
+                ``,
+                `- [ ] Review [Rails upgrade guide](https://guides.rubyonrails.org/upgrading_ruby_on_rails.html)`,
+                `- [ ] Review [Rails ${newSeries} release notes](https://rubyonrails.org/category/releases)`,
+                `- [ ] Check Ruby version compatibility (Rails ${newSeries} may require a newer Ruby)`,
+                `- [ ] Update \`rails/melange.yaml\`:`,
+                `  - \`rails_version\` to latest ${newSeries}.x`,
+                `- [ ] Update \`rails/apko/rails.yaml\` if gem paths changed`,
+                `- [ ] Build and test locally (\`make rails\`)`,
+                `- [ ] Verify CI passes`,
+                ``,
+                `### Why Manual?`,
+                ``,
+                `Major/minor Rails upgrades can introduce breaking API changes, deprecation removals,`,
+                `and new Ruby version requirements. Patch updates (${currentSeries}.x) are auto-PR'd;`,
+                `series upgrades require review.`,
+                ``,
+                `---`,
+                ``,
+                `Automatically created by the [update-rails](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/workflows/update-rails.yml) workflow.`,
+              ].join('\n'),
+              labels: ['dependencies', 'rails'],
+            });
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
   check-ruby-update:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
+      issues: write
 
     steps:
       - name: Checkout repository
@@ -130,9 +197,11 @@ jobs:
           fi
 
           SERIES=$(echo "$CURRENT" | cut -d. -f1,2)
+          CURRENT_MAJOR=$(echo "$SERIES" | cut -d. -f1)
+          CURRENT_MINOR=$(echo "$SERIES" | cut -d. -f2)
           echo "Current Ruby version: $CURRENT (series: $SERIES)"
 
-          # Query GitHub tags API for latest stable in the current series
+          # --- Patch update check within current series ---
           LATEST=$(curl -fsSL "https://api.github.com/repos/ruby/ruby/tags" | \
             jq -r --arg series "v${SERIES//./_}_" \
             '[.[] | select(.name | startswith($series)) | .name] | sort | last // empty' | \
@@ -167,10 +236,44 @@ jobs:
               echo "sha256=$SHA256"
               echo "series=$SERIES"
             } >> "$GITHUB_OUTPUT"
-            echo "Ruby update available: $CURRENT -> $LATEST"
+            echo "Ruby patch update available: $CURRENT -> $LATEST"
           else
             echo "update_available=false" >> "$GITHUB_OUTPUT"
-            echo "Ruby is up to date"
+            echo "Ruby $SERIES series is up to date"
+          fi
+
+          # --- New series check (minor/major) ---
+          NEXT_MINOR="$CURRENT_MAJOR.$((CURRENT_MINOR + 1))"
+          NEXT_MAJOR="$((CURRENT_MAJOR + 1)).0"
+
+          echo ""
+          echo "Checking for new Ruby series..."
+
+          NEW_SERIES=""
+
+          # Check next minor (e.g. 4.1)
+          MINOR_TAG=$(curl -fsSL "https://api.github.com/repos/ruby/ruby/tags" | \
+            jq -r --arg series "v${NEXT_MINOR//./_}_" \
+            '[.[] | select(.name | startswith($series)) | .name] | sort | last // empty')
+          if [ -n "$MINOR_TAG" ]; then
+            MINOR_VERSION=$(echo "$MINOR_TAG" | sed 's/^v//; s/_/./g')
+            echo "New minor series available: Ruby $NEXT_MINOR (latest: $MINOR_VERSION)"
+            NEW_SERIES="$NEXT_MINOR"
+          fi
+
+          # Check next major (e.g. 5.0)
+          MAJOR_TAG=$(curl -fsSL "https://api.github.com/repos/ruby/ruby/tags" | \
+            jq -r --arg series "v${NEXT_MAJOR//./_}_" \
+            '[.[] | select(.name | startswith($series)) | .name] | sort | last // empty')
+          if [ -n "$MAJOR_TAG" ]; then
+            MAJOR_VERSION=$(echo "$MAJOR_TAG" | sed 's/^v//; s/_/./g')
+            echo "New major series available: Ruby $NEXT_MAJOR (latest: $MAJOR_VERSION)"
+            NEW_SERIES="$NEXT_MAJOR"
+          fi
+
+          if [ -n "$NEW_SERIES" ]; then
+            echo "new_series=$NEW_SERIES" >> "$GITHUB_OUTPUT"
+            echo "current_series=$SERIES" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Update Ruby version and checksum
@@ -201,7 +304,7 @@ jobs:
           echo "=== Makefile ==="
           grep 'RUBY_VERSION' Makefile
 
-      - name: Create Ruby update PR
+      - name: Create Ruby patch update PR
         if: steps.check-ruby.outputs.update_available == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
@@ -242,3 +345,64 @@ jobs:
           labels: |
             dependencies
             rails
+
+      - name: Create new Ruby series issue
+        if: steps.check-ruby.outputs.new_series != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const newSeries = '${{ steps.check-ruby.outputs.new_series }}';
+            const currentSeries = '${{ steps.check-ruby.outputs.current_series }}';
+            const title = `chore(rails): new series available — Ruby ${newSeries}`;
+
+            // Check if issue already exists
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'rails,dependencies',
+            });
+
+            const exists = issues.some(i => i.title.includes(`Ruby ${newSeries}`));
+            if (exists) {
+              console.log(`Issue for Ruby ${newSeries} already exists, skipping`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: [
+                `## New Ruby Series Available`,
+                ``,
+                `Ruby **${newSeries}** is now available. We are currently on **${currentSeries}**.`,
+                ``,
+                `### Upgrade Checklist`,
+                ``,
+                `- [ ] Review [Ruby ${newSeries} release notes](https://www.ruby-lang.org/en/news/)`,
+                `- [ ] Check Rails compatibility with Ruby ${newSeries}`,
+                `- [ ] Update \`rails/melange.yaml\`:`,
+                `  - \`ruby_version\` to latest ${newSeries}.x`,
+                `  - \`version\` (package version) to match`,
+                `  - \`sha256\` (from ruby-lang.org)`,
+                `  - \`tag-filter\` from \`"v${currentSeries.replace(/\./g, '_')}_"\` to \`"v${newSeries.replace(/\./g, '_')}_"\``,
+                `- [ ] Update \`rails/apko/rails.yaml\`:`,
+                `  - Gem paths if Ruby major version changed (e.g. \`gems/4.0.0\` → \`gems/${newSeries.split('.')[0]}.0.0\`)`,
+                `- [ ] Update \`Makefile\` — \`RUBY_VERSION\``,
+                `- [ ] Build and test locally (\`make rails\`)`,
+                `- [ ] Verify CI passes`,
+                ``,
+                `### Why Manual?`,
+                ``,
+                `Minor/major Ruby upgrades can change gem paths, remove deprecated APIs, and affect`,
+                `C extension compatibility. Patch updates (${currentSeries}.x) are auto-PR'd; series`,
+                `upgrades require review.`,
+                ``,
+                `---`,
+                ``,
+                `Automatically created by the [update-rails](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/workflows/update-rails.yml) workflow.`,
+              ].join('\n'),
+              labels: ['dependencies', 'rails'],
+            });
+          github-token: ${{ secrets.GITHUB_TOKEN }}
