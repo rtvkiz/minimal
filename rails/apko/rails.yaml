@@ -25,6 +25,7 @@ contents:
     # Ruby runtime libs (shared libs used by ruby binary)
     - libssl3
     - libcrypto3
+    - libcrypt1
     - zlib
     - yaml
     - libffi
