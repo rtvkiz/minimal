@@ -65,6 +65,9 @@ jobs:
           # Update jenkins/melange.yaml
           sed -i "s/^  version: .*/  version: $VERSION/" jenkins/melange.yaml
 
+          # Reset epoch to 0 for new upstream version
+          sed -i "s/^  epoch: .*/  epoch: 0/" jenkins/melange.yaml
+
           # Update .github/workflows/build.yml
           sed -i "s/JENKINS_VERSION: .*/JENKINS_VERSION: \"$VERSION\"/" .github/workflows/build.yml
 
@@ -92,9 +95,13 @@ jobs:
 
             ## Changes
 
-            - `jenkins/melange.yaml` - package version
+            - `jenkins/melange.yaml` - package version, epoch reset
             - `.github/workflows/build.yml` - JENKINS_VERSION env var
             - `Makefile` - JENKINS_VERSION variable
+
+            ## Image Tag
+
+            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-jenkins:${{ steps.check.outputs.new_version }}-r0`
 
             ## Links
 

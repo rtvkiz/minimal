@@ -147,6 +147,10 @@ jobs:
 
             - `php/melange.yaml` - package version, SHA256 checksum, epoch reset
 
+            ## Image Tag
+
+            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-php:${{ steps.check.outputs.new_version }}-r0`
+
             ## Verification
 
             The CI pipeline will build PHP from source and run tests automatically.

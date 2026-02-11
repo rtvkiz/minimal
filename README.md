@@ -1,5 +1,8 @@
 # Minimal: Hardened Container Images
 
+[![Build Hardened Images](https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg)](https://github.com/rtvkiz/minimal/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A collection of production-ready container images with **minimal CVEs**, rebuilt daily using [Chainguard's apko](https://github.com/chainguard-dev/apko) and [Wolfi](https://github.com/wolfi-dev) packages. By including only required packages, these images maintain a reduced attack surface and typically have zero or near-zero known vulnerabilities.
 
 ## Available Images
@@ -21,6 +24,29 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **Rails** | `docker pull ghcr.io/rtvkiz/minimal-rails:latest` | No | Ruby 4.0 + Rails 8.1 (built from source) |
 
 *\*HTTPD, Jenkins may include shell(sh,busybox) via transitive Wolfi dependencies. CI treats shell presence as informational.*
+
+## Image Tags
+
+Every image is published with two tags:
+
+| Tag | Format | Example | Mutable |
+|-----|--------|---------|---------|
+| **Version** | `VERSION-rEPOCH` | `ghcr.io/rtvkiz/minimal-redis-slim:8.4.1-r0` | No (immutable) |
+| **Latest** | `latest` | `ghcr.io/rtvkiz/minimal-redis-slim:latest` | Yes (floating) |
+
+**For production, pin to the immutable version tag:**
+
+```bash
+# Immutable — guaranteed to never change
+docker pull ghcr.io/rtvkiz/minimal-redis-slim:8.4.1-r0
+
+# Floating — always points to the most recent build
+docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest
+```
+
+The `-r0` suffix is the revision number. It resets to `r0` on each new upstream version and increments (`r1`, `r2`, ...) for rebuilds of the same version (e.g., dependency patches, config changes). This follows the same convention as [Chainguard Images](https://www.chainguard.dev/chainguard-images).
+
+Old version tags are preserved — upgrading to a new version does not remove previous tags from the registry.
 
 ## Why This Matters
 
@@ -260,6 +286,7 @@ Docker and container runtimes automatically pull the correct architecture for yo
 ## Security Features
 
 - **Vulnerability visibility** - Every build is scanned (Trivy); results in job summary and Security tab; we rely on Wolfi for fast upstream patches
+- **Immutable version tags** - Chainguard-style `VERSION-rN` tags for reproducible deployments
 - **Signed images** - All images signed with [cosign](https://github.com/sigstore/cosign) keyless signing
 - **SBOM generation** - Full software bill of materials in SPDX format
 - **Non-root users** - All images run as non-root by default

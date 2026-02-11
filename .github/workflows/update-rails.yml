@@ -97,6 +97,11 @@ jobs:
 
             - `rails/melange.yaml` - rails_version variable
 
+            ## Note
+
+            The image tag is derived from the Ruby version, not the Rails gem version.
+            The current Ruby version determines the published tag.
+
             ## Links
 
             - [Rails Releases](https://rubyonrails.org/category/releases)
@@ -319,6 +324,10 @@ jobs:
 
             - `rails/melange.yaml` - package version, ruby_version, SHA256 checksum, epoch reset
             - `Makefile` - RUBY_VERSION variable
+
+            ## Image Tag
+
+            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-rails:${{ steps.check-ruby.outputs.new_version }}-r0`
 
             ## Verification
 

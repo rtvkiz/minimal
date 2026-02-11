@@ -15,6 +15,8 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
 
+permissions: {}
+
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
@@ -31,10 +33,11 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions: {}
     steps:
       - name: Install melange
         run: |
-          go install chainguard.dev/melange@latest
+          go install chainguard.dev/melange@v0.41.1
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Generate ephemeral signing key
@@ -58,6 +61,8 @@ jobs:
     needs: [keygen]
     # Always run, but keygen may be skipped (non-PR events)
     if: always()
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -108,7 +113,7 @@ jobs:
 
       - name: Install melange
         run: |
-          go install chainguard.dev/melange@latest
+          go install chainguard.dev/melange@v0.41.1
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       # For PRs: download ephemeral key from keygen job
@@ -163,22 +168,31 @@ jobs:
         include:
           - name: python
             apko_config: python/apko/python.yaml
+            primary_package: python-3.14
           - name: node-slim
             apko_config: node-slim/apko/node.yaml
+            primary_package: nodejs-25
           - name: go
             apko_config: go/apko/go.yaml
+            primary_package: go-1.25
           - name: nginx
             apko_config: nginx/apko/nginx.yaml
+            primary_package: nginx-mainline
           - name: httpd
             apko_config: httpd/apko/httpd.yaml
+            primary_package: apache2
           - name: postgres-slim
             apko_config: postgres-slim/apko/postgres.yaml
+            primary_package: postgresql-18
           - name: bun
             apko_config: bun/apko/bun.yaml
+            primary_package: bun
           - name: sqlite
             apko_config: sqlite/apko/sqlite.yaml
+            primary_package: sqlite
           - name: dotnet
             apko_config: dotnet/apko/dotnet.yaml
+            primary_package: dotnet-10-runtime
 
     steps:
       - name: Checkout repository
@@ -186,7 +200,7 @@ jobs:
 
       - name: Install apko
         run: |
-          go install chainguard.dev/apko@latest
+          go install chainguard.dev/apko@v1.1.6
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -220,7 +234,7 @@ jobs:
 
       - name: Install Trivy
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.69.1
           trivy --version
 
       - name: Scan image for vulnerabilities
@@ -311,6 +325,18 @@ jobs:
           sarif_file: 'trivy-${{ matrix.name }}.sarif'
           category: 'trivy-${{ matrix.name }}'
 
+      - name: Extract version from SBOM
+        id: version
+        run: |
+          VERSION=$(jq -r '.packages[] | select(.name == "${{ matrix.primary_package }}") | .versionInfo' sbom-x86_64.spdx.json | head -1)
+          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+            echo "::error::Failed to extract version for ${{ matrix.primary_package }} from SBOM"
+            exit 1
+          fi
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          echo "Image version: $VERSION"
+          rm -f sbom-*.spdx.json
+
       - name: Test image
         run: |
           export IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
@@ -320,6 +346,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           apko publish ${{ matrix.apko_config }} \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
             --arch x86_64,aarch64
 
@@ -331,7 +358,7 @@ jobs:
           max_attempts: 3
           command: |
             cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}
 
   #----------------------------------------------------------------------------
   # BUILD MELANGE-BASED IMAGES (needs packages from melange-build)
@@ -354,12 +381,16 @@ jobs:
         include:
           - name: jenkins
             apko_config: jenkins/apko/jenkins.yaml
+            melange_config: jenkins/melange.yaml
           - name: redis-slim
             apko_config: redis-slim/apko/redis.yaml
+            melange_config: redis-slim/melange.yaml
           - name: php
             apko_config: php/apko/php.yaml
+            melange_config: php/melange.yaml
           - name: rails
             apko_config: rails/apko/rails.yaml
+            melange_config: rails/melange.yaml
 
     steps:
       - name: Checkout repository
@@ -367,7 +398,7 @@ jobs:
 
       - name: Install apko
         run: |
-          go install chainguard.dev/apko@latest
+          go install chainguard.dev/apko@v1.1.6
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
@@ -434,7 +465,7 @@ jobs:
 
       - name: Install Trivy
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.69.1
           trivy --version
 
       - name: Scan image for vulnerabilities
@@ -525,6 +556,18 @@ jobs:
           sarif_file: 'trivy-${{ matrix.name }}.sarif'
           category: 'trivy-${{ matrix.name }}'
 
+      - name: Extract version from melange config
+        id: version
+        run: |
+          PKG_VERSION=$(awk '/^  version:/ {print $2}' "${{ matrix.melange_config }}")
+          PKG_EPOCH=$(awk '/^  epoch:/ {print $2}' "${{ matrix.melange_config }}")
+          if [ -z "$PKG_VERSION" ]; then
+            echo "::error::Failed to extract version from ${{ matrix.melange_config }}"
+            exit 1
+          fi
+          echo "tag=${PKG_VERSION}-r${PKG_EPOCH}" >> $GITHUB_OUTPUT
+          echo "Image version: ${PKG_VERSION}-r${PKG_EPOCH}"
+
       - name: Test image
         run: |
           export IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
@@ -534,6 +577,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           apko publish ${{ matrix.apko_config }} \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
             --arch x86_64,aarch64 \
             --repository-append ./packages \
@@ -547,7 +591,7 @@ jobs:
           max_attempts: 3
           command: |
             cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}
 
   #----------------------------------------------------------------------------
   # SUMMARY
@@ -556,6 +600,7 @@ jobs:
     needs: [build-apko, build-melange]
     runs-on: ubuntu-latest
     if: always()
+    permissions: {}
     steps:
       - name: Check results
         run: |
