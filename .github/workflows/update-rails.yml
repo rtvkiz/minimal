@@ -207,9 +207,11 @@ jobs:
           echo "Current Ruby version: $CURRENT (series: $SERIES)"
 
           # --- Patch update check within current series ---
-          LATEST=$(curl -fsSL "https://api.github.com/repos/ruby/ruby/tags" | \
-            jq -r --arg series "v${SERIES//./_}_" \
-            '[.[] | select(.name | startswith($series)) | .name] | sort | last // empty' | \
+          # Ruby 4.0+ uses dot-separated tags (v4.0.1), older uses underscores (v3_4_8)
+          USCORE_PREFIX="v${SERIES//./_}_"
+          LATEST=$(curl -fsSL "https://api.github.com/repos/ruby/ruby/tags?per_page=100" | \
+            jq -r --arg dot_prefix "v${SERIES}." --arg uscore_prefix "$USCORE_PREFIX" \
+            '[.[] | select((.name | startswith($dot_prefix)) or (.name | startswith($uscore_prefix))) | .name | select(test("preview|rc") | not)] | sort | last // empty' | \
             sed 's/^v//; s/_/./g')
 
           if [ -z "$LATEST" ]; then
@@ -257,9 +259,10 @@ jobs:
           NEW_SERIES=""
 
           # Check next minor (e.g. 4.1)
-          MINOR_TAG=$(curl -fsSL "https://api.github.com/repos/ruby/ruby/tags" | \
-            jq -r --arg series "v${NEXT_MINOR//./_}_" \
-            '[.[] | select(.name | startswith($series)) | .name] | sort | last // empty')
+          MINOR_USCORE="v${NEXT_MINOR//./_}_"
+          MINOR_TAG=$(curl -fsSL "https://api.github.com/repos/ruby/ruby/tags?per_page=100" | \
+            jq -r --arg dot_prefix "v${NEXT_MINOR}." --arg uscore_prefix "$MINOR_USCORE" \
+            '[.[] | select((.name | startswith($dot_prefix)) or (.name | startswith($uscore_prefix))) | .name] | sort | last // empty')
           if [ -n "$MINOR_TAG" ]; then
             MINOR_VERSION=$(echo "$MINOR_TAG" | sed 's/^v//; s/_/./g')
             echo "New minor series available: Ruby $NEXT_MINOR (latest: $MINOR_VERSION)"
@@ -267,9 +270,10 @@ jobs:
           fi
 
           # Check next major (e.g. 5.0)
-          MAJOR_TAG=$(curl -fsSL "https://api.github.com/repos/ruby/ruby/tags" | \
-            jq -r --arg series "v${NEXT_MAJOR//./_}_" \
-            '[.[] | select(.name | startswith($series)) | .name] | sort | last // empty')
+          MAJOR_USCORE="v${NEXT_MAJOR//./_}_"
+          MAJOR_TAG=$(curl -fsSL "https://api.github.com/repos/ruby/ruby/tags?per_page=100" | \
+            jq -r --arg dot_prefix "v${NEXT_MAJOR}." --arg uscore_prefix "$MAJOR_USCORE" \
+            '[.[] | select((.name | startswith($dot_prefix)) or (.name | startswith($uscore_prefix))) | .name] | sort | last // empty')
           if [ -n "$MAJOR_TAG" ]; then
             MAJOR_VERSION=$(echo "$MAJOR_TAG" | sed 's/^v//; s/_/./g')
             echo "New major series available: Ruby $NEXT_MAJOR (latest: $MAJOR_VERSION)"
