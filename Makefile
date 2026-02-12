@@ -13,13 +13,13 @@ RUBY_VERSION ?= 4.0.1
 RAILS_VERSION ?= 8.1.2
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite dotnet php php-melange rails rails-melange keygen
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-php scan-rails
+.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange keygen
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim postgres-slim bun sqlite dotnet php rails
+build: python jenkins go node-slim nginx httpd redis-slim postgres-slim bun sqlite dotnet java php rails
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -237,6 +237,23 @@ dotnet:
 	@echo "✓ minimal-dotnet built (Wolfi package)"
 
 #------------------------------------------------------------------------------
+# JAVA IMAGE (Wolfi pre-built OpenJDK JRE, shell-less)
+#------------------------------------------------------------------------------
+java:
+	@echo "Assembling minimal-java image with apko..."
+	apko build java/apko/java.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-java:$(VERSION) \
+		java.tar \
+		--arch x86_64
+	docker load < java.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-java:latest
+	@rm -f java.tar sbom-*.spdx.json
+	@echo "✓ minimal-java built (Wolfi package, shell-less)"
+
+#------------------------------------------------------------------------------
 # PHP IMAGE (melange source build + apko)
 #------------------------------------------------------------------------------
 php-melange: keygen
@@ -291,7 +308,7 @@ rails: rails-melange
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-php scan-rails
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -359,6 +376,12 @@ scan-dotnet:
 		$(REGISTRY)/$(OWNER)/minimal-dotnet:latest
 	@echo "✓ minimal-dotnet: scan passed"
 
+scan-java:
+	@echo "Scanning minimal-java..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-java:latest
+	@echo "✓ minimal-java: scan passed"
+
 scan-php:
 	@echo "Scanning minimal-php..."
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
@@ -396,6 +419,8 @@ scan-all:
 		$(REGISTRY)/$(OWNER)/minimal-sqlite:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-dotnet:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-java:latest
 
 #------------------------------------------------------------------------------
 # IMAGE SIZE REPORT
@@ -403,12 +428,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-rails)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-java|minimal-rails)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-postgres-slim test-bun test-sqlite test-dotnet test-rails
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails
 
 test-python:
 	@echo "Testing Python image..."
@@ -558,6 +583,14 @@ test-dotnet:
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
 	@echo "✓ .NET Runtime tests passed"
 
+test-java:
+	@echo "Testing OpenJDK Runtime image..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-java:latest -version
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-java:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ OpenJDK Runtime tests passed"
+
 test-rails:
 	@echo "Testing Rails image..."
 	docker run --rm $(REGISTRY)/$(OWNER)/minimal-rails:latest -v
@@ -601,6 +634,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-sqlite:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-dotnet:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-java:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-rails:latest
 
@@ -642,6 +677,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-dotnet:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-java:latest 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:latest 2>/dev/null || true
@@ -671,6 +709,7 @@ help:
 	@echo "  make bun             Build Bun (Wolfi package)"
 	@echo "  make sqlite          Build SQLite (Wolfi package)"
 	@echo "  make dotnet          Build .NET Runtime (Wolfi package)"
+	@echo "  make java            Build OpenJDK 21 JRE (Wolfi package)"
 	@echo "  make php             Build PHP (melange source build)"
 	@echo "  make rails           Build Rails (Ruby $(RUBY_VERSION) + Rails $(RAILS_VERSION), source build)"
 	@echo "  make build           Build all images"

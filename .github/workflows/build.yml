@@ -193,6 +193,9 @@ jobs:
           - name: dotnet
             apko_config: dotnet/apko/dotnet.yaml
             primary_package: dotnet-10-runtime
+          - name: java
+            apko_config: java/apko/java.yaml
+            primary_package: openjdk-21-jre
 
     steps:
       - name: Checkout repository

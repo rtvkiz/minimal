@@ -20,6 +20,7 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **PostgreSQL-slim** | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
 | **SQLite** | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
 | **.NET Runtime** | `docker pull ghcr.io/rtvkiz/minimal-dotnet:latest` | No | .NET 10 runtime for apps |
+| **Java** | `docker pull ghcr.io/rtvkiz/minimal-java:latest` | No | OpenJDK 21 JRE for Java apps |
 | **PHP** | `docker pull ghcr.io/rtvkiz/minimal-php:latest` | No | PHP 8.5 CLI (built from source) |
 | **Rails** | `docker pull ghcr.io/rtvkiz/minimal-rails:latest` | No | Ruby 4.0 + Rails 8.1 (built from source) |
 
@@ -103,6 +104,9 @@ docker run --rm -v $(pwd):/data ghcr.io/rtvkiz/minimal-sqlite:latest /data/mydb.
 # .NET - run your app
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-dotnet:latest /app/myapp.dll
 
+# Java - run your app
+docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-java:latest -jar /app/myapp.jar
+
 # PHP - run your app
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-php:latest /app/index.php
 
@@ -125,6 +129,7 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require '
 | PostgreSQL | 18.x | postgres (70) | `/usr/bin/postgres` | `/` |
 | SQLite | 3.51.x | nonroot (65532) | `/usr/bin/sqlite3` | `/data` |
 | .NET Runtime | 10.x | nonroot (65532) | `/usr/bin/dotnet` | `/app` |
+| Java | 21.x | nonroot (65532) | `/usr/bin/java` | `/app` |
 | PHP | 8.5.x | nonroot (65532) | `/usr/bin/php` | `/app` |
 | Rails | Ruby 4.0.x + Rails 8.1.x | nonroot (65532) | `/usr/bin/ruby` | `/app` |
 
@@ -142,11 +147,11 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require '
 │                              │                                              │
 │                              ▼                                              │
 │  ┌─────────────────────────────┐    ┌─────────────────────────────────────┐ │
-│  │     melange-build (8 jobs)  │    │      build-apko (9 jobs)           │ │
+│  │     melange-build (8 jobs)  │    │      build-apko (10 jobs)          │ │
 │  │     Native ARM64 runners    │    │      Wolfi pre-built packages       │ │
 │  │  ┌────────┐  ┌────────────┐ │    │  Python, Node, Go, Nginx, HTTPD,    │ │
-│  │  │ x86_64 │  │  aarch64   │ │    │  PostgreSQL, Bun, SQLite, .NET      │ │
-│  │  │ ubuntu │  │ ubuntu-arm │ │    │                                     │ │
+│  │  │ x86_64 │  │  aarch64   │ │    │  PostgreSQL, Bun, SQLite, .NET,     │ │
+│  │  │ ubuntu │  │ ubuntu-arm │ │    │  Java                               │ │
 │  │  └────┬───┘  └─────┬──────┘ │    │  ┌─────────┐     ┌───────────────┐  │ │
 │  │       │            │        │    │  │  Wolfi  │────▶│ apko publish  │  │ │
 │  │       └─────┬──────┘        │    │  │ packages│     │ (multi-arch)  │  │ │
@@ -199,7 +204,7 @@ Source-built packages (Jenkins, Redis, PHP, Rails) and Wolfi-based packages are 
 | `update-redis.yml` | Redis GitHub releases | Updates version and SHA256 in melange config |
 | `update-php.yml` | php.net releases API | Updates version and SHA256; opens issue for new minor/major series |
 | `update-rails.yml` | RubyGems API + Ruby GitHub tags | Updates Rails gem and Ruby source versions independently |
-| `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, PostgreSQL package versions |
+| `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, Java, PostgreSQL package versions |
 
 Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g. PHP 8.5 → 8.6) create a GitHub Issue with a manual upgrade checklist, since configure flags or APIs may change.
 
@@ -226,6 +231,7 @@ make redis-slim
 make postgres-slim
 make sqlite
 make dotnet
+make java
 make php
 make rails
 
@@ -255,6 +261,7 @@ minimal/
 ├── postgres-slim/apko/postgres.yaml  # PostgreSQL image (Wolfi pkg)
 ├── sqlite/apko/sqlite.yaml          # SQLite image (Wolfi pkg)
 ├── dotnet/apko/dotnet.yaml          # .NET Runtime image (Wolfi pkg)
+├── java/apko/java.yaml              # OpenJDK 21 JRE image (Wolfi pkg)
 ├── php/
 │   ├── apko/php.yaml                # PHP image
 │   └── melange.yaml                 # PHP from source (php.net)

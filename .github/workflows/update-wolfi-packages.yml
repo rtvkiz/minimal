@@ -105,6 +105,24 @@ jobs:
             echo "  -> Up to date"
           fi
 
+          # --- OpenJDK ---
+          CURRENT_JDK=$(grep -oP 'openjdk-\d+-jre' java/apko/java.yaml | head -1)
+          echo "Current OpenJDK package: $CURRENT_JDK"
+
+          # Find all openjdk-XX-jre packages
+          LATEST_JDK=$(grep -E "^openjdk-[0-9]+-jre " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t- -k2 -n | tail -1)
+          echo "Latest OpenJDK package: $LATEST_JDK"
+
+          if [ -n "$LATEST_JDK" ] && [ "$LATEST_JDK" != "$CURRENT_JDK" ]; then
+            echo "jdk_update=true" >> $GITHUB_OUTPUT
+            echo "jdk_current=$CURRENT_JDK" >> $GITHUB_OUTPUT
+            echo "jdk_latest=$LATEST_JDK" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_JDK -> $LATEST_JDK"
+          else
+            echo "  -> Up to date"
+          fi
+
           # --- PostgreSQL ---
           CURRENT_PG=$(grep -oP 'postgresql-\d+' postgres-slim/apko/postgres.yaml | head -1)
           echo "Current PostgreSQL package: $CURRENT_PG"
@@ -137,6 +155,9 @@ jobs:
           fi
           if [ -n "$LATEST_DOTNET" ] && [ "$LATEST_DOTNET" != "$CURRENT_DOTNET" ]; then
             echo ".NET: $CURRENT_DOTNET -> $LATEST_DOTNET"
+          fi
+          if [ -n "$LATEST_JDK" ] && [ "$LATEST_JDK" != "$CURRENT_JDK" ]; then
+            echo "OpenJDK: $CURRENT_JDK -> $LATEST_JDK"
           fi
           if [ -n "$LATEST_PG" ] && [ "$LATEST_PG" != "$CURRENT_PG" ]; then
             echo "PostgreSQL: $CURRENT_PG -> $LATEST_PG"
@@ -332,6 +353,62 @@ jobs:
 
       - name: Reset for next PR
         if: steps.check.outputs.dotnet_update == 'true'
+        run: git checkout -- .
+
+      # --- OpenJDK PR ---
+      - name: Update OpenJDK version
+        if: steps.check.outputs.jdk_update == 'true'
+        run: |
+          OLD="${{ steps.check.outputs.jdk_current }}"
+          NEW="${{ steps.check.outputs.jdk_latest }}"
+          # Extract version numbers (e.g., "21" from "openjdk-21-jre")
+          OLD_VER=$(echo "$OLD" | grep -oP '\d+')
+          NEW_VER=$(echo "$NEW" | grep -oP '\d+')
+          # Update package names (openjdk-21-jre, openjdk-21-default-jvm)
+          sed -i "s/openjdk-${OLD_VER}-jre/openjdk-${NEW_VER}-jre/g" java/apko/java.yaml
+          sed -i "s/openjdk-${OLD_VER}-default-jvm/openjdk-${NEW_VER}-default-jvm/g" java/apko/java.yaml
+          # Update JAVA_HOME and PATH (java-21-openjdk -> java-25-openjdk)
+          sed -i "s/java-${OLD_VER}-openjdk/java-${NEW_VER}-openjdk/g" java/apko/java.yaml
+          # Update build.yml primary_package
+          sed -i "s/primary_package: $OLD/primary_package: $NEW/" .github/workflows/build.yml
+          echo "Updated java/apko/java.yaml and build.yml: openjdk-${OLD_VER} -> openjdk-${NEW_VER}"
+
+      - name: Create OpenJDK PR
+        if: steps.check.outputs.jdk_update == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(java): upgrade to ${{ steps.check.outputs.jdk_latest }}"
+          body: |
+            ## Summary
+
+            Upgrades OpenJDK JRE from `${{ steps.check.outputs.jdk_current }}` to `${{ steps.check.outputs.jdk_latest }}`.
+
+            This is a **major version upgrade** detected from Wolfi's package repository.
+
+            ## Changes
+
+            - `java/apko/java.yaml` - updated package reference
+            - `.github/workflows/build.yml` - updated primary_package for version tagging
+
+            ## Before Merging
+
+            - [ ] Review [OpenJDK release notes](https://openjdk.org/projects/jdk/)
+            - [ ] Verify CI passes (image builds and tests succeed)
+            - [ ] Check for breaking changes that may affect users
+
+            ---
+
+            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
+          branch: update-java-${{ steps.check.outputs.jdk_latest }}
+          commit-message: "chore(java): upgrade to ${{ steps.check.outputs.jdk_latest }}"
+          delete-branch: true
+          labels: |
+            dependencies
+            java
+
+      - name: Reset for next PR
+        if: steps.check.outputs.jdk_update == 'true'
         run: git checkout -- .
 
       # --- PostgreSQL PR ---
