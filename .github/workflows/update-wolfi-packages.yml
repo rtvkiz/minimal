@@ -23,7 +23,7 @@ jobs:
           set -e
 
           # Download Wolfi package index
-          curl -sS https://packages.wolfi.dev/os/x86_64/APKINDEX.tar.gz -o /tmp/APKINDEX.tar.gz
+          curl -sS --retry 3 --retry-delay 5 https://packages.wolfi.dev/os/x86_64/APKINDEX.tar.gz -o /tmp/APKINDEX.tar.gz
           tar -xzf /tmp/APKINDEX.tar.gz -C /tmp
 
           # Parse APKINDEX to find available packages

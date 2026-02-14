@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
       
           # Fetch latest Jenkins LTS (follow redirects, strip whitespace)
-          LATEST=$(curl -fsSL https://updates.jenkins.io/stable/latestCore.txt | tr -d '\n')
+          LATEST=$(curl -fsSL --retry 3 --retry-delay 5 https://updates.jenkins.io/stable/latestCore.txt | tr -d '\n')
       
           # Validate version format strictly
           if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then

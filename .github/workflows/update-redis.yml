@@ -21,7 +21,7 @@ jobs:
         id: check
         run: |
           # Get latest stable 8.x release from GitHub
-          LATEST=$(curl -sS https://api.github.com/repos/redis/redis/releases/latest | \
+          LATEST=$(curl -sS --retry 3 --retry-delay 5 https://api.github.com/repos/redis/redis/releases/latest | \
             jq -r '.tag_name')
 
           if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
@@ -59,7 +59,7 @@ jobs:
 
           # Download tarball and compute SHA256 checksum
           echo "Downloading Redis $VERSION tarball..."
-          curl -fsSL "https://github.com/redis/redis/archive/refs/tags/${VERSION}.tar.gz" \
+          curl -fsSL --retry 3 --retry-delay 5 "https://github.com/redis/redis/archive/refs/tags/${VERSION}.tar.gz" \
             -o /tmp/redis.tar.gz
           SHA256=$(sha256sum /tmp/redis.tar.gz | awk '{print $1}')
           rm /tmp/redis.tar.gz

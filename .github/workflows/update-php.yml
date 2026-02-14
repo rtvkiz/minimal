@@ -36,7 +36,7 @@ jobs:
           echo "Current series: $SERIES"
 
           # --- Patch update check (e.g. 8.5.2 -> 8.5.3) ---
-          RELEASE_JSON=$(curl -fsSL "https://www.php.net/releases/?json&version=$SERIES")
+          RELEASE_JSON=$(curl -fsSL --retry 3 --retry-delay 5 "https://www.php.net/releases/?json&version=$SERIES")
 
           LATEST=$(echo "$RELEASE_JSON" | jq -r '.version')
 
@@ -93,7 +93,7 @@ jobs:
 
           NEW_SERIES=""
           # Check next minor (e.g. 8.6)
-          MINOR_CHECK=$(curl -fsSL "https://www.php.net/releases/?json&version=$NEXT_MINOR" 2>/dev/null || echo "{}")
+          MINOR_CHECK=$(curl -fsSL --retry 3 --retry-delay 5 "https://www.php.net/releases/?json&version=$NEXT_MINOR" 2>/dev/null || echo "{}")
           MINOR_VERSION=$(echo "$MINOR_CHECK" | jq -r '.version // empty' 2>/dev/null || true)
           if [ -n "$MINOR_VERSION" ]; then
             echo "New minor series available: PHP $NEXT_MINOR (latest: $MINOR_VERSION)"
@@ -101,7 +101,7 @@ jobs:
           fi
 
           # Check next major (e.g. 9.0)
-          MAJOR_CHECK=$(curl -fsSL "https://www.php.net/releases/?json&version=$NEXT_MAJOR" 2>/dev/null || echo "{}")
+          MAJOR_CHECK=$(curl -fsSL --retry 3 --retry-delay 5 "https://www.php.net/releases/?json&version=$NEXT_MAJOR" 2>/dev/null || echo "{}")
           MAJOR_VERSION=$(echo "$MAJOR_CHECK" | jq -r '.version // empty' 2>/dev/null || true)
           if [ -n "$MAJOR_VERSION" ]; then
             echo "New major series available: PHP $NEXT_MAJOR (latest: $MAJOR_VERSION)"
