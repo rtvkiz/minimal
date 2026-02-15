@@ -1,0 +1,124 @@
+# Melange build configuration for minimal MySQL
+# Builds MySQL from source with server + client only
+# No plugins, no extras, minimal footprint
+
+package:
+  name: mysql-minimal
+  version: 8.4.8
+  epoch: 0
+  description: "Minimal MySQL server and client built from source"
+  copyright:
+    - license: GPL-2.0-only
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-mysql.yml workflow
+  sha256: be9d96cdf87f276952a2cdd960f106b960a8860e46c115ed39c1b5f2e0387a20
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - cmake
+      - linux-headers
+      - openssl-dev
+      - ncurses-dev
+      - libevent-dev
+      - bison
+      - perl
+      - libtirpc-dev
+      - rpcsvc-proto
+
+pipeline:
+  # Download and verify MySQL source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-${{package.version}}.tar.gz" \
+        -o /home/build/mysql.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/mysql.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf mysql.tar.gz
+      rm mysql.tar.gz
+
+  # Configure and build MySQL
+  - runs: |
+      cd /home/build/mysql-${{package.version}}
+      mkdir build && cd build
+      cmake .. \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DMYSQL_DATADIR=/var/lib/mysql \
+        -DSYSCONFDIR=/etc/mysql \
+        -DWITH_SSL=system \
+        -DWITH_ZLIB=bundled \
+        -DDOWNLOAD_BOOST=1 \
+        -DWITH_BOOST=/home/build/boost \
+        -DWITH_UNIT_TESTS=OFF \
+        -DWITH_ROUTER=OFF \
+        -DWITH_DEBUG=OFF \
+        -DCOMPILATION_COMMENT="Minimal Hardened Build" \
+        -DCMAKE_C_FLAGS="-g0" \
+        -DCMAKE_CXX_FLAGS="-g0" \
+        -DWITHOUT_ARCHIVE_STORAGE_ENGINE=1 \
+        -DWITHOUT_BLACKHOLE_STORAGE_ENGINE=1 \
+        -DWITHOUT_EXAMPLE_STORAGE_ENGINE=1 \
+        -DWITHOUT_FEDERATED_STORAGE_ENGINE=1 \
+        -DWITHOUT_NDB_STORAGE_ENGINE=1 \
+        -DWITHOUT_NDBCLUSTER_STORAGE_ENGINE=1 \
+        -DWITHOUT_PERFSCHEMA_STORAGE_ENGINE=0 \
+        -DWITH_NDB=OFF
+      make -j2
+
+  # Install to destdir
+  - runs: |
+      cd /home/build/mysql-${{package.version}}/build
+      make install DESTDIR="${{targets.destdir}}"
+
+      # Keep only essential binaries
+      mkdir -p /tmp/mysql-bins
+      cp "${{targets.destdir}}/usr/bin/mysqld" /tmp/mysql-bins/ 2>/dev/null || \
+        cp "${{targets.destdir}}/usr/sbin/mysqld" /tmp/mysql-bins/
+      cp "${{targets.destdir}}/usr/bin/mysql" /tmp/mysql-bins/
+      cp "${{targets.destdir}}/usr/bin/mysqld_safe" /tmp/mysql-bins/ 2>/dev/null || true
+      cp "${{targets.destdir}}/usr/bin/mysql_tzinfo_to_sql" /tmp/mysql-bins/ 2>/dev/null || true
+
+      # Clean and reinstall only what we need
+      rm -rf "${{targets.destdir}}/usr/bin" "${{targets.destdir}}/usr/sbin"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /tmp/mysql-bins/* "${{targets.destdir}}/usr/bin/"
+
+      # Keep share directory (needed for --initialize)
+      # Keep lib directory (needed for plugins like InnoDB)
+
+      # Strip binaries
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/mysqld"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/mysql"
+
+      # Create data and config directories
+      mkdir -p "${{targets.destdir}}/var/lib/mysql"
+      mkdir -p "${{targets.destdir}}/var/run/mysqld"
+      mkdir -p "${{targets.destdir}}/etc/mysql"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying MySQL build..."
+      "${{targets.destdir}}/usr/bin/mysqld" --version
+      "${{targets.destdir}}/usr/bin/mysql" --version
+      echo "Checking binary sizes..."
+      ls -lh "${{targets.destdir}}/usr/bin/mysqld"
+      ls -lh "${{targets.destdir}}/usr/bin/mysql"
+
+update:
+  enabled: true
+  github:
+    identifier: mysql/mysql-server
+    use-tag: true
+    tag-filter: "mysql-8.4."
