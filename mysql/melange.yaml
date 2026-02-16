@@ -77,34 +77,30 @@ pipeline:
         -DWITH_NDB=OFF
       make -j$(nproc)
 
-  # Install to destdir
+  # Install only essential files to destdir
   - runs: |
       cd /home/build/mysql-${{package.version}}/build
-      make install DESTDIR="${{targets.destdir}}"
 
-      # Keep only essential binaries
-      mkdir -p /tmp/mysql-bins
-      cp "${{targets.destdir}}/usr/bin/mysqld" /tmp/mysql-bins/ 2>/dev/null || \
-        cp "${{targets.destdir}}/usr/sbin/mysqld" /tmp/mysql-bins/
-      cp "${{targets.destdir}}/usr/bin/mysql" /tmp/mysql-bins/
-      cp "${{targets.destdir}}/usr/bin/mysqld_safe" /tmp/mysql-bins/ 2>/dev/null || true
-      cp "${{targets.destdir}}/usr/bin/mysql_tzinfo_to_sql" /tmp/mysql-bins/ 2>/dev/null || true
-
-      # Clean and reinstall only what we need
-      rm -rf "${{targets.destdir}}/usr/bin" "${{targets.destdir}}/usr/sbin"
+      # Install binaries
       mkdir -p "${{targets.destdir}}/usr/bin"
-      cp /tmp/mysql-bins/* "${{targets.destdir}}/usr/bin/"
-
-      # Keep share directory (needed for --initialize)
-      # Keep lib directory (needed for plugins like InnoDB)
+      cp bin/mysqld "${{targets.destdir}}/usr/bin/"
+      cp bin/mysql "${{targets.destdir}}/usr/bin/"
 
       # Strip binaries
       strip --strip-unneeded "${{targets.destdir}}/usr/bin/mysqld"
       strip --strip-unneeded "${{targets.destdir}}/usr/bin/mysql"
 
-      # Create data and config directories
+      # Install share directory (needed for --initialize)
+      mkdir -p "${{targets.destdir}}/usr/share/mysql"
+      cp -r share/english "${{targets.destdir}}/usr/share/mysql/"
+      cp share/*.sql "${{targets.destdir}}/usr/share/mysql/" 2>/dev/null || true
+
+      # Install plugin directory (needed for InnoDB and auth)
+      mkdir -p "${{targets.destdir}}/usr/lib/mysql/plugin"
+      cp lib/plugin/*.so "${{targets.destdir}}/usr/lib/mysql/plugin/" 2>/dev/null || true
+
+      # Create data and config directories (no temp/run dirs - apko handles those)
       mkdir -p "${{targets.destdir}}/var/lib/mysql"
-      mkdir -p "${{targets.destdir}}/var/run/mysqld"
       mkdir -p "${{targets.destdir}}/etc/mysql"
 
   # Verify the build
