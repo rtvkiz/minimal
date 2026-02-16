@@ -9,17 +9,19 @@ JENKINS_VERSION ?= 2.541.1
 NGINX_VERSION ?= 1.29.4
 HTTPD_VERSION ?= 2.4.66
 REDIS_VERSION ?= 8.6.0
+MYSQL_VERSION ?= 8.4.8
+MEMCACHED_VERSION ?= 1.6.40
 RUBY_VERSION ?= 4.0.1
 RAILS_VERSION ?= 8.1.2
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange postgres-slim bun sqlite dotnet php php-melange rails rails-melange keygen
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-php scan-rails
+.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange memcached memcached-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange keygen
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim postgres-slim bun sqlite dotnet php rails
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached postgres-slim bun sqlite dotnet java php rails
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -169,6 +171,58 @@ redis-slim: redis-slim-melange
 	@echo "✓ minimal-redis-slim built (source build)"
 
 #------------------------------------------------------------------------------
+# MYSQL IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+mysql-melange: keygen
+	@echo "Building MySQL $(MYSQL_VERSION) from source via melange..."
+	melange build mysql/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ MySQL package built from source"
+
+mysql: mysql-melange
+	@echo "Assembling minimal-mysql image with apko..."
+	apko build mysql/apko/mysql.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION) \
+		mysql.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < mysql.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-mysql:latest
+	@rm -f mysql.tar sbom-*.spdx.json
+	@echo "✓ minimal-mysql built (source build)"
+
+#------------------------------------------------------------------------------
+# MEMCACHED IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+memcached-melange: keygen
+	@echo "Building Memcached $(MEMCACHED_VERSION) from source via melange..."
+	melange build memcached/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Memcached package built from source"
+
+memcached: memcached-melange
+	@echo "Assembling minimal-memcached image with apko..."
+	apko build memcached/apko/memcached.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION) \
+		memcached.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < memcached.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-memcached:latest
+	@rm -f memcached.tar sbom-*.spdx.json
+	@echo "✓ minimal-memcached built (source build)"
+
+#------------------------------------------------------------------------------
 # POSTGRES SLIM IMAGE (Wolfi pre-built package)
 #------------------------------------------------------------------------------
 postgres-slim:
@@ -237,6 +291,23 @@ dotnet:
 	@echo "✓ minimal-dotnet built (Wolfi package)"
 
 #------------------------------------------------------------------------------
+# JAVA IMAGE (Wolfi pre-built OpenJDK JRE, shell-less)
+#------------------------------------------------------------------------------
+java:
+	@echo "Assembling minimal-java image with apko..."
+	apko build java/apko/java.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-java:$(VERSION) \
+		java.tar \
+		--arch x86_64
+	docker load < java.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-java:latest
+	@rm -f java.tar sbom-*.spdx.json
+	@echo "✓ minimal-java built (Wolfi package, shell-less)"
+
+#------------------------------------------------------------------------------
 # PHP IMAGE (melange source build + apko)
 #------------------------------------------------------------------------------
 php-melange: keygen
@@ -291,7 +362,7 @@ rails: rails-melange
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-php scan-rails
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -335,6 +406,18 @@ scan-redis-slim:
 		$(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
 	@echo "✓ minimal-redis-slim: scan passed"
 
+scan-mysql:
+	@echo "Scanning minimal-mysql..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-mysql:latest
+	@echo "✓ minimal-mysql: scan passed"
+
+scan-memcached:
+	@echo "Scanning minimal-memcached..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-memcached:latest
+	@echo "✓ minimal-memcached: scan passed"
+
 scan-postgres-slim:
 	@echo "Scanning minimal-postgres-slim..."
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
@@ -358,6 +441,12 @@ scan-dotnet:
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-dotnet:latest
 	@echo "✓ minimal-dotnet: scan passed"
+
+scan-java:
+	@echo "Scanning minimal-java..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-java:latest
+	@echo "✓ minimal-java: scan passed"
 
 scan-php:
 	@echo "Scanning minimal-php..."
@@ -389,6 +478,10 @@ scan-all:
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-mysql:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-memcached:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-bun:latest
@@ -396,6 +489,8 @@ scan-all:
 		$(REGISTRY)/$(OWNER)/minimal-sqlite:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-dotnet:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-java:latest
 
 #------------------------------------------------------------------------------
 # IMAGE SIZE REPORT
@@ -403,12 +498,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-rails)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-mysql|minimal-memcached|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-java|minimal-rails)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-postgres-slim test-bun test-sqlite test-dotnet test-rails
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails
 
 test-python:
 	@echo "Testing Python image..."
@@ -517,6 +612,36 @@ test-redis-slim:
 	fi
 	@echo "✓ Redis Slim tests passed"
 
+test-mysql:
+	@echo "Testing MySQL image..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-mysql:latest --version
+	@echo "Testing MySQL client..."
+	docker run --rm --entrypoint /usr/bin/mysql \
+		$(REGISTRY)/$(OWNER)/minimal-mysql:latest --version
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-mysql:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ MySQL tests passed"
+
+test-memcached:
+	@echo "Testing Memcached image..."
+	@docker run -d --name memcached-test $(REGISTRY)/$(OWNER)/minimal-memcached:latest -u memcached
+	@sleep 2
+	@if docker ps | grep -q memcached-test; then \
+		echo "Memcached is running"; \
+		docker logs memcached-test; \
+		docker stop memcached-test && docker rm memcached-test; \
+	else \
+		echo "Memcached failed to start, checking logs..."; \
+		docker logs memcached-test 2>&1 || true; \
+		docker rm memcached-test 2>/dev/null || true; \
+		exit 1; \
+	fi
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-memcached:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ Memcached tests passed"
+
 test-postgres-slim:
 	@echo "Testing Postgres Slim image..."
 	docker run --rm --entrypoint /usr/bin/postgres \
@@ -558,6 +683,14 @@ test-dotnet:
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
 	@echo "✓ .NET Runtime tests passed"
 
+test-java:
+	@echo "Testing OpenJDK Runtime image..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-java:latest -version
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-java:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ OpenJDK Runtime tests passed"
+
 test-rails:
 	@echo "Testing Rails image..."
 	docker run --rm $(REGISTRY)/$(OWNER)/minimal-rails:latest -v
@@ -593,6 +726,10 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-httpd:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-mysql:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-memcached:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION)
@@ -601,6 +738,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-sqlite:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-dotnet:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-java:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-rails:latest
 
@@ -630,6 +769,12 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-redis-slim:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-mysql:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-memcached:latest 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest 2>/dev/null || true
@@ -642,6 +787,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-dotnet:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-java:latest 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:latest 2>/dev/null || true
@@ -667,10 +815,13 @@ help:
 	@echo "  make nginx           Build Nginx $(NGINX_VERSION) (Wolfi package)"
 	@echo "  make httpd           Build HTTPD $(HTTPD_VERSION) (Wolfi package)"
 	@echo "  make redis-slim      Build Redis Slim $(REDIS_VERSION) (source build)"
+	@echo "  make mysql           Build MySQL $(MYSQL_VERSION) (source build)"
+	@echo "  make memcached       Build Memcached $(MEMCACHED_VERSION) (source build)"
 	@echo "  make postgres-slim   Build Postgres Slim (Wolfi package)"
 	@echo "  make bun             Build Bun (Wolfi package)"
 	@echo "  make sqlite          Build SQLite (Wolfi package)"
 	@echo "  make dotnet          Build .NET Runtime (Wolfi package)"
+	@echo "  make java            Build OpenJDK 21 JRE (Wolfi package)"
 	@echo "  make php             Build PHP (melange source build)"
 	@echo "  make rails           Build Rails (Ruby $(RUBY_VERSION) + Rails $(RAILS_VERSION), source build)"
 	@echo "  make build           Build all images"
@@ -691,6 +842,8 @@ help:
 	@echo "  NGINX_VERSION=$(NGINX_VERSION)"
 	@echo "  HTTPD_VERSION=$(HTTPD_VERSION)"
 	@echo "  REDIS_VERSION=$(REDIS_VERSION)"
+	@echo "  MYSQL_VERSION=$(MYSQL_VERSION)"
+	@echo "  MEMCACHED_VERSION=$(MEMCACHED_VERSION)"
 	@echo "  RUBY_VERSION=$(RUBY_VERSION)"
 	@echo "  RAILS_VERSION=$(RAILS_VERSION)"
 	@echo "  REGISTRY=$(REGISTRY)"

@@ -1,0 +1,74 @@
+# Melange build configuration for minimal Memcached
+# Builds Memcached from source with TLS support
+# Minimal footprint - single binary
+
+package:
+  name: memcached-minimal
+  version: 1.6.40
+  epoch: 0
+  description: "Minimal Memcached built from source"
+  copyright:
+    - license: BSD-3-Clause
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-memcached.yml workflow
+  sha256: a3d360e9da2221a49bf9aae4e6880f2d44da6b2a2fae39b1911b9ca76488fbfd
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - linux-headers
+      - libevent-dev
+      - openssl-dev
+
+pipeline:
+  # Download and verify Memcached source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://memcached.org/files/memcached-${{package.version}}.tar.gz" \
+        -o /home/build/memcached.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/memcached.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf memcached.tar.gz
+      rm memcached.tar.gz
+
+  # Build Memcached from source
+  - runs: |
+      cd /home/build/memcached-${{package.version}}
+      ./configure \
+        --prefix=/usr \
+        --enable-tls
+      make -j$(nproc)
+
+  # Install to destdir
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/memcached-${{package.version}}/memcached "${{targets.destdir}}/usr/bin/"
+
+      # Strip binary
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/memcached"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying Memcached build..."
+      "${{targets.destdir}}/usr/bin/memcached" -h || true
+      echo "Checking binary size..."
+      ls -lh "${{targets.destdir}}/usr/bin/memcached"
+
+update:
+  enabled: true
+  github:
+    identifier: memcached/memcached
+    use-tag: true
+    tag-filter: "1.6."

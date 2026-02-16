@@ -17,9 +17,12 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **HTTPD** | `docker pull ghcr.io/rtvkiz/minimal-httpd:latest` | Maybe* | Apache web server |
 | **Jenkins** | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
 | **Redis-slim** | `docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest` | No | In-memory data store |
+| **MySQL** | `docker pull ghcr.io/rtvkiz/minimal-mysql:latest` | No | Relational database (built from source) |
+| **Memcached** | `docker pull ghcr.io/rtvkiz/minimal-memcached:latest` | No | In-memory caching (built from source) |
 | **PostgreSQL-slim** | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
 | **SQLite** | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
 | **.NET Runtime** | `docker pull ghcr.io/rtvkiz/minimal-dotnet:latest` | No | .NET 10 runtime for apps |
+| **Java** | `docker pull ghcr.io/rtvkiz/minimal-java:latest` | No | OpenJDK 21 JRE for Java apps |
 | **PHP** | `docker pull ghcr.io/rtvkiz/minimal-php:latest` | No | PHP 8.5 CLI (built from source) |
 | **Rails** | `docker pull ghcr.io/rtvkiz/minimal-rails:latest` | No | Ruby 4.0 + Rails 8.1 (built from source) |
 
@@ -94,6 +97,12 @@ docker run -d -p 8080:8080 -v jenkins_home:/var/jenkins_home ghcr.io/rtvkiz/mini
 # Redis - in-memory data store
 docker run -d -p 6379:6379 ghcr.io/rtvkiz/minimal-redis-slim:latest
 
+# MySQL - relational database
+docker run -d -p 3306:3306 -v mysqldata:/var/lib/mysql ghcr.io/rtvkiz/minimal-mysql:latest
+
+# Memcached - in-memory caching
+docker run -d -p 11211:11211 ghcr.io/rtvkiz/minimal-memcached:latest
+
 # PostgreSQL - relational database
 docker run -d -p 5432:5432 -v pgdata:/var/lib/postgresql/data ghcr.io/rtvkiz/minimal-postgres-slim:latest
 
@@ -102,6 +111,9 @@ docker run --rm -v $(pwd):/data ghcr.io/rtvkiz/minimal-sqlite:latest /data/mydb.
 
 # .NET - run your app
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-dotnet:latest /app/myapp.dll
+
+# Java - run your app
+docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-java:latest -jar /app/myapp.jar
 
 # PHP - run your app
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-php:latest /app/index.php
@@ -122,9 +134,12 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require '
 | HTTPD | 2.4.x | www-data (65532) | `/usr/sbin/httpd -DFOREGROUND` | `/var/www/localhost/htdocs` |
 | Jenkins | 2.541.x LTS | jenkins (1000) | `tini -- java -jar jenkins.war` | `/var/jenkins_home` |
 | Redis | 8.4.x | redis (65532) | `/usr/bin/redis-server` | `/` |
+| MySQL | 8.4.x | mysql (65532) | `/usr/bin/mysqld` | `/` |
+| Memcached | 1.6.x | memcached (65532) | `/usr/bin/memcached` | `/` |
 | PostgreSQL | 18.x | postgres (70) | `/usr/bin/postgres` | `/` |
 | SQLite | 3.51.x | nonroot (65532) | `/usr/bin/sqlite3` | `/data` |
 | .NET Runtime | 10.x | nonroot (65532) | `/usr/bin/dotnet` | `/app` |
+| Java | 21.x | nonroot (65532) | `/usr/bin/java` | `/app` |
 | PHP | 8.5.x | nonroot (65532) | `/usr/bin/php` | `/app` |
 | Rails | Ruby 4.0.x + Rails 8.1.x | nonroot (65532) | `/usr/bin/ruby` | `/app` |
 
@@ -145,8 +160,8 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require '
 │  │     melange-build (8 jobs)  │    │      build-apko (9 jobs)            │ │
 │  │     Native ARM64 runners    │    │      Wolfi pre-built packages       │ │
 │  │  ┌────────┐  ┌────────────┐ │    │  Python, Node, Go, Nginx, HTTPD,    │ │
-│  │  │ x86_64 │  │  aarch64   │ │    │  PostgreSQL, Bun, SQLite, .NET      │ │
-│  │  │ ubuntu │  │ ubuntu-arm │ │    │                                     │ │
+│  │  │ x86_64 │  │  aarch64   │ │    │  PostgreSQL, Bun, SQLite, .NET,     │ │
+│  │  │ ubuntu │  │ ubuntu-arm │ │    │  Java                               │ │
 │  │  └────┬───┘  └─────┬──────┘ │    │  ┌─────────┐     ┌───────────────┐  │ │
 │  │       │            │        │    │  │  Wolfi  │────►│ apko publish  │  │ │
 │  │       └─────┬──────┘        │    │  │ packages│     │ (multi-arch)  │  │ │
@@ -158,8 +173,9 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require '
 │  └────────────│────────────────┘                               │            │
 │               ▼                                                │            │
 │  ┌─────────────────────────────┐                               │            │
-│  │  build-melange (4 jobs)     │                               │            │
-│  │  Jenkins, Redis, PHP, Rails │                               │            │
+│  │  build-melange (6 jobs)     │                               │            │
+│  │  Jenkins, Redis, MySQL,     │                               │            │
+│  │  Memcached, PHP, Rails      │                               │            │
 │  │  ┌─────────┐ ┌────────────┐ │                               │            │
 │  │  │  merge  │►│   apko     │─┼───────────────────────────────┤            │
 │  │  │ packages│ │  publish   │ │                               │            │
@@ -191,15 +207,17 @@ Every build is scanned for vulnerabilities; results appear in the job summary an
 
 ### Automated Version Updates
 
-Source-built packages (Jenkins, Redis, PHP, Rails) and Wolfi-based packages are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
+Source-built packages (Jenkins, Redis, MySQL, Memcached, PHP, Rails) and Wolfi-based packages are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
 
 | Workflow | Watches | What It Does |
 |----------|---------|--------------|
 | `update-jenkins.yml` | Jenkins LTS releases | Updates version in melange config, Makefile, build.yml |
 | `update-redis.yml` | Redis GitHub releases | Updates version and SHA256 in melange config |
+| `update-mysql.yml` | MySQL GitHub tags | Updates version and SHA256 in melange config |
+| `update-memcached.yml` | Memcached GitHub releases | Updates version and SHA256 in melange config |
 | `update-php.yml` | php.net releases API | Updates version and SHA256; opens issue for new minor/major series |
 | `update-rails.yml` | RubyGems API + Ruby GitHub tags | Updates Rails gem and Ruby source versions independently |
-| `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, PostgreSQL package versions |
+| `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, Java, PostgreSQL package versions |
 
 Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g. PHP 8.5 → 8.6) create a GitHub Issue with a manual upgrade checklist, since configure flags or APIs may change.
 
@@ -208,7 +226,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 ```bash
 # Prerequisites
 go install chainguard.dev/apko@latest
-go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, PHP, Rails
+go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, Memcached, PHP, Rails
 brew install trivy  # or: apt install trivy
 
 # Build all images
@@ -223,9 +241,12 @@ make nginx
 make httpd
 make jenkins
 make redis-slim
+make mysql
+make memcached
 make postgres-slim
 make sqlite
 make dotnet
+make java
 make php
 make rails
 
@@ -252,9 +273,16 @@ minimal/
 ├── redis-slim/
 │   ├── apko/redis.yaml           # Redis image
 │   └── melange.yaml              # Redis source build
+├── mysql/
+│   ├── apko/mysql.yaml           # MySQL image
+│   └── melange.yaml              # MySQL source build
+├── memcached/
+│   ├── apko/memcached.yaml       # Memcached image
+│   └── melange.yaml              # Memcached source build
 ├── postgres-slim/apko/postgres.yaml  # PostgreSQL image (Wolfi pkg)
 ├── sqlite/apko/sqlite.yaml          # SQLite image (Wolfi pkg)
 ├── dotnet/apko/dotnet.yaml          # .NET Runtime image (Wolfi pkg)
+├── java/apko/java.yaml              # OpenJDK 21 JRE image (Wolfi pkg)
 ├── php/
 │   ├── apko/php.yaml                # PHP image
 │   └── melange.yaml                 # PHP from source (php.net)
@@ -267,6 +295,8 @@ minimal/
 │   ├── update-php.yml            # PHP version updates (from php.net)
 │   ├── update-rails.yml          # Rails/Ruby version updates
 │   ├── update-redis.yml          # Redis version updates
+│   ├── update-mysql.yml          # MySQL version updates
+│   ├── update-memcached.yml      # Memcached version updates
 │   └── update-wolfi-packages.yml # Wolfi package updates
 ├── Makefile
 └── LICENSE
