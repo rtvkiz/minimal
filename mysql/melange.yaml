@@ -75,7 +75,7 @@ pipeline:
         -DWITHOUT_NDBCLUSTER_STORAGE_ENGINE=1 \
         -DWITHOUT_PERFSCHEMA_STORAGE_ENGINE=0 \
         -DWITH_NDB=OFF
-      make -j2
+      make -j$(nproc)
 
   # Install to destdir
   - runs: |
