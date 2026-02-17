@@ -12,7 +12,7 @@ docker run --rm --user root "$IMAGE" \
   --initialize-insecure --datadir=/tmp/mysql-test 2>&1 | tail -5
 
 echo "Testing MySQL starts..."
-docker run -d --name mysql-test --user root \
+docker run -d --name mysql-test \
   -e MYSQL_ALLOW_EMPTY_PASSWORD=1 \
   "$IMAGE" --datadir=/tmp/mysql-data --skip-grant-tables
 sleep 5
