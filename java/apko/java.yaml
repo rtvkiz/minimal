@@ -12,8 +12,8 @@ contents:
     - wolfi-baselayout
 
     # OpenJDK 21 JRE from Wolfi (CVE-patched)
-    - openjdk-21-jre
-    - openjdk-21-default-jvm
+    - openjdk-25-jre
+    - openjdk-25-default-jvm
 
     # Core runtime dependencies
     - glibc
@@ -46,8 +46,8 @@ entrypoint:
 work-dir: /app
 
 environment:
-  JAVA_HOME: /usr/lib/jvm/java-21-openjdk
-  PATH: /usr/lib/jvm/java-21-openjdk/bin:/usr/bin:/bin
+  JAVA_HOME: /usr/lib/jvm/java-25-openjdk
+  PATH: /usr/lib/jvm/java-25-openjdk/bin:/usr/bin:/bin
   LANG: C.UTF-8
 
 paths:
