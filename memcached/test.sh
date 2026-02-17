@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "Testing Memcached version..."
-docker run --rm "$IMAGE" -h 2>&1 | head -1
+docker run --rm "$IMAGE" -V
 
 echo "Testing Memcached starts..."
 docker run -d --name memcached-test "$IMAGE" -u memcached
