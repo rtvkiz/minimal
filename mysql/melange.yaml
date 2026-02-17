@@ -99,13 +99,7 @@ pipeline:
       mkdir -p "${{targets.destdir}}/usr/lib/mysql/plugin"
       cp lib/plugin/*.so "${{targets.destdir}}/usr/lib/mysql/plugin/" 2>/dev/null || true
 
-      # Create data and config directories (no temp/run dirs - apko handles those)
-      mkdir -p "${{targets.destdir}}/var/lib/mysql"
-      mkdir -p "${{targets.destdir}}/etc/mysql"
-
-  # Clean up temp/runtime dirs (apko config creates /var/run/mysqld at image level)
-  - runs: |
-      rm -rf "${{targets.destdir}}/var/run"
+      # Data/config/runtime dirs are created by apko config with correct ownership
 
   # Verify the build
   - runs: |
