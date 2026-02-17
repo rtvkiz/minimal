@@ -77,7 +77,7 @@ pipeline:
         -DWITHOUT_PERFSCHEMA_STORAGE_ENGINE=0 \
         -DWITH_NDB=OFF \
         -DWITH_PROTOBUF=system
-      make -j$(nproc)
+      make -j$(nproc) mysqld mysql
 
   # Install only essential files to destdir
   - runs: |
