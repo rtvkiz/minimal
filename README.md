@@ -157,13 +157,13 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require '
 │                              │                                              │
 │                              ▼                                              │
 │  ┌─────────────────────────────┐    ┌─────────────────────────────────────┐ │
-│  │    melange-build (12 jobs)  │    │      build-apko (10 jobs)          │ │
+│  │     melange-build (8 jobs)  │    │      build-apko (9 jobs)            │ │
 │  │     Native ARM64 runners    │    │      Wolfi pre-built packages       │ │
 │  │  ┌────────┐  ┌────────────┐ │    │  Python, Node, Go, Nginx, HTTPD,    │ │
 │  │  │ x86_64 │  │  aarch64   │ │    │  PostgreSQL, Bun, SQLite, .NET,     │ │
 │  │  │ ubuntu │  │ ubuntu-arm │ │    │  Java                               │ │
 │  │  └────┬───┘  └─────┬──────┘ │    │  ┌─────────┐     ┌───────────────┐  │ │
-│  │       │            │        │    │  │  Wolfi  │────▶│ apko publish  │  │ │
+│  │       │            │        │    │  │  Wolfi  │────►│ apko publish  │  │ │
 │  │       └─────┬──────┘        │    │  │ packages│     │ (multi-arch)  │  │ │
 │  │             ▼               │    │  └─────────┘     └───────┬───────┘  │ │
 │  │     ┌──────────────┐        │    │                          │          │ │
@@ -177,7 +177,7 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require '
 │  │  Jenkins, Redis, MySQL,     │                               │            │
 │  │  Memcached, PHP, Rails      │                               │            │
 │  │  ┌─────────┐ ┌────────────┐ │                               │            │
-│  │  │  merge  │▶│   apko     │─┼───────────────────────────────┤            │
+│  │  │  merge  │►│   apko     │─┼───────────────────────────────┤            │
 │  │  │ packages│ │  publish   │ │                               │            │
 │  │  └─────────┘ └────────────┘ │                               │            │
 │  └─────────────────────────────┘                               │            │
@@ -185,12 +185,12 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require '
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │                        Verification & Publish                        │   │
 │  │  ┌─────────────┐     ┌─────────────┐     ┌─────────────────────────┐ │   │
-│  │  │   Trivy     │────▶│    Test     │────▶│  cosign sign + SBOM     │ │   │
+│  │  │   Trivy     │────►│    Test     │────►│  cosign sign + SBOM     │ │   │
 │  │  │  CVE scan   │     │   image     │     │  (keyless signing)      │ │   │
 │  │  └─────────────┘     └─────────────┘     └─────────────────────────┘ │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
-│  Note: PRs build and test but do not publish. Only main branch publishes.  │
+│  Note: PRs build and test but do not publish. Only main branch publishes.   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
