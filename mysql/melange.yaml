@@ -92,9 +92,11 @@ pipeline:
       strip --strip-unneeded "${{targets.destdir}}/usr/bin/mysqld"
       strip --strip-unneeded "${{targets.destdir}}/usr/bin/mysql"
 
-      # Install share directory (needed for --initialize)
+      # Install share directory (needed for --initialize and error messages)
+      # MySQL looks for errmsg.sys at /usr/share/<language>/errmsg.sys by default
+      mkdir -p "${{targets.destdir}}/usr/share/english"
       mkdir -p "${{targets.destdir}}/usr/share/mysql"
-      cp -r share/english "${{targets.destdir}}/usr/share/mysql/"
+      cp -r share/english/* "${{targets.destdir}}/usr/share/english/"
       cp share/*.sql "${{targets.destdir}}/usr/share/mysql/" 2>/dev/null || true
 
       # Install plugin directory (needed for InnoDB and auth)
