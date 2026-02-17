@@ -170,8 +170,7 @@ jobs:
           OLD="${{ steps.check.outputs.python_current }}"
           NEW="${{ steps.check.outputs.python_latest }}"
           sed -i "s/$OLD/$NEW/g" python/apko/python.yaml
-          sed -i "s/primary_package: $OLD/primary_package: $NEW/" .github/workflows/build.yml
-          echo "Updated python/apko/python.yaml and build.yml primary_package: $OLD -> $NEW"
+          echo "Updated python/apko/python.yaml: $OLD -> $NEW"
 
       - name: Create Python PR
         if: steps.check.outputs.python_update == 'true'
@@ -189,7 +188,6 @@ jobs:
             ## Changes
 
             - `python/apko/python.yaml` - updated package reference
-            - `.github/workflows/build.yml` - updated primary_package for version tagging
 
             ## Before Merging
 
@@ -218,8 +216,7 @@ jobs:
           OLD="${{ steps.check.outputs.go_current }}"
           NEW="${{ steps.check.outputs.go_latest }}"
           sed -i "s/$OLD/$NEW/g" go/apko/go.yaml
-          sed -i "s/primary_package: $OLD/primary_package: $NEW/" .github/workflows/build.yml
-          echo "Updated go/apko/go.yaml and build.yml primary_package: $OLD -> $NEW"
+          echo "Updated go/apko/go.yaml: $OLD -> $NEW"
 
       - name: Create Go PR
         if: steps.check.outputs.go_update == 'true'
@@ -237,7 +234,6 @@ jobs:
             ## Changes
 
             - `go/apko/go.yaml` - updated package reference
-            - `.github/workflows/build.yml` - updated primary_package for version tagging
 
             ## Before Merging
 
@@ -266,8 +262,7 @@ jobs:
           OLD="${{ steps.check.outputs.node_current }}"
           NEW="${{ steps.check.outputs.node_latest }}"
           sed -i "s/$OLD/$NEW/g" node-slim/apko/node.yaml
-          sed -i "s/primary_package: $OLD/primary_package: $NEW/" .github/workflows/build.yml
-          echo "Updated node-slim/apko/node.yaml and build.yml primary_package: $OLD -> $NEW"
+          echo "Updated node-slim/apko/node.yaml: $OLD -> $NEW"
 
       - name: Create Node.js PR
         if: steps.check.outputs.node_update == 'true'
@@ -285,7 +280,6 @@ jobs:
             ## Changes
 
             - `node-slim/apko/node.yaml` - updated package reference
-            - `.github/workflows/build.yml` - updated primary_package for version tagging
 
             ## Before Merging
 
@@ -314,8 +308,7 @@ jobs:
           OLD="${{ steps.check.outputs.dotnet_current }}"
           NEW="${{ steps.check.outputs.dotnet_latest }}"
           sed -i "s/$OLD/$NEW/g" dotnet/apko/dotnet.yaml
-          sed -i "s/primary_package: $OLD/primary_package: $NEW/" .github/workflows/build.yml
-          echo "Updated dotnet/apko/dotnet.yaml and build.yml primary_package: $OLD -> $NEW"
+          echo "Updated dotnet/apko/dotnet.yaml: $OLD -> $NEW"
 
       - name: Create .NET PR
         if: steps.check.outputs.dotnet_update == 'true'
@@ -333,7 +326,6 @@ jobs:
             ## Changes
 
             - `dotnet/apko/dotnet.yaml` - updated package reference
-            - `.github/workflows/build.yml` - updated primary_package for version tagging
 
             ## Before Merging
 
@@ -369,9 +361,7 @@ jobs:
           sed -i "s/openjdk-${OLD_VER}-default-jvm/openjdk-${NEW_VER}-default-jvm/g" java/apko/java.yaml
           # Update JAVA_HOME and PATH (java-21-openjdk -> java-25-openjdk)
           sed -i "s/java-${OLD_VER}-openjdk/java-${NEW_VER}-openjdk/g" java/apko/java.yaml
-          # Update build.yml primary_package
-          sed -i "s/primary_package: $OLD/primary_package: $NEW/" .github/workflows/build.yml
-          echo "Updated java/apko/java.yaml and build.yml: openjdk-${OLD_VER} -> openjdk-${NEW_VER}"
+          echo "Updated java/apko/java.yaml: openjdk-${OLD_VER} -> openjdk-${NEW_VER}"
 
       - name: Create OpenJDK PR
         if: steps.check.outputs.jdk_update == 'true'
@@ -389,7 +379,6 @@ jobs:
             ## Changes
 
             - `java/apko/java.yaml` - updated package reference
-            - `.github/workflows/build.yml` - updated primary_package for version tagging
 
             ## Before Merging
 
@@ -418,8 +407,7 @@ jobs:
           OLD="${{ steps.check.outputs.pg_current }}"
           NEW="${{ steps.check.outputs.pg_latest }}"
           sed -i "s/$OLD/$NEW/g" postgres-slim/apko/postgres.yaml
-          sed -i "s/primary_package: $OLD/primary_package: $NEW/" .github/workflows/build.yml
-          echo "Updated postgres-slim/apko/postgres.yaml and build.yml primary_package: $OLD -> $NEW"
+          echo "Updated postgres-slim/apko/postgres.yaml: $OLD -> $NEW"
 
       - name: Create PostgreSQL PR
         if: steps.check.outputs.pg_update == 'true'
@@ -437,7 +425,6 @@ jobs:
             ## Changes
 
             - `postgres-slim/apko/postgres.yaml` - updated package references
-            - `.github/workflows/build.yml` - updated primary_package for version tagging
 
             ## Before Merging
 

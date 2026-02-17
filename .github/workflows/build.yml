@@ -23,7 +23,6 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  JENKINS_VERSION: "2.541.1"
 
 jobs:
   #----------------------------------------------------------------------------
@@ -186,34 +185,34 @@ jobs:
         include:
           - name: python
             apko_config: python/apko/python.yaml
-            primary_package: python-3.14
+            primary_grep: "python-[0-9]"
           - name: node-slim
             apko_config: node-slim/apko/node.yaml
-            primary_package: nodejs-25
+            primary_grep: "nodejs-[0-9]"
           - name: go
             apko_config: go/apko/go.yaml
-            primary_package: go-1.25
+            primary_grep: "go-[0-9]"
           - name: nginx
             apko_config: nginx/apko/nginx.yaml
-            primary_package: nginx-mainline
+            primary_grep: "nginx-mainline"
           - name: httpd
             apko_config: httpd/apko/httpd.yaml
-            primary_package: apache2
+            primary_grep: "apache2"
           - name: postgres-slim
             apko_config: postgres-slim/apko/postgres.yaml
-            primary_package: postgresql-18
+            primary_grep: "postgresql-[0-9]"
           - name: bun
             apko_config: bun/apko/bun.yaml
-            primary_package: bun
+            primary_grep: "bun"
           - name: sqlite
             apko_config: sqlite/apko/sqlite.yaml
-            primary_package: sqlite
+            primary_grep: "sqlite"
           - name: dotnet
             apko_config: dotnet/apko/dotnet.yaml
-            primary_package: dotnet-10-runtime
+            primary_grep: "dotnet-[0-9].*-runtime"
           - name: java
             apko_config: java/apko/java.yaml
-            primary_package: openjdk-21-jre
+            primary_grep: "openjdk-[0-9].*-jre"
 
     steps:
       - name: Checkout repository
@@ -349,13 +348,19 @@ jobs:
       - name: Extract version from SBOM
         id: version
         run: |
-          VERSION=$(jq -r '.packages[] | select(.name == "${{ matrix.primary_package }}") | .versionInfo' sbom-x86_64.spdx.json | head -1)
+          # Read primary package name from apko config (source of truth)
+          PRIMARY_PKG=$(grep -oE '${{ matrix.primary_grep }}[a-z0-9.\-]*' ${{ matrix.apko_config }} | head -1)
+          if [ -z "$PRIMARY_PKG" ]; then
+            echo "::error::Failed to extract primary package from ${{ matrix.apko_config }} using pattern '${{ matrix.primary_grep }}'"
+            exit 1
+          fi
+          VERSION=$(jq -r --arg pkg "$PRIMARY_PKG" '.packages[] | select(.name == $pkg) | .versionInfo' sbom-x86_64.spdx.json | head -1)
           if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
-            echo "::error::Failed to extract version for ${{ matrix.primary_package }} from SBOM"
+            echo "::error::Failed to extract version for $PRIMARY_PKG from SBOM"
             exit 1
           fi
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
-          echo "Image version: $VERSION"
+          echo "Primary package: $PRIMARY_PKG, version: $VERSION"
           rm -f sbom-*.spdx.json
 
       - name: Test image

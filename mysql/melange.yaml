@@ -103,6 +103,10 @@ pipeline:
       mkdir -p "${{targets.destdir}}/var/lib/mysql"
       mkdir -p "${{targets.destdir}}/etc/mysql"
 
+  # Clean up temp/runtime dirs (apko config creates /var/run/mysqld at image level)
+  - runs: |
+      rm -rf "${{targets.destdir}}/var/run"
+
   # Verify the build
   - runs: |
       echo "Verifying MySQL build..."

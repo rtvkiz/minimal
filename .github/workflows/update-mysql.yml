@@ -20,11 +20,11 @@ jobs:
       - name: Check for new MySQL 8.4.x version
         id: check
         run: |
-          # Get latest MySQL 8.4.x tag from GitHub
+          # Get latest MySQL 8.4.x tag from GitHub (tags use mysql-cluster- prefix)
           LATEST=$(curl -sS --retry 3 --retry-delay 5 \
             "https://api.github.com/repos/mysql/mysql-server/tags?per_page=100" | \
-            jq -r '[.[] | select(.name | startswith("mysql-8.4.")) | .name] | first' | \
-            sed 's/^mysql-//')
+            jq -r '[.[] | select(.name | startswith("mysql-cluster-8.4.")) | .name] | first' | \
+            sed 's/^mysql-cluster-//')
 
           if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
             echo "::error::Failed to fetch latest MySQL version"

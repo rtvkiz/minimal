@@ -20,9 +20,9 @@ jobs:
       - name: Check for new Memcached stable version
         id: check
         run: |
-          # Get latest stable 1.6.x release from GitHub
-          LATEST=$(curl -sS --retry 3 --retry-delay 5 https://api.github.com/repos/memcached/memcached/releases/latest | \
-            jq -r '.tag_name')
+          # Get latest stable version from GitHub tags (memcached uses tags, not releases)
+          LATEST=$(curl -sS --retry 3 --retry-delay 5 "https://api.github.com/repos/memcached/memcached/tags?per_page=100" | \
+            jq -r '[.[] | .name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))] | first')
 
           if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
             echo "::error::Failed to fetch latest Memcached version"

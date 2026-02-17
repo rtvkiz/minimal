@@ -68,17 +68,12 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" jenkins/melange.yaml
 
-          # Update .github/workflows/build.yml
-          sed -i "s/JENKINS_VERSION: .*/JENKINS_VERSION: \"$VERSION\"/" .github/workflows/build.yml
-
           # Update Makefile
           sed -i "s/JENKINS_VERSION ?= .*/JENKINS_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== jenkins/melange.yaml ==="
           grep 'version:' jenkins/melange.yaml | head -1
-          echo "=== .github/workflows/build.yml ==="
-          grep 'JENKINS_VERSION:' .github/workflows/build.yml
           echo "=== Makefile ==="
           grep 'JENKINS_VERSION' Makefile
 
@@ -96,7 +91,6 @@ jobs:
             ## Changes
 
             - `jenkins/melange.yaml` - package version, epoch reset
-            - `.github/workflows/build.yml` - JENKINS_VERSION env var
             - `Makefile` - JENKINS_VERSION variable
 
             ## Image Tag
