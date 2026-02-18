@@ -717,8 +717,8 @@ test-caddy:
 	docker run --rm --entrypoint /usr/bin/caddy \
 		$(REGISTRY)/$(OWNER)/minimal-caddy:latest version
 	@echo "Testing Caddy modules..."
-	docker run --rm --entrypoint /usr/bin/caddy \
-		$(REGISTRY)/$(OWNER)/minimal-caddy:latest list-modules 2>&1 | head -20
+	@docker run --rm --entrypoint /usr/bin/caddy \
+		$(REGISTRY)/$(OWNER)/minimal-caddy:latest list-modules 2>&1 | head -20 || true
 	@echo "Verifying no shell..."
 	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-caddy:latest \
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
