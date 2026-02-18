@@ -4,7 +4,7 @@
 
 package:
   name: haproxy-minimal
-  version: 3.2.12
+  version: 3.2.0
   epoch: 0
   description: "Minimal HAProxy built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-haproxy.yml workflow
-  sha256: 310b424e60db2f3990206ca7c81293586842cb628e7dfad572c7146ae9e95a91
+  sha256: f762ae31bca1b51feb89e4395e36e17f867c25372a10853c70d292c3dd17b7b0
 
 environment:
   contents:
