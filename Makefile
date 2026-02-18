@@ -11,17 +11,19 @@ HTTPD_VERSION ?= 2.4.66
 REDIS_VERSION ?= 8.6.0
 MYSQL_VERSION ?= 8.4.8
 MEMCACHED_VERSION ?= 1.6.40
+CADDY_VERSION ?= 2.10.2
+HAPROXY_VERSION ?= 3.2.12
 RUBY_VERSION ?= 4.0.1
 RAILS_VERSION ?= 8.1.2
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange memcached memcached-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange keygen
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
+.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange keygen
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached postgres-slim bun sqlite dotnet java php rails
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -223,6 +225,58 @@ memcached: memcached-melange
 	@echo "✓ minimal-memcached built (source build)"
 
 #------------------------------------------------------------------------------
+# CADDY IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+caddy-melange: keygen
+	@echo "Building Caddy $(CADDY_VERSION) from source via melange..."
+	melange build caddy/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Caddy package built from source"
+
+caddy: caddy-melange
+	@echo "Assembling minimal-caddy image with apko..."
+	apko build caddy/apko/caddy.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-caddy:$(VERSION) \
+		caddy.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < caddy.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-caddy:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-caddy:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-caddy:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-caddy:latest
+	@rm -f caddy.tar sbom-*.spdx.json
+	@echo "✓ minimal-caddy built (source build)"
+
+#------------------------------------------------------------------------------
+# HAPROXY IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+haproxy-melange: keygen
+	@echo "Building HAProxy $(HAPROXY_VERSION) from source via melange..."
+	melange build haproxy/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ HAProxy package built from source"
+
+haproxy: haproxy-melange
+	@echo "Assembling minimal-haproxy image with apko..."
+	apko build haproxy/apko/haproxy.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-haproxy:$(VERSION) \
+		haproxy.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < haproxy.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-haproxy:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-haproxy:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-haproxy:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-haproxy:latest
+	@rm -f haproxy.tar sbom-*.spdx.json
+	@echo "✓ minimal-haproxy built (source build)"
+
+#------------------------------------------------------------------------------
 # POSTGRES SLIM IMAGE (Wolfi pre-built package)
 #------------------------------------------------------------------------------
 postgres-slim:
@@ -362,7 +416,7 @@ rails: rails-melange
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -417,6 +471,18 @@ scan-memcached:
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-memcached:latest
 	@echo "✓ minimal-memcached: scan passed"
+
+scan-caddy:
+	@echo "Scanning minimal-caddy..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-caddy:latest
+	@echo "✓ minimal-caddy: scan passed"
+
+scan-haproxy:
+	@echo "Scanning minimal-haproxy..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-haproxy:latest
+	@echo "✓ minimal-haproxy: scan passed"
 
 scan-postgres-slim:
 	@echo "Scanning minimal-postgres-slim..."
@@ -482,6 +548,10 @@ scan-all:
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-memcached:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-caddy:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-haproxy:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-bun:latest
@@ -498,12 +568,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-mysql|minimal-memcached|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-java|minimal-rails)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-mysql|minimal-memcached|minimal-caddy|minimal-haproxy|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-java|minimal-rails)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails
 
 test-python:
 	@echo "Testing Python image..."
@@ -642,6 +712,31 @@ test-memcached:
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
 	@echo "✓ Memcached tests passed"
 
+test-caddy:
+	@echo "Testing Caddy image..."
+	docker run --rm --entrypoint /usr/bin/caddy \
+		$(REGISTRY)/$(OWNER)/minimal-caddy:latest version
+	@echo "Testing Caddy modules..."
+	docker run --rm --entrypoint /usr/bin/caddy \
+		$(REGISTRY)/$(OWNER)/minimal-caddy:latest list-modules 2>&1 | head -20
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-caddy:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ Caddy tests passed"
+
+test-haproxy:
+	@echo "Testing HAProxy image..."
+	docker run --rm --entrypoint /usr/bin/haproxy \
+		$(REGISTRY)/$(OWNER)/minimal-haproxy:latest -v
+	@echo "Testing HAProxy build options..."
+	@docker run --rm --entrypoint /usr/bin/haproxy \
+		$(REGISTRY)/$(OWNER)/minimal-haproxy:latest -vv 2>&1 | grep -E "(USE_OPENSSL|USE_PCRE2)" || \
+		{ echo "FAIL: Expected USE_OPENSSL and USE_PCRE2"; exit 1; }
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-haproxy:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ HAProxy tests passed"
+
 test-postgres-slim:
 	@echo "Testing Postgres Slim image..."
 	docker run --rm --entrypoint /usr/bin/postgres \
@@ -730,6 +825,10 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-mysql:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-memcached:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-caddy:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-caddy:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-haproxy:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-haproxy:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION)
@@ -775,6 +874,12 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-memcached:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-caddy:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-caddy:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-caddy:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-haproxy:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-haproxy:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-haproxy:latest 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest 2>/dev/null || true
@@ -817,6 +922,8 @@ help:
 	@echo "  make redis-slim      Build Redis Slim $(REDIS_VERSION) (source build)"
 	@echo "  make mysql           Build MySQL $(MYSQL_VERSION) (source build)"
 	@echo "  make memcached       Build Memcached $(MEMCACHED_VERSION) (source build)"
+	@echo "  make caddy           Build Caddy $(CADDY_VERSION) (source build)"
+	@echo "  make haproxy         Build HAProxy $(HAPROXY_VERSION) (source build)"
 	@echo "  make postgres-slim   Build Postgres Slim (Wolfi package)"
 	@echo "  make bun             Build Bun (Wolfi package)"
 	@echo "  make sqlite          Build SQLite (Wolfi package)"
@@ -844,6 +951,8 @@ help:
 	@echo "  REDIS_VERSION=$(REDIS_VERSION)"
 	@echo "  MYSQL_VERSION=$(MYSQL_VERSION)"
 	@echo "  MEMCACHED_VERSION=$(MEMCACHED_VERSION)"
+	@echo "  CADDY_VERSION=$(CADDY_VERSION)"
+	@echo "  HAPROXY_VERSION=$(HAPROXY_VERSION)"
 	@echo "  RUBY_VERSION=$(RUBY_VERSION)"
 	@echo "  RAILS_VERSION=$(RAILS_VERSION)"
 	@echo "  REGISTRY=$(REGISTRY)"

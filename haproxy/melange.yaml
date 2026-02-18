@@ -1,0 +1,77 @@
+# Melange build configuration for minimal HAProxy
+# Builds HAProxy from source with TLS, PCRE2, and compression
+# Minimal footprint - single binary
+
+package:
+  name: haproxy-minimal
+  version: 3.2.12
+  epoch: 0
+  description: "Minimal HAProxy built from source"
+  copyright:
+    - license: GPL-2.0-or-later
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-haproxy.yml workflow
+  sha256: 310b424e60db2f3990206ca7c81293586842cb628e7dfad572c7146ae9e95a91
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - linux-headers
+      - openssl-dev
+      - pcre2-dev
+      - zlib-dev
+
+pipeline:
+  # Download and verify HAProxy source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://www.haproxy.org/download/3.2/src/haproxy-${{package.version}}.tar.gz" \
+        -o /home/build/haproxy.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/haproxy.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf haproxy.tar.gz
+      rm haproxy.tar.gz
+
+  # Build HAProxy from source
+  - runs: |
+      cd /home/build/haproxy-${{package.version}}
+      make -j$(nproc) \
+        TARGET=linux-glibc \
+        USE_OPENSSL=1 \
+        USE_PCRE2=1 \
+        USE_ZLIB=1 \
+        PREFIX=/usr
+
+  # Install to destdir
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/haproxy-${{package.version}}/haproxy "${{targets.destdir}}/usr/bin/"
+
+      # Strip binary
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/haproxy"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying HAProxy build..."
+      "${{targets.destdir}}/usr/bin/haproxy" -v
+      echo "Checking binary size..."
+      ls -lh "${{targets.destdir}}/usr/bin/haproxy"
+
+update:
+  enabled: true
+  github:
+    identifier: haproxy/haproxy
+    use-tag: true
+    tag-filter: "v3.2."

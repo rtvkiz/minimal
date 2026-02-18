@@ -1,0 +1,71 @@
+# Melange build configuration for minimal Caddy
+# Builds Caddy from source (Go) with static binary
+# First Go-based melange build in the project
+
+package:
+  name: caddy-minimal
+  version: 2.10.2
+  epoch: 0
+  description: "Minimal Caddy web server built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-caddy.yml workflow
+  sha256: f63f46b7ae68ced0a5c2e31df1b6dfc7656117d162a1bc7fed4bd4afd14ddc8f
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify Caddy source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://github.com/caddyserver/caddy/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/caddy.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/caddy.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf caddy.tar.gz
+      rm caddy.tar.gz
+
+  # Build Caddy from source (static binary)
+  - runs: |
+      cd /home/build/caddy-${{package.version}}
+      CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -X github.com/caddyserver/caddy/v2.CustomVersion=v${{package.version}}" \
+        -o caddy \
+        ./cmd/caddy
+
+  # Install to destdir (no strip needed - Go ldflags already removes debug info)
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/caddy-${{package.version}}/caddy "${{targets.destdir}}/usr/bin/"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying Caddy build..."
+      "${{targets.destdir}}/usr/bin/caddy" version
+      echo "Checking binary size..."
+      ls -lh "${{targets.destdir}}/usr/bin/caddy"
+
+update:
+  enabled: true
+  github:
+    identifier: caddyserver/caddy
+    use-tag: true
+    tag-filter: "v2."

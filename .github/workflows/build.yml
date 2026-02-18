@@ -102,6 +102,24 @@ jobs:
             melange_config: memcached/melange.yaml
             arch: aarch64
             runner: ubuntu-24.04-arm
+          # Caddy builds
+          - name: caddy
+            melange_config: caddy/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: caddy
+            melange_config: caddy/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+          # HAProxy builds
+          - name: haproxy
+            melange_config: haproxy/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: haproxy
+            melange_config: haproxy/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
           # PHP builds
           - name: php
             melange_config: php/melange.yaml
@@ -417,6 +435,12 @@ jobs:
           - name: memcached
             apko_config: memcached/apko/memcached.yaml
             melange_config: memcached/melange.yaml
+          - name: caddy
+            apko_config: caddy/apko/caddy.yaml
+            melange_config: caddy/melange.yaml
+          - name: haproxy
+            apko_config: haproxy/apko/haproxy.yaml
+            melange_config: haproxy/melange.yaml
           - name: php
             apko_config: php/apko/php.yaml
             melange_config: php/melange.yaml

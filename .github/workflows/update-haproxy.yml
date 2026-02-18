@@ -1,0 +1,122 @@
+name: Update HAProxy Version
+
+on:
+  schedule:
+    # Check daily at 7:00am UTC
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new HAProxy LTS version
+        id: check
+        run: |
+          # Get latest stable 3.2.x LTS release from GitHub (tags prefixed with v)
+          LATEST=$(curl -sS --retry 3 --retry-delay 5 "https://api.github.com/repos/haproxy/haproxy/tags?per_page=100" | \
+            jq -r '[.[] | .name | select(startswith("v3.2."))] | first | ltrimstr("v")')
+
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "::error::Failed to fetch latest HAProxy version"
+            exit 1
+          fi
+
+          # Validate version format strictly
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid HAProxy version received: $LATEST"
+            exit 1
+          fi
+
+          # Get current version from melange.yaml
+          CURRENT=$(grep '^  version:' haproxy/melange.yaml | awk '{print $2}')
+
+          echo "Current version: $CURRENT"
+          echo "Latest version: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+            echo "Update available: $CURRENT -> $LATEST"
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            echo "Already up to date"
+          fi
+
+      - name: Update version and checksum in all files
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          echo "Updating to HAProxy $VERSION"
+
+          # Download tarball from haproxy.org and compute SHA256 checksum
+          echo "Downloading HAProxy $VERSION tarball..."
+          curl -fsSL --retry 3 --retry-delay 5 "https://www.haproxy.org/download/3.2/src/haproxy-${VERSION}.tar.gz" \
+            -o /tmp/haproxy.tar.gz
+          SHA256=$(sha256sum /tmp/haproxy.tar.gz | awk '{print $1}')
+          rm /tmp/haproxy.tar.gz
+          echo "SHA256: $SHA256"
+
+          # Update haproxy/melange.yaml - version
+          sed -i "s/^  version: .*/  version: $VERSION/" haproxy/melange.yaml
+
+          # Update haproxy/melange.yaml - checksum
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" haproxy/melange.yaml
+
+          # Reset epoch to 0 for new upstream version
+          sed -i "s/^  epoch: .*/  epoch: 0/" haproxy/melange.yaml
+
+          # Update Makefile
+          sed -i "s/HAPROXY_VERSION ?= .*/HAPROXY_VERSION ?= $VERSION/" Makefile
+
+          # Verify changes
+          echo "=== haproxy/melange.yaml ==="
+          grep -E '(version:|sha256:)' haproxy/melange.yaml | head -2
+          echo "=== Makefile ==="
+          grep 'HAPROXY_VERSION' Makefile
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(haproxy): bump to ${{ steps.check.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates HAProxy from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+            ## Changes
+
+            - `haproxy/melange.yaml` - package version, SHA256 checksum, epoch reset
+            - `Makefile` - HAPROXY_VERSION variable
+
+            ## Image Tag
+
+            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-haproxy:${{ steps.check.outputs.new_version }}-r0`
+
+            ## Links
+
+            - [HAProxy Releases](https://github.com/haproxy/haproxy/releases)
+            - [Release Notes for v${{ steps.check.outputs.new_version }}](https://github.com/haproxy/haproxy/releases/tag/v${{ steps.check.outputs.new_version }})
+
+            ---
+
+            This PR was automatically created by the [update-haproxy](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-haproxy.yml) workflow.
+          branch: update-haproxy-${{ steps.check.outputs.new_version }}
+          commit-message: |
+            chore(haproxy): bump to ${{ steps.check.outputs.new_version }}
+
+            Updates HAProxy from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
+          delete-branch: true
+          labels: |
+            dependencies
+            haproxy
