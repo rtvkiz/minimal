@@ -104,6 +104,21 @@ pipeline:
       mkdir -p "${{targets.destdir}}/usr/lib/plugin"
       cp lib/plugin/*.so "${{targets.destdir}}/usr/lib/plugin/" 2>/dev/null || true
 
+      # Install entrypoint script
+      cat > "${{targets.destdir}}/usr/bin/docker-entrypoint.sh" << 'ENTRY'
+      #!/bin/sh
+      set -e
+
+      # Auto-initialize if data directory is empty
+      if [ ! -f /var/lib/mysql/ibdata1 ]; then
+        echo "Initializing MySQL data directory..."
+        mysqld --initialize-insecure
+      fi
+
+      exec mysqld "$@"
+      ENTRY
+      chmod +x "${{targets.destdir}}/usr/bin/docker-entrypoint.sh"
+
       # Data/config/runtime dirs are created by apko config with correct ownership
 
   # Verify the build

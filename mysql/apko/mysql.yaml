@@ -12,6 +12,9 @@ contents:
     # Base filesystem
     - wolfi-baselayout
 
+    # Shell (needed for entrypoint script)
+    - busybox
+
     # Our MySQL (built from source via melange)
     - mysql-minimal
 
@@ -49,7 +52,7 @@ accounts:
   run-as: 65532
 
 entrypoint:
-  command: /usr/bin/mysqld
+  command: /usr/bin/docker-entrypoint.sh
 
 environment:
   PATH: /usr/bin:/bin
