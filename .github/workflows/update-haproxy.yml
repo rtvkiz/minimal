@@ -17,12 +17,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check for new HAProxy LTS version
+      - name: Check for new HAProxy stable version
         id: check
         run: |
-          # Get latest stable 3.2.x LTS release from GitHub (tags prefixed with v)
+          # Get latest stable 3.x release from GitHub (tags prefixed with v)
           LATEST=$(curl -sS --retry 3 --retry-delay 5 "https://api.github.com/repos/haproxy/haproxy/tags?per_page=100" | \
-            jq -r '[.[] | .name | select(startswith("v3.2."))] | first | ltrimstr("v")')
+            jq -r '[.[] | .name | select(test("^v3\\.[0-9]+\\.[0-9]+$"))] | first | ltrimstr("v")')
 
           if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
             echo "::error::Failed to fetch latest HAProxy version"
@@ -58,8 +58,9 @@ jobs:
           echo "Updating to HAProxy $VERSION"
 
           # Download tarball from haproxy.org and compute SHA256 checksum
+          MINOR_VER=$(echo "$VERSION" | cut -d. -f1,2)
           echo "Downloading HAProxy $VERSION tarball..."
-          curl -fsSL --retry 3 --retry-delay 5 "https://www.haproxy.org/download/3.2/src/haproxy-${VERSION}.tar.gz" \
+          curl -fsSL --retry 3 --retry-delay 5 "https://www.haproxy.org/download/${MINOR_VER}/src/haproxy-${VERSION}.tar.gz" \
             -o /tmp/haproxy.tar.gz
           SHA256=$(sha256sum /tmp/haproxy.tar.gz | awk '{print $1}')
           rm /tmp/haproxy.tar.gz

@@ -34,7 +34,8 @@ pipeline:
   # Download and verify HAProxy source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL "https://www.haproxy.org/download/3.2/src/haproxy-${{package.version}}.tar.gz" \
+      MINOR_VER=$(echo "${{package.version}}" | cut -d. -f1,2)
+      curl -fsSL "https://www.haproxy.org/download/${MINOR_VER}/src/haproxy-${{package.version}}.tar.gz" \
         -o /home/build/haproxy.tar.gz
 
       # Verify checksum
@@ -74,4 +75,4 @@ update:
   github:
     identifier: haproxy/haproxy
     use-tag: true
-    tag-filter: "v3.2."
+    tag-filter: "v3."
