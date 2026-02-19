@@ -93,6 +93,15 @@ jobs:
             melange_config: mysql/melange.yaml
             arch: aarch64
             runner: ubuntu-24.04-arm
+          # MySQL LTS builds
+          - name: mysql-lts
+            melange_config: mysql-lts/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: mysql-lts
+            melange_config: mysql-lts/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
           # Memcached builds
           - name: memcached
             melange_config: memcached/melange.yaml
@@ -432,6 +441,9 @@ jobs:
           - name: mysql
             apko_config: mysql/apko/mysql.yaml
             melange_config: mysql/melange.yaml
+          - name: mysql-lts
+            apko_config: mysql-lts/apko/mysql.yaml
+            melange_config: mysql-lts/melange.yaml
           - name: memcached
             apko_config: memcached/apko/memcached.yaml
             melange_config: memcached/melange.yaml

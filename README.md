@@ -17,7 +17,8 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **HTTPD** | `docker pull ghcr.io/rtvkiz/minimal-httpd:latest` | Maybe* | Apache web server |
 | **Jenkins** | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
 | **Redis-slim** | `docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest` | No | In-memory data store |
-| **MySQL** | `docker pull ghcr.io/rtvkiz/minimal-mysql:latest` | No | Relational database (built from source) |
+| **MySQL** | `docker pull ghcr.io/rtvkiz/minimal-mysql:latest` | Yes | Relational database, Innovation track (built from source) |
+| **MySQL LTS** | `docker pull ghcr.io/rtvkiz/minimal-mysql-lts:latest` | Yes | Relational database, LTS track (built from source) |
 | **Memcached** | `docker pull ghcr.io/rtvkiz/minimal-memcached:latest` | No | In-memory caching (built from source) |
 | **PostgreSQL-slim** | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
 | **SQLite** | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
@@ -26,7 +27,7 @@ A collection of production-ready container images with **minimal CVEs**, rebuilt
 | **PHP** | `docker pull ghcr.io/rtvkiz/minimal-php:latest` | No | PHP 8.5 CLI (built from source) |
 | **Rails** | `docker pull ghcr.io/rtvkiz/minimal-rails:latest` | No | Ruby 4.0 + Rails 8.1 (built from source) |
 
-*\*HTTPD, Jenkins may include shell(sh,busybox) via transitive Wolfi dependencies. CI treats shell presence as informational.*
+*\*HTTPD, Jenkins may include shell(sh,busybox) via transitive Wolfi dependencies. MySQL and MySQL LTS include busybox for their auto-init entrypoint scripts. CI treats shell presence as informational.*
 
 ## Image Tags
 
@@ -97,8 +98,11 @@ docker run -d -p 8080:8080 -v jenkins_home:/var/jenkins_home ghcr.io/rtvkiz/mini
 # Redis - in-memory data store
 docker run -d -p 6379:6379 ghcr.io/rtvkiz/minimal-redis-slim:latest
 
-# MySQL - relational database
+# MySQL - relational database (Innovation track)
 docker run -d -p 3306:3306 -v mysqldata:/var/lib/mysql ghcr.io/rtvkiz/minimal-mysql:latest
+
+# MySQL LTS - relational database (LTS track)
+docker run -d -p 3306:3306 -v mysqldata:/var/lib/mysql ghcr.io/rtvkiz/minimal-mysql-lts:latest
 
 # Memcached - in-memory caching
 docker run -d -p 11211:11211 ghcr.io/rtvkiz/minimal-memcached:latest
@@ -134,7 +138,8 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require '
 | HTTPD | 2.4.x | www-data (65532) | `/usr/sbin/httpd -DFOREGROUND` | `/var/www/localhost/htdocs` |
 | Jenkins | 2.541.x LTS | jenkins (1000) | `tini -- java -jar jenkins.war` | `/var/jenkins_home` |
 | Redis | 8.4.x | redis (65532) | `/usr/bin/redis-server` | `/` |
-| MySQL | 8.4.x | mysql (65532) | `/usr/bin/mysqld` | `/` |
+| MySQL | 9.x | mysql (65532) | `/usr/bin/docker-entrypoint.sh` | `/` |
+| MySQL LTS | 8.4.x | mysql (65532) | `/usr/bin/docker-entrypoint.sh` | `/` |
 | Memcached | 1.6.x | memcached (65532) | `/usr/bin/memcached` | `/` |
 | PostgreSQL | 18.x | postgres (70) | `/usr/bin/postgres` | `/` |
 | SQLite | 3.51.x | nonroot (65532) | `/usr/bin/sqlite3` | `/data` |
@@ -175,7 +180,8 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require '
 │  ┌─────────────────────────────┐                               │            │
 │  │  build-melange (6 jobs)     │                               │            │
 │  │  Jenkins, Redis, MySQL,     │                               │            │
-│  │  Memcached, PHP, Rails      │                               │            │
+│  │  MySQL LTS, Memcached,      │                               │            │
+│  │  PHP, Rails                 │                               │            │
 │  │  ┌─────────┐ ┌────────────┐ │                               │            │
 │  │  │  merge  │►│   apko     │─┼───────────────────────────────┤            │
 │  │  │ packages│ │  publish   │ │                               │            │
@@ -207,13 +213,14 @@ Every build is scanned for vulnerabilities; results appear in the job summary an
 
 ### Automated Version Updates
 
-Source-built packages (Jenkins, Redis, MySQL, Memcached, PHP, Rails) and Wolfi-based packages are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
+Source-built packages (Jenkins, Redis, MySQL, MySQL LTS, Memcached, PHP, Rails) and Wolfi-based packages are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
 
 | Workflow | Watches | What It Does |
 |----------|---------|--------------|
 | `update-jenkins.yml` | Jenkins LTS releases | Updates version in melange config, Makefile, build.yml |
 | `update-redis.yml` | Redis GitHub releases | Updates version and SHA256 in melange config |
-| `update-mysql.yml` | MySQL GitHub tags | Updates version and SHA256 in melange config |
+| `update-mysql.yml` | MySQL Innovation (9.x) GitHub tags | Updates version and SHA256 in melange config |
+| `update-mysql-lts.yml` | MySQL LTS (8.4.x) GitHub tags | Updates version and SHA256 in melange config |
 | `update-memcached.yml` | Memcached GitHub releases | Updates version and SHA256 in melange config |
 | `update-php.yml` | php.net releases API | Updates version and SHA256; opens issue for new minor/major series |
 | `update-rails.yml` | RubyGems API + Ruby GitHub tags | Updates Rails gem and Ruby source versions independently |
@@ -226,7 +233,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 ```bash
 # Prerequisites
 go install chainguard.dev/apko@latest
-go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, Memcached, PHP, Rails
+go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, MySQL LTS, Memcached, PHP, Rails
 brew install trivy  # or: apt install trivy
 
 # Build all images
@@ -242,6 +249,7 @@ make httpd
 make jenkins
 make redis-slim
 make mysql
+make mysql-lts
 make memcached
 make postgres-slim
 make sqlite
@@ -274,8 +282,11 @@ minimal/
 │   ├── apko/redis.yaml           # Redis image
 │   └── melange.yaml              # Redis source build
 ├── mysql/
-│   ├── apko/mysql.yaml           # MySQL image
-│   └── melange.yaml              # MySQL source build
+│   ├── apko/mysql.yaml           # MySQL Innovation image
+│   └── melange.yaml              # MySQL Innovation source build
+├── mysql-lts/
+│   ├── apko/mysql.yaml           # MySQL LTS image
+│   └── melange.yaml              # MySQL LTS source build
 ├── memcached/
 │   ├── apko/memcached.yaml       # Memcached image
 │   └── melange.yaml              # Memcached source build
@@ -295,7 +306,8 @@ minimal/
 │   ├── update-php.yml            # PHP version updates (from php.net)
 │   ├── update-rails.yml          # Rails/Ruby version updates
 │   ├── update-redis.yml          # Redis version updates
-│   ├── update-mysql.yml          # MySQL version updates
+│   ├── update-mysql.yml          # MySQL Innovation version updates
+│   ├── update-mysql-lts.yml      # MySQL LTS version updates
 │   ├── update-memcached.yml      # Memcached version updates
 │   └── update-wolfi-packages.yml # Wolfi package updates
 ├── Makefile

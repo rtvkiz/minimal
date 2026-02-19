@@ -1,0 +1,84 @@
+# Minimal MySQL image - built from source via melange
+# CVE patching via daily rebuilds from upstream source
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Shell (needed for entrypoint script)
+    - busybox
+
+    # Our MySQL (built from source via melange)
+    - mysql-lts-minimal
+
+    # Core libraries
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libstdc++
+
+    # SSL/TLS libraries
+    - libssl3
+    - libcrypto3
+
+    # Terminal / ncurses
+    - ncurses
+
+    # Event library
+    - libevent
+
+    # Protobuf (required by mysqld for X Protocol / Group Replication)
+    - libprotobuf-lite
+
+    # Certificates
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: mysql
+      gid: 65532
+  users:
+    - username: mysql
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/docker-entrypoint.sh
+
+environment:
+  PATH: /usr/bin:/bin
+
+paths:
+  - path: /etc/mysql
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/mysql
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/run/mysqld
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+archs:
+  - x86_64
+  - aarch64
