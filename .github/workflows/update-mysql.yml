@@ -2,8 +2,8 @@ name: Update MySQL Version
 
 on:
   schedule:
-    # Check daily at 6:45am UTC
-    - cron: '45 6 * * *'
+    # Check daily at 6:50am UTC
+    - cron: '50 6 * * *'
   workflow_dispatch:
 
 jobs:
@@ -17,13 +17,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check for new MySQL Innovation version
+      - name: Check for new MySQL 8.4.x version
         id: check
         run: |
-          # Get latest MySQL 9.x tag from GitHub (tags use mysql-cluster- prefix)
+          # Get latest MySQL 8.4.x tag from GitHub (tags use mysql-cluster- prefix)
           LATEST=$(curl -sS --retry 3 --retry-delay 5 \
             "https://api.github.com/repos/mysql/mysql-server/tags?per_page=100" | \
-            jq -r '[.[] | select(.name | startswith("mysql-cluster-9.")) | .name] | first' | \
+            jq -r '[.[] | select(.name | startswith("mysql-cluster-8.4.")) | .name] | first' | \
             sed 's/^mysql-cluster-//')
 
           if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
@@ -59,13 +59,9 @@ jobs:
           VERSION="${{ steps.check.outputs.new_version }}"
           echo "Updating to MySQL $VERSION"
 
-          # Compute MAJOR_MINOR from version (e.g., 9.6 from 9.6.0)
-          MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
-          echo "Major.minor: $MAJOR_MINOR"
-
           # Download tarball and compute SHA256 checksum
           echo "Downloading MySQL $VERSION tarball..."
-          curl -fsSL --retry 3 --retry-delay 5 "https://dev.mysql.com/get/Downloads/MySQL-${MAJOR_MINOR}/mysql-${VERSION}.tar.gz" \
+          curl -fsSL --retry 3 --retry-delay 5 "https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-${VERSION}.tar.gz" \
             -o /tmp/mysql.tar.gz
           SHA256=$(sha256sum /tmp/mysql.tar.gz | awk '{print $1}')
           rm /tmp/mysql.tar.gz
@@ -77,9 +73,6 @@ jobs:
           # Update mysql/melange.yaml - checksum
           sed -i "s/^  sha256: .*/  sha256: $SHA256/" mysql/melange.yaml
 
-          # Update mysql/melange.yaml - major-minor variable
-          sed -i "s/^  major-minor: .*/  major-minor: \"$MAJOR_MINOR\"/" mysql/melange.yaml
-
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" mysql/melange.yaml
 
@@ -88,7 +81,7 @@ jobs:
 
           # Verify changes
           echo "=== mysql/melange.yaml ==="
-          grep -E '(version:|sha256:|major-minor:)' mysql/melange.yaml | head -3
+          grep -E '(version:|sha256:)' mysql/melange.yaml | head -2
           echo "=== Makefile ==="
           grep 'MYSQL_VERSION' Makefile
 
@@ -101,11 +94,11 @@ jobs:
           body: |
             ## Summary
 
-            Updates MySQL (Innovation) from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+            Updates MySQL from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
 
             ## Changes
 
-            - `mysql/melange.yaml` - package version, SHA256 checksum, major-minor variable, epoch reset
+            - `mysql/melange.yaml` - package version, SHA256 checksum, epoch reset
             - `Makefile` - MYSQL_VERSION variable
 
             ## Image Tag
@@ -114,7 +107,7 @@ jobs:
 
             ## Links
 
-            - [MySQL Release Notes](https://dev.mysql.com/doc/relnotes/mysql/innovation/en/)
+            - [MySQL 8.4 Release Notes](https://dev.mysql.com/doc/relnotes/mysql/8.4/en/)
             - [MySQL Downloads](https://dev.mysql.com/downloads/mysql/)
 
             ---
@@ -124,7 +117,7 @@ jobs:
           commit-message: |
             chore(mysql): bump to ${{ steps.check.outputs.new_version }}
 
-            Updates MySQL (Innovation) from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
+            Updates MySQL from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
           delete-branch: true
           labels: |
             dependencies

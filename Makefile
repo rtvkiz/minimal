@@ -9,8 +9,7 @@ JENKINS_VERSION ?= 2.541.1
 NGINX_VERSION ?= 1.29.4
 HTTPD_VERSION ?= 2.4.66
 REDIS_VERSION ?= 8.6.0
-MYSQL_VERSION ?= 9.6.0
-MYSQL_LTS_VERSION ?= 8.4.8
+MYSQL_VERSION ?= 8.4.8
 MEMCACHED_VERSION ?= 1.6.40
 CADDY_VERSION ?= 2.10.2
 HAPROXY_VERSION ?= 3.2.0
@@ -18,14 +17,13 @@ RUBY_VERSION ?= 4.0.1
 RAILS_VERSION ?= 8.1.2
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local mysql-lts mysql-lts-melange memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange keygen
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-mysql-lts scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
-.PHONY: test-mysql-lts
+.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange keygen
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql mysql-lts memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -175,7 +173,7 @@ redis-slim: redis-slim-melange
 	@echo "✓ minimal-redis-slim built (source build)"
 
 #------------------------------------------------------------------------------
-# MYSQL IMAGE (melange source build + apko, Innovation track)
+# MYSQL IMAGE (melange source build + apko, LTS track)
 #------------------------------------------------------------------------------
 mysql-melange: keygen
 	@echo "Building MySQL $(MYSQL_VERSION) from source via melange..."
@@ -222,32 +220,6 @@ mysql: mysql-melange
 		$(REGISTRY)/$(OWNER)/minimal-mysql:latest
 	@rm -f mysql.tar sbom-*.spdx.json
 	@echo "✓ minimal-mysql built (source build)"
-
-#------------------------------------------------------------------------------
-# MYSQL LTS IMAGE (melange source build + apko, LTS track)
-#------------------------------------------------------------------------------
-mysql-lts-melange: keygen
-	@echo "Building MySQL LTS $(MYSQL_LTS_VERSION) from source via melange..."
-	melange build mysql-lts/melange.yaml \
-		--arch x86_64,aarch64 \
-		--signing-key melange.rsa
-	@echo "✓ MySQL LTS package built from source"
-
-mysql-lts: mysql-lts-melange
-	@echo "Assembling minimal-mysql-lts image with apko..."
-	apko build mysql-lts/apko/mysql.yaml \
-		$(REGISTRY)/$(OWNER)/minimal-mysql-lts:$(VERSION) \
-		mysql-lts.tar \
-		--arch x86_64 \
-		--repository-append ./packages \
-		--keyring-append melange.rsa.pub
-	docker load < mysql-lts.tar
-	docker tag $(REGISTRY)/$(OWNER)/minimal-mysql-lts:$(VERSION)-amd64 \
-		$(REGISTRY)/$(OWNER)/minimal-mysql-lts:$(VERSION)
-	docker tag $(REGISTRY)/$(OWNER)/minimal-mysql-lts:$(VERSION)-amd64 \
-		$(REGISTRY)/$(OWNER)/minimal-mysql-lts:latest
-	@rm -f mysql-lts.tar sbom-*.spdx.json
-	@echo "✓ minimal-mysql-lts built (source build)"
 
 #------------------------------------------------------------------------------
 # MEMCACHED IMAGE (melange source build + apko)
@@ -467,7 +439,7 @@ rails: rails-melange
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-mysql-lts scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -516,12 +488,6 @@ scan-mysql:
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-mysql:latest
 	@echo "✓ minimal-mysql: scan passed"
-
-scan-mysql-lts:
-	@echo "Scanning minimal-mysql-lts..."
-	trivy image --exit-code 1 --severity CRITICAL,HIGH \
-		$(REGISTRY)/$(OWNER)/minimal-mysql-lts:latest
-	@echo "✓ minimal-mysql-lts: scan passed"
 
 scan-memcached:
 	@echo "Scanning minimal-memcached..."
@@ -603,8 +569,6 @@ scan-all:
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-mysql:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
-		$(REGISTRY)/$(OWNER)/minimal-mysql-lts:latest
-	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-memcached:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-caddy:latest
@@ -627,12 +591,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-mysql|minimal-mysql-lts|minimal-memcached|minimal-caddy|minimal-haproxy|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-java|minimal-rails)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-mysql|minimal-memcached|minimal-caddy|minimal-haproxy|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-java|minimal-rails)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-mysql-lts test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails
 
 test-python:
 	@echo "Testing Python image..."
@@ -748,14 +712,6 @@ test-mysql:
 	docker run --rm --entrypoint /usr/bin/mysql \
 		$(REGISTRY)/$(OWNER)/minimal-mysql:latest --version
 	@echo "✓ MySQL tests passed"
-
-test-mysql-lts:
-	@echo "Testing MySQL LTS image..."
-	docker run --rm $(REGISTRY)/$(OWNER)/minimal-mysql-lts:latest --version
-	@echo "Testing MySQL LTS client..."
-	docker run --rm --entrypoint /usr/bin/mysql \
-		$(REGISTRY)/$(OWNER)/minimal-mysql-lts:latest --version
-	@echo "✓ MySQL LTS tests passed"
 
 test-memcached:
 	@echo "Testing Memcached image..."
@@ -887,8 +843,6 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-mysql:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-mysql-lts:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-mysql-lts:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-memcached:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-caddy:$(VERSION)
@@ -937,9 +891,6 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-mysql:latest 2>/dev/null || true
-	docker rmi $(REGISTRY)/$(OWNER)/minimal-mysql-lts:$(VERSION) 2>/dev/null || true
-	docker rmi $(REGISTRY)/$(OWNER)/minimal-mysql-lts:$(VERSION)-amd64 2>/dev/null || true
-	docker rmi $(REGISTRY)/$(OWNER)/minimal-mysql-lts:latest 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-memcached:latest 2>/dev/null || true
@@ -989,8 +940,7 @@ help:
 	@echo "  make nginx           Build Nginx $(NGINX_VERSION) (Wolfi package)"
 	@echo "  make httpd           Build HTTPD $(HTTPD_VERSION) (Wolfi package)"
 	@echo "  make redis-slim      Build Redis Slim $(REDIS_VERSION) (source build)"
-	@echo "  make mysql           Build MySQL $(MYSQL_VERSION) Innovation (source build)"
-	@echo "  make mysql-lts       Build MySQL $(MYSQL_LTS_VERSION) LTS (source build)"
+	@echo "  make mysql           Build MySQL $(MYSQL_VERSION) LTS (source build)"
 	@echo "  make memcached       Build Memcached $(MEMCACHED_VERSION) (source build)"
 	@echo "  make caddy           Build Caddy $(CADDY_VERSION) (source build)"
 	@echo "  make haproxy         Build HAProxy $(HAPROXY_VERSION) (source build)"
@@ -1020,7 +970,6 @@ help:
 	@echo "  HTTPD_VERSION=$(HTTPD_VERSION)"
 	@echo "  REDIS_VERSION=$(REDIS_VERSION)"
 	@echo "  MYSQL_VERSION=$(MYSQL_VERSION)"
-	@echo "  MYSQL_LTS_VERSION=$(MYSQL_LTS_VERSION)"
 	@echo "  MEMCACHED_VERSION=$(MEMCACHED_VERSION)"
 	@echo "  CADDY_VERSION=$(CADDY_VERSION)"
 	@echo "  HAPROXY_VERSION=$(HAPROXY_VERSION)"

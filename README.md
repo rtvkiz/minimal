@@ -1,75 +1,63 @@
-# Minimal: Hardened Container Images
+<p align="center">
+  <img src="assets/logo.svg" alt="Minimal — Hardened Container Images" width="600">
+</p>
 
-[![Build Hardened Images](https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg)](https://github.com/rtvkiz/minimal/actions/workflows/build.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  Production-ready container images with <strong>minimal CVEs</strong>, rebuilt daily using
+  <a href="https://github.com/chainguard-dev/apko">Chainguard's apko</a> and
+  <a href="https://github.com/wolfi-dev">Wolfi</a> packages.
+</p>
 
-A collection of production-ready container images with **minimal CVEs**, rebuilt daily using [Chainguard's apko](https://github.com/chainguard-dev/apko) and [Wolfi](https://github.com/wolfi-dev) packages. By including only required packages, these images maintain a reduced attack surface and typically have zero or near-zero known vulnerabilities.
+<p align="center">
+  <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build Hardened Images"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/Images-16-0d9488" alt="Images: 16">
+  <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
+</p>
 
-## Available Images
-
-| Image | Pull Command | Shell | Use Case |
-|-------|--------------|-------|----------|
-| **Python** | `docker pull ghcr.io/rtvkiz/minimal-python:latest` | No | Python apps, microservices |
-| **Node.js-slim** | `docker pull ghcr.io/rtvkiz/minimal-node-slim:latest` | No | Node.js apps, JavaScript |
-| **Bun** | `docker pull ghcr.io/rtvkiz/minimal-bun:latest` | No | Fast JavaScript/TypeScript runtime |
-| **Go** | `docker pull ghcr.io/rtvkiz/minimal-go:latest` | No | Go development, CGO builds |
-| **Nginx** | `docker pull ghcr.io/rtvkiz/minimal-nginx:latest` | No | Reverse proxy, static files |
-| **HTTPD** | `docker pull ghcr.io/rtvkiz/minimal-httpd:latest` | Maybe* | Apache web server |
-| **Jenkins** | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
-| **Redis-slim** | `docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest` | No | In-memory data store |
-| **MySQL** | `docker pull ghcr.io/rtvkiz/minimal-mysql:latest` | Yes | Relational database, Innovation track (built from source) |
-| **MySQL LTS** | `docker pull ghcr.io/rtvkiz/minimal-mysql-lts:latest` | Yes | Relational database, LTS track (built from source) |
-| **Memcached** | `docker pull ghcr.io/rtvkiz/minimal-memcached:latest` | No | In-memory caching (built from source) |
-| **PostgreSQL-slim** | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
-| **SQLite** | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
-| **.NET Runtime** | `docker pull ghcr.io/rtvkiz/minimal-dotnet:latest` | No | .NET 10 runtime for apps |
-| **Java** | `docker pull ghcr.io/rtvkiz/minimal-java:latest` | No | OpenJDK 21 JRE for Java apps |
-| **PHP** | `docker pull ghcr.io/rtvkiz/minimal-php:latest` | No | PHP 8.5 CLI (built from source) |
-| **Rails** | `docker pull ghcr.io/rtvkiz/minimal-rails:latest` | No | Ruby 4.0 + Rails 8.1 (built from source) |
-
-*\*HTTPD, Jenkins may include shell(sh,busybox) via transitive Wolfi dependencies. MySQL and MySQL LTS include busybox for their auto-init entrypoint scripts. CI treats shell presence as informational.*
-
-## Image Tags
-
-Every image is published with two tags:
-
-| Tag | Format | Example | Mutable |
-|-----|--------|---------|---------|
-| **Version** | `VERSION-rEPOCH` | `ghcr.io/rtvkiz/minimal-redis-slim:8.4.1-r0` | No (immutable) |
-| **Latest** | `latest` | `ghcr.io/rtvkiz/minimal-redis-slim:latest` | Yes (floating) |
-
-**For production, pin to the immutable version tag:**
-
-```bash
-# Immutable — guaranteed to never change
-docker pull ghcr.io/rtvkiz/minimal-redis-slim:8.4.1-r0
-
-# Floating — always points to the most recent build
-docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest
-```
-
-The `-r0` suffix is the revision number. It resets to `r0` on each new upstream version and increments (`r1`, `r2`, ...) for rebuilds of the same version (e.g., dependency patches, config changes). This follows the same convention as [Chainguard Images](https://www.chainguard.dev/chainguard-images).
-
-Old version tags are preserved — upgrading to a new version does not remove previous tags from the registry.
+---
 
 ## Why This Matters
 
 Container vulnerabilities are a top attack vector. Most base images ship with dozens of known CVEs that take weeks or months to patch:
 
-```
-Traditional images:     Your containers:
-┌───────────────────┐    ┌──────────────────┐
-│ debian:latest     │    │ minimal-python   │
-│ 127 CVEs          │    │ 0-5 CVEs         │
-│ Patched: ~30 days │    │ Patched: <48 hrs │
-└───────────────────┘    └──────────────────┘
-```
+> **Traditional images** — `debian:latest` — **127 CVEs**, patched in ~30 days
+>
+> **Minimal images** — `minimal-python` — **0-5 CVEs**, patched in <48 hours
 
 **Impact:**
-- Pass security audits and compliance requirements (SOC2, FedRAMP, PCI-DSS)
-- Reduce attack surface with minimal, distroless images
-- Get CVE patches within 24-48 hours of disclosure (vs weeks for Debian/Ubuntu)
-- Cryptographically signed images with full SBOM for supply chain security
+- **Compliance ready** — Pass SOC2, FedRAMP, and PCI-DSS security audits
+- **Reduced attack surface** — Minimal, distroless images with only essential packages
+- **Rapid CVE patching** — Fixes within 24-48 hours of disclosure (vs weeks for Debian/Ubuntu)
+- **Supply chain security** — Cryptographically signed images with full SBOM
+
+## Available Images
+
+| Image | Pull Command | Shell | Use Case |
+|-------|--------------|-------|----------|
+| | | **Languages** | |
+| **Python** | `docker pull ghcr.io/rtvkiz/minimal-python:latest` | No | Python apps, microservices |
+| **Node.js-slim** | `docker pull ghcr.io/rtvkiz/minimal-node-slim:latest` | No | Node.js apps, JavaScript |
+| **Bun** | `docker pull ghcr.io/rtvkiz/minimal-bun:latest` | No | Fast JavaScript/TypeScript runtime |
+| **Go** | `docker pull ghcr.io/rtvkiz/minimal-go:latest` | No | Go development, CGO builds |
+| **.NET Runtime** | `docker pull ghcr.io/rtvkiz/minimal-dotnet:latest` | No | .NET 10 runtime for apps |
+| **Java** | `docker pull ghcr.io/rtvkiz/minimal-java:latest` | No | OpenJDK 21 JRE for Java apps |
+| **PHP** | `docker pull ghcr.io/rtvkiz/minimal-php:latest` | No | PHP 8.5 CLI (built from source) |
+| **Rails** | `docker pull ghcr.io/rtvkiz/minimal-rails:latest` | No | Ruby 4.0 + Rails 8.1 (built from source) |
+| | | **Web Servers** | |
+| **Nginx** | `docker pull ghcr.io/rtvkiz/minimal-nginx:latest` | No | Reverse proxy, static files |
+| **HTTPD** | `docker pull ghcr.io/rtvkiz/minimal-httpd:latest` | Maybe* | Apache web server |
+| | | **Databases** | |
+| **MySQL** | `docker pull ghcr.io/rtvkiz/minimal-mysql:latest` | Yes | Relational database, LTS track (8.4.x), built from source |
+| **PostgreSQL-slim** | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
+| **SQLite** | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
+| | | **Caching** | |
+| **Redis-slim** | `docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest` | No | In-memory data store |
+| **Memcached** | `docker pull ghcr.io/rtvkiz/minimal-memcached:latest` | No | In-memory caching (built from source) |
+| | | **CI/CD** | |
+| **Jenkins** | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
+
+*\*HTTPD, Jenkins may include shell(sh,busybox) via transitive Wolfi dependencies. MySQL includes busybox for its auto-init entrypoint script. CI treats shell presence as informational.*
 
 ## Quick Start
 
@@ -98,11 +86,8 @@ docker run -d -p 8080:8080 -v jenkins_home:/var/jenkins_home ghcr.io/rtvkiz/mini
 # Redis - in-memory data store
 docker run -d -p 6379:6379 ghcr.io/rtvkiz/minimal-redis-slim:latest
 
-# MySQL - relational database (Innovation track)
+# MySQL - relational database (LTS)
 docker run -d -p 3306:3306 -v mysqldata:/var/lib/mysql ghcr.io/rtvkiz/minimal-mysql:latest
-
-# MySQL LTS - relational database (LTS track)
-docker run -d -p 3306:3306 -v mysqldata:/var/lib/mysql ghcr.io/rtvkiz/minimal-mysql-lts:latest
 
 # Memcached - in-memory caching
 docker run -d -p 11211:11211 ghcr.io/rtvkiz/minimal-memcached:latest
@@ -126,27 +111,36 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-php:latest /app/index.php
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require 'rails'; puts Rails.version"
 ```
 
-## Image Specifications
+## Security Features
 
-| Image | Version | User | Entrypoint | Workdir |
-|-------|---------|------|------------|---------|
-| Python | 3.14.x | nonroot (65532) | `/usr/bin/python3` | `/app` |
-| Node.js-slim | 25.x | nonroot (65532) | `/usr/bin/dumb-init -- /usr/bin/node` | `/app` |
-| Bun | latest | nonroot (65532) | `/usr/bin/bun` | `/app` |
-| Go | 1.25.x | nonroot (65532) | `/usr/bin/go` | `/app` |
-| Nginx | mainline | nginx (65532) | `/usr/sbin/nginx -g "daemon off;"` | `/` |
-| HTTPD | 2.4.x | www-data (65532) | `/usr/sbin/httpd -DFOREGROUND` | `/var/www/localhost/htdocs` |
-| Jenkins | 2.541.x LTS | jenkins (1000) | `tini -- java -jar jenkins.war` | `/var/jenkins_home` |
-| Redis | 8.4.x | redis (65532) | `/usr/bin/redis-server` | `/` |
-| MySQL | 9.x | mysql (65532) | `/usr/bin/docker-entrypoint.sh` | `/` |
-| MySQL LTS | 8.4.x | mysql (65532) | `/usr/bin/docker-entrypoint.sh` | `/` |
-| Memcached | 1.6.x | memcached (65532) | `/usr/bin/memcached` | `/` |
-| PostgreSQL | 18.x | postgres (70) | `/usr/bin/postgres` | `/` |
-| SQLite | 3.51.x | nonroot (65532) | `/usr/bin/sqlite3` | `/data` |
-| .NET Runtime | 10.x | nonroot (65532) | `/usr/bin/dotnet` | `/app` |
-| Java | 21.x | nonroot (65532) | `/usr/bin/java` | `/app` |
-| PHP | 8.5.x | nonroot (65532) | `/usr/bin/php` | `/app` |
-| Rails | Ruby 4.0.x + Rails 8.1.x | nonroot (65532) | `/usr/bin/ruby` | `/app` |
+| | | |
+|:--|:--|:--|
+| **Vulnerability scanning** — Every build scanned with Trivy; results in job summary and Security tab | **Immutable tags** — Chainguard-style `VERSION-rN` tags for reproducible deployments | **Signed images** — All images signed with [cosign](https://github.com/sigstore/cosign) keyless signing |
+| **SBOM generation** — Full software bill of materials in SPDX format | **Non-root users** — All images run as non-root by default | **Minimal attack surface** — Only essential packages included |
+| **Shell-less images** — Most images have no shell | **Reproducible builds** — Declarative apko configurations | **Multi-architecture** — Native support for AMD64 and ARM64 |
+
+## Image Tags
+
+Every image is published with two tags:
+
+| Tag | Format | Example | Mutable |
+|-----|--------|---------|---------|
+| **Version** | `VERSION-rEPOCH` | `ghcr.io/rtvkiz/minimal-redis-slim:8.4.1-r0` | No (immutable) |
+| **Latest** | `latest` | `ghcr.io/rtvkiz/minimal-redis-slim:latest` | Yes (floating) |
+
+**For production, pin to the immutable version tag:**
+
+```bash
+# Immutable — guaranteed to never change
+docker pull ghcr.io/rtvkiz/minimal-redis-slim:8.4.1-r0
+
+# Floating — always points to the most recent build
+docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest
+```
+
+The `-r0` suffix is the revision number. It resets to `r0` on each new upstream version and increments (`r1`, `r2`, ...) for rebuilds of the same version (e.g., dependency patches, config changes). This follows the same convention as [Chainguard Images](https://www.chainguard.dev/chainguard-images).
+
+Old version tags are preserved — upgrading to a new version does not remove previous tags from the registry.
 
 ## How Images Are Built
 
@@ -180,7 +174,7 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require '
 │  ┌─────────────────────────────┐                               │            │
 │  │  build-melange (6 jobs)     │                               │            │
 │  │  Jenkins, Redis, MySQL,     │                               │            │
-│  │  MySQL LTS, Memcached,      │                               │            │
+│  │  Memcached, Caddy, HAProxy, │                               │            │
 │  │  PHP, Rails                 │                               │            │
 │  │  ┌─────────┐ ┌────────────┐ │                               │            │
 │  │  │  merge  │►│   apko     │─┼───────────────────────────────┤            │
@@ -213,14 +207,13 @@ Every build is scanned for vulnerabilities; results appear in the job summary an
 
 ### Automated Version Updates
 
-Source-built packages (Jenkins, Redis, MySQL, MySQL LTS, Memcached, PHP, Rails) and Wolfi-based packages are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
+Source-built packages (Jenkins, Redis, MySQL, Memcached, PHP, Rails) and Wolfi-based packages are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
 
 | Workflow | Watches | What It Does |
 |----------|---------|--------------|
 | `update-jenkins.yml` | Jenkins LTS releases | Updates version in melange config, Makefile, build.yml |
 | `update-redis.yml` | Redis GitHub releases | Updates version and SHA256 in melange config |
-| `update-mysql.yml` | MySQL Innovation (9.x) GitHub tags | Updates version and SHA256 in melange config |
-| `update-mysql-lts.yml` | MySQL LTS (8.4.x) GitHub tags | Updates version and SHA256 in melange config |
+| `update-mysql.yml` | MySQL LTS (8.4.x) GitHub tags | Updates version and SHA256 in melange config |
 | `update-memcached.yml` | Memcached GitHub releases | Updates version and SHA256 in melange config |
 | `update-php.yml` | php.net releases API | Updates version and SHA256; opens issue for new minor/major series |
 | `update-rails.yml` | RubyGems API + Ruby GitHub tags | Updates Rails gem and Ruby source versions independently |
@@ -228,12 +221,41 @@ Source-built packages (Jenkins, Redis, MySQL, MySQL LTS, Memcached, PHP, Rails) 
 
 Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g. PHP 8.5 → 8.6) create a GitHub Issue with a manual upgrade checklist, since configure flags or APIs may change.
 
-## Build Locally
+<details>
+<summary><strong>Image Specifications</strong></summary>
+
+<br>
+
+| Image | Version | User | Entrypoint | Workdir |
+|-------|---------|------|------------|---------|
+| Python | 3.14.x | nonroot (65532) | `/usr/bin/python3` | `/app` |
+| Node.js-slim | 25.x | nonroot (65532) | `/usr/bin/dumb-init -- /usr/bin/node` | `/app` |
+| Bun | latest | nonroot (65532) | `/usr/bin/bun` | `/app` |
+| Go | 1.25.x | nonroot (65532) | `/usr/bin/go` | `/app` |
+| Nginx | mainline | nginx (65532) | `/usr/sbin/nginx -g "daemon off;"` | `/` |
+| HTTPD | 2.4.x | www-data (65532) | `/usr/sbin/httpd -DFOREGROUND` | `/var/www/localhost/htdocs` |
+| Jenkins | 2.541.x LTS | jenkins (1000) | `tini -- java -jar jenkins.war` | `/var/jenkins_home` |
+| Redis | 8.4.x | redis (65532) | `/usr/bin/redis-server` | `/` |
+| MySQL | 8.4.x | mysql (65532) | `/usr/bin/docker-entrypoint.sh` | `/` |
+| Memcached | 1.6.x | memcached (65532) | `/usr/bin/memcached` | `/` |
+| PostgreSQL | 18.x | postgres (70) | `/usr/bin/postgres` | `/` |
+| SQLite | 3.51.x | nonroot (65532) | `/usr/bin/sqlite3` | `/data` |
+| .NET Runtime | 10.x | nonroot (65532) | `/usr/bin/dotnet` | `/app` |
+| Java | 21.x | nonroot (65532) | `/usr/bin/java` | `/app` |
+| PHP | 8.5.x | nonroot (65532) | `/usr/bin/php` | `/app` |
+| Rails | Ruby 4.0.x + Rails 8.1.x | nonroot (65532) | `/usr/bin/ruby` | `/app` |
+
+</details>
+
+<details>
+<summary><strong>Build Locally</strong></summary>
+
+<br>
 
 ```bash
 # Prerequisites
 go install chainguard.dev/apko@latest
-go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, MySQL LTS, Memcached, PHP, Rails
+go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, Memcached, PHP, Rails
 brew install trivy  # or: apt install trivy
 
 # Build all images
@@ -249,7 +271,6 @@ make httpd
 make jenkins
 make redis-slim
 make mysql
-make mysql-lts
 make memcached
 make postgres-slim
 make sqlite
@@ -265,7 +286,12 @@ make scan
 make test
 ```
 
-## Project Structure
+</details>
+
+<details>
+<summary><strong>Project Structure</strong></summary>
+
+<br>
 
 ```
 minimal/
@@ -282,9 +308,6 @@ minimal/
 │   ├── apko/redis.yaml           # Redis image
 │   └── melange.yaml              # Redis source build
 ├── mysql/
-│   ├── apko/mysql.yaml           # MySQL Innovation image
-│   └── melange.yaml              # MySQL Innovation source build
-├── mysql-lts/
 │   ├── apko/mysql.yaml           # MySQL LTS image
 │   └── melange.yaml              # MySQL LTS source build
 ├── memcached/
@@ -306,13 +329,14 @@ minimal/
 │   ├── update-php.yml            # PHP version updates (from php.net)
 │   ├── update-rails.yml          # Rails/Ruby version updates
 │   ├── update-redis.yml          # Redis version updates
-│   ├── update-mysql.yml          # MySQL Innovation version updates
-│   ├── update-mysql-lts.yml      # MySQL LTS version updates
+│   ├── update-mysql.yml          # MySQL LTS version updates
 │   ├── update-memcached.yml      # Memcached version updates
 │   └── update-wolfi-packages.yml # Wolfi package updates
 ├── Makefile
 └── LICENSE
 ```
+
+</details>
 
 ## Supported Architectures
 
@@ -324,18 +348,6 @@ All images are published as multi-architecture manifests supporting:
 | `aarch64` | `linux/arm64` | Supported |
 
 Docker and container runtimes automatically pull the correct architecture for your platform.
-
-## Security Features
-
-- **Vulnerability visibility** - Every build is scanned (Trivy); results in job summary and Security tab; we rely on Wolfi for fast upstream patches
-- **Immutable version tags** - Chainguard-style `VERSION-rN` tags for reproducible deployments
-- **Signed images** - All images signed with [cosign](https://github.com/sigstore/cosign) keyless signing
-- **SBOM generation** - Full software bill of materials in SPDX format
-- **Non-root users** - All images run as non-root by default
-- **Minimal attack surface** - Only essential packages included
-- **Shell-less images** - Most images have no shell
-- **Reproducible builds** - Declarative apko configurations
-- **Multi-architecture** - Native support for AMD64 and ARM64
 
 ## Verify Image Signatures
 
