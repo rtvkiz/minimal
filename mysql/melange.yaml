@@ -79,7 +79,7 @@ pipeline:
         -DWITHOUT_PERFSCHEMA_STORAGE_ENGINE=0 \
         -DWITH_NDB=OFF \
         -DWITH_PROTOBUF=system \
-        -DWITH_ICU=OFF
+        -DWITH_ICU=bundled
       make -j$(nproc) mysqld mysql component_reference_cache
 
   # Install only essential files to destdir

@@ -18,7 +18,7 @@ RUBY_VERSION ?= 4.0.1
 RAILS_VERSION ?= 8.1.2
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-lts mysql-lts-melange memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange keygen
+.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local mysql-lts mysql-lts-melange memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange keygen
 .PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-mysql-lts scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
 .PHONY: test-mysql-lts
 
@@ -183,6 +183,29 @@ mysql-melange: keygen
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ MySQL package built from source"
+
+# Local-only: build mysql package for x86_64 then assemble image (skip aarch64 to avoid pod failure on WSL2)
+mysql-local: keygen
+	@echo "Building MySQL $(MYSQL_VERSION) from source (x86_64 only)..."
+	melange build mysql/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa \
+		--out-dir ./packages \
+		--runner docker
+	@echo "Assembling minimal-mysql image with apko..."
+	apko build mysql/apko/mysql.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION) \
+		mysql.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < mysql.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-mysql:latest
+	@rm -f mysql.tar sbom-*.spdx.json
+	@echo "✓ minimal-mysql built locally (x86_64 only)"
 
 mysql: mysql-melange
 	@echo "Assembling minimal-mysql image with apko..."
