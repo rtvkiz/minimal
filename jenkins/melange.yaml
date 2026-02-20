@@ -5,7 +5,7 @@
 
 package:
   name: jenkins-minimal
-  version: 2.541.1
+  version: 2.541.2
   epoch: 0
   description: "Minimal Jenkins with custom JRE (jlink)"
   copyright:
