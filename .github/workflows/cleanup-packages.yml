@@ -14,26 +14,31 @@ jobs:
       - name: Delete all untagged versions across all packages
         run: |
           OWNER="${{ github.repository_owner }}"
+          PACKAGES=(
+            minimal-python minimal-node-slim minimal-go minimal-nginx
+            minimal-httpd minimal-postgres-slim minimal-bun minimal-sqlite
+            minimal-dotnet minimal-java minimal-jenkins minimal-redis-slim
+            minimal-mysql minimal-memcached minimal-caddy minimal-haproxy
+            minimal-php minimal-rails
+          )
 
-          gh api "/users/${OWNER}/packages?package_type=container" \
-            --paginate --jq '.[].name' 2>/dev/null \
-          | while read -r pkg; do
-              echo "── $pkg"
+          for pkg in "${PACKAGES[@]}"; do
+            echo "── $pkg"
 
-              gh api "/users/${OWNER}/packages/container/${pkg}/versions" \
-                --paginate \
-                --jq '[.[] | select(.metadata.container.tags | length == 0)] | .[].id' \
-                2>/dev/null \
-              | while read -r id; do
-                  if gh api --method DELETE \
-                    "/users/${OWNER}/packages/container/${pkg}/versions/${id}" \
-                    2>/dev/null; then
-                    echo "   deleted $id"
-                  else
-                    echo "   skipped $id (referenced by a tagged image)"
-                  fi
-                done
-            done
+            gh api "/users/${OWNER}/packages/container/${pkg}/versions" \
+              --paginate \
+              --jq '[.[] | select(.metadata.container.tags | length == 0)] | .[].id' \
+              2>/dev/null \
+            | while read -r id; do
+                if gh api --method DELETE \
+                  "/users/${OWNER}/packages/container/${pkg}/versions/${id}" \
+                  2>/dev/null; then
+                  echo "   deleted $id"
+                else
+                  echo "   skipped $id (referenced by a tagged image)"
+                fi
+              done
+          done
 
           echo "Done."
         env:
