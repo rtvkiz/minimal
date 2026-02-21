@@ -244,7 +244,7 @@ jobs:
       - name: Setup cosign
         uses: sigstore/cosign-installer@v3
         with:
-          cosign-release: 'v2.4.1'
+          cosign-release: 'v2.5.2'
 
       - name: Log in to Container Registry
         if: github.event_name != 'pull_request'
@@ -462,7 +462,7 @@ jobs:
       - name: Setup cosign
         uses: sigstore/cosign-installer@v3
         with:
-          cosign-release: 'v2.4.1'
+          cosign-release: 'v2.5.2'
 
       - name: Log in to Container Registry
         if: github.event_name != 'pull_request'
