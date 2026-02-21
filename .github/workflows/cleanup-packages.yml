@@ -15,39 +15,25 @@ jobs:
         run: |
           OWNER="${{ github.repository_owner }}"
 
-          PACKAGES=$(gh api "/users/${OWNER}/packages?package_type=container" \
-            --paginate --jq '.[].name' 2>/dev/null)
+          gh api "/users/${OWNER}/packages?package_type=container" \
+            --paginate --jq '.[].name' 2>/dev/null \
+          | while read -r pkg; do
+              echo "── $pkg"
 
-          if [ -z "$PACKAGES" ]; then
-            echo "No packages found."
-            exit 0
-          fi
-
-          for pkg in $PACKAGES; do
-            echo "── $pkg"
-            UNTAGGED_IDS=$(gh api "/users/${OWNER}/packages/container/${pkg}/versions" \
-              --paginate \
-              --jq '[.[] | select(.metadata.container.tags | length == 0)] | .[].id' \
-              2>/dev/null)
-
-            if [ -z "$UNTAGGED_IDS" ]; then
-              echo "   no untagged versions"
-              continue
-            fi
-
-            COUNT=$(echo "$UNTAGGED_IDS" | wc -l)
-            echo "   deleting $COUNT untagged version(s)..."
-
-            for id in $UNTAGGED_IDS; do
-              if gh api --method DELETE \
-                "/users/${OWNER}/packages/container/${pkg}/versions/${id}" \
-                2>/dev/null; then
-                echo "   deleted $id"
-              else
-                echo "   skipped $id (may be referenced by a tagged image)"
-              fi
+              gh api "/users/${OWNER}/packages/container/${pkg}/versions" \
+                --paginate \
+                --jq '[.[] | select(.metadata.container.tags | length == 0)] | .[].id' \
+                2>/dev/null \
+              | while read -r id; do
+                  if gh api --method DELETE \
+                    "/users/${OWNER}/packages/container/${pkg}/versions/${id}" \
+                    2>/dev/null; then
+                    echo "   deleted $id"
+                  else
+                    echo "   skipped $id (referenced by a tagged image)"
+                  fi
+                done
             done
-          done
 
           echo "Done."
         env:
