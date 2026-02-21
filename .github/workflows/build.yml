@@ -391,6 +391,8 @@ jobs:
         run: |
           apko publish ${{ matrix.apko_config }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }} \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}-amd64 \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}-arm64 \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
             --arch x86_64,aarch64
 
@@ -634,6 +636,8 @@ jobs:
         run: |
           apko publish ${{ matrix.apko_config }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }} \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}-amd64 \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}-arm64 \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
             --arch x86_64,aarch64 \
             --repository-append ./packages \
@@ -672,7 +676,7 @@ jobs:
   cleanup:
     needs: [build-apko, build-melange]
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule'
+    if: github.event_name != 'pull_request'
     permissions:
       packages: write
     steps:
@@ -683,7 +687,7 @@ jobs:
           while read -r pkg; do
             echo "Cleaning old versions from $pkg..."
             gh api "/users/${{ github.repository_owner }}/packages/container/$pkg/versions" \
-              --paginate --jq '[.[] | select(.metadata.container.tags | length == 0)] | sort_by(.created_at) | reverse | .[10:] | .[].id' 2>/dev/null | \
+              --paginate --jq '[.[] | select(.metadata.container.tags | length == 0)] | sort_by(.created_at) | reverse | .[4:] | .[].id' 2>/dev/null | \
             while read -r id; do
               echo "  Deleting version $id"
               gh api --method DELETE "/users/${{ github.repository_owner }}/packages/container/$pkg/versions/$id" 2>/dev/null || true
