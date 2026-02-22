@@ -80,10 +80,6 @@ pipeline:
       # Install log4j2 config (Kafka 4.x migrated from Log4j 1 to Log4j 2)
       cp "$KAFKA_SRC/config/log4j2.yaml" "${{targets.destdir}}/opt/kafka/config/"
 
-      # Data and log directories
-      mkdir -p "${{targets.destdir}}/var/kafka/data"
-      mkdir -p "${{targets.destdir}}/var/log/kafka"
-
       # Install entrypoint: initialises KRaft storage on first boot then starts broker
       cat > "${{targets.destdir}}/usr/bin/kafka-entrypoint.sh" << 'ENTRY'
       #!/bin/sh
