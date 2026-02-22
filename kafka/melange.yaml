@@ -93,8 +93,8 @@ pipeline:
       # Format KRaft storage on first boot
       if [ ! -f "$KAFKA_DATA/meta.properties" ]; then
         echo "Initializing Kafka KRaft storage..."
-        CLUSTER_ID=$($JAVA -cp "$CLASSPATH" org.apache.kafka.tools.StorageTool random-uuid)
-        $JAVA -cp "$CLASSPATH" org.apache.kafka.tools.StorageTool format \
+        CLUSTER_ID=$($JAVA -cp "$CLASSPATH" kafka.tools.StorageTool random-uuid)
+        $JAVA -cp "$CLASSPATH" kafka.tools.StorageTool format \
           --config "$KAFKA_CONFIG" \
           --cluster-id "$CLUSTER_ID"
         echo "Storage initialized (cluster ID: $CLUSTER_ID)"

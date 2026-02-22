@@ -6,7 +6,7 @@ docker run --rm --entrypoint /usr/bin/java "$IMAGE" -version
 
 echo "Testing Kafka JARs present..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" \
-  -c "ls /opt/kafka/libs/kafka_*.jar | wc -l | grep -v '^0$'"
+  -c "ls /opt/kafka/libs/kafka*.jar | wc -l | grep -v '^0$'"
 
 echo "Testing Kafka main class loads..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" \
@@ -14,7 +14,7 @@ docker run --rm --entrypoint /bin/sh "$IMAGE" \
 
 echo "Testing StorageTool (random-uuid)..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" \
-  -c "java -cp '/opt/kafka/libs/*' org.apache.kafka.tools.StorageTool random-uuid | grep -E '^[A-Za-z0-9_-]{22}$'"
+  -c "java -cp '/opt/kafka/libs/*' kafka.tools.StorageTool random-uuid | grep -E '^[A-Za-z0-9_-]{22}$'"
 
 echo "Testing config present..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" \
