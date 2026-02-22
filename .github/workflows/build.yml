@@ -391,8 +391,6 @@ jobs:
         run: |
           apko publish ${{ matrix.apko_config }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }} \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}-amd64 \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}-arm64 \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
             --arch x86_64,aarch64
 
@@ -636,8 +634,6 @@ jobs:
         run: |
           apko publish ${{ matrix.apko_config }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }} \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}-amd64 \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}-arm64 \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
             --arch x86_64,aarch64 \
             --repository-append ./packages \
