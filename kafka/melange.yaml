@@ -96,13 +96,15 @@ pipeline:
         CLUSTER_ID=$($JAVA -cp "$CLASSPATH" kafka.tools.StorageTool random-uuid)
         $JAVA -cp "$CLASSPATH" kafka.tools.StorageTool format \
           --config "$KAFKA_CONFIG" \
-          --cluster-id "$CLUSTER_ID"
+          --cluster-id "$CLUSTER_ID" \
+          --standalone
         echo "Storage initialized (cluster ID: $CLUSTER_ID)"
       fi
 
       exec $JAVA \
         ${KAFKA_HEAP_OPTS:--Xmx1G -Xms256M} \
         -Dlog4j.configurationFile=file:/opt/kafka/config/log4j2.yaml \
+        -Dkafka.logs.dir=/var/log/kafka \
         -cp "$CLASSPATH" \
         kafka.Kafka "$KAFKA_CONFIG" "$@"
       ENTRY
