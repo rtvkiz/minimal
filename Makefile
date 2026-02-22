@@ -15,15 +15,17 @@ CADDY_VERSION ?= 2.11.1
 HAPROXY_VERSION ?= 3.3.0
 RUBY_VERSION ?= 4.0.1
 RAILS_VERSION ?= 8.1.2
+KAFKA_VERSION ?= 4.2.0
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange keygen
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
+.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -437,9 +439,37 @@ rails: rails-melange
 	@echo "✓ minimal-rails built (source build)"
 
 #------------------------------------------------------------------------------
+# KAFKA IMAGE (official binary release + jlink JRE, KRaft mode)
+#------------------------------------------------------------------------------
+kafka-melange: keygen
+	@echo "Building Kafka $(KAFKA_VERSION) package via melange..."
+	# x86_64 only locally: jlink runs inside the melange sandbox so aarch64
+	# cross-builds fail on x86_64 hosts without QEMU binfmt. CI uses native ARM runners.
+	melange build kafka/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Kafka package built"
+
+kafka: kafka-melange
+	@echo "Assembling minimal-kafka image with apko..."
+	apko build kafka/apko/kafka.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION) \
+		kafka.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < kafka.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kafka:latest
+	@rm -f kafka.tar sbom-*.spdx.json
+	@echo "✓ minimal-kafka built (official binary + jlink JRE)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -549,6 +579,12 @@ scan-rails:
 		$(REGISTRY)/$(OWNER)/minimal-rails:latest
 	@echo "✓ minimal-rails: scan passed"
 
+scan-kafka:
+	@echo "Scanning minimal-kafka..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-kafka:latest
+	@echo "✓ minimal-kafka: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -584,6 +620,8 @@ scan-all:
 		$(REGISTRY)/$(OWNER)/minimal-dotnet:latest
 	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
 		$(REGISTRY)/$(OWNER)/minimal-java:latest
+	trivy image --severity CRITICAL,HIGH,MEDIUM,LOW \
+		$(REGISTRY)/$(OWNER)/minimal-kafka:latest
 
 #------------------------------------------------------------------------------
 # IMAGE SIZE REPORT
@@ -591,12 +629,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-mysql|minimal-memcached|minimal-caddy|minimal-haproxy|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-java|minimal-rails)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-mysql|minimal-memcached|minimal-caddy|minimal-haproxy|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-java|minimal-rails|minimal-kafka)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka
 
 test-python:
 	@echo "Testing Python image..."
@@ -823,6 +861,12 @@ test-rails:
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
 	@echo "✓ Rails tests passed"
 
+test-kafka:
+	@echo "Testing Kafka image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kafka:latest" && \
+		kafka/test.sh
+	@echo "✓ Kafka tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -861,6 +905,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-java:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-rails:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-kafka:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -918,6 +964,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-kafka:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -951,6 +1000,8 @@ help:
 	@echo "  make java            Build OpenJDK 21 JRE (Wolfi package)"
 	@echo "  make php             Build PHP (melange source build)"
 	@echo "  make rails           Build Rails (Ruby $(RUBY_VERSION) + Rails $(RAILS_VERSION), source build)"
+	@echo "  make kafka           Build Kafka $(KAFKA_VERSION) (official binary + jlink JRE, KRaft)"
+	@echo "  make kafka-melange   Build Kafka package only (no image)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"
@@ -975,5 +1026,6 @@ help:
 	@echo "  HAPROXY_VERSION=$(HAPROXY_VERSION)"
 	@echo "  RUBY_VERSION=$(RUBY_VERSION)"
 	@echo "  RAILS_VERSION=$(RAILS_VERSION)"
+	@echo "  KAFKA_VERSION=$(KAFKA_VERSION)"
 	@echo "  REGISTRY=$(REGISTRY)"
 	@echo "  OWNER=$(OWNER)"

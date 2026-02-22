@@ -19,7 +19,7 @@ jobs:
             minimal-httpd minimal-postgres-slim minimal-bun minimal-sqlite
             minimal-dotnet minimal-java minimal-jenkins minimal-redis-slim
             minimal-mysql minimal-memcached minimal-caddy minimal-haproxy
-            minimal-php minimal-rails
+            minimal-php minimal-rails minimal-kafka
           )
 
           for pkg in "${PACKAGES[@]}"; do

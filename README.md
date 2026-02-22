@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build Hardened Images"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Images-16-0d9488" alt="Images: 16">
+  <img src="https://img.shields.io/badge/Images-19-0d9488" alt="Images: 19">
   <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
 </p>
 
@@ -54,10 +54,12 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | | | **Caching** | |
 | **Redis-slim** | `docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest` | No | In-memory data store |
 | **Memcached** | `docker pull ghcr.io/rtvkiz/minimal-memcached:latest` | No | In-memory caching (built from source) |
+| | | **Messaging** | |
+| **Kafka** | `docker pull ghcr.io/rtvkiz/minimal-kafka:latest` | Yes | Apache Kafka 4.x, KRaft mode, custom jlink JRE |
 | | | **CI/CD** | |
 | **Jenkins** | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
 
-*\*HTTPD, Jenkins may include shell(sh,busybox) via transitive Wolfi dependencies. MySQL includes busybox for its auto-init entrypoint script. CI treats shell presence as informational.*
+*\*HTTPD, Jenkins, Kafka may include shell(sh,busybox) via transitive Wolfi dependencies or KRaft init entrypoint. MySQL includes busybox for its auto-init entrypoint script. CI treats shell presence as informational.*
 
 ## Quick Start
 
@@ -109,6 +111,9 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-php:latest /app/index.php
 
 # Rails - run your app
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require 'rails'; puts Rails.version"
+
+# Kafka - start a broker (KRaft mode, auto-initializes storage on first boot)
+docker run -d -p 9092:9092 -v kafkadata:/var/kafka/data ghcr.io/rtvkiz/minimal-kafka:latest
 ```
 
 ## Security Features
@@ -156,7 +161,7 @@ Old version tags are preserved — upgrading to a new version does not remove pr
 │                              │                                              │
 │                              ▼                                              │
 │  ┌─────────────────────────────┐    ┌─────────────────────────────────────┐ │
-│  │     melange-build (8 jobs)  │    │      build-apko (9 jobs)            │ │
+│  │     melange-build (9 jobs)  │    │      build-apko (10 jobs)           │ │
 │  │     Native ARM64 runners    │    │      Wolfi pre-built packages       │ │
 │  │  ┌────────┐  ┌────────────┐ │    │  Python, Node, Go, Nginx, HTTPD,    │ │
 │  │  │ x86_64 │  │  aarch64   │ │    │  PostgreSQL, Bun, SQLite, .NET,     │ │
@@ -172,10 +177,10 @@ Old version tags are preserved — upgrading to a new version does not remove pr
 │  └────────────│────────────────┘                               │            │
 │               ▼                                                │            │
 │  ┌─────────────────────────────┐                               │            │
-│  │  build-melange (6 jobs)     │                               │            │
+│  │  build-melange (9 jobs)     │                               │            │
 │  │  Jenkins, Redis, MySQL,     │                               │            │
 │  │  Memcached, Caddy, HAProxy, │                               │            │
-│  │  PHP, Rails                 │                               │            │
+│  │  PHP, Rails, Kafka          │                               │            │
 │  │  ┌─────────┐ ┌────────────┐ │                               │            │
 │  │  │  merge  │►│   apko     │─┼───────────────────────────────┤            │
 │  │  │ packages│ │  publish   │ │                               │            │
@@ -207,7 +212,7 @@ Every build is scanned for vulnerabilities; results appear in the job summary an
 
 ### Automated Version Updates
 
-Source-built packages (Jenkins, Redis, MySQL, Memcached, PHP, Rails) and Wolfi-based packages are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
+Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails) and Wolfi-based packages are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
 
 | Workflow | Watches | What It Does |
 |----------|---------|--------------|
@@ -215,6 +220,7 @@ Source-built packages (Jenkins, Redis, MySQL, Memcached, PHP, Rails) and Wolfi-b
 | `update-redis.yml` | Redis GitHub releases | Updates version and SHA256 in melange config |
 | `update-mysql.yml` | MySQL LTS (8.4.x) GitHub tags | Updates version and SHA256 in melange config |
 | `update-memcached.yml` | Memcached GitHub releases | Updates version and SHA256 in melange config |
+| `update-kafka.yml` | Apache Kafka 4.x GitHub tags | Updates version and SHA512 in melange config |
 | `update-php.yml` | php.net releases API | Updates version and SHA256; opens issue for new minor/major series |
 | `update-rails.yml` | RubyGems API + Ruby GitHub tags | Updates Rails gem and Ruby source versions independently |
 | `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, Java, PostgreSQL package versions |
@@ -244,6 +250,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | Java | 21.x | nonroot (65532) | `/usr/bin/java` | `/app` |
 | PHP | 8.5.x | nonroot (65532) | `/usr/bin/php` | `/app` |
 | Rails | Ruby 4.0.x + Rails 8.1.x | nonroot (65532) | `/usr/bin/ruby` | `/app` |
+| Kafka | 4.2.x | kafka (65532) | `/usr/bin/kafka-entrypoint.sh` | `/` |
 
 </details>
 
@@ -255,7 +262,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 ```bash
 # Prerequisites
 go install chainguard.dev/apko@latest
-go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, Memcached, PHP, Rails
+go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails
 brew install trivy  # or: apt install trivy
 
 # Build all images
@@ -278,6 +285,7 @@ make dotnet
 make java
 make php
 make rails
+make kafka
 
 # Scan for CVEs
 make scan
@@ -323,6 +331,9 @@ minimal/
 ├── rails/
 │   ├── apko/rails.yaml              # Rails image
 │   └── melange.yaml                 # Ruby from source + Rails gem
+├── kafka/
+│   ├── apko/kafka.yaml              # Kafka image
+│   └── melange.yaml                 # Apache binary + jlink JRE
 ├── .github/workflows/
 │   ├── build.yml                 # Daily CI pipeline
 │   ├── update-jenkins.yml        # Jenkins version updates
@@ -331,6 +342,7 @@ minimal/
 │   ├── update-redis.yml          # Redis version updates
 │   ├── update-mysql.yml          # MySQL LTS version updates
 │   ├── update-memcached.yml      # Memcached version updates
+│   ├── update-kafka.yml          # Kafka version updates
 │   └── update-wolfi-packages.yml # Wolfi package updates
 ├── Makefile
 └── LICENSE

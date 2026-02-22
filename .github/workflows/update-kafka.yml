@@ -1,0 +1,127 @@
+name: Update Kafka Version
+
+on:
+  schedule:
+    # Check daily at 7am UTC
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new Kafka 4.x release
+        id: check
+        run: |
+          # Get latest 4.x release tag from GitHub (apache/kafka)
+          # Sort semantically (not by creation date) to always pick the highest version
+          LATEST=$(curl -sS --retry 3 --retry-delay 5 \
+            "https://api.github.com/repos/apache/kafka/tags?per_page=100" | \
+            jq -r '[.[] | select(.name | test("^4\\.[0-9]+\\.[0-9]+$")) | .name]
+                   | sort_by(split(".") | map(tonumber)) | last')
+
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "::error::Failed to fetch latest Kafka 4.x version"
+            exit 1
+          fi
+
+          # Validate version format
+          if ! [[ "$LATEST" =~ ^4\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Kafka version received: $LATEST"
+            exit 1
+          fi
+
+          # Get current version from melange.yaml
+          CURRENT=$(grep '^  version:' kafka/melange.yaml | awk '{print $2}')
+
+          echo "Current version: $CURRENT"
+          echo "Latest version:  $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+            echo "Update available: $CURRENT -> $LATEST"
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            echo "Already up to date"
+          fi
+
+      - name: Update version and checksum in all files
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          SCALA_VERSION="2.13"
+          echo "Updating to Kafka $VERSION"
+
+          # Download the official binary release tarball and compute SHA512
+          echo "Downloading Kafka $VERSION tarball..."
+          curl -fsSL --retry 3 --retry-delay 5 \
+            "https://downloads.apache.org/kafka/${VERSION}/kafka_${SCALA_VERSION}-${VERSION}.tgz" \
+            -o /tmp/kafka.tgz
+          SHA512=$(sha512sum /tmp/kafka.tgz | awk '{print $1}')
+          rm /tmp/kafka.tgz
+          echo "SHA512: $SHA512"
+
+          # Update kafka/melange.yaml - version
+          sed -i "s/^  version: .*/  version: $VERSION/" kafka/melange.yaml
+
+          # Update kafka/melange.yaml - sha512
+          sed -i "s/^  sha512: .*/  sha512: $SHA512/" kafka/melange.yaml
+
+          # Reset epoch to 0 for new upstream version
+          sed -i "s/^  epoch: .*/  epoch: 0/" kafka/melange.yaml
+
+          # Update Makefile
+          sed -i "s/KAFKA_VERSION ?= .*/KAFKA_VERSION ?= $VERSION/" Makefile
+
+          # Verify changes
+          echo "=== kafka/melange.yaml ==="
+          grep -E '(version:|sha512:|epoch:)' kafka/melange.yaml | head -3
+          echo "=== Makefile ==="
+          grep 'KAFKA_VERSION' Makefile
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(kafka): bump to ${{ steps.check.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates Apache Kafka from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+            ## Changes
+
+            - `kafka/melange.yaml` - package version, SHA512 checksum, epoch reset
+            - `Makefile` - KAFKA_VERSION variable
+
+            ## Image Tag
+
+            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-kafka:${{ steps.check.outputs.new_version }}-r0`
+
+            ## Links
+
+            - [Apache Kafka Releases](https://kafka.apache.org/downloads)
+            - [Release Notes for ${{ steps.check.outputs.new_version }}](https://archive.apache.org/dist/kafka/${{ steps.check.outputs.new_version }}/RELEASE_NOTES.html)
+
+            ---
+
+            This PR was automatically created by the [update-kafka](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-kafka.yml) workflow.
+          branch: update-kafka-${{ steps.check.outputs.new_version }}
+          commit-message: |
+            chore(kafka): bump to ${{ steps.check.outputs.new_version }}
+
+            Updates Apache Kafka from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
+          delete-branch: true
+          labels: |
+            dependencies
+            kafka

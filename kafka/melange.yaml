@@ -1,0 +1,133 @@
+# Melange build configuration for minimal Apache Kafka
+# Downloads official Apache binary release + creates custom JRE with jlink
+# KRaft mode only (no ZooKeeper) - Kafka 4.x+
+
+package:
+  name: kafka-minimal
+  version: 4.2.0
+  epoch: 0
+  description: "Minimal Apache Kafka with custom JRE (jlink), KRaft mode"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA512 of kafka_2.13-{version}.tgz - updated by update-kafka.yml workflow
+  sha512: 16ce46e590ba915f01b720ea514445e49c88bf129cf4ceab88878b122d54ef24f0dedb88d0eb178957f58057a6c6a9adbea8b8059307585daea13129b85ba1d8
+  scala_version: "2.13"
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      # Full JDK needed for jlink (build-time only)
+      - openjdk-21-default-jdk
+      - openjdk-21-jmods
+      # binutils provides objcopy required by jlink --strip-debug
+      - binutils
+
+pipeline:
+  # Download and verify Kafka binary release
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL \
+        "https://downloads.apache.org/kafka/${{package.version}}/kafka_${{vars.scala_version}}-${{package.version}}.tgz" \
+        -o /home/build/kafka.tgz
+
+      echo "${{vars.sha512}}  /home/build/kafka.tgz" | sha512sum -c -
+
+      cd /home/build
+      tar xzf kafka.tgz
+      rm kafka.tgz
+
+  # Create minimal JRE with jlink (only modules Kafka needs)
+  - runs: |
+      JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      $JAVA_HOME/bin/jlink \
+        --module-path $JAVA_HOME/jmods \
+        --add-modules java.base,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.rmi,java.security.jgss,java.security.sasl,java.sql,java.xml,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs \
+        --strip-debug \
+        --no-man-pages \
+        --no-header-files \
+        --compress=zip-6 \
+        --output /home/build/custom-jre
+
+  # Install to destdir
+  - runs: |
+      KAFKA_SRC="/home/build/kafka_${{vars.scala_version}}-${{package.version}}"
+
+      # Install custom JRE
+      mkdir -p "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+      cp -a /home/build/custom-jre/* "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf ../lib/jvm/java-21-minimal/bin/java "${{targets.destdir}}/usr/bin/java"
+
+      # Install Kafka JARs (everything in libs/)
+      mkdir -p "${{targets.destdir}}/opt/kafka/libs"
+      cp "$KAFKA_SRC"/libs/*.jar "${{targets.destdir}}/opt/kafka/libs/"
+
+      # Install KRaft server config with correct data directory
+      # In Kafka 4.x, config/kraft/ subdirectory is gone - KRaft is the only mode
+      mkdir -p "${{targets.destdir}}/opt/kafka/config"
+      cp "$KAFKA_SRC/config/server.properties" "${{targets.destdir}}/opt/kafka/config/"
+      sed -i "s|log.dirs=.*|log.dirs=/var/kafka/data|" "${{targets.destdir}}/opt/kafka/config/server.properties"
+
+      # Install log4j2 config (Kafka 4.x migrated from Log4j 1 to Log4j 2)
+      cp "$KAFKA_SRC/config/log4j2.yaml" "${{targets.destdir}}/opt/kafka/config/"
+
+      # Data and log directories
+      mkdir -p "${{targets.destdir}}/var/kafka/data"
+      mkdir -p "${{targets.destdir}}/var/log/kafka"
+
+      # Install entrypoint: initialises KRaft storage on first boot then starts broker
+      cat > "${{targets.destdir}}/usr/bin/kafka-entrypoint.sh" << 'ENTRY'
+      #!/bin/sh
+      set -e
+
+      KAFKA_DATA=${KAFKA_DATA:-/var/kafka/data}
+      KAFKA_CONFIG=${KAFKA_CONFIG:-/opt/kafka/config/server.properties}
+      CLASSPATH="/opt/kafka/libs/*"
+      JAVA=/usr/bin/java
+
+      # Format KRaft storage on first boot
+      if [ ! -f "$KAFKA_DATA/meta.properties" ]; then
+        echo "Initializing Kafka KRaft storage..."
+        CLUSTER_ID=$($JAVA -cp "$CLASSPATH" org.apache.kafka.tools.StorageTool random-uuid)
+        $JAVA -cp "$CLASSPATH" org.apache.kafka.tools.StorageTool format \
+          --config "$KAFKA_CONFIG" \
+          --cluster-id "$CLUSTER_ID"
+        echo "Storage initialized (cluster ID: $CLUSTER_ID)"
+      fi
+
+      exec $JAVA \
+        ${KAFKA_HEAP_OPTS:--Xmx1G -Xms256M} \
+        -Dlog4j.configurationFile=file:/opt/kafka/config/log4j2.yaml \
+        -cp "$CLASSPATH" \
+        kafka.Kafka "$KAFKA_CONFIG" "$@"
+      ENTRY
+      chmod +x "${{targets.destdir}}/usr/bin/kafka-entrypoint.sh"
+
+      # Strip native libraries in JRE to reduce size
+      find "${{targets.destdir}}/usr/lib/jvm/java-21-minimal" -name '*.so' \
+        -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  # Verify
+  - runs: |
+      echo "Verifying JRE..."
+      "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/bin/java" -version
+      echo "Checking Kafka JARs..."
+      ls "${{targets.destdir}}/opt/kafka/libs/" | wc -l
+      echo "Checking JRE size..."
+      du -sh "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+
+update:
+  enabled: true
+  github:
+    identifier: apache/kafka
+    use-tag: true
+    tag-filter: "4."

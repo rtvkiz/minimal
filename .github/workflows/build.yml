@@ -138,6 +138,15 @@ jobs:
             melange_config: rails/melange.yaml
             arch: aarch64
             runner: ubuntu-24.04-arm
+          # Kafka builds
+          - name: kafka
+            melange_config: kafka/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: kafka
+            melange_config: kafka/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -447,6 +456,9 @@ jobs:
           - name: rails
             apko_config: rails/apko/rails.yaml
             melange_config: rails/melange.yaml
+          - name: kafka
+            apko_config: kafka/apko/kafka.yaml
+            melange_config: kafka/melange.yaml
 
     steps:
       - name: Checkout repository
@@ -660,8 +672,12 @@ jobs:
     steps:
       - name: Check results
         run: |
-          if [ "${{ needs.build-apko.result }}" == "failure" ] || [ "${{ needs.build-melange.result }}" == "failure" ]; then
-            echo "::error::One or more images failed"
+          APKO="${{ needs.build-apko.result }}"
+          MELANGE="${{ needs.build-melange.result }}"
+          echo "build-apko: $APKO"
+          echo "build-melange: $MELANGE"
+          if [ "$APKO" != "success" ] || [ "$MELANGE" != "success" ]; then
+            echo "::error::One or more image builds did not succeed (build-apko=$APKO, build-melange=$MELANGE)"
             exit 1
           fi
           echo "All hardened images built successfully!"
@@ -672,7 +688,7 @@ jobs:
   cleanup:
     needs: [build-apko, build-melange]
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
+    if: always() && github.event_name != 'pull_request'
     permissions:
       packages: write
     steps:
