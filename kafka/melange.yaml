@@ -50,7 +50,7 @@ pipeline:
       JAVA_HOME=/usr/lib/jvm/java-21-openjdk
       $JAVA_HOME/bin/jlink \
         --module-path $JAVA_HOME/jmods \
-        --add-modules java.base,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.rmi,java.security.jgss,java.security.sasl,java.sql,java.xml,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs \
+        --add-modules java.base,java.desktop,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.rmi,java.security.jgss,java.security.sasl,java.sql,java.xml,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs \
         --strip-debug \
         --no-man-pages \
         --no-header-files \
