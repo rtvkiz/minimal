@@ -12,7 +12,7 @@ contents:
     - wolfi-baselayout
 
     # Go from Wolfi (CVE-patched)
-    - go-1.25
+    - go-1.26
 
     # Build tools
     - binutils
