@@ -16,16 +16,20 @@ HAPROXY_VERSION ?= 3.3.0
 RUBY_VERSION ?= 4.0.1
 RAILS_VERSION ?= 8.1.2
 KAFKA_VERSION ?= 4.2.0
+VALKEY_VERSION ?= 9.0.3
+NATS_VERSION ?= 2.12.4
+TRAEFIK_VERSION ?= 3.6.9
 
 .PHONY: all build scan clean help
 .PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka
-.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka
+.PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -302,6 +306,84 @@ haproxy: haproxy-melange
 	@echo "✓ minimal-haproxy built (source build)"
 
 #------------------------------------------------------------------------------
+# VALKEY IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+valkey-melange: keygen
+	@echo "Building Valkey $(VALKEY_VERSION) from source via melange..."
+	melange build valkey/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Valkey package built from source"
+
+valkey: valkey-melange
+	@echo "Assembling minimal-valkey image with apko..."
+	apko build valkey/apko/valkey.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-valkey:$(VERSION) \
+		valkey.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < valkey.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-valkey:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-valkey:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-valkey:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-valkey:latest
+	@rm -f valkey.tar sbom-*.spdx.json
+	@echo "✓ minimal-valkey built (source build)"
+
+#------------------------------------------------------------------------------
+# NATS IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+nats-melange: keygen
+	@echo "Building NATS $(NATS_VERSION) from source via melange..."
+	melange build nats/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ NATS package built from source"
+
+nats: nats-melange
+	@echo "Assembling minimal-nats image with apko..."
+	apko build nats/apko/nats.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-nats:$(VERSION) \
+		nats.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < nats.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-nats:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-nats:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-nats:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-nats:latest
+	@rm -f nats.tar sbom-*.spdx.json
+	@echo "✓ minimal-nats built (source build)"
+
+#------------------------------------------------------------------------------
+# TRAEFIK IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+traefik-melange: keygen
+	@echo "Building Traefik $(TRAEFIK_VERSION) from source via melange..."
+	melange build traefik/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Traefik package built from source"
+
+traefik: traefik-melange
+	@echo "Assembling minimal-traefik image with apko..."
+	apko build traefik/apko/traefik.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION) \
+		traefik.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < traefik.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-traefik:latest
+	@rm -f traefik.tar sbom-*.spdx.json
+	@echo "✓ minimal-traefik built (source build)"
+
+#------------------------------------------------------------------------------
 # POSTGRES SLIM IMAGE (Wolfi pre-built package)
 #------------------------------------------------------------------------------
 postgres-slim:
@@ -469,7 +551,7 @@ kafka: kafka-melange
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -585,6 +667,24 @@ scan-kafka:
 		$(REGISTRY)/$(OWNER)/minimal-kafka:latest
 	@echo "✓ minimal-kafka: scan passed"
 
+scan-valkey:
+	@echo "Scanning minimal-valkey..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-valkey:latest
+	@echo "✓ minimal-valkey: scan passed"
+
+scan-nats:
+	@echo "Scanning minimal-nats..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-nats:latest
+	@echo "✓ minimal-nats: scan passed"
+
+scan-traefik:
+	@echo "Scanning minimal-traefik..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-traefik:latest
+	@echo "✓ minimal-traefik: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -634,7 +734,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik
 
 test-python:
 	@echo "Testing Python image..."
@@ -867,6 +967,24 @@ test-kafka:
 		kafka/test.sh
 	@echo "✓ Kafka tests passed"
 
+test-valkey:
+	@echo "Testing Valkey image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-valkey:latest" && \
+		valkey/test.sh
+	@echo "✓ Valkey tests passed"
+
+test-nats:
+	@echo "Testing NATS image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-nats:latest" && \
+		nats/test.sh
+	@echo "✓ NATS tests passed"
+
+test-traefik:
+	@echo "Testing Traefik image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-traefik:latest" && \
+		traefik/test.sh
+	@echo "✓ Traefik tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -907,6 +1025,12 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-rails:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-kafka:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-valkey:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-valkey:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-nats:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-nats:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-traefik:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -967,6 +1091,15 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-kafka:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-valkey:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-valkey:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-valkey:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-nats:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-nats:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-nats:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-traefik:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -1002,6 +1135,9 @@ help:
 	@echo "  make rails           Build Rails (Ruby $(RUBY_VERSION) + Rails $(RAILS_VERSION), source build)"
 	@echo "  make kafka           Build Kafka $(KAFKA_VERSION) (official binary + jlink JRE, KRaft)"
 	@echo "  make kafka-melange   Build Kafka package only (no image)"
+	@echo "  make valkey          Build Valkey $(VALKEY_VERSION) (source build)"
+	@echo "  make nats            Build NATS $(NATS_VERSION) (source build)"
+	@echo "  make traefik         Build Traefik $(TRAEFIK_VERSION) (source build)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"
@@ -1027,5 +1163,8 @@ help:
 	@echo "  RUBY_VERSION=$(RUBY_VERSION)"
 	@echo "  RAILS_VERSION=$(RAILS_VERSION)"
 	@echo "  KAFKA_VERSION=$(KAFKA_VERSION)"
+	@echo "  VALKEY_VERSION=$(VALKEY_VERSION)"
+	@echo "  NATS_VERSION=$(NATS_VERSION)"
+	@echo "  TRAEFIK_VERSION=$(TRAEFIK_VERSION)"
 	@echo "  REGISTRY=$(REGISTRY)"
 	@echo "  OWNER=$(OWNER)"

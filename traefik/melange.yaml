@@ -1,0 +1,71 @@
+# Melange build configuration for minimal Traefik
+# Builds Traefik v3 from source (Go) with static binary
+# CGO_ENABLED=0 produces fully static binary - minimal runtime deps
+
+package:
+  name: traefik-minimal
+  version: 3.6.9
+  epoch: 0
+  description: "Minimal Traefik cloud-native reverse proxy built from source"
+  copyright:
+    - license: MIT
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-traefik.yml workflow
+  sha256: 1e5d4a8ea210bbdd864554309d26039b15f9beec9e801b4fb8c990d294c742ce
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify Traefik source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://github.com/traefik/traefik/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/traefik.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/traefik.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf traefik.tar.gz
+      rm traefik.tar.gz
+
+  # Build Traefik from source (static binary)
+  - runs: |
+      cd /home/build/traefik-${{package.version}}
+      CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -X github.com/traefik/traefik/v3/pkg/version.Version=v${{package.version}}" \
+        -o traefik \
+        ./cmd/traefik/
+
+  # Install to destdir
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/traefik-${{package.version}}/traefik "${{targets.destdir}}/usr/bin/"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying Traefik build..."
+      "${{targets.destdir}}/usr/bin/traefik" version
+      echo "Checking binary size..."
+      ls -lh "${{targets.destdir}}/usr/bin/traefik"
+
+update:
+  enabled: true
+  github:
+    identifier: traefik/traefik
+    use-tag: true
+    tag-filter: "v3."

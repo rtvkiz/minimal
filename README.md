@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build Hardened Images"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Images-19-0d9488" alt="Images: 19">
+  <img src="https://img.shields.io/badge/Images-22-0d9488" alt="Images: 22">
   <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
 </p>
 
@@ -54,12 +54,20 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | | | **Caching** | |
 | **Redis-slim** | `docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest` | No | In-memory data store |
 | **Memcached** | `docker pull ghcr.io/rtvkiz/minimal-memcached:latest` | No | In-memory caching (built from source) |
+| **Valkey** | `docker pull ghcr.io/rtvkiz/minimal-valkey:latest` | No | BSD-licensed Redis fork (Linux Foundation), built from source |
 | | | **Messaging** | |
 | **Kafka** | `docker pull ghcr.io/rtvkiz/minimal-kafka:latest` | Yes | Apache Kafka 4.x, KRaft mode, custom jlink JRE |
+| **NATS** | `docker pull ghcr.io/rtvkiz/minimal-nats:latest` | No | NATS Server (`nats-server`) only — core message broker with JetStream, built from source |
+| | | **Proxies** | |
+| **Caddy** | `docker pull ghcr.io/rtvkiz/minimal-caddy:latest` | No | Automatic HTTPS web server |
+| **HAProxy** | `docker pull ghcr.io/rtvkiz/minimal-haproxy:latest` | No | High-performance TCP/HTTP load balancer |
+| **Traefik** | `docker pull ghcr.io/rtvkiz/minimal-traefik:latest` | No | Cloud-native reverse proxy and load balancer, built from source |
 | | | **CI/CD** | |
 | **Jenkins** | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
 
 *\*HTTPD, Jenkins, Kafka may include shell(sh,busybox) via transitive Wolfi dependencies or KRaft init entrypoint. MySQL includes busybox for its auto-init entrypoint script. CI treats shell presence as informational.*
+
+*The NATS image contains only [`nats-server`](https://github.com/nats-io/nats-server) (the broker). The NATS ecosystem also includes a separate CLI ([`natscli`](https://github.com/nats-io/natscli)) and client libraries — these are not included.*
 
 ## Quick Start
 

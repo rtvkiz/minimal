@@ -1,0 +1,71 @@
+# Melange build configuration for minimal NATS Server
+# Builds NATS from source (Go) with static binary
+# CGO_ENABLED=0 produces fully static binary - zero runtime deps beyond glibc
+
+package:
+  name: nats-minimal
+  version: 2.12.4
+  epoch: 0
+  description: "Minimal NATS Server built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-nats.yml workflow
+  sha256: df0baaf9d5db37ad4bebc222fe905d16d80a24fbad3f26e803b286c8489ddbc0
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify NATS source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://github.com/nats-io/nats-server/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/nats.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/nats.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf nats.tar.gz
+      rm nats.tar.gz
+
+  # Build NATS from source (static binary)
+  - runs: |
+      cd /home/build/nats-server-${{package.version}}
+      CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -X github.com/nats-io/nats-server/v2/server.VERSION=${{package.version}}" \
+        -o nats-server \
+        .
+
+  # Install to destdir
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/nats-server-${{package.version}}/nats-server "${{targets.destdir}}/usr/bin/"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying NATS build..."
+      "${{targets.destdir}}/usr/bin/nats-server" --version
+      echo "Checking binary size..."
+      ls -lh "${{targets.destdir}}/usr/bin/nats-server"
+
+update:
+  enabled: true
+  github:
+    identifier: nats-io/nats-server
+    use-tag: true
+    tag-filter: "v2."

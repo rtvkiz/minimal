@@ -1,0 +1,122 @@
+name: Update Traefik Version
+
+on:
+  schedule:
+    # Check daily at 7:30am UTC
+    - cron: '30 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new Traefik stable version
+        id: check
+        run: |
+          # Get latest stable v3.x release from GitHub tags
+          LATEST=$(curl -sS --retry 3 --retry-delay 5 "https://api.github.com/repos/traefik/traefik/tags?per_page=100" | \
+            jq -r '[.[] | .name | select(test("^v3\\.[0-9]+\\.[0-9]+$"))] | first | ltrimstr("v")')
+
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "::error::Failed to fetch latest Traefik version"
+            exit 1
+          fi
+
+          # Validate version format strictly
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Traefik version received: $LATEST"
+            exit 1
+          fi
+
+          # Get current version from melange.yaml
+          CURRENT=$(grep '^  version:' traefik/melange.yaml | awk '{print $2}')
+
+          echo "Current version: $CURRENT"
+          echo "Latest version: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+            echo "Update available: $CURRENT -> $LATEST"
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            echo "Already up to date"
+          fi
+
+      - name: Update version and checksum in all files
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          echo "Updating to Traefik $VERSION"
+
+          # Download tarball and compute SHA256 checksum
+          echo "Downloading Traefik $VERSION tarball..."
+          curl -fsSL --retry 3 --retry-delay 5 "https://github.com/traefik/traefik/archive/refs/tags/v${VERSION}.tar.gz" \
+            -o /tmp/traefik.tar.gz
+          SHA256=$(sha256sum /tmp/traefik.tar.gz | awk '{print $1}')
+          rm /tmp/traefik.tar.gz
+          echo "SHA256: $SHA256"
+
+          # Update traefik/melange.yaml - version
+          sed -i "s/^  version: .*/  version: $VERSION/" traefik/melange.yaml
+
+          # Update traefik/melange.yaml - checksum
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" traefik/melange.yaml
+
+          # Reset epoch to 0 for new upstream version
+          sed -i "s/^  epoch: .*/  epoch: 0/" traefik/melange.yaml
+
+          # Update Makefile
+          sed -i "s/TRAEFIK_VERSION ?= .*/TRAEFIK_VERSION ?= $VERSION/" Makefile
+
+          # Verify changes
+          echo "=== traefik/melange.yaml ==="
+          grep -E '(version:|sha256:)' traefik/melange.yaml | head -2
+          echo "=== Makefile ==="
+          grep 'TRAEFIK_VERSION' Makefile
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(traefik): bump to ${{ steps.check.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates Traefik from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+            ## Changes
+
+            - `traefik/melange.yaml` - package version, SHA256 checksum, epoch reset
+            - `Makefile` - TRAEFIK_VERSION variable
+
+            ## Image Tag
+
+            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-traefik:${{ steps.check.outputs.new_version }}-r0`
+
+            ## Links
+
+            - [Traefik Releases](https://github.com/traefik/traefik/releases)
+            - [Release Notes for v${{ steps.check.outputs.new_version }}](https://github.com/traefik/traefik/releases/tag/v${{ steps.check.outputs.new_version }})
+
+            ---
+
+            This PR was automatically created by the [update-traefik](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-traefik.yml) workflow.
+          branch: update-traefik-${{ steps.check.outputs.new_version }}
+          commit-message: |
+            chore(traefik): bump to ${{ steps.check.outputs.new_version }}
+
+            Updates Traefik from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
+          delete-branch: true
+          labels: |
+            dependencies
+            traefik

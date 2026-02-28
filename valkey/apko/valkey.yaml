@@ -1,0 +1,73 @@
+# Minimal Valkey image - built from source via melange
+# CVE patching via daily rebuilds from upstream source
+# BSD-licensed Redis fork under the Linux Foundation
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Our Valkey (built from source via melange)
+    - valkey-minimal
+
+    # Core libraries
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libstdc++
+
+    # SSL/TLS libraries
+    - libssl3
+    - libcrypto3
+
+    # Memory allocator
+    - libjemalloc2
+
+    # Certificates
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: valkey
+      gid: 65532
+  users:
+    - username: valkey
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/valkey-server
+
+environment:
+  PATH: /usr/bin:/bin
+
+paths:
+  - path: /data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-valkey"
+  org.opencontainers.image.description: "Hardened shell-less Valkey image built from source via melange with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/valkey"
+  org.opencontainers.image.licenses: "BSD-3-Clause"
+
+archs:
+  - x86_64
+  - aarch64

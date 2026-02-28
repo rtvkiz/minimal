@@ -1,0 +1,122 @@
+name: Update NATS Version
+
+on:
+  schedule:
+    # Check daily at 7:20am UTC
+    - cron: '20 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new NATS stable version
+        id: check
+        run: |
+          # Get latest stable v2.x release from GitHub tags
+          LATEST=$(curl -sS --retry 3 --retry-delay 5 "https://api.github.com/repos/nats-io/nats-server/tags?per_page=100" | \
+            jq -r '[.[] | .name | select(test("^v2\\.[0-9]+\\.[0-9]+$"))] | first | ltrimstr("v")')
+
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "::error::Failed to fetch latest NATS version"
+            exit 1
+          fi
+
+          # Validate version format strictly
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid NATS version received: $LATEST"
+            exit 1
+          fi
+
+          # Get current version from melange.yaml
+          CURRENT=$(grep '^  version:' nats/melange.yaml | awk '{print $2}')
+
+          echo "Current version: $CURRENT"
+          echo "Latest version: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+            echo "Update available: $CURRENT -> $LATEST"
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            echo "Already up to date"
+          fi
+
+      - name: Update version and checksum in all files
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          echo "Updating to NATS $VERSION"
+
+          # Download tarball and compute SHA256 checksum
+          echo "Downloading NATS $VERSION tarball..."
+          curl -fsSL --retry 3 --retry-delay 5 "https://github.com/nats-io/nats-server/archive/refs/tags/v${VERSION}.tar.gz" \
+            -o /tmp/nats.tar.gz
+          SHA256=$(sha256sum /tmp/nats.tar.gz | awk '{print $1}')
+          rm /tmp/nats.tar.gz
+          echo "SHA256: $SHA256"
+
+          # Update nats/melange.yaml - version
+          sed -i "s/^  version: .*/  version: $VERSION/" nats/melange.yaml
+
+          # Update nats/melange.yaml - checksum
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" nats/melange.yaml
+
+          # Reset epoch to 0 for new upstream version
+          sed -i "s/^  epoch: .*/  epoch: 0/" nats/melange.yaml
+
+          # Update Makefile
+          sed -i "s/NATS_VERSION ?= .*/NATS_VERSION ?= $VERSION/" Makefile
+
+          # Verify changes
+          echo "=== nats/melange.yaml ==="
+          grep -E '(version:|sha256:)' nats/melange.yaml | head -2
+          echo "=== Makefile ==="
+          grep 'NATS_VERSION' Makefile
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(nats): bump to ${{ steps.check.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates NATS Server from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+            ## Changes
+
+            - `nats/melange.yaml` - package version, SHA256 checksum, epoch reset
+            - `Makefile` - NATS_VERSION variable
+
+            ## Image Tag
+
+            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-nats:${{ steps.check.outputs.new_version }}-r0`
+
+            ## Links
+
+            - [NATS Server Releases](https://github.com/nats-io/nats-server/releases)
+            - [Release Notes for v${{ steps.check.outputs.new_version }}](https://github.com/nats-io/nats-server/releases/tag/v${{ steps.check.outputs.new_version }})
+
+            ---
+
+            This PR was automatically created by the [update-nats](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-nats.yml) workflow.
+          branch: update-nats-${{ steps.check.outputs.new_version }}
+          commit-message: |
+            chore(nats): bump to ${{ steps.check.outputs.new_version }}
+
+            Updates NATS Server from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
+          delete-branch: true
+          labels: |
+            dependencies
+            nats

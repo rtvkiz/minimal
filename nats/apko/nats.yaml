@@ -1,0 +1,69 @@
+# Minimal NATS Server image - built from source via melange
+# CVE patching via daily rebuilds from upstream source
+# CGO_ENABLED=0 static binary - minimal runtime deps
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Our NATS (built from source via melange)
+    - nats-minimal
+
+    # Core libraries (minimal - static Go binary)
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+
+    # Certificates
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nats
+      gid: 65532
+  users:
+    - username: nats
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/nats-server
+
+environment:
+  PATH: /usr/bin:/bin
+
+paths:
+  - path: /etc/nats
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /data/nats
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-nats"
+  org.opencontainers.image.description: "Hardened shell-less NATS Server image built from source via melange with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/nats"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

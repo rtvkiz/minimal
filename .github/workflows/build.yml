@@ -147,6 +147,33 @@ jobs:
             melange_config: kafka/melange.yaml
             arch: aarch64
             runner: ubuntu-24.04-arm
+          # Valkey builds
+          - name: valkey
+            melange_config: valkey/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: valkey
+            melange_config: valkey/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+          # NATS builds
+          - name: nats
+            melange_config: nats/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: nats
+            melange_config: nats/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+          # Traefik builds
+          - name: traefik
+            melange_config: traefik/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: traefik
+            melange_config: traefik/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -459,6 +486,15 @@ jobs:
           - name: kafka
             apko_config: kafka/apko/kafka.yaml
             melange_config: kafka/melange.yaml
+          - name: valkey
+            apko_config: valkey/apko/valkey.yaml
+            melange_config: valkey/melange.yaml
+          - name: nats
+            apko_config: nats/apko/nats.yaml
+            melange_config: nats/melange.yaml
+          - name: traefik
+            apko_config: traefik/apko/traefik.yaml
+            melange_config: traefik/melange.yaml
 
     steps:
       - name: Checkout repository

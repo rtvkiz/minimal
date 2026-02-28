@@ -1,0 +1,83 @@
+# Melange build configuration for minimal Valkey
+# Builds Valkey from source with TLS support
+# Valkey is the BSD-licensed Redis fork under the Linux Foundation
+# Minimal footprint - server + CLI only
+
+package:
+  name: valkey-minimal
+  version: 9.0.3
+  epoch: 0
+  description: "Minimal Valkey server and CLI built from source"
+  copyright:
+    - license: BSD-3-Clause
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-valkey.yml workflow
+  sha256: e220f4b0143292ee6ea6d705aa40d45a0c8a77759b3e94c201cb5c25dbdca42f
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - linux-headers
+      - openssl-dev
+      - jemalloc-dev
+
+pipeline:
+  # Download and verify Valkey source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://github.com/valkey-io/valkey/archive/refs/tags/${{package.version}}.tar.gz" \
+        -o /home/build/valkey.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/valkey.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf valkey.tar.gz
+      rm valkey.tar.gz
+
+  # Build Valkey from source
+  - runs: |
+      cd /home/build/valkey-${{package.version}}
+      make -j$(nproc) \
+        BUILD_TLS=yes \
+        USE_SYSTEMD=no \
+        MALLOC=jemalloc
+      make install PREFIX=/home/build/valkey-install
+
+  # Install to destdir
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/valkey-install/bin/valkey-server "${{targets.destdir}}/usr/bin/"
+      cp /home/build/valkey-install/bin/valkey-cli "${{targets.destdir}}/usr/bin/"
+
+      # Strip binaries
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/valkey-server"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/valkey-cli"
+
+      # Create data directory
+      mkdir -p "${{targets.destdir}}/data"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying Valkey build..."
+      "${{targets.destdir}}/usr/bin/valkey-server" --version
+      "${{targets.destdir}}/usr/bin/valkey-cli" --version
+      echo "Checking binary sizes..."
+      ls -lh "${{targets.destdir}}/usr/bin/valkey-server"
+      ls -lh "${{targets.destdir}}/usr/bin/valkey-cli"
+
+update:
+  enabled: true
+  github:
+    identifier: valkey-io/valkey
+    use-tag: true
+    tag-filter: "9."
