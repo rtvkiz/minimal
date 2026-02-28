@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
 
     steps:
       - name: Checkout repository
@@ -51,6 +52,21 @@ jobs:
           else
             echo "update_available=false" >> $GITHUB_OUTPUT
             echo "Already up to date"
+          fi
+
+          # Check for next major MySQL version (e.g., 9.x when tracking 8.4.x LTS)
+          # Note: MySQL 9.x is the innovation track; the next LTS is expected around 9.6
+          CURRENT_MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          NEXT_MAJOR=$((CURRENT_MAJOR + 1))
+          echo "tracked_version=$CURRENT" >> $GITHUB_OUTPUT
+          NEXT_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+            "https://api.github.com/repos/mysql/mysql-server/tags?per_page=100" | \
+            jq -r --arg next "mysql-cluster-${NEXT_MAJOR}." \
+              '[.[] | .name | select(startswith($next))] | first // empty')
+          if [ -n "$NEXT_TAG" ]; then
+            echo "next_major_version=$NEXT_MAJOR" >> $GITHUB_OUTPUT
+            echo "next_major_tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+            echo "::warning::New major MySQL version detected: $NEXT_TAG (innovation track — evaluate LTS readiness)"
           fi
 
       - name: Update version and checksum in all files
@@ -122,3 +138,59 @@ jobs:
           labels: |
             dependencies
             mysql
+
+      - name: Create new major version issue
+        if: steps.check.outputs.next_major_version != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const nextMajor = '${{ steps.check.outputs.next_major_version }}';
+            const nextTag = '${{ steps.check.outputs.next_major_tag }}';
+            const currentVersion = '${{ steps.check.outputs.tracked_version }}';
+            const title = `chore(mysql): new major version detected — MySQL ${nextMajor}.x (evaluate LTS readiness)`;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'mysql,dependencies',
+            });
+            if (issues.some(i => i.title.includes(`MySQL ${nextMajor}.x`))) {
+              console.log(`Issue for MySQL ${nextMajor}.x already exists, skipping`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              labels: ['dependencies', 'mysql'],
+              body: [
+                `## New Major MySQL Version Detected`,
+                ``,
+                `MySQL **${nextMajor}.x** tags have been detected (first tag: \`${nextTag}\`).`,
+                `We are currently tracking **8.4.x** (LTS, supported until 2032) — currently at ${currentVersion}.`,
+                ``,
+                `> **Important:** MySQL ${nextMajor}.x is likely the **innovation track** (non-LTS).`,
+                `> MySQL's LTS policy means the next LTS branch after 8.4 is expected around **${nextMajor}.6**.`,
+                `> Do not upgrade until the LTS designation is confirmed by Oracle.`,
+                ``,
+                `### Decision Checklist`,
+                ``,
+                `- [ ] Check [MySQL versioning policy](https://dev.mysql.com/doc/refman/${nextMajor}.0/en/mysql-releases.html) — confirm LTS vs innovation track`,
+                `- [ ] Monitor for the \`${nextMajor}.6\` release (expected LTS designation)`,
+                `- [ ] Review breaking changes and migration notes once LTS is confirmed`,
+                `- [ ] Update \`update-mysql.yml\`: change tag filter from \`mysql-cluster-8.4.\` to \`mysql-cluster-${nextMajor}.X.\``,
+                `- [ ] Update \`mysql/melange.yaml\`: version, sha256, download URL, \`tag-filter\``,
+                `- [ ] Test image build and run \`mysql/test.sh\``,
+                ``,
+                `### Links`,
+                ``,
+                `- [MySQL Release Notes](https://dev.mysql.com/doc/relnotes/mysql/${nextMajor}.0/en/)`,
+                `- [MySQL LTS Policy](https://dev.mysql.com/blog-archive/introducing-mysql-innovation-and-long-term-support-lts-versions/)`,
+                `- [First ${nextMajor}.x tag: \`${nextTag}\`](https://github.com/mysql/mysql-server/releases/tag/${nextTag})`,
+                ``,
+                `---`,
+                `*Detected by the [update-mysql](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/update-mysql.yml) workflow.*`,
+              ].join('\n'),
+            });

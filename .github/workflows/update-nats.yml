@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
 
     steps:
       - name: Checkout repository
@@ -49,6 +50,20 @@ jobs:
           else
             echo "update_available=false" >> $GITHUB_OUTPUT
             echo "Already up to date"
+          fi
+
+          # Check for next major version (e.g., v3.x when tracking v2.x)
+          CURRENT_MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          NEXT_MAJOR=$((CURRENT_MAJOR + 1))
+          echo "tracked_version=$CURRENT" >> $GITHUB_OUTPUT
+          NEXT_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+            "https://api.github.com/repos/nats-io/nats-server/tags?per_page=100" | \
+            jq -r --arg next "v${NEXT_MAJOR}." \
+              '[.[] | .name | select(startswith($next)) | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))] | first // empty')
+          if [ -n "$NEXT_TAG" ]; then
+            echo "next_major_version=$NEXT_MAJOR" >> $GITHUB_OUTPUT
+            echo "next_major_tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+            echo "::warning::New major version detected: NATS Server v${NEXT_MAJOR}.x ($NEXT_TAG)"
           fi
 
       - name: Update version and checksum in all files
@@ -120,3 +135,55 @@ jobs:
           labels: |
             dependencies
             nats
+
+      - name: Create new major version issue
+        if: steps.check.outputs.next_major_version != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const nextMajor = '${{ steps.check.outputs.next_major_version }}';
+            const nextTag = '${{ steps.check.outputs.next_major_tag }}';
+            const currentVersion = '${{ steps.check.outputs.tracked_version }}';
+            const currentMajor = currentVersion.split('.')[0];
+            const title = `chore(nats): new major version available — NATS Server v${nextMajor}.x`;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'nats,dependencies',
+            });
+            if (issues.some(i => i.title.includes(`v${nextMajor}.x`))) {
+              console.log(`Issue for NATS Server v${nextMajor}.x already exists, skipping`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              labels: ['dependencies', 'nats'],
+              body: [
+                `## New Major Version Detected`,
+                ``,
+                `NATS Server **v${nextMajor}.x** has been detected (first tag: \`${nextTag}\`).`,
+                `We are currently tracking **v${currentMajor}.x** (${currentVersion}).`,
+                ``,
+                `### Upgrade Checklist`,
+                ``,
+                `- [ ] Review the [NATS Server v${nextMajor} release notes](https://github.com/nats-io/nats-server/releases/tag/${nextTag})`,
+                `- [ ] Check Go module path for changes (currently \`github.com/nats-io/nats-server/v2\`)`,
+                `- [ ] Verify ldflags version variable path (\`server.VERSION\`) is unchanged`,
+                `- [ ] Update \`update-nats.yml\`: change tag filter from \`^v${currentMajor}\\\\.\` to \`^v${nextMajor}\\\\.\``,
+                `- [ ] Update \`nats/melange.yaml\`: version, sha256, \`tag-filter\`, Go module path in ldflags`,
+                `- [ ] Test image build and run \`nats/test.sh\``,
+                ``,
+                `### Links`,
+                ``,
+                `- [NATS Server Releases](https://github.com/nats-io/nats-server/releases)`,
+                `- [First v${nextMajor}.x tag: \`${nextTag}\`](https://github.com/nats-io/nats-server/releases/tag/${nextTag})`,
+                ``,
+                `---`,
+                `*Detected by the [update-nats](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/update-nats.yml) workflow.*`,
+              ].join('\n'),
+            });

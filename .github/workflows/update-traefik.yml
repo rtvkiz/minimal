@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
 
     steps:
       - name: Checkout repository
@@ -49,6 +50,20 @@ jobs:
           else
             echo "update_available=false" >> $GITHUB_OUTPUT
             echo "Already up to date"
+          fi
+
+          # Check for next major version (e.g., v4.x when tracking v3.x)
+          CURRENT_MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          NEXT_MAJOR=$((CURRENT_MAJOR + 1))
+          echo "tracked_version=$CURRENT" >> $GITHUB_OUTPUT
+          NEXT_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+            "https://api.github.com/repos/traefik/traefik/tags?per_page=100" | \
+            jq -r --arg next "v${NEXT_MAJOR}." \
+              '[.[] | .name | select(startswith($next)) | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))] | first // empty')
+          if [ -n "$NEXT_TAG" ]; then
+            echo "next_major_version=$NEXT_MAJOR" >> $GITHUB_OUTPUT
+            echo "next_major_tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+            echo "::warning::New major version detected: Traefik v${NEXT_MAJOR}.x ($NEXT_TAG)"
           fi
 
       - name: Update version and checksum in all files
@@ -120,3 +135,56 @@ jobs:
           labels: |
             dependencies
             traefik
+
+      - name: Create new major version issue
+        if: steps.check.outputs.next_major_version != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const nextMajor = '${{ steps.check.outputs.next_major_version }}';
+            const nextTag = '${{ steps.check.outputs.next_major_tag }}';
+            const currentVersion = '${{ steps.check.outputs.tracked_version }}';
+            const currentMajor = currentVersion.split('.')[0];
+            const title = `chore(traefik): new major version available — Traefik v${nextMajor}.x`;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'traefik,dependencies',
+            });
+            if (issues.some(i => i.title.includes(`v${nextMajor}.x`))) {
+              console.log(`Issue for Traefik v${nextMajor}.x already exists, skipping`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              labels: ['dependencies', 'traefik'],
+              body: [
+                `## New Major Version Detected`,
+                ``,
+                `Traefik **v${nextMajor}.x** has been detected (first tag: \`${nextTag}\`).`,
+                `We are currently tracking **v${currentMajor}.x** (${currentVersion}).`,
+                ``,
+                `### Upgrade Checklist`,
+                ``,
+                `- [ ] Review the [Traefik v${nextMajor} migration guide](https://doc.traefik.io/traefik/migration/v${currentMajor}-to-v${nextMajor}/) and release notes`,
+                `- [ ] Check Go module path for changes (currently \`github.com/traefik/traefik/v3\`)`,
+                `- [ ] Verify ldflags version variable path (\`pkg/version.Version\`) is unchanged`,
+                `- [ ] Check entrypoint command flags for breaking changes`,
+                `- [ ] Update \`update-traefik.yml\`: change tag filter from \`^v${currentMajor}\\\\.\` to \`^v${nextMajor}\\\\.\``,
+                `- [ ] Update \`traefik/melange.yaml\`: version, sha256, \`tag-filter\`, Go module path in ldflags`,
+                `- [ ] Test image build and run \`traefik/test.sh\``,
+                ``,
+                `### Links`,
+                ``,
+                `- [Traefik Releases](https://github.com/traefik/traefik/releases)`,
+                `- [First v${nextMajor}.x tag: \`${nextTag}\`](https://github.com/traefik/traefik/releases/tag/${nextTag})`,
+                ``,
+                `---`,
+                `*Detected by the [update-traefik](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/update-traefik.yml) workflow.*`,
+              ].join('\n'),
+            });
