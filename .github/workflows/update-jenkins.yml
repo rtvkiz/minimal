@@ -56,14 +56,25 @@ jobs:
           fi
 
 
-      - name: Update version in all files
+      - name: Update version and checksum in all files
         if: steps.check.outputs.update_available == 'true'
         run: |
           VERSION="${{ steps.check.outputs.new_version }}"
           echo "Updating to Jenkins $VERSION"
 
-          # Update jenkins/melange.yaml
+          # Download WAR and compute SHA256 checksum
+          echo "Downloading Jenkins $VERSION WAR..."
+          curl -fsSL --retry 3 --retry-delay 5 "https://get.jenkins.io/war-stable/${VERSION}/jenkins.war" \
+            -o /tmp/jenkins.war
+          SHA256=$(sha256sum /tmp/jenkins.war | awk '{print $1}')
+          rm /tmp/jenkins.war
+          echo "SHA256: $SHA256"
+
+          # Update jenkins/melange.yaml - version
           sed -i "s/^  version: .*/  version: $VERSION/" jenkins/melange.yaml
+
+          # Update jenkins/melange.yaml - checksum
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" jenkins/melange.yaml
 
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" jenkins/melange.yaml
@@ -73,7 +84,7 @@ jobs:
 
           # Verify changes
           echo "=== jenkins/melange.yaml ==="
-          grep 'version:' jenkins/melange.yaml | head -1
+          grep -E '(version:|sha256:)' jenkins/melange.yaml | head -2
           echo "=== Makefile ==="
           grep 'JENKINS_VERSION' Makefile
 
@@ -90,7 +101,7 @@ jobs:
 
             ## Changes
 
-            - `jenkins/melange.yaml` - package version, epoch reset
+            - `jenkins/melange.yaml` - package version, SHA256 checksum, epoch reset
             - `Makefile` - JENKINS_VERSION variable
 
             ## Image Tag

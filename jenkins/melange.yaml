@@ -11,6 +11,10 @@ package:
   copyright:
     - license: MIT
 
+vars:
+  # SHA256 checksum of jenkins.war - updated by update-jenkins.yml workflow
+  sha256: dc9d532e54d4b7eb7d78edcd3217876dd4811b49d1a3b66e599ad4a642d57193
+
 environment:
   contents:
     repositories:
@@ -37,10 +41,9 @@ pipeline:
       mkdir -p /home/build/jenkins
       curl -fsSL "https://get.jenkins.io/war-stable/${{package.version}}/jenkins.war" \
         -o /home/build/jenkins/jenkins.war
-      curl -fsSL "https://get.jenkins.io/war-stable/${{package.version}}/jenkins.war.sha256" \
-        -o /tmp/jenkins.war.sha256
-      cd /home/build/jenkins && sha256sum -c /tmp/jenkins.war.sha256
-      rm -f /tmp/jenkins.war.sha256
+
+      # Verify against pinned checksum (stored in repo, not fetched dynamically)
+      echo "${{vars.sha256}}  /home/build/jenkins/jenkins.war" | sha256sum -c -
 
   # Create minimal JRE with jlink (only modules Jenkins needs)
   - runs: |
