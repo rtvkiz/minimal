@@ -306,35 +306,33 @@ jobs:
           docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
             grep "minimal-${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY || true
 
-      - name: Install Trivy
+      - name: Install Grype
         run: |
-          curl -sfL --retry 3 --retry-delay 5 https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.69.1
-          trivy --version
+          GRYPE_VERSION=$(curl -sfL https://api.github.com/repos/anchore/grype/releases/latest | jq -r '.tag_name')
+          curl -sSfL "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin grype
+          grype version
 
       - name: Scan image for vulnerabilities
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
-          trivy image \
-            --format json \
-            --output trivy-${{ matrix.name }}.json \
-            --severity CRITICAL,HIGH,MEDIUM,LOW \
-            "$IMAGE"
+          grype "$IMAGE" -o json > grype-${{ matrix.name }}.json
 
       - name: Generate vulnerability report
         if: always()
         run: |
-          REPORT="trivy-${{ matrix.name }}.json"
+          REPORT="grype-${{ matrix.name }}.json"
           if [ ! -f "$REPORT" ]; then
             echo "## Security Scan: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
             echo "Scan report not found." >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
 
-          # Count vulnerabilities by severity across all results
-          CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$REPORT")
-          HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$REPORT")
-          MEDIUM=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' "$REPORT")
-          LOW=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="LOW")] | length' "$REPORT")
+          # Count vulnerabilities by severity (grype uses Title Case severity)
+          CRITICAL=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "CRITICAL")] | length' "$REPORT")
+          HIGH=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "HIGH")] | length' "$REPORT")
+          MEDIUM=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "MEDIUM")] | length' "$REPORT")
+          LOW=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "LOW")] | length' "$REPORT")
           TOTAL=$((CRITICAL + HIGH + MEDIUM + LOW))
 
           # Header
@@ -364,9 +362,10 @@ jobs:
             echo "| Library | CVE | Severity | Installed | Fixed | Title |" >> $GITHUB_STEP_SUMMARY
             echo "|---------|-----|----------|-----------|-------|-------|" >> $GITHUB_STEP_SUMMARY
             jq -r '
-              [.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH")]
-              | sort_by(.Severity) | reverse[]
-              | "| \(.PkgName) | \(.VulnerabilityID) | \(.Severity) | \(.InstalledVersion) | \(.FixedVersion // "n/a") | \(.Title // "n/a" | .[0:80]) |"
+              [.matches[] | select(.vulnerability.severity | ascii_upcase | (. == "CRITICAL" or . == "HIGH"))]
+              | sort_by(if .vulnerability.severity | ascii_upcase == "CRITICAL" then 0 else 1 end)
+              | .[]
+              | "| \(.artifact.name) | \(.vulnerability.id) | \(.vulnerability.severity | ascii_upcase) | \(.artifact.version) | \(.vulnerability.fix.versions[0] // "n/a") | \(.vulnerability.description // "n/a" | .[0:80]) |"
             ' "$REPORT" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           else
@@ -378,26 +377,22 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: vulnerability-report-${{ matrix.name }}
-          path: trivy-${{ matrix.name }}.json
+          path: grype-${{ matrix.name }}.json
           retention-days: 90
 
       - name: Generate SARIF report
         if: always()
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
-          trivy image \
-            --format sarif \
-            --output trivy-${{ matrix.name }}.sarif \
-            --severity CRITICAL,HIGH,MEDIUM,LOW \
-            "$IMAGE" || true
+          grype "$IMAGE" -o sarif > grype-${{ matrix.name }}.sarif || true
 
       - name: Upload SARIF to Security tab
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         continue-on-error: true
         with:
-          sarif_file: 'trivy-${{ matrix.name }}.sarif'
-          category: 'trivy-${{ matrix.name }}'
+          sarif_file: 'grype-${{ matrix.name }}.sarif'
+          category: 'grype-${{ matrix.name }}'
 
       - name: Extract version from SBOM
         id: version
@@ -567,35 +562,33 @@ jobs:
           docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
             grep "minimal-${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY || true
 
-      - name: Install Trivy
+      - name: Install Grype
         run: |
-          curl -sfL --retry 3 --retry-delay 5 https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.69.1
-          trivy --version
+          GRYPE_VERSION=$(curl -sfL https://api.github.com/repos/anchore/grype/releases/latest | jq -r '.tag_name')
+          curl -sSfL "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin grype
+          grype version
 
       - name: Scan image for vulnerabilities
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
-          trivy image \
-            --format json \
-            --output trivy-${{ matrix.name }}.json \
-            --severity CRITICAL,HIGH,MEDIUM,LOW \
-            "$IMAGE"
+          grype "$IMAGE" -o json > grype-${{ matrix.name }}.json
 
       - name: Generate vulnerability report
         if: always()
         run: |
-          REPORT="trivy-${{ matrix.name }}.json"
+          REPORT="grype-${{ matrix.name }}.json"
           if [ ! -f "$REPORT" ]; then
             echo "## Security Scan: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
             echo "Scan report not found." >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
 
-          # Count vulnerabilities by severity across all results
-          CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$REPORT")
-          HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$REPORT")
-          MEDIUM=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' "$REPORT")
-          LOW=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="LOW")] | length' "$REPORT")
+          # Count vulnerabilities by severity (grype uses Title Case severity)
+          CRITICAL=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "CRITICAL")] | length' "$REPORT")
+          HIGH=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "HIGH")] | length' "$REPORT")
+          MEDIUM=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "MEDIUM")] | length' "$REPORT")
+          LOW=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "LOW")] | length' "$REPORT")
           TOTAL=$((CRITICAL + HIGH + MEDIUM + LOW))
 
           # Header
@@ -625,9 +618,10 @@ jobs:
             echo "| Library | CVE | Severity | Installed | Fixed | Title |" >> $GITHUB_STEP_SUMMARY
             echo "|---------|-----|----------|-----------|-------|-------|" >> $GITHUB_STEP_SUMMARY
             jq -r '
-              [.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH")]
-              | sort_by(.Severity) | reverse[]
-              | "| \(.PkgName) | \(.VulnerabilityID) | \(.Severity) | \(.InstalledVersion) | \(.FixedVersion // "n/a") | \(.Title // "n/a" | .[0:80]) |"
+              [.matches[] | select(.vulnerability.severity | ascii_upcase | (. == "CRITICAL" or . == "HIGH"))]
+              | sort_by(if .vulnerability.severity | ascii_upcase == "CRITICAL" then 0 else 1 end)
+              | .[]
+              | "| \(.artifact.name) | \(.vulnerability.id) | \(.vulnerability.severity | ascii_upcase) | \(.artifact.version) | \(.vulnerability.fix.versions[0] // "n/a") | \(.vulnerability.description // "n/a" | .[0:80]) |"
             ' "$REPORT" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           else
@@ -639,26 +633,22 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: vulnerability-report-${{ matrix.name }}
-          path: trivy-${{ matrix.name }}.json
+          path: grype-${{ matrix.name }}.json
           retention-days: 90
 
       - name: Generate SARIF report
         if: always()
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
-          trivy image \
-            --format sarif \
-            --output trivy-${{ matrix.name }}.sarif \
-            --severity CRITICAL,HIGH,MEDIUM,LOW \
-            "$IMAGE" || true
+          grype "$IMAGE" -o sarif > grype-${{ matrix.name }}.sarif || true
 
       - name: Upload SARIF to Security tab
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         continue-on-error: true
         with:
-          sarif_file: 'trivy-${{ matrix.name }}.sarif'
-          category: 'trivy-${{ matrix.name }}'
+          sarif_file: 'grype-${{ matrix.name }}.sarif'
+          category: 'grype-${{ matrix.name }}'
 
       - name: Extract version from melange config
         id: version
