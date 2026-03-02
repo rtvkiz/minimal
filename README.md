@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build Hardened Images"></a>
+  <a href="https://rtvkiz.github.io/minimal/"><img src="https://img.shields.io/badge/Vulnerability_Report-View-0d9488" alt="Vulnerability Report"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/Images-22-0d9488" alt="Images: 22">
   <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
@@ -128,7 +129,7 @@ docker run -d -p 9092:9092 -v kafkadata:/var/kafka/data ghcr.io/rtvkiz/minimal-k
 
 | | | |
 |:--|:--|:--|
-| **Vulnerability scanning** — Every build scanned with Trivy; results in job summary and Security tab | **Immutable tags** — Chainguard-style `VERSION-rN` tags for reproducible deployments | **Signed images** — All images signed with [cosign](https://github.com/sigstore/cosign) keyless signing |
+| **Vulnerability scanning** — Every build scanned with Grype; results in [vulnerability report](https://rtvkiz.github.io/minimal/), job summary, and Security tab | **Immutable tags** — Chainguard-style `VERSION-rN` tags for reproducible deployments | **Signed images** — All images signed with [cosign](https://github.com/sigstore/cosign) keyless signing |
 | **SBOM generation** — Full software bill of materials in SPDX format | **Non-root users** — All images run as non-root by default | **Minimal attack surface** — Only essential packages included |
 | **Shell-less images** — Most images have no shell | **Reproducible builds** — Declarative apko configurations | **Multi-architecture** — Native support for AMD64 and ARM64 |
 
@@ -271,7 +272,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 # Prerequisites
 go install chainguard.dev/apko@latest
 go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails
-brew install trivy  # or: apt install trivy
+brew install anchore/grype/grype  # or: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh
 
 # Build all images
 make build

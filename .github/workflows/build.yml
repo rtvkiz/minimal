@@ -739,6 +739,8 @@ jobs:
           SHA="${{ github.sha }}"
           SHORT_SHA="${SHA:0:7}"
 
+          CSS='body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:1100px;margin:40px auto;padding:0 20px;color:#1f2328}h1{font-size:24px;margin-bottom:4px}p.meta{color:#656d76;font-size:14px;margin-bottom:24px}p.meta a,p.back a{color:#0969da;text-decoration:none}p.back{font-size:14px;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#f6f8fa;text-align:left;padding:8px 12px;border:1px solid #d0d7de;font-weight:600}td{padding:8px 12px;border:1px solid #d0d7de;vertical-align:top}tr:nth-child(even):not(.totals){background:#f6f8fa}tr.totals{border-top:2px solid #d0d7de}a{color:#0969da;text-decoration:none}a:hover{text-decoration:underline}.critical{color:#d1242f}.high{color:#bc4c00}.medium{color:#bf8700}.low{color:#656d76}.zero{color:#1f2328}'
+
           ROWS=""
           TOTAL_CRITICAL=0
           TOTAL_HIGH=0
@@ -761,7 +763,38 @@ jobs:
             HCLASS=$([ "$H" -gt 0 ] && echo "high" || echo "zero")
             MCLASS=$([ "$M" -gt 0 ] && echo "medium" || echo "zero")
             LCLASS=$([ "$L" -gt 0 ] && echo "low" || echo "zero")
-            ROWS="${ROWS}<tr><td>${NAME}</td><td class=\"${CCLASS}\">${C}</td><td class=\"${HCLASS}\">${H}</td><td class=\"${MCLASS}\">${M}</td><td class=\"${LCLASS}\">${L}</td><td>${T}</td></tr>\n"
+            ROWS="${ROWS}<tr><td><a href=\"${NAME}.html\">${NAME}</a></td><td class=\"${CCLASS}\">${C}</td><td class=\"${HCLASS}\">${H}</td><td class=\"${MCLASS}\">${M}</td><td class=\"${LCLASS}\">${L}</td><td>${T}</td></tr>\n"
+
+            # Per-image detail page
+            CVE_ROWS=$(jq -r '
+              .matches
+              | sort_by(if .vulnerability.severity | ascii_upcase == "CRITICAL" then 0 elif .vulnerability.severity | ascii_upcase == "HIGH" then 1 elif .vulnerability.severity | ascii_upcase == "MEDIUM" then 2 else 3 end)
+              | .[]
+              | "<tr><td>\(.artifact.name)</td><td>\(.artifact.version)</td><td class=\"\(.vulnerability.severity | ascii_downcase)\">\(.vulnerability.severity | ascii_upcase)</td><td><a href=\"\(.vulnerability.dataSource // "")\" target=\"_blank\">\(.vulnerability.id)</a></td><td>\(.vulnerability.fix.versions[0] // "n/a")</td><td>\(.vulnerability.description // "" | .[0:150] | @html)</td></tr>"
+            ' "$f" || true)
+
+            cat > "site/${NAME}.html" <<DETAIL
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${NAME} — Vulnerability Report</title>
+            <style>${CSS}</style>
+          </head>
+          <body>
+            <p class="back"><a href="index.html">← All images</a></p>
+            <h1>${NAME}</h1>
+            <p class="meta">Updated: ${BUILD_DATE} &nbsp;|&nbsp; Commit: <a href="${RUN_URL}">${SHORT_SHA}</a></p>
+            <table>
+              <thead><tr><th>Package</th><th>Version</th><th>Severity</th><th>CVE</th><th>Fix Version</th><th>Description</th></tr></thead>
+              <tbody>
+                ${CVE_ROWS:-<tr><td colspan="6">No vulnerabilities found.</td></tr>}
+              </tbody>
+            </table>
+          </body>
+          </html>
+          DETAIL
           done
 
           TOTAL_ALL=$((TOTAL_CRITICAL + TOTAL_HIGH + TOTAL_MEDIUM + TOTAL_LOW))
@@ -773,34 +806,15 @@ jobs:
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Vulnerability Report - Minimal Images</title>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #1f2328; }
-              h1 { font-size: 24px; margin-bottom: 4px; }
-              .meta { color: #656d76; font-size: 14px; margin-bottom: 24px; }
-              .meta a { color: #0969da; text-decoration: none; }
-              table { width: 100%; border-collapse: collapse; font-size: 14px; }
-              th { background: #f6f8fa; text-align: left; padding: 8px 12px; border: 1px solid #d0d7de; font-weight: 600; }
-              td { padding: 8px 12px; border: 1px solid #d0d7de; }
-              tr:nth-child(even):not(.totals) { background: #f6f8fa; }
-              tr.totals { background: #f6f8fa; border-top: 2px solid #d0d7de; }
-              .critical { color: #d1242f; }
-              .high { color: #bc4c00; }
-              .medium { color: #bf8700; }
-              .low { color: #656d76; }
-              .zero { color: #1f2328; }
-            </style>
+            <title>Vulnerability Report — Minimal Images</title>
+            <style>${CSS}</style>
           </head>
           <body>
             <h1>Vulnerability Report</h1>
             <p class="meta">Updated: ${BUILD_DATE} &nbsp;|&nbsp; Commit: <a href="${RUN_URL}">${SHORT_SHA}</a></p>
             <table>
-              <thead>
-                <tr><th>Image</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th><th>Total</th></tr>
-              </thead>
-              <tbody>
-                $(echo -e "$ROWS")
-              </tbody>
+              <thead><tr><th>Image</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th><th>Total</th></tr></thead>
+              <tbody>$(echo -e "$ROWS")</tbody>
             </table>
           </body>
           </html>
