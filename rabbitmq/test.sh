@@ -15,7 +15,7 @@ docker run --rm --entrypoint /bin/sh "$IMAGE" \
 
 echo "Testing plugins present..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" \
-  -c "ls /opt/rabbitmq/plugins/*.ez | wc -l | xargs -I{} sh -c '[ {} -gt 0 ] && echo \"Plugins OK: {} found\"'"
+  -c "COUNT=\$(ls -d /opt/rabbitmq/plugins/*/ 2>/dev/null | wc -l); [ \"\$COUNT\" -gt 0 ] && echo \"Plugins OK: \$COUNT found\" || (echo 'No plugins found'; exit 1)"
 
 echo "Testing RabbitMQ starts..."
 docker run -d \
