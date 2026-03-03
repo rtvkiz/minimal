@@ -12,7 +12,7 @@
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build Hardened Images"></a>
   <a href="https://rtvkiz.github.io/minimal/"><img src="https://img.shields.io/badge/Vulnerability_Report-View-0d9488" alt="Vulnerability Report"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Images-22-0d9488" alt="Images: 22">
+  <img src="https://img.shields.io/badge/Images-23-0d9488" alt="Images: 23">
   <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
 </p>
 
@@ -62,6 +62,7 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | **Valkey** | `docker pull ghcr.io/rtvkiz/minimal-valkey:latest` | No | BSD-licensed Redis fork (Linux Foundation), built from source |
 | | | **Messaging** | |
 | **Kafka** | `docker pull ghcr.io/rtvkiz/minimal-kafka:latest` | Yes | Apache Kafka 4.x, KRaft mode, custom jlink JRE |
+| **RabbitMQ** | `docker pull ghcr.io/rtvkiz/minimal-rabbitmq:latest` | Yes | RabbitMQ 4.x AMQP broker, Wolfi Erlang OTP runtime |
 | **NATS** | `docker pull ghcr.io/rtvkiz/minimal-nats:latest` | No | NATS Server (`nats-server`) only — core message broker with JetStream, built from source |
 | | | **Proxies** | |
 | **Caddy** | `docker pull ghcr.io/rtvkiz/minimal-caddy:latest` | No | Automatic HTTPS web server |
@@ -127,6 +128,9 @@ docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require '
 
 # Kafka - start a broker (KRaft mode, auto-initializes storage on first boot)
 docker run -d -p 9092:9092 -v kafkadata:/var/kafka/data ghcr.io/rtvkiz/minimal-kafka:latest
+
+# RabbitMQ - AMQP message broker
+docker run -d -p 5672:5672 -v rabbitmqdata:/var/lib/rabbitmq ghcr.io/rtvkiz/minimal-rabbitmq:latest
 ```
 
 ## Security Features
@@ -190,10 +194,10 @@ Old version tags are preserved — upgrading to a new version does not remove pr
 │  └────────────│────────────────┘                               │            │
 │               ▼                                                │            │
 │  ┌─────────────────────────────┐                               │            │
-│  │  build-melange (9 jobs)     │                               │            │
+│  │  build-melange (10 jobs)    │                               │            │
 │  │  Jenkins, Redis, MySQL,     │                               │            │
 │  │  Memcached, Caddy, HAProxy, │                               │            │
-│  │  PHP, Rails, Kafka          │                               │            │
+│  │  PHP, Rails, Kafka, RabbitMQ│                               │            │
 │  │  ┌─────────┐ ┌────────────┐ │                               │            │
 │  │  │  merge  │►│   apko     │─┼───────────────────────────────┤            │
 │  │  │ packages│ │  publish   │ │                               │            │
@@ -236,6 +240,7 @@ Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails) and 
 | `update-kafka.yml` | Apache Kafka 4.x GitHub tags | Updates version and SHA512 in melange config |
 | `update-php.yml` | php.net releases API | Updates version and SHA256; opens issue for new minor/major series |
 | `update-rails.yml` | RubyGems API + Ruby GitHub tags | Updates Rails gem and Ruby source versions independently |
+| `update-rabbitmq.yml` | RabbitMQ GitHub releases | Updates version and SHA256 of generic-unix tarball in melange config |
 | `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, Java, PostgreSQL package versions |
 
 Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g. PHP 8.5 → 8.6) create a GitHub Issue with a manual upgrade checklist, since configure flags or APIs may change.
@@ -264,6 +269,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | PHP | 8.5.x | nonroot (65532) | `/usr/bin/php` | `/app` |
 | Rails | Ruby 4.0.x + Rails 8.1.x | nonroot (65532) | `/usr/bin/ruby` | `/app` |
 | Kafka | 4.2.x | kafka (65532) | `/usr/bin/kafka-entrypoint.sh` | `/` |
+| RabbitMQ | 4.2.x | rabbitmq (65532) | `/opt/rabbitmq/sbin/rabbitmq-server` | `/` |
 
 </details>
 
@@ -275,7 +281,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 ```bash
 # Prerequisites
 go install chainguard.dev/apko@latest
-go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails
+go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails, RabbitMQ
 brew install anchore/grype/grype  # or: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh
 
 # Build all images
@@ -299,6 +305,7 @@ make java
 make php
 make rails
 make kafka
+make rabbitmq
 
 # Scan for CVEs
 make scan

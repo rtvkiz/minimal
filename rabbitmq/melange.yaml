@@ -1,0 +1,88 @@
+# Melange build configuration for minimal RabbitMQ
+# Downloads official generic-unix binary release (pre-compiled BEAM files)
+# Runtime Erlang OTP is provided by Wolfi's erlang-27 package at image assembly time
+
+package:
+  name: rabbitmq-minimal
+  version: 4.2.4
+  epoch: 0
+  description: "Minimal RabbitMQ message broker from official generic-unix release"
+  copyright:
+    - license: MPL-2.0
+
+vars:
+  # SHA256 of rabbitmq-server-generic-unix-{version}.tar.xz - updated by update-rabbitmq.yml
+  sha256: 7cc2ce2dea3c35fc1cf9ad48bca4a534e394af9e6c77c71d94eeb07775ec7832
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - xz
+
+pipeline:
+  # Download and verify RabbitMQ generic-unix release
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL \
+        "https://github.com/rabbitmq/rabbitmq-server/releases/download/v${{package.version}}/rabbitmq-server-generic-unix-${{package.version}}.tar.xz" \
+        -o /home/build/rabbitmq.tar.xz
+
+      echo "${{vars.sha256}}  /home/build/rabbitmq.tar.xz" | sha256sum -c -
+
+      cd /home/build
+      tar xJf rabbitmq.tar.xz
+      rm rabbitmq.tar.xz
+
+  # Install to destdir
+  - runs: |
+      RMQ_SRC="/home/build/rabbitmq_server-${{package.version}}"
+
+      # Install RabbitMQ tree under /opt/rabbitmq
+      mkdir -p "${{targets.destdir}}/opt/rabbitmq"
+      cp -a "$RMQ_SRC/." "${{targets.destdir}}/opt/rabbitmq/"
+
+      # Convenience symlinks for CLI tools
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf /opt/rabbitmq/sbin/rabbitmq-server    "${{targets.destdir}}/usr/bin/rabbitmq-server"
+      ln -sf /opt/rabbitmq/sbin/rabbitmqctl         "${{targets.destdir}}/usr/bin/rabbitmqctl"
+      ln -sf /opt/rabbitmq/sbin/rabbitmq-diagnostics "${{targets.destdir}}/usr/bin/rabbitmq-diagnostics"
+      ln -sf /opt/rabbitmq/sbin/rabbitmq-plugins    "${{targets.destdir}}/usr/bin/rabbitmq-plugins"
+
+      # Minimal default config - log to stdout, disable the management UI by default
+      mkdir -p "${{targets.destdir}}/etc/rabbitmq"
+      cat > "${{targets.destdir}}/etc/rabbitmq/rabbitmq.conf" << 'CONF'
+# RabbitMQ default configuration for minimal container image
+# Override by mounting your own /etc/rabbitmq/rabbitmq.conf
+
+# Log to stdout for container-friendly output
+log.console = true
+log.console.level = info
+
+# Disable file-based logging by default
+log.file = false
+CONF
+
+  # Verify the release
+  - runs: |
+      echo "Verifying RabbitMQ release..."
+      test -f "${{targets.destdir}}/opt/rabbitmq/sbin/rabbitmq-server"
+      test -f "${{targets.destdir}}/opt/rabbitmq/sbin/rabbitmqctl"
+      echo "Plugin count:"
+      ls "${{targets.destdir}}/opt/rabbitmq/plugins/"*.ez 2>/dev/null | wc -l
+      echo "Version from sbin:"
+      grep -r "VERSION" "${{targets.destdir}}/opt/rabbitmq/sbin/rabbitmq-defaults" || true
+
+update:
+  enabled: true
+  github:
+    identifier: rabbitmq/rabbitmq-server
+    use-tag: true
+    tag-filter: "v4."
+    strip-prefix: "v"

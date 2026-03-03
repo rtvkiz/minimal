@@ -19,17 +19,18 @@ KAFKA_VERSION ?= 4.2.0
 VALKEY_VERSION ?= 9.0.3
 NATS_VERSION ?= 2.12.4
 TRAEFIK_VERSION ?= 3.6.9
+RABBITMQ_VERSION ?= 4.2.4
 
 .PHONY: all build scan clean help
 .PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen
-.PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik
-.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik
+.PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange rabbitmq rabbitmq-melange
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik rabbitmq
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -384,6 +385,32 @@ traefik: traefik-melange
 	@echo "✓ minimal-traefik built (source build)"
 
 #------------------------------------------------------------------------------
+# RABBITMQ IMAGE (melange official binary release + apko)
+#------------------------------------------------------------------------------
+rabbitmq-melange: keygen
+	@echo "Building RabbitMQ $(RABBITMQ_VERSION) via melange (official generic-unix release)..."
+	melange build rabbitmq/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ RabbitMQ package built"
+
+rabbitmq: rabbitmq-melange
+	@echo "Assembling minimal-rabbitmq image with apko..."
+	apko build rabbitmq/apko/rabbitmq.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION) \
+		rabbitmq.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < rabbitmq.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest
+	@rm -f rabbitmq.tar sbom-*.spdx.json
+	@echo "✓ minimal-rabbitmq built"
+
+#------------------------------------------------------------------------------
 # POSTGRES SLIM IMAGE (Wolfi pre-built package)
 #------------------------------------------------------------------------------
 postgres-slim:
@@ -551,7 +578,7 @@ kafka: kafka-melange
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -685,6 +712,12 @@ scan-traefik:
 		$(REGISTRY)/$(OWNER)/minimal-traefik:latest
 	@echo "✓ minimal-traefik: scan passed"
 
+scan-rabbitmq:
+	@echo "Scanning minimal-rabbitmq..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest
+	@echo "✓ minimal-rabbitmq: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -734,7 +767,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq
 
 test-python:
 	@echo "Testing Python image..."
@@ -985,6 +1018,12 @@ test-traefik:
 		traefik/test.sh
 	@echo "✓ Traefik tests passed"
 
+test-rabbitmq:
+	@echo "Testing RabbitMQ image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest" && \
+		rabbitmq/test.sh
+	@echo "✓ RabbitMQ tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -1031,6 +1070,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-nats:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-traefik:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -1100,6 +1141,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-traefik:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -1138,6 +1182,7 @@ help:
 	@echo "  make valkey          Build Valkey $(VALKEY_VERSION) (source build)"
 	@echo "  make nats            Build NATS $(NATS_VERSION) (source build)"
 	@echo "  make traefik         Build Traefik $(TRAEFIK_VERSION) (source build)"
+	@echo "  make rabbitmq        Build RabbitMQ $(RABBITMQ_VERSION) (official binary + Wolfi Erlang)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"
@@ -1166,5 +1211,6 @@ help:
 	@echo "  VALKEY_VERSION=$(VALKEY_VERSION)"
 	@echo "  NATS_VERSION=$(NATS_VERSION)"
 	@echo "  TRAEFIK_VERSION=$(TRAEFIK_VERSION)"
+	@echo "  RABBITMQ_VERSION=$(RABBITMQ_VERSION)"
 	@echo "  REGISTRY=$(REGISTRY)"
 	@echo "  OWNER=$(OWNER)"
