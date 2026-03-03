@@ -50,24 +50,14 @@ pipeline:
 
       # Convenience symlinks for CLI tools
       mkdir -p "${{targets.destdir}}/usr/bin"
-      ln -sf /opt/rabbitmq/sbin/rabbitmq-server    "${{targets.destdir}}/usr/bin/rabbitmq-server"
-      ln -sf /opt/rabbitmq/sbin/rabbitmqctl         "${{targets.destdir}}/usr/bin/rabbitmqctl"
+      ln -sf /opt/rabbitmq/sbin/rabbitmq-server     "${{targets.destdir}}/usr/bin/rabbitmq-server"
+      ln -sf /opt/rabbitmq/sbin/rabbitmqctl          "${{targets.destdir}}/usr/bin/rabbitmqctl"
       ln -sf /opt/rabbitmq/sbin/rabbitmq-diagnostics "${{targets.destdir}}/usr/bin/rabbitmq-diagnostics"
-      ln -sf /opt/rabbitmq/sbin/rabbitmq-plugins    "${{targets.destdir}}/usr/bin/rabbitmq-plugins"
+      ln -sf /opt/rabbitmq/sbin/rabbitmq-plugins     "${{targets.destdir}}/usr/bin/rabbitmq-plugins"
 
-      # Minimal default config - log to stdout, disable the management UI by default
+      # Stub config dir - actual config is mounted by the user or set via env vars
+      # (stdout logging is handled by RABBITMQ_LOGS=- in the apko image env)
       mkdir -p "${{targets.destdir}}/etc/rabbitmq"
-      cat > "${{targets.destdir}}/etc/rabbitmq/rabbitmq.conf" << 'CONF'
-# RabbitMQ default configuration for minimal container image
-# Override by mounting your own /etc/rabbitmq/rabbitmq.conf
-
-# Log to stdout for container-friendly output
-log.console = true
-log.console.level = info
-
-# Disable file-based logging by default
-log.file = false
-CONF
 
   # Verify the release
   - runs: |

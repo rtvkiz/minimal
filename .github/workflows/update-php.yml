@@ -35,15 +35,24 @@ jobs:
           echo "Current version: $CURRENT"
           echo "Current series: $SERIES"
 
-          # --- Patch update check (e.g. 8.5.2 -> 8.5.3) ---
-          RELEASE_JSON=$(curl -fsSL --retry 3 --retry-delay 5 "https://www.php.net/releases/?json&version=$SERIES")
+          MAJOR=$(echo "$SERIES" | cut -d. -f1)
+          MINOR=$(echo "$SERIES" | cut -d. -f2)
 
-          LATEST=$(echo "$RELEASE_JSON" | jq -r '.version')
+          # --- Patch update check via GitHub tags (php/php-src) ---
+          # Tags are named php-8.5.3; filter to current series and sort by patch number
+          LATEST_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+            "https://api.github.com/repos/php/php-src/tags?per_page=100" | \
+            jq -r --arg series "^php-${SERIES//./\\.}\\.[0-9]+\$" \
+              '[.[] | .name | select(test($series))] |
+               sort_by(split(".") | last | tonumber) | last // empty')
 
-          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
-            echo "::error::Failed to fetch latest PHP $SERIES version from php.net"
+          if [ -z "$LATEST_TAG" ]; then
+            echo "::error::Failed to fetch latest PHP $SERIES tag from GitHub"
             exit 1
           fi
+
+          # Strip the leading 'php-' prefix
+          LATEST="${LATEST_TAG#php-}"
 
           # Validate version format
           if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -54,13 +63,14 @@ jobs:
           echo "Latest in $SERIES series: $LATEST"
 
           if [ "$LATEST" != "$CURRENT" ]; then
-            # Get SHA256 for .tar.gz from PHP releases API
-            SHA256=$(echo "$RELEASE_JSON" | jq -r '.source[] | select(.filename | endswith(".tar.gz")) | .sha256')
-
-            if [ -z "$SHA256" ] || [ "$SHA256" = "null" ]; then
-              echo "::error::Failed to get SHA256 for PHP $LATEST"
-              exit 1
-            fi
+            # Download tarball from php.net and compute SHA256 locally
+            echo "Downloading PHP $LATEST tarball to compute SHA256..."
+            curl -fsSL --retry 3 --retry-delay 5 \
+              "https://www.php.net/distributions/php-${LATEST}.tar.gz" \
+              -o /tmp/php.tar.gz
+            SHA256=$(sha256sum /tmp/php.tar.gz | awk '{print $1}')
+            rm /tmp/php.tar.gz
+            echo "SHA256: $SHA256"
 
             # Validate SHA256 format (64 hex chars)
             if ! [[ "$SHA256" =~ ^[0-9a-f]{64}$ ]]; then
@@ -76,35 +86,37 @@ jobs:
               echo "series=$SERIES"
             } >> "$GITHUB_OUTPUT"
 
-            echo "Patch update available: $CURRENT → $LATEST (sha256: $SHA256)"
+            echo "Patch update available: $CURRENT -> $LATEST (sha256: $SHA256)"
           else
             echo "update_available=false" >> "$GITHUB_OUTPUT"
             echo "Already up to date for $SERIES series"
           fi
 
-          # --- Minor/major series check (e.g. 8.5 -> 8.6 or 9.0) ---
-          CURRENT_MAJOR=$(echo "$SERIES" | cut -d. -f1)
-          CURRENT_MINOR=$(echo "$SERIES" | cut -d. -f2)
-          NEXT_MINOR="$CURRENT_MAJOR.$((CURRENT_MINOR + 1))"
-          NEXT_MAJOR="$((CURRENT_MAJOR + 1)).0"
+          # --- Minor/major series check via GitHub tags ---
+          NEXT_MINOR="${MAJOR}.$((MINOR + 1))"
+          NEXT_MAJOR="$((MAJOR + 1)).0"
 
           echo ""
           echo "Checking for new series..."
 
           NEW_SERIES=""
           # Check next minor (e.g. 8.6)
-          MINOR_CHECK=$(curl -fsSL --retry 3 --retry-delay 5 "https://www.php.net/releases/?json&version=$NEXT_MINOR" 2>/dev/null || echo "{}")
-          MINOR_VERSION=$(echo "$MINOR_CHECK" | jq -r '.version // empty' 2>/dev/null || true)
-          if [ -n "$MINOR_VERSION" ]; then
-            echo "New minor series available: PHP $NEXT_MINOR (latest: $MINOR_VERSION)"
+          MINOR_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+            "https://api.github.com/repos/php/php-src/tags?per_page=100" | \
+            jq -r --arg series "^php-${NEXT_MINOR//./\\.}\\.[0-9]+\$" \
+              '[.[] | .name | select(test($series))] | first // empty')
+          if [ -n "$MINOR_TAG" ]; then
+            echo "New minor series available: PHP $NEXT_MINOR (tag: $MINOR_TAG)"
             NEW_SERIES="$NEXT_MINOR"
           fi
 
           # Check next major (e.g. 9.0)
-          MAJOR_CHECK=$(curl -fsSL --retry 3 --retry-delay 5 "https://www.php.net/releases/?json&version=$NEXT_MAJOR" 2>/dev/null || echo "{}")
-          MAJOR_VERSION=$(echo "$MAJOR_CHECK" | jq -r '.version // empty' 2>/dev/null || true)
-          if [ -n "$MAJOR_VERSION" ]; then
-            echo "New major series available: PHP $NEXT_MAJOR (latest: $MAJOR_VERSION)"
+          MAJOR_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+            "https://api.github.com/repos/php/php-src/tags?per_page=100" | \
+            jq -r --arg series "^php-${NEXT_MAJOR//./\\.}\\.[0-9]+\$" \
+              '[.[] | .name | select(test($series))] | first // empty')
+          if [ -n "$MAJOR_TAG" ]; then
+            echo "New major series available: PHP $NEXT_MAJOR (tag: $MAJOR_TAG)"
             NEW_SERIES="$NEXT_MAJOR"
           fi
 
