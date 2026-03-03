@@ -16,6 +16,10 @@
   <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
 </p>
 
+<p align="center">
+  <strong><a href="https://rtvkiz.github.io/minimal/">rtvkiz.github.io/minimal</a> — live vulnerability report, updated on every build</strong>
+</p>
+
 ---
 
 ## Why This Matters
