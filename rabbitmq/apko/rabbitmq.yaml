@@ -52,6 +52,11 @@ entrypoint:
 environment:
   # Erlang needs HOME to store the .erlang.cookie file
   HOME: /var/lib/rabbitmq
+  # Redirect data paths away from /opt/rabbitmq (which is the install prefix,
+  # not writable at runtime). SYS_PREFIX=${RABBITMQ_HOME} in rabbitmq-defaults
+  # makes all paths default to /opt/rabbitmq/var/... without these overrides.
+  RABBITMQ_MNESIA_BASE: /var/lib/rabbitmq/mnesia
+  RABBITMQ_LOG_BASE: /var/log/rabbitmq
   # Log to stdout (container-friendly)
   RABBITMQ_LOGS: "-"
   PATH: /usr/bin:/bin
