@@ -20,17 +20,18 @@ VALKEY_VERSION ?= 9.0.3
 NATS_VERSION ?= 2.12.4
 TRAEFIK_VERSION ?= 3.6.9
 RABBITMQ_VERSION ?= 4.2.4
+MINIO_VERSION ?= 2025.10.15
 
 .PHONY: all build scan clean help
 .PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen
-.PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange rabbitmq rabbitmq-melange
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq
-.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq
+.PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange rabbitmq rabbitmq-melange minio minio-melange
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik rabbitmq
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik rabbitmq minio
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -411,6 +412,32 @@ rabbitmq: rabbitmq-melange
 	@echo "✓ minimal-rabbitmq built"
 
 #------------------------------------------------------------------------------
+# MINIO IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+minio-melange: keygen
+	@echo "Building MinIO $(MINIO_VERSION) from source via melange..."
+	melange build minio/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ MinIO package built from source"
+
+minio: minio-melange
+	@echo "Assembling minimal-minio image with apko..."
+	apko build minio/apko/minio.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION) \
+		minio.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < minio.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-minio:latest
+	@rm -f minio.tar sbom-*.spdx.json
+	@echo "✓ minimal-minio built (source build)"
+
+#------------------------------------------------------------------------------
 # POSTGRES SLIM IMAGE (Wolfi pre-built package)
 #------------------------------------------------------------------------------
 postgres-slim:
@@ -718,6 +745,12 @@ scan-rabbitmq:
 		$(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest
 	@echo "✓ minimal-rabbitmq: scan passed"
 
+scan-minio:
+	@echo "Scanning minimal-minio..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-minio:latest
+	@echo "✓ minimal-minio: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -767,7 +800,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio
 
 test-python:
 	@echo "Testing Python image..."
@@ -1024,6 +1057,12 @@ test-rabbitmq:
 		rabbitmq/test.sh
 	@echo "✓ RabbitMQ tests passed"
 
+test-minio:
+	@echo "Testing MinIO image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-minio:latest" && \
+		minio/test.sh
+	@echo "✓ MinIO tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -1072,6 +1111,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-traefik:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-minio:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -1144,6 +1185,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-minio:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -1183,6 +1227,7 @@ help:
 	@echo "  make nats            Build NATS $(NATS_VERSION) (source build)"
 	@echo "  make traefik         Build Traefik $(TRAEFIK_VERSION) (source build)"
 	@echo "  make rabbitmq        Build RabbitMQ $(RABBITMQ_VERSION) (official binary + Wolfi Erlang)"
+	@echo "  make minio           Build MinIO $(MINIO_VERSION) (source build)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"

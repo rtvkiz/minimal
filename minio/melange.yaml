@@ -1,0 +1,79 @@
+# Melange build configuration for minimal MinIO
+# Builds MinIO from source (Go) with static binary
+# CGO_ENABLED=0 produces fully static binary - zero runtime deps beyond glibc
+
+package:
+  name: minio-minimal
+  # Date-based version derived from RELEASE tag (e.g. RELEASE.2025-10-15T17-29-55Z → 2025.10.15)
+  version: 2025.10.15
+  epoch: 0
+  description: "Minimal MinIO S3-compatible object storage built from source"
+  copyright:
+    - license: AGPL-3.0-only
+
+vars:
+  # Full RELEASE tag — used for download URL and ldflags
+  # Updated by update-minio.yml workflow
+  minio_release: RELEASE.2025-10-15T17-29-55Z
+  # SHA256 checksum of source tarball - updated by update-minio.yml workflow
+  sha256: be6d0bd3696c3a13a35f02d3a0280b64319c67918b4501c5c3d87f96d000085c
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify MinIO source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://github.com/minio/minio/archive/refs/tags/${{vars.minio_release}}.tar.gz" \
+        -o /home/build/minio.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/minio.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf minio.tar.gz
+      rm minio.tar.gz
+
+  # Build MinIO from source (static binary)
+  - runs: |
+      cd /home/build/minio-${{vars.minio_release}}
+      CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X github.com/minio/minio/cmd.Version=${{vars.minio_release}} \
+          -X github.com/minio/minio/cmd.ReleaseTag=${{vars.minio_release}} \
+          -X github.com/minio/minio/cmd.CommitID=source-build \
+          -X github.com/minio/minio/cmd.ShortCommitID=source" \
+        -o minio \
+        .
+
+  # Install to destdir
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/minio-${{vars.minio_release}}/minio "${{targets.destdir}}/usr/bin/"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying MinIO build..."
+      "${{targets.destdir}}/usr/bin/minio" --version
+      echo "Checking binary size..."
+      ls -lh "${{targets.destdir}}/usr/bin/minio"
+
+update:
+  enabled: true
+  github:
+    identifier: minio/minio
+    use-tag: true
+    tag-filter: "RELEASE."

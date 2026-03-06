@@ -12,7 +12,7 @@
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build Hardened Images"></a>
   <a href="https://rtvkiz.github.io/minimal/"><img src="https://img.shields.io/badge/Vulnerability_Report-View-0d9488" alt="Vulnerability Report"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Images-23-0d9488" alt="Images: 23">
+  <img src="https://img.shields.io/badge/Images-24-0d9488" alt="Images: 24">
   <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
 </p>
 
@@ -64,6 +64,8 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | **Kafka** | `docker pull ghcr.io/rtvkiz/minimal-kafka:latest` | Yes | Apache Kafka 4.x, KRaft mode, custom jlink JRE |
 | **RabbitMQ** | `docker pull ghcr.io/rtvkiz/minimal-rabbitmq:latest` | Yes | RabbitMQ 4.x AMQP broker, Wolfi Erlang OTP runtime |
 | **NATS** | `docker pull ghcr.io/rtvkiz/minimal-nats:latest` | No | NATS Server (`nats-server`) only — core message broker with JetStream, built from source |
+| | | **Object Storage** | |
+| **MinIO** | `docker pull ghcr.io/rtvkiz/minimal-minio:latest` | No | S3-compatible object storage, built from source |
 | | | **Proxies** | |
 | **Caddy** | `docker pull ghcr.io/rtvkiz/minimal-caddy:latest` | No | Automatic HTTPS web server |
 | **HAProxy** | `docker pull ghcr.io/rtvkiz/minimal-haproxy:latest` | No | High-performance TCP/HTTP load balancer |
@@ -241,6 +243,7 @@ Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails) and 
 | `update-php.yml` | php.net releases API | Updates version and SHA256; opens issue for new minor/major series |
 | `update-rails.yml` | RubyGems API + Ruby GitHub tags | Updates Rails gem and Ruby source versions independently |
 | `update-rabbitmq.yml` | RabbitMQ GitHub releases | Updates version and SHA256 of generic-unix tarball in melange config |
+| `update-minio.yml` | MinIO GitHub releases | Updates release tag, date-based version, and SHA256 in melange config |
 | `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, Java, PostgreSQL package versions |
 
 Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g. PHP 8.5 → 8.6) create a GitHub Issue with a manual upgrade checklist, since configure flags or APIs may change.
@@ -270,6 +273,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | Rails | Ruby 4.0.x + Rails 8.1.x | nonroot (65532) | `/usr/bin/ruby` | `/app` |
 | Kafka | 4.2.x | kafka (65532) | `/usr/bin/kafka-entrypoint.sh` | `/` |
 | RabbitMQ | 4.2.x | rabbitmq (65532) | `/opt/rabbitmq/sbin/rabbitmq-server` | `/` |
+| MinIO | RELEASE.2025-10-15T17-29-55Z | minio (65532) | `/usr/bin/minio server --console-address :9001 /data` | `/data` |
 
 </details>
 

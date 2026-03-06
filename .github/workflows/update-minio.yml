@@ -1,0 +1,136 @@
+name: Update MinIO Version
+
+on:
+  schedule:
+    # Check daily at 7:45am UTC
+    - cron: '45 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new MinIO release
+        id: check
+        run: |
+          # Get latest release tag from GitHub API
+          LATEST_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+            "https://api.github.com/repos/minio/minio/releases/latest" | \
+            jq -r '.tag_name')
+
+          if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "null" ]; then
+            echo "::error::Failed to fetch latest MinIO release tag"
+            exit 1
+          fi
+
+          # Validate format: RELEASE.YYYY-MM-DDTHH-MM-SSZ
+          if ! echo "$LATEST_TAG" | grep -qE '^RELEASE\.[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}-[0-9]{2}-[0-9]{2}Z$'; then
+            echo "::error::Unexpected MinIO tag format: $LATEST_TAG"
+            exit 1
+          fi
+
+          # Extract date as version: RELEASE.2025-10-15T17-29-55Z → 2025.10.15
+          DATE_PART=$(echo "$LATEST_TAG" | sed 's/^RELEASE\.\([0-9]\{4\}\)-\([0-9]\{2\}\)-\([0-9]\{2\}\)T.*/\1.\2.\3/')
+          NEW_VERSION="$DATE_PART"
+
+          # Get current release tag from melange.yaml vars
+          CURRENT_TAG=$(grep '^ *minio_release:' minio/melange.yaml | awk '{print $2}')
+          CURRENT_VERSION=$(grep '^  version:' minio/melange.yaml | awk '{print $2}')
+
+          echo "Current tag: $CURRENT_TAG (version $CURRENT_VERSION)"
+          echo "Latest tag:  $LATEST_TAG (version $NEW_VERSION)"
+
+          if [ "$LATEST_TAG" != "$CURRENT_TAG" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "current_tag=$CURRENT_TAG" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "Update available: $CURRENT_TAG -> $LATEST_TAG"
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            echo "Already up to date: $CURRENT_TAG"
+          fi
+
+      - name: Update version and checksum in all files
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          NEW_TAG="${{ steps.check.outputs.new_tag }}"
+          NEW_VERSION="${{ steps.check.outputs.new_version }}"
+          echo "Updating to MinIO $NEW_TAG"
+
+          # Download tarball and compute SHA256 checksum
+          echo "Downloading MinIO $NEW_TAG tarball..."
+          curl -fsSL --retry 3 --retry-delay 5 \
+            "https://github.com/minio/minio/archive/refs/tags/${NEW_TAG}.tar.gz" \
+            -o /tmp/minio.tar.gz
+          SHA256=$(sha256sum /tmp/minio.tar.gz | awk '{print $1}')
+          rm /tmp/minio.tar.gz
+          echo "SHA256: $SHA256"
+
+          # Update minio/melange.yaml - package version (date-based)
+          sed -i "s/^  version: .*/  version: $NEW_VERSION/" minio/melange.yaml
+
+          # Update minio/melange.yaml - minio_release tag
+          sed -i "s/^  minio_release: .*/  minio_release: $NEW_TAG/" minio/melange.yaml
+
+          # Update minio/melange.yaml - checksum
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" minio/melange.yaml
+
+          # Reset epoch to 0 for new upstream version
+          sed -i "s/^  epoch: .*/  epoch: 0/" minio/melange.yaml
+
+          # Update Makefile
+          sed -i "s/MINIO_VERSION ?= .*/MINIO_VERSION ?= $NEW_VERSION/" Makefile
+
+          # Verify changes
+          echo "=== minio/melange.yaml ==="
+          grep -E '(version:|minio_release:|sha256:)' minio/melange.yaml | head -3
+          echo "=== Makefile ==="
+          grep 'MINIO_VERSION' Makefile
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(minio): bump to ${{ steps.check.outputs.new_tag }}"
+          body: |
+            ## Summary
+
+            Updates MinIO from `${{ steps.check.outputs.current_tag }}` to `${{ steps.check.outputs.new_tag }}`.
+
+            ## Changes
+
+            - `minio/melange.yaml` - package version (`${{ steps.check.outputs.new_version }}`), release tag, SHA256 checksum, epoch reset
+            - `Makefile` - MINIO_VERSION variable
+
+            ## Image Tag
+
+            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-minio:${{ steps.check.outputs.new_version }}-r0`
+
+            ## Links
+
+            - [MinIO Releases](https://github.com/minio/minio/releases)
+            - [Release Notes for ${{ steps.check.outputs.new_tag }}](https://github.com/minio/minio/releases/tag/${{ steps.check.outputs.new_tag }})
+
+            ---
+
+            This PR was automatically created by the [update-minio](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-minio.yml) workflow.
+          branch: update-minio-${{ steps.check.outputs.new_version }}
+          commit-message: |
+            chore(minio): bump to ${{ steps.check.outputs.new_tag }}
+
+            Updates MinIO from ${{ steps.check.outputs.current_tag }} to ${{ steps.check.outputs.new_tag }}.
+          delete-branch: true
+          labels: |
+            dependencies
+            minio

@@ -183,6 +183,15 @@ jobs:
             melange_config: rabbitmq/melange.yaml
             arch: aarch64
             runner: ubuntu-24.04-arm
+          # MinIO builds
+          - name: minio
+            melange_config: minio/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: minio
+            melange_config: minio/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -502,6 +511,9 @@ jobs:
           - name: rabbitmq
             apko_config: rabbitmq/apko/rabbitmq.yaml
             melange_config: rabbitmq/melange.yaml
+          - name: minio
+            apko_config: minio/apko/minio.yaml
+            melange_config: minio/melange.yaml
 
     steps:
       - name: Checkout repository
