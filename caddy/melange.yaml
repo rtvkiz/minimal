@@ -4,7 +4,7 @@
 
 package:
   name: caddy-minimal
-  version: 2.11.1
+  version: 2.11.2
   epoch: 0
   description: "Minimal Caddy web server built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-caddy.yml workflow
-  sha256: 6d0a9e90b3a7ea0b385a66003f493c1a7317f47d57faadd0ee7d82798b7d89e3
+  sha256: ee12f7b5f97308708de5067deebb3d3322fc24f6d54f906a47a0a4e8db799122
 
 environment:
   contents:
