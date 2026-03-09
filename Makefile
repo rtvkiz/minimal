@@ -23,15 +23,15 @@ RABBITMQ_VERSION ?= 4.2.4
 MINIO_VERSION ?= 2025.10.15
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen
+.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen opensearch
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange rabbitmq rabbitmq-melange minio minio-melange
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio
-.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio test-opensearch
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik rabbitmq minio
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik rabbitmq minio opensearch
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -523,6 +523,23 @@ java:
 	@echo "✓ minimal-java built (Wolfi package, shell-less)"
 
 #------------------------------------------------------------------------------
+# OPENSEARCH IMAGE (Wolfi pre-built package)
+#------------------------------------------------------------------------------
+opensearch:
+	@echo "Assembling minimal-opensearch image with apko..."
+	apko build opensearch/apko/opensearch.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION) \
+		opensearch.tar \
+		--arch x86_64
+	docker load < opensearch.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-opensearch:latest
+	@rm -f opensearch.tar sbom-*.spdx.json
+	@echo "✓ minimal-opensearch built (Wolfi package)"
+
+#------------------------------------------------------------------------------
 # PHP IMAGE (melange source build + apko)
 #------------------------------------------------------------------------------
 php-melange: keygen
@@ -751,6 +768,12 @@ scan-minio:
 		$(REGISTRY)/$(OWNER)/minimal-minio:latest
 	@echo "✓ minimal-minio: scan passed"
 
+scan-opensearch:
+	@echo "Scanning minimal-opensearch..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-opensearch:latest
+	@echo "✓ minimal-opensearch: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -800,7 +823,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio test-opensearch
 
 test-python:
 	@echo "Testing Python image..."
@@ -1063,6 +1086,12 @@ test-minio:
 		minio/test.sh
 	@echo "✓ MinIO tests passed"
 
+test-opensearch:
+	@echo "Testing OpenSearch image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-opensearch:latest" && \
+		opensearch/test.sh
+	@echo "✓ OpenSearch tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -1113,6 +1142,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-minio:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-opensearch:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -1188,6 +1219,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-minio:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-opensearch:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -1228,6 +1262,7 @@ help:
 	@echo "  make traefik         Build Traefik $(TRAEFIK_VERSION) (source build)"
 	@echo "  make rabbitmq        Build RabbitMQ $(RABBITMQ_VERSION) (official binary + Wolfi Erlang)"
 	@echo "  make minio           Build MinIO $(MINIO_VERSION) (source build)"
+	@echo "  make opensearch      Build OpenSearch 2.x (Wolfi package)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"

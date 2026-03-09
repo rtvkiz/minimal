@@ -285,6 +285,9 @@ jobs:
           - name: java
             apko_config: java/apko/java.yaml
             primary_grep: "openjdk-[0-9].*-jre"
+          - name: opensearch
+            apko_config: opensearch/apko/opensearch.yaml
+            primary_grep: "opensearch-2"
 
     steps:
       - name: Checkout repository
