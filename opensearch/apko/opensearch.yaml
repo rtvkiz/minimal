@@ -46,6 +46,9 @@ environment:
   # Set to "false" and configure TLS for production clusters
   DISABLE_SECURITY_PLUGIN: "true"
   OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+  # Entrypoint converts dotted env vars to -E<key>=<value> OpenSearch flags.
+  # discovery.type=single-node bypasses multi-node bootstrap checks.
+  "discovery.type": "single-node"
   LANG: C.UTF-8
 
 paths:
