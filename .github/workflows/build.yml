@@ -329,7 +329,11 @@ jobs:
 
       - name: Install Grype
         run: |
-          GRYPE_VERSION=$(curl -sfL https://api.github.com/repos/anchore/grype/releases/latest | jq -r '.tag_name')
+          GRYPE_VERSION=$(curl -sfL --retry 3 --retry-delay 5 https://api.github.com/repos/anchore/grype/releases/latest | jq -r '.tag_name // empty')
+          if [ -z "$GRYPE_VERSION" ] || [ "$GRYPE_VERSION" = "null" ]; then
+            GRYPE_VERSION="v0.109.1"
+            echo "::warning::GitHub API rate-limited, using pinned grype $GRYPE_VERSION"
+          fi
           curl -sSfL "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz" \
             | tar -xz -C /usr/local/bin grype
           grype version
@@ -591,7 +595,11 @@ jobs:
 
       - name: Install Grype
         run: |
-          GRYPE_VERSION=$(curl -sfL https://api.github.com/repos/anchore/grype/releases/latest | jq -r '.tag_name')
+          GRYPE_VERSION=$(curl -sfL --retry 3 --retry-delay 5 https://api.github.com/repos/anchore/grype/releases/latest | jq -r '.tag_name // empty')
+          if [ -z "$GRYPE_VERSION" ] || [ "$GRYPE_VERSION" = "null" ]; then
+            GRYPE_VERSION="v0.109.1"
+            echo "::warning::GitHub API rate-limited, using pinned grype $GRYPE_VERSION"
+          fi
           curl -sSfL "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz" \
             | tar -xz -C /usr/local/bin grype
           grype version
