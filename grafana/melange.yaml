@@ -49,6 +49,7 @@ pipeline:
   # corepack (bundled with Node.js 22) handles the correct yarn version
   - runs: |
       cd /home/build/grafana-${{package.version}}
+      npm install -g corepack
       corepack enable
       yarn install --immutable
       yarn build

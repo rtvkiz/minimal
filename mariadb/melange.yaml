@@ -68,7 +68,7 @@ pipeline:
         -DWITH_UNIT_TESTS=OFF \
         -DWITH_DEBUG=OFF \
         -DWITH_JEMALLOC=OFF \
-        -DWITH_SYSTEMD=OFF \
+        -DWITH_SYSTEMD=no \
         -DWITH_LINUX_AIO=OFF \
         -DCMAKE_C_FLAGS="-g0" \
         -DCMAKE_CXX_FLAGS="-g0" \

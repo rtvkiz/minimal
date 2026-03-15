@@ -25,7 +25,6 @@ environment:
       - curl
       - build-base
       - rust
-      - cargo
       - cmake
       - protobuf
       - openssl-dev

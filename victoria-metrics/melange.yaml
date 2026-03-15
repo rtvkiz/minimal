@@ -41,7 +41,7 @@ pipeline:
         -ldflags="-s -w \
           -X github.com/VictoriaMetrics/VictoriaMetrics/lib/buildinfo.Version=${{package.version}}" \
         -o victoria-metrics \
-        ./app/victoria-metrics/main.go
+        ./app/victoria-metrics
 
   - runs: |
       mkdir -p "${{targets.destdir}}/usr/bin"

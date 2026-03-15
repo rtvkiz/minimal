@@ -45,21 +45,21 @@ pipeline:
           -X go.etcd.io/etcd/api/v3/version.GitSHA=release \
           -X go.etcd.io/etcd/server/v3/version=${{package.version}}" \
         -o etcd \
-        ./server/main.go
+        ./server
 
       # Build etcdctl
       CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w" \
         -o etcdctl \
-        ./etcdctl/main.go
+        ./etcdctl
 
       # Build etcdutl
       CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w" \
         -o etcdutl \
-        ./etcdutl/main.go
+        ./etcdutl
 
   - runs: |
       mkdir -p "${{targets.destdir}}/usr/bin"
