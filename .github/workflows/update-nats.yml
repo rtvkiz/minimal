@@ -20,9 +20,13 @@ jobs:
 
       - name: Check for new NATS stable version
         id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Get latest stable v2.x release from GitHub tags
-          LATEST=$(curl -sS --retry 3 --retry-delay 5 "https://api.github.com/repos/nats-io/nats-server/tags?per_page=100" | \
+          LATEST=$(curl -sS --retry 3 --retry-delay 5 \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/nats-io/nats-server/tags?per_page=100" | \
             jq -r '[.[] | .name | select(test("^v2\\.[0-9]+\\.[0-9]+$"))] | first | ltrimstr("v")')
 
           if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
@@ -57,6 +61,7 @@ jobs:
           NEXT_MAJOR=$((CURRENT_MAJOR + 1))
           echo "tracked_version=$CURRENT" >> $GITHUB_OUTPUT
           NEXT_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+            --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/nats-io/nats-server/tags?per_page=100" | \
             jq -r --arg next "v${NEXT_MAJOR}." \
               '[.[] | .name | select(startswith($next)) | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))] | first // empty')

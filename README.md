@@ -12,7 +12,7 @@
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build Hardened Images"></a>
   <a href="https://rtvkiz.github.io/minimal/"><img src="https://img.shields.io/badge/Vulnerability_Report-View-0d9488" alt="Vulnerability Report"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Images-25-0d9488" alt="Images: 25">
+  <img src="https://img.shields.io/badge/Images-28-0d9488" alt="Images: 28">
   <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
 </p>
 
@@ -54,6 +54,7 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | **HTTPD** | `docker pull ghcr.io/rtvkiz/minimal-httpd:latest` | Maybe* | Apache web server |
 | | | **Databases** | |
 | **MySQL** | `docker pull ghcr.io/rtvkiz/minimal-mysql:latest` | Yes | Relational database, LTS track (8.4.x), built from source |
+| **MariaDB** | `docker pull ghcr.io/rtvkiz/minimal-mariadb:latest` | Yes | MariaDB LTS (11.4.x) built from source, MySQL-compatible |
 | **PostgreSQL-slim** | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
 | **SQLite** | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
 | | | **Caching** | |
@@ -67,6 +68,9 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | | | **Object Storage** | |
 | **MinIO** | `docker pull ghcr.io/rtvkiz/minimal-minio:latest` | No | S3-compatible object storage, built from source |
 | **OpenSearch** | `docker pull ghcr.io/rtvkiz/minimal-opensearch:latest` | No* | OpenSearch 2.x — Elasticsearch-compatible search and analytics |
+| | | **Observability** | |
+| **Prometheus** | `docker pull ghcr.io/rtvkiz/minimal-prometheus:latest` | No | Metrics collection and alerting, built from source |
+| **Grafana** | `docker pull ghcr.io/rtvkiz/minimal-grafana:latest` | No | Observability platform with dashboards, built from source |
 | | | **Proxies** | |
 | **Caddy** | `docker pull ghcr.io/rtvkiz/minimal-caddy:latest` | No | Automatic HTTPS web server |
 | **HAProxy** | `docker pull ghcr.io/rtvkiz/minimal-haproxy:latest` | No | High-performance TCP/HTTP load balancer |

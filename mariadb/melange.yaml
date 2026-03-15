@@ -1,0 +1,142 @@
+# Melange build configuration for minimal MariaDB
+# Builds MariaDB 11.4 LTS from source with cmake
+# LTS series, EOL 2029-05-29
+
+package:
+  name: mariadb-minimal
+  version: 11.4.10
+  epoch: 0
+  description: "Minimal MariaDB LTS server built from source"
+  copyright:
+    - license: GPL-2.0-only
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-mariadb.yml workflow
+  sha256: 14783ddc5edd966ff05aa0efd5ed6d3d369ed5b9e4080a448f00f87a9f0a4a6b
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - cmake
+      - linux-headers
+      - openssl-dev
+      - ncurses-dev
+      - bison
+      - perl
+      - libtirpc-dev
+      - rpcsvc-proto
+      - pcre2-dev
+      - libxml2-dev
+      - zstd-dev
+      - lz4-dev
+      - fmt-dev
+
+pipeline:
+  # Download and verify MariaDB source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://archive.mariadb.org/mariadb-${{package.version}}/source/mariadb-${{package.version}}.tar.gz" \
+        -o /home/build/mariadb.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/mariadb.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf mariadb.tar.gz
+      rm mariadb.tar.gz
+
+  # Configure and build MariaDB
+  - runs: |
+      cd /home/build/mariadb-${{package.version}}
+      mkdir build && cd build
+      cmake .. \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DMYSQL_DATADIR=/var/lib/mysql \
+        -DSYSCONFDIR=/etc/mysql \
+        -DWITH_SSL=system \
+        -DWITH_ZLIB=system \
+        -DWITH_PCRE=system \
+        -DWITH_READLINE=ON \
+        -DWITH_UNIT_TESTS=OFF \
+        -DWITH_DEBUG=OFF \
+        -DWITH_JEMALLOC=OFF \
+        -DWITH_SYSTEMD=OFF \
+        -DWITH_LINUX_AIO=OFF \
+        -DCMAKE_C_FLAGS="-g0" \
+        -DCMAKE_CXX_FLAGS="-g0" \
+        -DPLUGIN_TOKUDB=NO \
+        -DPLUGIN_ROCKSDB=NO \
+        -DPLUGIN_MROONGA=NO \
+        -DPLUGIN_OQGRAPH=NO \
+        -DPLUGIN_CONNECT=NO \
+        -DPLUGIN_SPIDER=NO \
+        -DPLUGIN_WSREP=NO \
+        -DWITH_WSREP=OFF \
+        -DWITHOUT_EXAMPLE_STORAGE_ENGINE=1 \
+        -DWITHOUT_FEDERATED_STORAGE_ENGINE=1
+      make -j$(nproc) mariadbd mariadb
+
+  # Install only essential files to destdir
+  - runs: |
+      cd /home/build/mariadb-${{package.version}}/build
+
+      # Install binaries
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp bin/mariadbd "${{targets.destdir}}/usr/bin/"
+      cp bin/mariadb "${{targets.destdir}}/usr/bin/"
+
+      # mysqld/mysql symlinks for compatibility
+      ln -sf mariadbd "${{targets.destdir}}/usr/bin/mysqld"
+      ln -sf mariadb "${{targets.destdir}}/usr/bin/mysql"
+
+      # Strip binaries
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/mariadbd"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/mariadb"
+
+      # Install share directory (needed for --initialize and error messages)
+      mkdir -p "${{targets.destdir}}/usr/share/mysql"
+      cp -r share/english "${{targets.destdir}}/usr/share/mysql/"
+      cp share/*.sql "${{targets.destdir}}/usr/share/mysql/" 2>/dev/null || true
+
+      # Install plugin directory
+      mkdir -p "${{targets.destdir}}/usr/lib/mysql/plugin"
+      cp lib/plugin/*.so "${{targets.destdir}}/usr/lib/mysql/plugin/" 2>/dev/null || true
+
+      # Install entrypoint script
+      cat > "${{targets.destdir}}/usr/bin/docker-entrypoint.sh" << 'ENTRY'
+      #!/bin/sh
+      set -e
+
+      # Auto-initialize if data directory is empty
+      if [ ! -f /var/lib/mysql/ibdata1 ]; then
+        echo "Initializing MariaDB data directory..."
+        mariadbd --initialize-insecure --user=mysql
+      fi
+
+      exec mariadbd --user=mysql "$@"
+      ENTRY
+      chmod +x "${{targets.destdir}}/usr/bin/docker-entrypoint.sh"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying MariaDB build..."
+      "${{targets.destdir}}/usr/bin/mariadbd" --version
+      "${{targets.destdir}}/usr/bin/mariadb" --version
+      echo "Checking binary sizes..."
+      ls -lh "${{targets.destdir}}/usr/bin/mariadbd"
+      ls -lh "${{targets.destdir}}/usr/bin/mariadb"
+
+update:
+  enabled: true
+  github:
+    identifier: MariaDB/server
+    use-tag: true
+    tag-filter: "mariadb-11.4."

@@ -1,0 +1,125 @@
+name: Update MariaDB Version
+
+on:
+  schedule:
+    # Check daily at 7:40am UTC
+    - cron: '40 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new MariaDB 11.4 LTS release
+        id: check
+        run: |
+          # Get latest 11.4.x release from the MariaDB downloads REST API.
+          # No auth required; returns a stable JSON API.
+          LATEST=$(curl -fsSL --retry 3 --retry-delay 5 \
+            "https://downloads.mariadb.org/rest-api/mariadb/11.4/" | \
+            jq -r '[.releases | keys[] | select(test("^11\\.4\\."))] | sort_by(split(".") | map(tonumber)) | last')
+
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "::error::Failed to fetch latest MariaDB 11.4.x version from downloads.mariadb.org"
+            exit 1
+          fi
+
+          # Validate version format strictly
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid MariaDB version received: $LATEST"
+            exit 1
+          fi
+
+          # Get current version from melange.yaml
+          CURRENT=$(grep '^  version:' mariadb/melange.yaml | awk '{print $2}')
+
+          echo "Current version: $CURRENT"
+          echo "Latest version: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+            echo "Update available: $CURRENT -> $LATEST"
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            echo "Already up to date"
+          fi
+
+      - name: Update version and checksum in all files
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          echo "Updating to MariaDB $VERSION"
+
+          # Download source tarball and compute SHA256 checksum
+          echo "Downloading MariaDB $VERSION tarball..."
+          curl -fsSL --retry 3 --retry-delay 5 \
+            "https://archive.mariadb.org/mariadb-${VERSION}/source/mariadb-${VERSION}.tar.gz" \
+            -o /tmp/mariadb.tar.gz
+          SHA256=$(sha256sum /tmp/mariadb.tar.gz | awk '{print $1}')
+          rm /tmp/mariadb.tar.gz
+          echo "SHA256: $SHA256"
+
+          # Update mariadb/melange.yaml - version
+          sed -i "s/^  version: .*/  version: $VERSION/" mariadb/melange.yaml
+
+          # Update mariadb/melange.yaml - checksum
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" mariadb/melange.yaml
+
+          # Reset epoch to 0 for new upstream version
+          sed -i "s/^  epoch: .*/  epoch: 0/" mariadb/melange.yaml
+
+          # Update Makefile
+          sed -i "s/MARIADB_VERSION ?= .*/MARIADB_VERSION ?= $VERSION/" Makefile
+
+          # Verify changes
+          echo "=== mariadb/melange.yaml ==="
+          grep -E '(version:|sha256:)' mariadb/melange.yaml | head -2
+          echo "=== Makefile ==="
+          grep 'MARIADB_VERSION' Makefile
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(mariadb): bump to ${{ steps.check.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates MariaDB from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+            ## Changes
+
+            - `mariadb/melange.yaml` - package version, SHA256 checksum, epoch reset
+            - `Makefile` - MARIADB_VERSION variable
+
+            ## Image Tag
+
+            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-mariadb:${{ steps.check.outputs.new_version }}-r0`
+
+            ## Links
+
+            - [MariaDB 11.4 Releases](https://mariadb.com/kb/en/release-notes-mariadb-11-4-series/)
+            - [MariaDB Downloads](https://mariadb.org/download/)
+
+            ---
+
+            This PR was automatically created by the [update-mariadb](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-mariadb.yml) workflow.
+          branch: update-mariadb-${{ steps.check.outputs.new_version }}
+          commit-message: |
+            chore(mariadb): bump to ${{ steps.check.outputs.new_version }}
+
+            Updates MariaDB from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
+          delete-branch: true
+          labels: |
+            dependencies
+            mariadb

@@ -21,17 +21,21 @@ NATS_VERSION ?= 2.12.5
 TRAEFIK_VERSION ?= 3.6.10
 RABBITMQ_VERSION ?= 4.2.4
 MINIO_VERSION ?= 2025.10.15
+PROMETHEUS_VERSION ?= 3.10.0
+GRAFANA_VERSION ?= 12.4.1
+MARIADB_VERSION ?= 11.4.10
 
 .PHONY: all build scan clean help
 .PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen opensearch
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange rabbitmq rabbitmq-melange minio minio-melange
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch
-.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio test-opensearch
+.PHONY: prometheus prometheus-melange grafana grafana-melange mariadb mariadb-melange
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik rabbitmq minio opensearch
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik rabbitmq minio opensearch prometheus grafana mariadb
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -438,6 +442,84 @@ minio: minio-melange
 	@echo "✓ minimal-minio built (source build)"
 
 #------------------------------------------------------------------------------
+# PROMETHEUS IMAGE (melange source build + apko, no embedded web UI)
+#------------------------------------------------------------------------------
+prometheus-melange: keygen
+	@echo "Building Prometheus $(PROMETHEUS_VERSION) from source via melange..."
+	melange build prometheus/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Prometheus package built from source"
+
+prometheus: prometheus-melange
+	@echo "Assembling minimal-prometheus image with apko..."
+	apko build prometheus/apko/prometheus.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-prometheus:$(VERSION) \
+		prometheus.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < prometheus.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-prometheus:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-prometheus:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-prometheus:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-prometheus:latest
+	@rm -f prometheus.tar sbom-*.spdx.json
+	@echo "✓ minimal-prometheus built (source build)"
+
+#------------------------------------------------------------------------------
+# GRAFANA IMAGE (melange source build: Go backend + yarn 4 frontend + apko)
+#------------------------------------------------------------------------------
+grafana-melange: keygen
+	@echo "Building Grafana $(GRAFANA_VERSION) from source via melange..."
+	melange build grafana/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Grafana package built from source"
+
+grafana: grafana-melange
+	@echo "Assembling minimal-grafana image with apko..."
+	apko build grafana/apko/grafana.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-grafana:$(VERSION) \
+		grafana.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < grafana.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-grafana:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-grafana:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-grafana:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-grafana:latest
+	@rm -f grafana.tar sbom-*.spdx.json
+	@echo "✓ minimal-grafana built (source build, Go + frontend)"
+
+#------------------------------------------------------------------------------
+# MARIADB IMAGE (melange source build + apko, LTS 11.4 track)
+#------------------------------------------------------------------------------
+mariadb-melange: keygen
+	@echo "Building MariaDB $(MARIADB_VERSION) from source via melange..."
+	melange build mariadb/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ MariaDB package built from source"
+
+mariadb: mariadb-melange
+	@echo "Assembling minimal-mariadb image with apko..."
+	apko build mariadb/apko/mariadb.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-mariadb:$(VERSION) \
+		mariadb.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < mariadb.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-mariadb:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-mariadb:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-mariadb:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-mariadb:latest
+	@rm -f mariadb.tar sbom-*.spdx.json
+	@echo "✓ minimal-mariadb built (source build)"
+
+#------------------------------------------------------------------------------
 # POSTGRES SLIM IMAGE (Wolfi pre-built package)
 #------------------------------------------------------------------------------
 postgres-slim:
@@ -622,7 +704,7 @@ kafka: kafka-melange
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -774,6 +856,24 @@ scan-opensearch:
 		$(REGISTRY)/$(OWNER)/minimal-opensearch:latest
 	@echo "✓ minimal-opensearch: scan passed"
 
+scan-prometheus:
+	@echo "Scanning minimal-prometheus..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-prometheus:latest
+	@echo "✓ minimal-prometheus: scan passed"
+
+scan-grafana:
+	@echo "Scanning minimal-grafana..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-grafana:latest
+	@echo "✓ minimal-grafana: scan passed"
+
+scan-mariadb:
+	@echo "Scanning minimal-mariadb..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-mariadb:latest
+	@echo "✓ minimal-mariadb: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -823,7 +923,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio test-opensearch
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb
 
 test-python:
 	@echo "Testing Python image..."
@@ -1091,6 +1191,24 @@ test-opensearch:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-opensearch:latest" && \
 		opensearch/test.sh
 	@echo "✓ OpenSearch tests passed"
+
+test-prometheus:
+	@echo "Testing Prometheus image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-prometheus:latest" && \
+		prometheus/test.sh
+	@echo "✓ Prometheus tests passed"
+
+test-grafana:
+	@echo "Testing Grafana image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-grafana:latest" && \
+		grafana/test.sh
+	@echo "✓ Grafana tests passed"
+
+test-mariadb:
+	@echo "Testing MariaDB image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-mariadb:latest" && \
+		mariadb/test.sh
+	@echo "✓ MariaDB tests passed"
 
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY

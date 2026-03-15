@@ -20,12 +20,15 @@ jobs:
       - name: Check for new Redis stable version
         id: check
         run: |
-          # Get latest stable 8.x release from GitHub
-          LATEST=$(curl -sS --retry 3 --retry-delay 5 https://api.github.com/repos/redis/redis/releases/latest | \
-            jq -r '.tag_name')
+          # Get latest stable release from the Redis download server directory listing.
+          # This avoids GitHub API rate limits; only stable releases appear here.
+          LATEST=$(curl -sS --retry 3 --retry-delay 5 "https://download.redis.io/releases/" | \
+            grep -oE 'redis-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz' | \
+            grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | \
+            sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
 
-          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
-            echo "::error::Failed to fetch latest Redis version"
+          if [ -z "$LATEST" ]; then
+            echo "::error::Failed to fetch latest Redis version from download.redis.io"
             exit 1
           fi
 

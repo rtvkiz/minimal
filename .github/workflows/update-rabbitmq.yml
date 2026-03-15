@@ -19,9 +19,13 @@ jobs:
 
       - name: Check for new RabbitMQ stable version
         id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Get latest stable 4.x release from GitHub (releases/latest always points to newest)
-          LATEST_TAG=$(curl -sS --retry 3 --retry-delay 5 https://api.github.com/repos/rabbitmq/rabbitmq-server/releases/latest | \
+          LATEST_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/rabbitmq/rabbitmq-server/releases/latest" | \
             jq -r '.tag_name')
 
           if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "null" ]; then

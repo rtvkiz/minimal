@@ -21,15 +21,16 @@ jobs:
       - name: Check for new Kafka 4.x release
         id: check
         run: |
-          # Get latest 4.x release tag from GitHub (apache/kafka)
-          # Sort semantically (not by creation date) to always pick the highest version
+          # Get latest 4.x release from the Apache dist server directory listing.
+          # This avoids GitHub API rate limits; only final releases appear here.
           LATEST=$(curl -sS --retry 3 --retry-delay 5 \
-            "https://api.github.com/repos/apache/kafka/tags?per_page=100" | \
-            jq -r '[.[] | select(.name | test("^4\\.[0-9]+\\.[0-9]+$")) | .name]
-                   | sort_by(split(".") | map(tonumber)) | last')
+            "https://downloads.apache.org/kafka/" | \
+            grep -oE 'href="4\.[0-9]+\.[0-9]+/"' | \
+            grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | \
+            sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
 
-          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
-            echo "::error::Failed to fetch latest Kafka 4.x version"
+          if [ -z "$LATEST" ]; then
+            echo "::error::Failed to fetch latest Kafka 4.x version from downloads.apache.org"
             exit 1
           fi
 
@@ -60,9 +61,10 @@ jobs:
           NEXT_MAJOR=$((CURRENT_MAJOR + 1))
           echo "tracked_version=$CURRENT" >> $GITHUB_OUTPUT
           NEXT_TAG=$(curl -sS --retry 3 --retry-delay 5 \
-            "https://api.github.com/repos/apache/kafka/tags?per_page=100" | \
-            jq -r --arg next "${NEXT_MAJOR}." \
-              '[.[] | .name | select(startswith($next)) | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))] | first // empty')
+            "https://downloads.apache.org/kafka/" | \
+            grep -oE "href=\"${NEXT_MAJOR}\.[0-9]+\.[0-9]+/\"" | \
+            grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | \
+            sort -t. -k1,1n -k2,2n -k3,3n | head -1)
           if [ -n "$NEXT_TAG" ]; then
             echo "next_major_version=$NEXT_MAJOR" >> $GITHUB_OUTPUT
             echo "next_major_tag=$NEXT_TAG" >> $GITHUB_OUTPUT

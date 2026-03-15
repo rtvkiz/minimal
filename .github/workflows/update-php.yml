@@ -38,21 +38,17 @@ jobs:
           MAJOR=$(echo "$SERIES" | cut -d. -f1)
           MINOR=$(echo "$SERIES" | cut -d. -f2)
 
-          # --- Patch update check via GitHub tags (php/php-src) ---
-          # Tags are named php-8.5.3; filter to current series and sort by patch number
-          LATEST_TAG=$(curl -sS --retry 3 --retry-delay 5 \
-            "https://api.github.com/repos/php/php-src/tags?per_page=100" | \
-            jq -r --arg series "^php-${SERIES//./\\.}\\.[0-9]+\$" \
-              '[.[] | .name | select(test($series))] |
-               sort_by(split(".") | last | tonumber) | last // empty')
+          # --- Patch update check via php.net releases API ---
+          # Returns {"version":"8.5.4","source":[...],...} for known series,
+          # or {"error":"Unknown version"} for series that don't exist yet.
+          LATEST_RESP=$(curl -fsSL --retry 3 --retry-delay 5 \
+            "https://www.php.net/releases/index.php?json&version=${SERIES}")
+          LATEST=$(echo "$LATEST_RESP" | jq -r '.version // empty')
 
-          if [ -z "$LATEST_TAG" ]; then
-            echo "::error::Failed to fetch latest PHP $SERIES tag from GitHub"
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "::error::Failed to fetch latest PHP $SERIES version from php.net"
             exit 1
           fi
-
-          # Strip the leading 'php-' prefix
-          LATEST="${LATEST_TAG#php-}"
 
           # Validate version format
           if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -92,7 +88,7 @@ jobs:
             echo "Already up to date for $SERIES series"
           fi
 
-          # --- Minor/major series check via GitHub tags ---
+          # --- Minor/major series check via php.net releases API ---
           NEXT_MINOR="${MAJOR}.$((MINOR + 1))"
           NEXT_MAJOR="$((MAJOR + 1)).0"
 
@@ -100,23 +96,22 @@ jobs:
           echo "Checking for new series..."
 
           NEW_SERIES=""
-          # Check next minor (e.g. 8.6)
-          MINOR_TAG=$(curl -sS --retry 3 --retry-delay 5 \
-            "https://api.github.com/repos/php/php-src/tags?per_page=100" | \
-            jq -r --arg series "^php-${NEXT_MINOR//./\\.}\\.[0-9]+\$" \
-              '[.[] | .name | select(test($series))] | first // empty')
-          if [ -n "$MINOR_TAG" ]; then
-            echo "New minor series available: PHP $NEXT_MINOR (tag: $MINOR_TAG)"
+          # Check next minor (e.g. 8.6); failures are non-fatal — series may not exist yet.
+          # php.net returns {"error":"Unknown version"} for non-existent series (no .version field).
+          MINOR_RESP=$(curl -sS --retry 3 --retry-delay 5 \
+            "https://www.php.net/releases/index.php?json&version=${NEXT_MINOR}" || echo '{}')
+          MINOR_EXISTS=$(echo "$MINOR_RESP" | jq -r '.version // empty' 2>/dev/null || echo '')
+          if [ -n "$MINOR_EXISTS" ]; then
+            echo "New minor series available: PHP $NEXT_MINOR ($MINOR_EXISTS)"
             NEW_SERIES="$NEXT_MINOR"
           fi
 
           # Check next major (e.g. 9.0)
-          MAJOR_TAG=$(curl -sS --retry 3 --retry-delay 5 \
-            "https://api.github.com/repos/php/php-src/tags?per_page=100" | \
-            jq -r --arg series "^php-${NEXT_MAJOR//./\\.}\\.[0-9]+\$" \
-              '[.[] | .name | select(test($series))] | first // empty')
-          if [ -n "$MAJOR_TAG" ]; then
-            echo "New major series available: PHP $NEXT_MAJOR (tag: $MAJOR_TAG)"
+          MAJOR_RESP=$(curl -sS --retry 3 --retry-delay 5 \
+            "https://www.php.net/releases/index.php?json&version=${NEXT_MAJOR}" || echo '{}')
+          MAJOR_EXISTS=$(echo "$MAJOR_RESP" | jq -r '.version // empty' 2>/dev/null || echo '')
+          if [ -n "$MAJOR_EXISTS" ]; then
+            echo "New major series available: PHP $NEXT_MAJOR ($MAJOR_EXISTS)"
             NEW_SERIES="$NEXT_MAJOR"
           fi
 

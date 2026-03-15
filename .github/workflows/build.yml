@@ -192,6 +192,29 @@ jobs:
             melange_config: minio/melange.yaml
             arch: aarch64
             runner: ubuntu-24.04-arm
+          # Prometheus builds
+          - name: prometheus
+            melange_config: prometheus/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: prometheus
+            melange_config: prometheus/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+          # Grafana builds (x86_64 only — frontend build requires native tooling)
+          - name: grafana
+            melange_config: grafana/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          # MariaDB builds
+          - name: mariadb
+            melange_config: mariadb/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: mariadb
+            melange_config: mariadb/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -482,45 +505,71 @@ jobs:
           - name: jenkins
             apko_config: jenkins/apko/jenkins.yaml
             melange_config: jenkins/melange.yaml
+            arches: x86_64,aarch64
           - name: redis-slim
             apko_config: redis-slim/apko/redis.yaml
             melange_config: redis-slim/melange.yaml
+            arches: x86_64,aarch64
           - name: mysql
             apko_config: mysql/apko/mysql.yaml
             melange_config: mysql/melange.yaml
+            arches: x86_64,aarch64
           - name: memcached
             apko_config: memcached/apko/memcached.yaml
             melange_config: memcached/melange.yaml
+            arches: x86_64,aarch64
           - name: caddy
             apko_config: caddy/apko/caddy.yaml
             melange_config: caddy/melange.yaml
+            arches: x86_64,aarch64
           - name: haproxy
             apko_config: haproxy/apko/haproxy.yaml
             melange_config: haproxy/melange.yaml
+            arches: x86_64,aarch64
           - name: php
             apko_config: php/apko/php.yaml
             melange_config: php/melange.yaml
+            arches: x86_64,aarch64
           - name: rails
             apko_config: rails/apko/rails.yaml
             melange_config: rails/melange.yaml
+            arches: x86_64,aarch64
           - name: kafka
             apko_config: kafka/apko/kafka.yaml
             melange_config: kafka/melange.yaml
+            arches: x86_64,aarch64
           - name: valkey
             apko_config: valkey/apko/valkey.yaml
             melange_config: valkey/melange.yaml
+            arches: x86_64,aarch64
           - name: nats
             apko_config: nats/apko/nats.yaml
             melange_config: nats/melange.yaml
+            arches: x86_64,aarch64
           - name: traefik
             apko_config: traefik/apko/traefik.yaml
             melange_config: traefik/melange.yaml
+            arches: x86_64,aarch64
           - name: rabbitmq
             apko_config: rabbitmq/apko/rabbitmq.yaml
             melange_config: rabbitmq/melange.yaml
+            arches: x86_64,aarch64
           - name: minio
             apko_config: minio/apko/minio.yaml
             melange_config: minio/melange.yaml
+            arches: x86_64,aarch64
+          - name: prometheus
+            apko_config: prometheus/apko/prometheus.yaml
+            melange_config: prometheus/melange.yaml
+            arches: x86_64,aarch64
+          - name: grafana
+            apko_config: grafana/apko/grafana.yaml
+            melange_config: grafana/melange.yaml
+            arches: x86_64
+          - name: mariadb
+            apko_config: mariadb/apko/mariadb.yaml
+            melange_config: mariadb/melange.yaml
+            arches: x86_64,aarch64
 
     steps:
       - name: Checkout repository
@@ -551,6 +600,7 @@ jobs:
           path: ./packages-x86_64
 
       - name: Download aarch64 packages
+        if: contains(matrix.arches, 'aarch64')
         uses: actions/download-artifact@v4
         with:
           name: packages-${{ matrix.name }}-aarch64
@@ -708,7 +758,7 @@ jobs:
           apko publish ${{ matrix.apko_config }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
-            --arch x86_64,aarch64 \
+            --arch ${{ matrix.arches }} \
             --repository-append ./packages \
             --keyring-append ./melange.rsa.pub
 
