@@ -27,6 +27,7 @@ environment:
       - rust
       - cmake
       - protoc
+      - protobuf-dev
       - openssl-dev
       - pkgconf
 
