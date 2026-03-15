@@ -40,6 +40,8 @@ pipeline:
 
   - runs: |
       cd /home/build/qdrant-${{package.version}}
+      # prost-build requires protoc; set PROTOC explicitly so it's found reliably
+      export PROTOC=/usr/bin/protoc
       cargo build --release --bin qdrant
 
   - runs: |

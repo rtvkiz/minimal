@@ -89,9 +89,10 @@ pipeline:
       cd /home/build/mariadb-${{package.version}}/build
 
       # Install binaries
+      # cmake outputs server to sql/mariadbd and client to client/mariadb in the build tree
       mkdir -p "${{targets.destdir}}/usr/bin"
-      cp bin/mariadbd "${{targets.destdir}}/usr/bin/"
-      cp bin/mariadb "${{targets.destdir}}/usr/bin/"
+      cp sql/mariadbd "${{targets.destdir}}/usr/bin/"
+      cp client/mariadb "${{targets.destdir}}/usr/bin/"
 
       # mysqld/mysql symlinks for compatibility
       ln -sf mariadbd "${{targets.destdir}}/usr/bin/mysqld"

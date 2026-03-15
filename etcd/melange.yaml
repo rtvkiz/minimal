@@ -34,36 +34,37 @@ pipeline:
       cd /home/build && tar xzf etcd.tar.gz && rm etcd.tar.gz
 
   - runs: |
-      cd /home/build/etcd-${{package.version}}
-
-      BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+      # etcd 3.6 is a multi-module monorepo: server/, etcdctl/, etcdutl/ each
+      # have their own go.mod and must be built from within their directory.
 
       # Build etcd server
+      cd /home/build/etcd-${{package.version}}/server
       CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w \
-          -X go.etcd.io/etcd/api/v3/version.GitSHA=release \
-          -X go.etcd.io/etcd/server/v3/version=${{package.version}}" \
-        -o etcd \
-        ./server
+          -X go.etcd.io/etcd/api/v3/version.GitSHA=release" \
+        -o /home/build/etcd \
+        .
 
       # Build etcdctl
+      cd /home/build/etcd-${{package.version}}/etcdctl
       CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w" \
-        -o etcdctl \
-        ./etcdctl
+        -o /home/build/etcdctl \
+        .
 
       # Build etcdutl
+      cd /home/build/etcd-${{package.version}}/etcdutl
       CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w" \
-        -o etcdutl \
-        ./etcdutl
+        -o /home/build/etcdutl \
+        .
 
   - runs: |
       mkdir -p "${{targets.destdir}}/usr/bin"
-      cp /home/build/etcd-${{package.version}}/{etcd,etcdctl,etcdutl} \
+      cp /home/build/{etcd,etcdctl,etcdutl} \
         "${{targets.destdir}}/usr/bin/"
 
   - runs: |
