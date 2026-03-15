@@ -215,6 +215,51 @@ jobs:
             melange_config: mariadb/melange.yaml
             arch: aarch64
             runner: ubuntu-24.04-arm
+          # etcd builds
+          - name: etcd
+            melange_config: etcd/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: etcd
+            melange_config: etcd/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+          # VictoriaMetrics builds
+          - name: victoria-metrics
+            melange_config: victoria-metrics/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: victoria-metrics
+            melange_config: victoria-metrics/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+          # Jaeger builds
+          - name: jaeger
+            melange_config: jaeger/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: jaeger
+            melange_config: jaeger/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+          # OTel Collector builds
+          - name: otelcol
+            melange_config: otelcol/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: otelcol
+            melange_config: otelcol/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+          # Qdrant builds
+          - name: qdrant
+            melange_config: qdrant/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: qdrant
+            melange_config: qdrant/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -311,6 +356,9 @@ jobs:
           - name: opensearch
             apko_config: opensearch/apko/opensearch.yaml
             primary_grep: "opensearch-2"
+          - name: deno
+            apko_config: deno/apko/deno.yaml
+            primary_grep: "deno"
 
     steps:
       - name: Checkout repository
@@ -569,6 +617,26 @@ jobs:
           - name: mariadb
             apko_config: mariadb/apko/mariadb.yaml
             melange_config: mariadb/melange.yaml
+            arches: x86_64,aarch64
+          - name: etcd
+            apko_config: etcd/apko/etcd.yaml
+            melange_config: etcd/melange.yaml
+            arches: x86_64,aarch64
+          - name: victoria-metrics
+            apko_config: victoria-metrics/apko/victoria-metrics.yaml
+            melange_config: victoria-metrics/melange.yaml
+            arches: x86_64,aarch64
+          - name: jaeger
+            apko_config: jaeger/apko/jaeger.yaml
+            melange_config: jaeger/melange.yaml
+            arches: x86_64,aarch64
+          - name: otelcol
+            apko_config: otelcol/apko/otelcol.yaml
+            melange_config: otelcol/melange.yaml
+            arches: x86_64,aarch64
+          - name: qdrant
+            apko_config: qdrant/apko/qdrant.yaml
+            melange_config: qdrant/melange.yaml
             arches: x86_64,aarch64
 
     steps:

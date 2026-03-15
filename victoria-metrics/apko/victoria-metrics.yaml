@@ -1,0 +1,54 @@
+# Minimal VictoriaMetrics image - built from source via melange
+# Prometheus-compatible time-series DB; drop-in long-term storage backend
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - victoria-metrics-minimal
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: victoria-metrics
+      gid: 65532
+  users:
+    - username: victoria-metrics
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/victoria-metrics
+
+cmd: >-
+  --storageDataPath=/victoria-metrics-data
+  --httpListenAddr=:8428
+  --retentionPeriod=1
+
+environment:
+  PATH: /usr/bin:/bin
+
+paths:
+  - path: /victoria-metrics-data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+
+annotations:
+  org.opencontainers.image.title: "minimal-victoria-metrics"
+  org.opencontainers.image.description: "Hardened VictoriaMetrics time-series DB built from source via melange"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/victoria-metrics"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

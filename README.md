@@ -12,7 +12,7 @@
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build Hardened Images"></a>
   <a href="https://rtvkiz.github.io/minimal/"><img src="https://img.shields.io/badge/Vulnerability_Report-View-0d9488" alt="Vulnerability Report"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Images-28-0d9488" alt="Images: 28">
+  <img src="https://img.shields.io/badge/Images-34-0d9488" alt="Images: 34">
   <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
 </p>
 
@@ -71,6 +71,14 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | | | **Observability** | |
 | **Prometheus** | `docker pull ghcr.io/rtvkiz/minimal-prometheus:latest` | No | Metrics collection and alerting, built from source |
 | **Grafana** | `docker pull ghcr.io/rtvkiz/minimal-grafana:latest` | No | Observability platform with dashboards, built from source |
+| **VictoriaMetrics** | `docker pull ghcr.io/rtvkiz/minimal-victoria-metrics:latest` | No | High-performance metrics storage and query engine, built from source |
+| **Jaeger** | `docker pull ghcr.io/rtvkiz/minimal-jaeger:latest` | No | Distributed tracing platform (v2), built from source |
+| **OTel Collector** | `docker pull ghcr.io/rtvkiz/minimal-otelcol:latest` | No | OpenTelemetry Collector core — traces, metrics, logs, built from source |
+| | | **Databases / Search** | |
+| **etcd** | `docker pull ghcr.io/rtvkiz/minimal-etcd:latest` | No | Distributed key-value store for Kubernetes and service discovery, built from source |
+| **Qdrant** | `docker pull ghcr.io/rtvkiz/minimal-qdrant:latest` | No | Vector database for AI/ML semantic search, built from source (Rust) |
+| | | **Runtimes** | |
+| **Deno** | `docker pull ghcr.io/rtvkiz/minimal-deno:latest` | No | Secure TypeScript/JavaScript runtime (Wolfi package) |
 | | | **Proxies** | |
 | **Caddy** | `docker pull ghcr.io/rtvkiz/minimal-caddy:latest` | No | Automatic HTTPS web server |
 | **HAProxy** | `docker pull ghcr.io/rtvkiz/minimal-haproxy:latest` | No | High-performance TCP/HTTP load balancer |
@@ -249,7 +257,12 @@ Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails) and 
 | `update-rails.yml` | RubyGems API + Ruby GitHub tags | Updates Rails gem and Ruby source versions independently |
 | `update-rabbitmq.yml` | RabbitMQ GitHub releases | Updates version and SHA256 of generic-unix tarball in melange config |
 | `update-minio.yml` | MinIO GitHub releases | Updates release tag, date-based version, and SHA256 in melange config |
-| `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, Java, PostgreSQL package versions |
+| `update-victoria-metrics.yml` | VictoriaMetrics GitHub releases | Updates version and SHA256 in melange config |
+| `update-jaeger.yml` | Jaeger v2.x GitHub releases | Updates version and SHA256; warns on major version change |
+| `update-otelcol.yml` | OTel Collector stable releases | Updates version and SHA256; skips prereleases |
+| `update-qdrant.yml` | Qdrant v1.x GitHub releases | Updates version and SHA256; warns on major version change |
+| `update-etcd.yml` | etcd v3.x GitHub releases | Updates version and SHA256; warns on major version change |
+| `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, Java, PostgreSQL, Deno package versions |
 
 Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g. PHP 8.5 → 8.6) create a GitHub Issue with a manual upgrade checklist, since configure flags or APIs may change.
 
@@ -280,6 +293,12 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | RabbitMQ | 4.2.x | rabbitmq (65532) | `/opt/rabbitmq/sbin/rabbitmq-server` | `/` |
 | MinIO | RELEASE.2025-10-15T17-29-55Z | minio (65532) | `/usr/bin/minio server --console-address :9001 /data` | `/data` |
 | OpenSearch | 2.19.x | opensearch (65532) | `/usr/share/opensearch/opensearch-docker-entrypoint.sh` | `/usr/share/opensearch/data` |
+| etcd | 3.6.x | nonroot (65532) | `/usr/bin/etcd` | `/var/lib/etcd` |
+| VictoriaMetrics | 1.137.x | nonroot (65532) | `/usr/bin/victoria-metrics` | `/` |
+| Jaeger | 2.16.x | nonroot (65532) | `/usr/bin/jaeger` | `/` |
+| OTel Collector | 0.147.x | nonroot (65532) | `/usr/bin/otelcol` | `/` |
+| Qdrant | 1.17.x | nonroot (65532) | `/usr/bin/qdrant` | `/qdrant` |
+| Deno | 2.x | nonroot (65532) | `/usr/bin/deno` | `/app` |
 
 </details>
 

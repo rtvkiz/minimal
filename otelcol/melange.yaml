@@ -1,0 +1,105 @@
+# Melange build configuration for minimal OpenTelemetry Collector
+# Builds otelcorecol from source (Go) — vendor-agnostic telemetry pipeline
+# Receives OTLP traces/metrics/logs; ships with debug + OTLP exporters
+
+package:
+  name: otelcol-minimal
+  version: 0.147.0
+  epoch: 0
+  description: "Minimal OpenTelemetry Collector built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: 50625bc6bce0628485da4f4ac715ed2fdeb7024646c75582940d985133dd791f
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://github.com/open-telemetry/opentelemetry-collector/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/otelcol.tar.gz
+      echo "${{vars.sha256}}  /home/build/otelcol.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf otelcol.tar.gz && rm otelcol.tar.gz
+
+  - runs: |
+      cd /home/build/opentelemetry-collector-${{package.version}}/cmd/otelcorecol
+      CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X go.opentelemetry.io/collector/internal/version.Version=${{package.version}}" \
+        -o otelcol \
+        .
+
+  - runs: |
+      cd /home/build/opentelemetry-collector-${{package.version}}/cmd/otelcorecol
+
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp otelcol "${{targets.destdir}}/usr/bin/"
+
+      # Default config: OTLP receiver → debug exporter for all signals
+      mkdir -p "${{targets.destdir}}/etc/otelcol"
+      cat > "${{targets.destdir}}/etc/otelcol/config.yaml" << 'EOF'
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+
+      processors:
+        batch:
+
+      exporters:
+        debug:
+          verbosity: normal
+
+      extensions:
+        health_check:
+          endpoint: 0.0.0.0:13133
+        pprof:
+          endpoint: 0.0.0.0:1777
+        zpages:
+          endpoint: 0.0.0.0:55679
+
+      service:
+        extensions: [health_check, pprof, zpages]
+        pipelines:
+          traces:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [debug]
+          metrics:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [debug]
+          logs:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [debug]
+      EOF
+
+  - runs: |
+      echo "Verifying OTel Collector build..."
+      "${{targets.destdir}}/usr/bin/otelcol" --version
+      ls -lh "${{targets.destdir}}/usr/bin/otelcol"
+
+update:
+  enabled: true
+  github:
+    identifier: open-telemetry/opentelemetry-collector
+    use-tag: true
+    tag-filter: "v0."

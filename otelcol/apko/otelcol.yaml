@@ -1,0 +1,55 @@
+# Minimal OpenTelemetry Collector image - built from source via melange
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - otelcol-minimal
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: otelcol
+      gid: 65532
+  users:
+    - username: otelcol
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/otelcol
+
+cmd: --config=/etc/otelcol/config.yaml
+
+environment:
+  PATH: /usr/bin:/bin
+
+paths:
+  - path: /etc/otelcol
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-otelcol"
+  org.opencontainers.image.description: "Hardened OpenTelemetry Collector built from source via melange"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/otelcol"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

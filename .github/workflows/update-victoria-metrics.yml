@@ -1,0 +1,109 @@
+name: Update VictoriaMetrics Version
+
+on:
+  schedule:
+    # Check daily at 8:00am UTC
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new VictoriaMetrics v1.x release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CURRENT=$(grep '^  version:' victoria-metrics/melange.yaml | awk '{print $2}')
+
+          LATEST_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/VictoriaMetrics/VictoriaMetrics/releases/latest" | \
+            jq -r '.tag_name')
+
+          if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "null" ]; then
+            echo "::error::Failed to fetch latest VictoriaMetrics version"
+            exit 1
+          fi
+
+          LATEST="${LATEST_TAG#v}"
+
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid VictoriaMetrics version received: $LATEST"
+            exit 1
+          fi
+
+          echo "Current version: $CURRENT"
+          echo "Latest version: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            echo "Already up to date"
+          fi
+
+      - name: Update version and checksum
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          curl -fsSL --retry 3 --retry-delay 5 \
+            "https://github.com/VictoriaMetrics/VictoriaMetrics/archive/refs/tags/v${VERSION}.tar.gz" \
+            -o /tmp/victoria-metrics.tar.gz
+          SHA256=$(sha256sum /tmp/victoria-metrics.tar.gz | awk '{print $1}')
+          rm /tmp/victoria-metrics.tar.gz
+
+          sed -i "s/^  version: .*/  version: $VERSION/" victoria-metrics/melange.yaml
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" victoria-metrics/melange.yaml
+          sed -i "s/^  epoch: .*/  epoch: 0/" victoria-metrics/melange.yaml
+          sed -i "s/VICTORIA_METRICS_VERSION ?= .*/VICTORIA_METRICS_VERSION ?= $VERSION/" Makefile
+
+          echo "=== victoria-metrics/melange.yaml ===" && grep -E '(version:|sha256:)' victoria-metrics/melange.yaml | head -2
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(victoria-metrics): bump to ${{ steps.check.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates VictoriaMetrics from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+            ## Changes
+
+            - `victoria-metrics/melange.yaml` - package version, SHA256 checksum, epoch reset
+            - `Makefile` - VICTORIA_METRICS_VERSION variable
+
+            ## Image Tag
+
+            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-victoria-metrics:${{ steps.check.outputs.new_version }}-r0`
+
+            ## Links
+
+            - [VictoriaMetrics Releases](https://github.com/VictoriaMetrics/VictoriaMetrics/releases)
+            - [Release Notes for ${{ steps.check.outputs.new_version }}](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v${{ steps.check.outputs.new_version }})
+
+            ---
+
+            This PR was automatically created by the [update-victoria-metrics](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-victoria-metrics.yml) workflow.
+          branch: update-victoria-metrics-${{ steps.check.outputs.new_version }}
+          commit-message: |
+            chore(victoria-metrics): bump to ${{ steps.check.outputs.new_version }}
+
+            Updates VictoriaMetrics from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
+          delete-branch: true
+          labels: |
+            dependencies
+            victoria-metrics

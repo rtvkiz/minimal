@@ -1,0 +1,124 @@
+# Melange build configuration for minimal Jaeger
+# Builds Jaeger v2 from source (Go) — single all-in-one binary
+# Uses in-memory storage by default; OTLP-native ingestion
+
+package:
+  name: jaeger-minimal
+  version: 2.16.0
+  epoch: 0
+  description: "Minimal Jaeger distributed tracing backend built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: 1bd9b313d363aba8ea5b4e5a6c8548c306196a5b57f5b408e3673f9991c903a1
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://github.com/jaegertracing/jaeger/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/jaeger.tar.gz
+      echo "${{vars.sha256}}  /home/build/jaeger.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf jaeger.tar.gz && rm jaeger.tar.gz
+
+  - runs: |
+      cd /home/build/jaeger-${{package.version}}
+      CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X github.com/jaegertracing/jaeger/internal/version.commitSHA=release \
+          -X github.com/jaegertracing/jaeger/internal/version.latestVersion=v${{package.version}}" \
+        -o jaeger \
+        ./cmd/jaeger/main.go
+
+  - runs: |
+      cd /home/build/jaeger-${{package.version}}
+
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp jaeger "${{targets.destdir}}/usr/bin/"
+
+      # Install default in-memory config
+      mkdir -p "${{targets.destdir}}/etc/jaeger"
+      cat > "${{targets.destdir}}/etc/jaeger/config.yaml" << 'EOF'
+      service:
+        extensions: [jaeger_storage, jaeger_query, healthcheckv2]
+        pipelines:
+          traces:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [jaeger_storage_exporter]
+        telemetry:
+          resource:
+            service.name: jaeger
+          metrics:
+            level: basic
+            readers:
+              - pull:
+                  exporter:
+                    prometheus:
+                      host: 0.0.0.0
+                      port: 8888
+          logs:
+            level: info
+
+      extensions:
+        healthcheckv2:
+          use_v2: true
+          http:
+            endpoint: 0.0.0.0:13133
+
+        jaeger_query:
+          storage:
+            traces: memory_store
+          http:
+            endpoint: 0.0.0.0:16686
+          grpc:
+            endpoint: 0.0.0.0:16685
+
+        jaeger_storage:
+          backends:
+            memory_store:
+              memory:
+                max_traces: 100000
+
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+
+      processors:
+        batch:
+
+      exporters:
+        jaeger_storage_exporter:
+          trace_storage: memory_store
+      EOF
+
+  - runs: |
+      echo "Verifying Jaeger build..."
+      "${{targets.destdir}}/usr/bin/jaeger" --version
+      ls -lh "${{targets.destdir}}/usr/bin/jaeger"
+
+update:
+  enabled: true
+  github:
+    identifier: jaegertracing/jaeger
+    use-tag: true
+    tag-filter: "v2."

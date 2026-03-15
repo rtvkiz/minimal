@@ -1,0 +1,61 @@
+# Melange build configuration for minimal VictoriaMetrics
+# Builds the single-node VictoriaMetrics binary from source (Go)
+# Drop-in Prometheus-compatible time-series database and storage backend
+
+package:
+  name: victoria-metrics-minimal
+  version: 1.137.0
+  epoch: 0
+  description: "Minimal VictoriaMetrics time-series database built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: 70a71f414dd83cfb97efe2ad819fc8707be4222ec8c11900d68da11de6456afc
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://github.com/VictoriaMetrics/VictoriaMetrics/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/victoria-metrics.tar.gz
+      echo "${{vars.sha256}}  /home/build/victoria-metrics.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf victoria-metrics.tar.gz && rm victoria-metrics.tar.gz
+
+  - runs: |
+      cd /home/build/VictoriaMetrics-${{package.version}}
+      CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X github.com/VictoriaMetrics/VictoriaMetrics/lib/buildinfo.Version=${{package.version}}" \
+        -o victoria-metrics \
+        ./app/victoria-metrics/main.go
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/VictoriaMetrics-${{package.version}}/victoria-metrics \
+        "${{targets.destdir}}/usr/bin/"
+
+  - runs: |
+      echo "Verifying VictoriaMetrics build..."
+      "${{targets.destdir}}/usr/bin/victoria-metrics" --version
+      ls -lh "${{targets.destdir}}/usr/bin/victoria-metrics"
+
+update:
+  enabled: true
+  github:
+    identifier: VictoriaMetrics/VictoriaMetrics
+    use-tag: true
+    tag-filter: "v1."

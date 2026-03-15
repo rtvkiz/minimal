@@ -1,0 +1,112 @@
+name: Update Qdrant Version
+
+on:
+  schedule:
+    # Check daily at 8:30am UTC
+    - cron: '30 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new Qdrant v1.x release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CURRENT=$(grep '^  version:' qdrant/melange.yaml | awk '{print $2}')
+          CURRENT_MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+
+          LATEST_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/qdrant/qdrant/releases/latest" | \
+            jq -r '.tag_name')
+
+          if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "null" ]; then
+            echo "::error::Failed to fetch latest Qdrant version"
+            exit 1
+          fi
+
+          LATEST="${LATEST_TAG#v}"
+
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Qdrant version received: $LATEST"
+            exit 1
+          fi
+
+          LATEST_MAJOR=$(echo "$LATEST" | cut -d. -f1)
+          echo "Current version: $CURRENT"
+          echo "Latest version: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ] && [ "$LATEST_MAJOR" = "$CURRENT_MAJOR" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            [ "$LATEST_MAJOR" != "$CURRENT_MAJOR" ] && echo "::warning::New major version detected: Qdrant ${LATEST_MAJOR}.x"
+            echo "Already up to date"
+          fi
+
+      - name: Update version and checksum
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          curl -fsSL --retry 3 --retry-delay 5 \
+            "https://github.com/qdrant/qdrant/archive/refs/tags/v${VERSION}.tar.gz" \
+            -o /tmp/qdrant.tar.gz
+          SHA256=$(sha256sum /tmp/qdrant.tar.gz | awk '{print $1}')
+          rm /tmp/qdrant.tar.gz
+
+          sed -i "s/^  version: .*/  version: $VERSION/" qdrant/melange.yaml
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" qdrant/melange.yaml
+          sed -i "s/^  epoch: .*/  epoch: 0/" qdrant/melange.yaml
+          sed -i "s/QDRANT_VERSION ?= .*/QDRANT_VERSION ?= $VERSION/" Makefile
+
+          echo "=== qdrant/melange.yaml ===" && grep -E '(version:|sha256:)' qdrant/melange.yaml | head -2
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(qdrant): bump to ${{ steps.check.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates Qdrant from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+            ## Changes
+
+            - `qdrant/melange.yaml` - package version, SHA256 checksum, epoch reset
+            - `Makefile` - QDRANT_VERSION variable
+
+            ## Image Tag
+
+            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-qdrant:${{ steps.check.outputs.new_version }}-r0`
+
+            ## Links
+
+            - [Qdrant Releases](https://github.com/qdrant/qdrant/releases)
+            - [Release Notes for ${{ steps.check.outputs.new_version }}](https://github.com/qdrant/qdrant/releases/tag/v${{ steps.check.outputs.new_version }})
+
+            ---
+
+            This PR was automatically created by the [update-qdrant](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-qdrant.yml) workflow.
+          branch: update-qdrant-${{ steps.check.outputs.new_version }}
+          commit-message: |
+            chore(qdrant): bump to ${{ steps.check.outputs.new_version }}
+
+            Updates Qdrant from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
+          delete-branch: true
+          labels: |
+            dependencies
+            qdrant

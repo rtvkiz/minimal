@@ -1,0 +1,67 @@
+# Melange build configuration for minimal Qdrant
+# Builds Qdrant vector search engine from source (Rust)
+# Used for AI/ML workloads: RAG pipelines, semantic search, recommendations
+
+package:
+  name: qdrant-minimal
+  version: 1.17.0
+  epoch: 0
+  description: "Minimal Qdrant vector search engine built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: 6ee985c23a8290bfa1b3792723f599274e37cd8fefe615e669860689ed883c95
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - rust
+      - cargo
+      - cmake
+      - protobuf
+      - openssl-dev
+      - pkgconf
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://github.com/qdrant/qdrant/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/qdrant.tar.gz
+      echo "${{vars.sha256}}  /home/build/qdrant.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf qdrant.tar.gz && rm qdrant.tar.gz
+
+  - runs: |
+      cd /home/build/qdrant-${{package.version}}
+      cargo build --release --bin qdrant
+
+  - runs: |
+      cd /home/build/qdrant-${{package.version}}
+
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp target/release/qdrant "${{targets.destdir}}/usr/bin/"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/qdrant"
+
+      # Ship default config
+      mkdir -p "${{targets.destdir}}/etc/qdrant"
+      cp config/config.yaml "${{targets.destdir}}/etc/qdrant/"
+
+  - runs: |
+      echo "Verifying Qdrant build..."
+      "${{targets.destdir}}/usr/bin/qdrant" --version
+      ls -lh "${{targets.destdir}}/usr/bin/qdrant"
+
+update:
+  enabled: true
+  github:
+    identifier: qdrant/qdrant
+    use-tag: true
+    tag-filter: "v1."

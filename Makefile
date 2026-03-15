@@ -24,18 +24,24 @@ MINIO_VERSION ?= 2025.10.15
 PROMETHEUS_VERSION ?= 3.10.0
 GRAFANA_VERSION ?= 12.4.1
 MARIADB_VERSION ?= 11.4.10
+ETCD_VERSION ?= 3.6.8
+VICTORIA_METRICS_VERSION ?= 1.137.0
+JAEGER_VERSION ?= 2.16.0
+OTELCOL_VERSION ?= 0.147.0
+QDRANT_VERSION ?= 1.17.0
 
 .PHONY: all build scan clean help
 .PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen opensearch
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange grafana grafana-melange mariadb mariadb-melange
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb
-.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb
+.PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik rabbitmq minio opensearch prometheus grafana mariadb
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik rabbitmq minio opensearch prometheus grafana mariadb etcd victoria-metrics jaeger otelcol qdrant deno
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -520,6 +526,153 @@ mariadb: mariadb-melange
 	@echo "✓ minimal-mariadb built (source build)"
 
 #------------------------------------------------------------------------------
+# ETCD IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+etcd-melange: keygen
+	@echo "Building etcd $(ETCD_VERSION) from source via melange..."
+	melange build etcd/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ etcd package built from source"
+
+etcd: etcd-melange
+	@echo "Assembling minimal-etcd image with apko..."
+	apko build etcd/apko/etcd.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-etcd:$(VERSION) \
+		etcd.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < etcd.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-etcd:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-etcd:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-etcd:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-etcd:latest
+	@rm -f etcd.tar sbom-*.spdx.json
+	@echo "✓ minimal-etcd built (source build)"
+
+#------------------------------------------------------------------------------
+# VICTORIA-METRICS IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+victoria-metrics-melange: keygen
+	@echo "Building VictoriaMetrics $(VICTORIA_METRICS_VERSION) from source via melange..."
+	melange build victoria-metrics/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ VictoriaMetrics package built from source"
+
+victoria-metrics: victoria-metrics-melange
+	@echo "Assembling minimal-victoria-metrics image with apko..."
+	apko build victoria-metrics/apko/victoria-metrics.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-victoria-metrics:$(VERSION) \
+		victoria-metrics.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < victoria-metrics.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-victoria-metrics:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-victoria-metrics:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-victoria-metrics:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-victoria-metrics:latest
+	@rm -f victoria-metrics.tar sbom-*.spdx.json
+	@echo "✓ minimal-victoria-metrics built (source build)"
+
+#------------------------------------------------------------------------------
+# JAEGER IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+jaeger-melange: keygen
+	@echo "Building Jaeger $(JAEGER_VERSION) from source via melange..."
+	melange build jaeger/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Jaeger package built from source"
+
+jaeger: jaeger-melange
+	@echo "Assembling minimal-jaeger image with apko..."
+	apko build jaeger/apko/jaeger.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-jaeger:$(VERSION) \
+		jaeger.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < jaeger.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-jaeger:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-jaeger:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-jaeger:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-jaeger:latest
+	@rm -f jaeger.tar sbom-*.spdx.json
+	@echo "✓ minimal-jaeger built (source build)"
+
+#------------------------------------------------------------------------------
+# OTELCOL IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+otelcol-melange: keygen
+	@echo "Building OTel Collector $(OTELCOL_VERSION) from source via melange..."
+	melange build otelcol/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ OTel Collector package built from source"
+
+otelcol: otelcol-melange
+	@echo "Assembling minimal-otelcol image with apko..."
+	apko build otelcol/apko/otelcol.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-otelcol:$(VERSION) \
+		otelcol.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < otelcol.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-otelcol:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-otelcol:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-otelcol:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-otelcol:latest
+	@rm -f otelcol.tar sbom-*.spdx.json
+	@echo "✓ minimal-otelcol built (source build)"
+
+#------------------------------------------------------------------------------
+# QDRANT IMAGE (melange Rust source build + apko)
+#------------------------------------------------------------------------------
+qdrant-melange: keygen
+	@echo "Building Qdrant $(QDRANT_VERSION) from source via melange (Rust)..."
+	melange build qdrant/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Qdrant package built from source"
+
+qdrant: qdrant-melange
+	@echo "Assembling minimal-qdrant image with apko..."
+	apko build qdrant/apko/qdrant.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-qdrant:$(VERSION) \
+		qdrant.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < qdrant.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-qdrant:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-qdrant:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-qdrant:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-qdrant:latest
+	@rm -f qdrant.tar sbom-*.spdx.json
+	@echo "✓ minimal-qdrant built (Rust source build)"
+
+#------------------------------------------------------------------------------
+# DENO IMAGE (Wolfi pre-built package, shell-less)
+#------------------------------------------------------------------------------
+deno:
+	@echo "Assembling minimal-deno image with apko..."
+	apko build deno/apko/deno.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-deno:$(VERSION) \
+		deno.tar \
+		--arch x86_64
+	docker load < deno.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-deno:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-deno:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-deno:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-deno:latest
+	@rm -f deno.tar sbom-*.spdx.json
+	@echo "✓ minimal-deno built (Wolfi package, shell-less)"
+
+#------------------------------------------------------------------------------
 # POSTGRES SLIM IMAGE (Wolfi pre-built package)
 #------------------------------------------------------------------------------
 postgres-slim:
@@ -874,6 +1027,42 @@ scan-mariadb:
 		$(REGISTRY)/$(OWNER)/minimal-mariadb:latest
 	@echo "✓ minimal-mariadb: scan passed"
 
+scan-etcd:
+	@echo "Scanning minimal-etcd..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-etcd:latest
+	@echo "✓ minimal-etcd: scan passed"
+
+scan-victoria-metrics:
+	@echo "Scanning minimal-victoria-metrics..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-victoria-metrics:latest
+	@echo "✓ minimal-victoria-metrics: scan passed"
+
+scan-jaeger:
+	@echo "Scanning minimal-jaeger..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-jaeger:latest
+	@echo "✓ minimal-jaeger: scan passed"
+
+scan-otelcol:
+	@echo "Scanning minimal-otelcol..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-otelcol:latest
+	@echo "✓ minimal-otelcol: scan passed"
+
+scan-qdrant:
+	@echo "Scanning minimal-qdrant..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-qdrant:latest
+	@echo "✓ minimal-qdrant: scan passed"
+
+scan-deno:
+	@echo "Scanning minimal-deno..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-deno:latest
+	@echo "✓ minimal-deno: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -1209,6 +1398,42 @@ test-mariadb:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-mariadb:latest" && \
 		mariadb/test.sh
 	@echo "✓ MariaDB tests passed"
+
+test-etcd:
+	@echo "Testing etcd image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-etcd:latest" && \
+		etcd/test.sh
+	@echo "✓ etcd tests passed"
+
+test-victoria-metrics:
+	@echo "Testing VictoriaMetrics image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-victoria-metrics:latest" && \
+		victoria-metrics/test.sh
+	@echo "✓ VictoriaMetrics tests passed"
+
+test-jaeger:
+	@echo "Testing Jaeger image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-jaeger:latest" && \
+		jaeger/test.sh
+	@echo "✓ Jaeger tests passed"
+
+test-otelcol:
+	@echo "Testing OTel Collector image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-otelcol:latest" && \
+		otelcol/test.sh
+	@echo "✓ OTel Collector tests passed"
+
+test-qdrant:
+	@echo "Testing Qdrant image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-qdrant:latest" && \
+		qdrant/test.sh
+	@echo "✓ Qdrant tests passed"
+
+test-deno:
+	@echo "Testing Deno image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-deno:latest" && \
+		deno/test.sh
+	@echo "✓ Deno tests passed"
 
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
