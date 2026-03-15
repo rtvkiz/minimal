@@ -28,7 +28,7 @@ environment:
       - go
       - git
       - nodejs-22
-      - nodejs-22-npm
+      - yarn
       - python3
 
 pipeline:
@@ -50,8 +50,8 @@ pipeline:
   # corepack (bundled with Node.js 22) handles the correct yarn version
   - runs: |
       cd /home/build/grafana-${{package.version}}
-      # Install yarn 4 (berry) directly; corepack is not needed
-      npm install -g yarn@4
+      # Wolfi's yarn (1.x) reads .yarnrc.yml and delegates to the bundled
+      # yarn 4 release in .yarn/releases/ — no npm or corepack needed
       yarn install --immutable
       yarn build
 

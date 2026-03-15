@@ -64,8 +64,9 @@ pipeline:
 
   - runs: |
       mkdir -p "${{targets.destdir}}/usr/bin"
-      cp /home/build/{etcd,etcdctl,etcdutl} \
-        "${{targets.destdir}}/usr/bin/"
+      cp /home/build/etcd "${{targets.destdir}}/usr/bin/"
+      cp /home/build/etcdctl "${{targets.destdir}}/usr/bin/"
+      cp /home/build/etcdutl "${{targets.destdir}}/usr/bin/"
 
   - runs: |
       echo "Verifying etcd build..."

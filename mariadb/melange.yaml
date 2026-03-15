@@ -103,9 +103,10 @@ pipeline:
       strip --strip-unneeded "${{targets.destdir}}/usr/bin/mariadb"
 
       # Install share directory (needed for --initialize and error messages)
+      # share/ is in the source tree (parent of the build/ dir), not the build tree
       mkdir -p "${{targets.destdir}}/usr/share/mysql"
-      cp -r share/english "${{targets.destdir}}/usr/share/mysql/"
-      cp share/*.sql "${{targets.destdir}}/usr/share/mysql/" 2>/dev/null || true
+      cp -r ../share/english "${{targets.destdir}}/usr/share/mysql/"
+      cp ../share/*.sql "${{targets.destdir}}/usr/share/mysql/" 2>/dev/null || true
 
       # Install plugin directory
       mkdir -p "${{targets.destdir}}/usr/lib/mysql/plugin"
