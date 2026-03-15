@@ -49,6 +49,8 @@ pipeline:
   # Grafana's package.json specifies "packageManager": "yarn@4.x.x"
   # corepack (bundled with Node.js 22) handles the correct yarn version
   - runs: |
+      # git needs a writable HOME to write its global config (bwrap sandbox)
+      export HOME=/tmp
       cd /home/build/grafana-${{package.version}}
       # Wolfi's yarn (1.x) reads .yarnrc.yml and delegates to the bundled
       # yarn 4 release in .yarn/releases/ — no npm or corepack needed
