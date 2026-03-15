@@ -56,6 +56,10 @@ pipeline:
       mkdir -p "${{targets.destdir}}/etc/qdrant"
       cp config/config.yaml "${{targets.destdir}}/etc/qdrant/"
 
+      # Remove cargo registry cache — melange's license scanner cannot change
+      # permissions on registry source files, causing the post-build check to fail
+      rm -rf /home/build/.cargo/registry
+
   - runs: |
       echo "Verifying Qdrant build..."
       "${{targets.destdir}}/usr/bin/qdrant" --version
