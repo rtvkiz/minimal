@@ -201,11 +201,6 @@ jobs:
             melange_config: prometheus/melange.yaml
             arch: aarch64
             runner: ubuntu-24.04-arm
-          # Grafana builds (x86_64 only — frontend build requires native tooling)
-          - name: grafana
-            melange_config: grafana/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
           # MariaDB builds
           - name: mariadb
             melange_config: mariadb/melange.yaml
@@ -610,10 +605,6 @@ jobs:
             apko_config: prometheus/apko/prometheus.yaml
             melange_config: prometheus/melange.yaml
             arches: x86_64,aarch64
-          - name: grafana
-            apko_config: grafana/apko/grafana.yaml
-            melange_config: grafana/melange.yaml
-            arches: x86_64
           - name: mariadb
             apko_config: mariadb/apko/mariadb.yaml
             melange_config: mariadb/melange.yaml
