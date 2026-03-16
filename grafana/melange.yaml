@@ -53,10 +53,7 @@ pipeline:
       # an invalid ' core.autocrlf' key that causes git to abort.
       # GIT_CONFIG_SYSTEM and GIT_CONFIG_GLOBAL (git >= 2.32) redirect git to a
       # file we control instead of the unwritable/invalid system and user configs.
-      cat > /home/build/.gitconfig << 'GITCONF'
-[core]
-	autocrlf = false
-GITCONF
+      printf '[core]\nautocrlf = false\n' > /home/build/.gitconfig
       export GIT_CONFIG_SYSTEM=/home/build/.gitconfig
       export GIT_CONFIG_GLOBAL=/home/build/.gitconfig
       cd /home/build/grafana-${{package.version}}
