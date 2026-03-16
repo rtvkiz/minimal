@@ -49,10 +49,16 @@ pipeline:
   # Grafana's package.json specifies "packageManager": "yarn@4.x.x"
   # corepack (bundled with Node.js 22) handles the correct yarn version
   - runs: |
-      # The bwrap sandbox /etc/gitconfig has an invalid ' core.autocrlf' entry
-      # (leading space) that causes git to abort when yarn clones react-data-grid.
-      # Overwrite it with a valid minimal config.
-      printf '[core]\n\tautocrlf = false\n' > /etc/gitconfig
+      # The CI runner's /etc/gitconfig (bind-mounted read-only into bwrap) has
+      # an invalid ' core.autocrlf' key that causes git to abort.
+      # GIT_CONFIG_SYSTEM and GIT_CONFIG_GLOBAL (git >= 2.32) redirect git to a
+      # file we control instead of the unwritable/invalid system and user configs.
+      cat > /home/build/.gitconfig << 'GITCONF'
+[core]
+	autocrlf = false
+GITCONF
+      export GIT_CONFIG_SYSTEM=/home/build/.gitconfig
+      export GIT_CONFIG_GLOBAL=/home/build/.gitconfig
       cd /home/build/grafana-${{package.version}}
       # Wolfi's yarn (1.x) reads .yarnrc.yml and delegates to the bundled
       # yarn 4 release in .yarn/releases/ — no npm or corepack needed
