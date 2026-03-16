@@ -49,13 +49,18 @@ pipeline:
   # Grafana's package.json specifies "packageManager": "yarn@4.x.x"
   # corepack (bundled with Node.js 22) handles the correct yarn version
   - runs: |
-      # yarn 4's git plugin builds a minimal subprocess env that excludes our
-      # exports, so env-var approaches don't reach git. Replace the git binary
-      # with a wrapper that hardcodes the config bypass before delegating.
-      mv /usr/bin/git /usr/bin/git.real
-      printf '#!/bin/sh\nexec env GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null /usr/bin/git.real -c core.autocrlf=false "$@"\n' \
-        > /usr/bin/git
-      chmod +x /usr/bin/git
+      # Two previous wrapper bugs:
+      # 1. mv /usr/bin/git fails silently (no set -e, /usr/bin may be ro bind-mount)
+      # 2. GIT_CONFIG_GLOBAL=/dev/null causes git to try to create /dev/null.lock
+      #    in /dev/ (read-only in bwrap) → "unable to write parameters to config file"
+      # Fix: put wrapper in /usr/local/bin (no mv, definitely writable) and use a
+      # real writable file for GIT_CONFIG_GLOBAL so git config writes succeed.
+      printf '[core]\nautocrlf = false\n' > /home/build/.gitconfig
+      mkdir -p /usr/local/bin
+      printf '#!/bin/sh\nexec env GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/home/build/.gitconfig /usr/bin/git -c core.autocrlf=false "$@"\n' \
+        > /usr/local/bin/git
+      chmod +x /usr/local/bin/git
+      export PATH=/usr/local/bin:$PATH
       cd /home/build/grafana-${{package.version}}
       # Wolfi's yarn (1.x) reads .yarnrc.yml and delegates to the bundled
       # yarn 4 release in .yarn/releases/ — no npm or corepack needed
