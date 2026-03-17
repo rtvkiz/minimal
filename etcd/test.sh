@@ -8,7 +8,6 @@ docker run --rm --entrypoint /usr/bin/etcdctl "$IMAGE" version
 echo "Testing etcd starts and responds to client requests..."
 docker run -d --name etcd-test \
   "$IMAGE" \
-  --data-dir=/var/lib/etcd \
   --listen-client-urls=http://0.0.0.0:2379 \
   --advertise-client-urls=http://127.0.0.1:2379 \
   --listen-peer-urls=http://0.0.0.0:2380 \

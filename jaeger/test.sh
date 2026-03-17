@@ -6,7 +6,7 @@ docker run --rm --entrypoint /usr/bin/jaeger "$IMAGE" --version
 
 echo "Testing Jaeger starts and serves UI + health check..."
 docker run -d --name jaeger-test "$IMAGE"
-sleep 4
+sleep 8
 
 if docker ps | grep -q jaeger-test; then
   JAEGER_IP=$(docker inspect -f '{{.NetworkSettings.IPAddress}}' jaeger-test)
