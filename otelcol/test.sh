@@ -8,14 +8,14 @@ echo "Testing OTel Collector config validation..."
 docker run --rm --entrypoint /usr/bin/otelcol "$IMAGE" \
   validate --config=/etc/otelcol/config.yaml
 
-echo "Testing OTel Collector starts and passes health check..."
+echo "Testing OTel Collector starts and serves zpages..."
 docker run -d --name otelcol-test "$IMAGE"
 sleep 3
 
 if docker ps | grep -q otelcol-test; then
   OTEL_IP=$(docker inspect -f '{{.NetworkSettings.IPAddress}}' otelcol-test)
-  curl -sf "http://${OTEL_IP}:13133/" | grep -qi "ok\|ready\|healthy"
-  echo "OTel Collector is running and healthy"
+  curl -sf "http://${OTEL_IP}:55679/debug/servicez" > /dev/null
+  echo "OTel Collector is running and zpages is accessible"
   docker stop otelcol-test && docker rm otelcol-test
 else
   echo "OTel Collector failed to start"

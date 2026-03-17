@@ -82,7 +82,7 @@ pipeline:
         -DWITH_WSREP=OFF \
         -DWITHOUT_EXAMPLE_STORAGE_ENGINE=1 \
         -DWITHOUT_FEDERATED_STORAGE_ENGINE=1
-      make -j$(nproc) mariadbd mariadb
+      make -j$(nproc) mariadbd mariadb my_print_defaults
 
   # Install only essential files to destdir
   - runs: |
@@ -93,6 +93,7 @@ pipeline:
       mkdir -p "${{targets.destdir}}/usr/bin"
       cp sql/mariadbd "${{targets.destdir}}/usr/bin/"
       cp client/mariadb "${{targets.destdir}}/usr/bin/"
+      cp extra/my_print_defaults "${{targets.destdir}}/usr/bin/"
 
       # mysqld/mysql symlinks for compatibility
       ln -sf mariadbd "${{targets.destdir}}/usr/bin/mysqld"
@@ -101,6 +102,7 @@ pipeline:
       # Strip binaries
       strip --strip-unneeded "${{targets.destdir}}/usr/bin/mariadbd"
       strip --strip-unneeded "${{targets.destdir}}/usr/bin/mariadb"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/my_print_defaults"
 
       # Install share directory (needed for error messages and mariadb-install-db)
       mkdir -p "${{targets.destdir}}/usr/share/mysql"
@@ -125,7 +127,7 @@ pipeline:
       # Auto-initialize if data directory is empty
       if [ ! -f /var/lib/mysql/ibdata1 ]; then
         echo "Initializing MariaDB data directory..."
-        mariadb-install-db --user=mysql --datadir=/var/lib/mysql
+        mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
       fi
 
       exec mariadbd --user=mysql "$@"
