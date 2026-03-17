@@ -30,7 +30,8 @@ accounts:
 
 entrypoint:
   command: /usr/bin/qdrant
-  work-dir: /qdrant
+
+work-dir: /qdrant
 
 environment:
   PATH: /usr/bin:/bin
