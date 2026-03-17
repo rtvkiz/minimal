@@ -110,8 +110,10 @@ pipeline:
       mkdir -p "${{targets.destdir}}/usr/share/mysql"
       mkdir -p "${{targets.destdir}}/usr/share"
       cp -r sql/share/english "${{targets.destdir}}/usr/share/mysql/" 2>/dev/null || true
+      # mariadb-install-db --basedir=/usr looks for all SQL files at /usr/share/
+      # Copy from both build tree locations to both share dirs
       cp sql/share/*.sql "${{targets.destdir}}/usr/share/mysql/" 2>/dev/null || true
-      # SQL files used by mariadb-install-db are in the source tree scripts/ dir
+      cp sql/share/*.sql "${{targets.destdir}}/usr/share/" 2>/dev/null || true
       cp ../scripts/*.sql "${{targets.destdir}}/usr/share/mysql/" 2>/dev/null || true
       cp ../scripts/*.sql "${{targets.destdir}}/usr/share/" 2>/dev/null || true
 
