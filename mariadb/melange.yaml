@@ -136,7 +136,7 @@ pipeline:
       # Auto-initialize if data directory is empty
       if [ ! -f /var/lib/mysql/ibdata1 ]; then
         echo "Initializing MariaDB data directory..."
-        mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+        mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql --force
       fi
 
       exec mariadbd --user=mysql "$@"
