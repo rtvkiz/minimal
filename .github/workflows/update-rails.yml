@@ -42,8 +42,8 @@ jobs:
             exit 1
           fi
 
-          # Validate version format
-          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          # Validate version format (Rails uses optional 4th segment for security releases, e.g. 8.0.2.1)
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
             echo "::error::Invalid Rails version received: $LATEST"
             exit 1
           fi
