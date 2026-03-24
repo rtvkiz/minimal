@@ -141,6 +141,24 @@ jobs:
             echo "  -> Up to date"
           fi
 
+          # --- OpenSearch ---
+          CURRENT_OS=$(grep -oP 'opensearch-\d+' opensearch/apko/opensearch.yaml | head -1)
+          echo "Current OpenSearch package: $CURRENT_OS"
+
+          # Find all opensearch-X packages
+          LATEST_OS=$(grep -E "^opensearch-[0-9]+ " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t- -k2 -n | tail -1)
+          echo "Latest OpenSearch package: $LATEST_OS"
+
+          if [ -n "$LATEST_OS" ] && [ "$LATEST_OS" != "$CURRENT_OS" ]; then
+            echo "opensearch_update=true" >> $GITHUB_OUTPUT
+            echo "opensearch_current=$CURRENT_OS" >> $GITHUB_OUTPUT
+            echo "opensearch_latest=$LATEST_OS" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_OS -> $LATEST_OS"
+          else
+            echo "  -> Up to date"
+          fi
+
           # Summary
           echo ""
           echo "=== Summary ==="
@@ -161,6 +179,9 @@ jobs:
           fi
           if [ -n "$LATEST_PG" ] && [ "$LATEST_PG" != "$CURRENT_PG" ]; then
             echo "PostgreSQL: $CURRENT_PG -> $LATEST_PG"
+          fi
+          if [ -n "$LATEST_OS" ] && [ "$LATEST_OS" != "$CURRENT_OS" ]; then
+            echo "OpenSearch: $CURRENT_OS -> $LATEST_OS"
           fi
 
       # --- Python PR ---
@@ -441,3 +462,56 @@ jobs:
           labels: |
             dependencies
             postgresql
+
+      - name: Reset for next PR
+        if: steps.check.outputs.pg_update == 'true'
+        run: git checkout -- .
+
+      # --- OpenSearch PR ---
+      - name: Update OpenSearch version
+        if: steps.check.outputs.opensearch_update == 'true'
+        run: |
+          OLD="${{ steps.check.outputs.opensearch_current }}"
+          NEW="${{ steps.check.outputs.opensearch_latest }}"
+          # Extract version numbers (e.g., "2" from "opensearch-2")
+          OLD_VER=$(echo "$OLD" | grep -oP '\d+')
+          NEW_VER=$(echo "$NEW" | grep -oP '\d+')
+          # Update package name (opensearch-2 -> opensearch-3)
+          sed -i "s/opensearch-${OLD_VER}/opensearch-${NEW_VER}/g" opensearch/apko/opensearch.yaml
+          # Update OPENSEARCH_JAVA_HOME if JDK version changes with new major
+          # (Wolfi opensearch-X pulls its own openjdk dependency — check and update path)
+          echo "Updated opensearch/apko/opensearch.yaml: opensearch-${OLD_VER} -> opensearch-${NEW_VER}"
+
+      - name: Create OpenSearch PR
+        if: steps.check.outputs.opensearch_update == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(opensearch): upgrade to ${{ steps.check.outputs.opensearch_latest }}"
+          body: |
+            ## Summary
+
+            Upgrades OpenSearch from `${{ steps.check.outputs.opensearch_current }}` to `${{ steps.check.outputs.opensearch_latest }}`.
+
+            This is a **major version upgrade** detected from Wolfi's package repository.
+
+            ## Changes
+
+            - `opensearch/apko/opensearch.yaml` - updated package reference
+
+            ## Before Merging
+
+            - [ ] Review [OpenSearch release notes](https://opensearch.org/docs/latest/version-history/)
+            - [ ] Verify `OPENSEARCH_JAVA_HOME` path is correct for the new version's JDK dependency
+            - [ ] Verify CI passes (image builds and tests succeed)
+            - [ ] Check for breaking changes that may affect users
+
+            ---
+
+            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
+          branch: update-opensearch-${{ steps.check.outputs.opensearch_latest }}
+          commit-message: "chore(opensearch): upgrade to ${{ steps.check.outputs.opensearch_latest }}"
+          delete-branch: true
+          labels: |
+            dependencies
+            opensearch
