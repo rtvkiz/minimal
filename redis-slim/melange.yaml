@@ -4,7 +4,7 @@
 
 package:
   name: redis-minimal
-  version: 8.6.1
+  version: 8.6.2
   epoch: 0
   description: "Minimal Redis server and CLI built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-redis.yml workflow
-  sha256: 88ff5661160bf4b12aba2dfc579b131c202e75a3ac1f0b1d06db05a9929d5a89
+  sha256: cef021615ec4aef355a824cf933702be5def36e37ca1e9b99ab1cc5599f1748f
 
 environment:
   contents:
