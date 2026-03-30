@@ -141,10 +141,6 @@ jobs:
             echo "  -> Up to date"
           fi
 
-          else
-            echo "  -> Up to date"
-          fi
-
           # Summary
           echo ""
           echo "=== Summary ==="
