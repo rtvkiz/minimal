@@ -244,7 +244,7 @@ Every build is scanned for vulnerabilities; results appear in the job summary an
 
 ### Automated Version Updates
 
-Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails) and Wolfi-based packages are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
+Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails) and key services (OpenSearch) are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
 
 | Workflow | Watches | What It Does |
 |----------|---------|--------------|
@@ -262,6 +262,7 @@ Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails) and 
 | `update-otelcol.yml` | OTel Collector stable releases | Updates version and SHA256; skips prereleases |
 | `update-qdrant.yml` | Qdrant v1.x GitHub releases | Updates version and SHA256; warns on major version change |
 | `update-etcd.yml` | etcd v3.x GitHub releases | Updates version and SHA256; warns on major version change |
+| `update-opensearch.yml` | OpenSearch 2.x GitHub releases | Updates version in Makefile and README.md; opens issue for major 3.x |
 | `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, Java, PostgreSQL, Deno package versions |
 
 Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g. PHP 8.5 → 8.6) create a GitHub Issue with a manual upgrade checklist, since configure flags or APIs may change.
@@ -292,7 +293,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | Kafka | 4.2.x | kafka (65532) | `/usr/bin/kafka-entrypoint.sh` | `/` |
 | RabbitMQ | 4.2.x | rabbitmq (65532) | `/opt/rabbitmq/sbin/rabbitmq-server` | `/` |
 | MinIO | RELEASE.2025-10-15T17-29-55Z | minio (65532) | `/usr/bin/minio server --console-address :9001 /data` | `/data` |
-| OpenSearch | 2.19.x | opensearch (65532) | `/usr/share/opensearch/opensearch-docker-entrypoint.sh` | `/usr/share/opensearch/data` |
+| OpenSearch | 2.19.1 | opensearch (65532) | `/usr/share/opensearch/opensearch-docker-entrypoint.sh` | `/usr/share/opensearch/data` |
 | etcd | 3.6.x | nonroot (65532) | `/usr/bin/etcd` | `/var/lib/etcd` |
 | VictoriaMetrics | 1.137.x | nonroot (65532) | `/usr/bin/victoria-metrics` | `/` |
 | Jaeger | 2.16.x | nonroot (65532) | `/usr/bin/jaeger` | `/` |

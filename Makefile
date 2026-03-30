@@ -29,6 +29,7 @@ VICTORIA_METRICS_VERSION ?= 1.122.17
 JAEGER_VERSION ?= 2.16.0
 OTELCOL_VERSION ?= 0.148.0
 QDRANT_VERSION ?= 1.17.1
+OPENSEARCH_VERSION ?= 2.19.1
 
 .PHONY: all build scan clean help
 .PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen opensearch
@@ -1605,7 +1606,7 @@ help:
 	@echo "  make traefik         Build Traefik $(TRAEFIK_VERSION) (source build)"
 	@echo "  make rabbitmq        Build RabbitMQ $(RABBITMQ_VERSION) (official binary + Wolfi Erlang)"
 	@echo "  make minio           Build MinIO $(MINIO_VERSION) (source build)"
-	@echo "  make opensearch      Build OpenSearch 2.x (Wolfi package)"
+	@echo "  make opensearch      Build OpenSearch $(OPENSEARCH_VERSION) (Wolfi package)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"
@@ -1635,5 +1636,6 @@ help:
 	@echo "  NATS_VERSION=$(NATS_VERSION)"
 	@echo "  TRAEFIK_VERSION=$(TRAEFIK_VERSION)"
 	@echo "  RABBITMQ_VERSION=$(RABBITMQ_VERSION)"
+	@echo "  OPENSEARCH_VERSION=$(OPENSEARCH_VERSION)"
 	@echo "  REGISTRY=$(REGISTRY)"
 	@echo "  OWNER=$(OWNER)"

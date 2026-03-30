@@ -1,0 +1,156 @@
+name: Update OpenSearch Version
+
+on:
+  schedule:
+    # Check daily at 6:40am UTC
+    - cron: '40 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for new OpenSearch versions
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          # Get latest OpenSearch 2.x tag (excluding -rc, etc.)
+          LATEST_2X=$(curl -sS --retry 3 --retry-delay 5 \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/opensearch-project/OpenSearch/tags?per_page=100" | \
+            jq -r '[.[] | .name | select(test("^2\\.[0-9]+\\.[0-9]+$"))] | first')
+
+          if [ -z "$LATEST_2X" ] || [ "$LATEST_2X" = "null" ]; then
+            echo "::error::Failed to fetch latest OpenSearch 2.x version"
+            exit 1
+          fi
+
+          # Get current version from Makefile
+          CURRENT=$(grep '^OPENSEARCH_VERSION ?=' Makefile | awk '{print $3}')
+
+          echo "Current version: $CURRENT"
+          echo "Latest 2.x version: $LATEST_2X"
+
+          if [ "$LATEST_2X" != "$CURRENT" ]; then
+            echo "update_available=true" >> "$GITHUB_OUTPUT"
+            echo "new_version=$LATEST_2X" >> "$GITHUB_OUTPUT"
+            echo "current_version=$CURRENT" >> "$GITHUB_OUTPUT"
+            echo "Update available: $CURRENT -> $LATEST_2X"
+          else
+            echo "update_available=false" >> "$GITHUB_OUTPUT"
+            echo "Up to date for 2.x line"
+          fi
+
+          # Check for new major version (3.x)
+          LATEST_3X=$(curl -sS --retry 3 --retry-delay 5 \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/opensearch-project/OpenSearch/tags?per_page=100" | \
+            jq -r '[.[] | .name | select(test("^3\\.[0-9]+\\.[0-9]+$"))] | first // empty')
+          
+          if [ -n "$LATEST_3X" ]; then
+            echo "next_major_version=3" >> "$GITHUB_OUTPUT"
+            echo "next_major_tag=$LATEST_3X" >> "$GITHUB_OUTPUT"
+            echo "::warning::New major OpenSearch version detected: $LATEST_3X"
+          fi
+
+      - name: Update version in all files
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          NEW="${{ steps.check.outputs.new_version }}"
+          OLD="${{ steps.check.outputs.current_version }}"
+          echo "Updating to OpenSearch $NEW"
+
+          # Update Makefile
+          sed -i "s/OPENSEARCH_VERSION ?= $OLD/OPENSEARCH_VERSION ?= $NEW/" Makefile
+
+          # Update README.md version table (line 295: | OpenSearch | X.Y.Z | ...)
+          # We update 2.19.x or similar pattern
+          sed -i "s/| OpenSearch | [0-9.]\+\.x /| OpenSearch | $NEW /" README.md || true
+          # Also try direct replacement of the old version if it was not .x
+          sed -i "s/| OpenSearch | $OLD /| OpenSearch | $NEW /" README.md || true
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(opensearch): bump to ${{ steps.check.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates OpenSearch version tracking from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+            This image uses the `opensearch-2` Wolfi package, which is rebuilt daily. This PR updates the version metadata in the `Makefile` and `README.md` to reflect the latest release in the 2.x line.
+
+            ## Changes
+
+            - `Makefile` - `OPENSEARCH_VERSION` variable
+            - `README.md` - Version Table
+
+            ## Links
+
+            - [OpenSearch Release Notes](https://opensearch.org/docs/latest/version-history/)
+
+            ---
+
+            This PR was automatically created by the [update-opensearch](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-opensearch.yml) workflow.
+          branch: update-opensearch-${{ steps.check.outputs.new_version }}
+          commit-message: "chore(opensearch): bump to ${{ steps.check.outputs.new_version }}"
+          delete-branch: true
+          labels: |
+            dependencies
+            opensearch
+
+      - name: Create new major version issue
+        if: steps.check.outputs.next_major_version != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const nextMajor = '${{ steps.check.outputs.next_major_version }}';
+            const nextTag = '${{ steps.check.outputs.next_major_tag }}';
+            const title = `chore(opensearch): new major version detected — OpenSearch ${nextMajor}.x`;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'opensearch,dependencies',
+            });
+            if (issues.some(i => i.title.includes(`OpenSearch ${nextMajor}.x`))) {
+              console.log(`Issue for OpenSearch ${nextMajor}.x already exists, skipping`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              labels: ['dependencies', 'opensearch'],
+              body: [
+                `## New Major OpenSearch Version Detected`,
+                ``,
+                `OpenSearch **${nextMajor}.x** tags have been detected (latest tag: \`${nextTag}\`).`,
+                ``,
+                `### Checklist for upgrade:`,
+                ``,
+                `- [ ] Check if Wolfi has \`opensearch-${nextMajor}\` package available: \`apk index -R https://packages.wolfi.dev/os/x86_64/APKINDEX.tar.gz | grep opensearch-${nextMajor}\``,
+                `- [ ] Update \`opensearch/apko/opensearch.yaml\`: change \`opensearch-2\` to \`opensearch-${nextMajor}\``,
+                `- [ ] Update \`Makefile\`: change \`OPENSEARCH_VERSION\` to \`${nextTag}\``,
+                `- [ ] Review [OpenSearch Breaking Changes](https://opensearch.org/docs/latest/version-history/)`,
+                `- [ ] Verify image build and run \`opensearch/test.sh\``,
+                ``,
+                `---`,
+                `*Detected by the [update-opensearch](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/update-opensearch.yml) workflow.*`,
+              ].join('\n'),
+            });
