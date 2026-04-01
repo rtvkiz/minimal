@@ -1,5 +1,5 @@
-# Minimal OpenSearch image - using Wolfi's pre-built opensearch-2 package
-# OpenSearch 2.x with OpenJDK 17 JRE
+# Minimal OpenSearch image - using Wolfi's pre-built opensearch-3 package
+# OpenSearch 3.x with OpenJDK 21 JRE
 # CVE patching via daily Wolfi package rebuilds
 
 contents:
@@ -11,8 +11,8 @@ contents:
     # Base filesystem
     - wolfi-baselayout
 
-    # OpenSearch 2.x from Wolfi (pulls openjdk-17-jre, bash, busybox, curl)
-    - opensearch-2
+    # OpenSearch 3.x from Wolfi (pulls openjdk-21-jre, bash, busybox, curl)
+    - opensearch-3
 
     # Core runtime libraries
     - glibc
@@ -38,8 +38,8 @@ entrypoint:
 environment:
   OPENSEARCH_HOME: /usr/share/opensearch
   OPENSEARCH_PATH_CONF: /usr/share/opensearch/config
-  # Point entrypoint to Wolfi's openjdk-17-jre (no bundled JDK in Wolfi package)
-  OPENSEARCH_JAVA_HOME: /usr/lib/jvm/java-17-openjdk
+  # Point entrypoint to Wolfi's openjdk-21-jre (no bundled JDK in Wolfi package)
+  OPENSEARCH_JAVA_HOME: /usr/lib/jvm/java-21-openjdk
   # Disable security plugin demo config — users configure TLS for production
   DISABLE_INSTALL_DEMO_CONFIG: "true"
   # Disable security plugin entirely for simple single-node dev usage
@@ -75,7 +75,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-opensearch"
-  org.opencontainers.image.description: "Hardened OpenSearch 2.x image on Wolfi with OpenJDK 17, daily CVE patches"
+  org.opencontainers.image.description: "Hardened OpenSearch 3.x image on Wolfi with OpenJDK 21, daily CVE patches"
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/opensearch"
   org.opencontainers.image.licenses: "Apache-2.0"
