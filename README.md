@@ -295,7 +295,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | MinIO | RELEASE.2025-10-15T17-29-55Z | minio (65532) | `/usr/bin/minio server --console-address :9001 /data` | `/data` |
 | OpenSearch | 2.19.5 | opensearch (65532) | `/usr/share/opensearch/opensearch-docker-entrypoint.sh` | `/usr/share/opensearch/data` |
 | etcd | 3.6.x | nonroot (65532) | `/usr/bin/etcd` | `/var/lib/etcd` |
-| VictoriaMetrics | 1.137.x | nonroot (65532) | `/usr/bin/victoria-metrics` | `/` |
+| VictoriaMetrics | 1.138.x | nonroot (65532) | `/usr/bin/victoria-metrics` | `/` |
 | Jaeger | 2.17.x | nonroot (65532) | `/usr/bin/jaeger` | `/` |
 | OTel Collector | 0.149.x | nonroot (65532) | `/usr/bin/otelcol` | `/` |
 | Qdrant | 1.17.x | nonroot (65532) | `/usr/bin/qdrant` | `/qdrant` |
