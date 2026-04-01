@@ -29,7 +29,7 @@ VICTORIA_METRICS_VERSION ?= 1.138.0
 JAEGER_VERSION ?= 2.17.0
 OTELCOL_VERSION ?= 0.149.0
 QDRANT_VERSION ?= 1.17.1
-OPENSEARCH_VERSION ?= 2.19.5
+OPENSEARCH_VERSION ?= 3.5.0
 
 .PHONY: all build scan clean help
 .PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen opensearch
