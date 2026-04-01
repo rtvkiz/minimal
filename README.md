@@ -297,7 +297,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | etcd | 3.6.x | nonroot (65532) | `/usr/bin/etcd` | `/var/lib/etcd` |
 | VictoriaMetrics | 1.138.x | nonroot (65532) | `/usr/bin/victoria-metrics` | `/` |
 | Jaeger | 2.17.x | nonroot (65532) | `/usr/bin/jaeger` | `/` |
-| OTel Collector | 0.148.x | nonroot (65532) | `/usr/bin/otelcol` | `/` |
+| OTel Collector | 0.149.x | nonroot (65532) | `/usr/bin/otelcol` | `/` |
 | Qdrant | 1.17.x | nonroot (65532) | `/usr/bin/qdrant` | `/qdrant` |
 | Deno | 2.x | nonroot (65532) | `/usr/bin/deno` | `/app` |
 
