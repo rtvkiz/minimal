@@ -281,7 +281,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | Nginx | mainline | nginx (65532) | `/usr/sbin/nginx -g "daemon off;"` | `/` |
 | HTTPD | 2.4.x | www-data (65532) | `/usr/sbin/httpd -DFOREGROUND` | `/var/www/localhost/htdocs` |
 | Jenkins | 2.541.x LTS | jenkins (1000) | `tini -- java -jar jenkins.war` | `/var/jenkins_home` |
-| Redis | 8.4.x | redis (65532) | `/usr/bin/redis-server` | `/` |
+| Redis | 8.6.x | redis (65532) | `/usr/bin/redis-server` | `/` |
 | MySQL | 8.4.x | mysql (65532) | `/usr/bin/docker-entrypoint.sh` | `/` |
 | Memcached | 1.6.x | memcached (65532) | `/usr/bin/memcached` | `/` |
 | PostgreSQL | 18.x | postgres (70) | `/usr/bin/postgres` | `/` |
@@ -293,11 +293,11 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | Kafka | 4.2.x | kafka (65532) | `/usr/bin/kafka-entrypoint.sh` | `/` |
 | RabbitMQ | 4.2.x | rabbitmq (65532) | `/opt/rabbitmq/sbin/rabbitmq-server` | `/` |
 | MinIO | RELEASE.2025-10-15T17-29-55Z | minio (65532) | `/usr/bin/minio server --console-address :9001 /data` | `/data` |
-| OpenSearch | 2.19.1 | opensearch (65532) | `/usr/share/opensearch/opensearch-docker-entrypoint.sh` | `/usr/share/opensearch/data` |
+| OpenSearch | 2.19.5 | opensearch (65532) | `/usr/share/opensearch/opensearch-docker-entrypoint.sh` | `/usr/share/opensearch/data` |
 | etcd | 3.6.x | nonroot (65532) | `/usr/bin/etcd` | `/var/lib/etcd` |
-| VictoriaMetrics | 1.137.x | nonroot (65532) | `/usr/bin/victoria-metrics` | `/` |
-| Jaeger | 2.16.x | nonroot (65532) | `/usr/bin/jaeger` | `/` |
-| OTel Collector | 0.147.x | nonroot (65532) | `/usr/bin/otelcol` | `/` |
+| VictoriaMetrics | 1.138.x | nonroot (65532) | `/usr/bin/victoria-metrics` | `/` |
+| Jaeger | 2.17.x | nonroot (65532) | `/usr/bin/jaeger` | `/` |
+| OTel Collector | 0.148.x | nonroot (65532) | `/usr/bin/otelcol` | `/` |
 | Qdrant | 1.17.x | nonroot (65532) | `/usr/bin/qdrant` | `/qdrant` |
 | Deno | 2.x | nonroot (65532) | `/usr/bin/deno` | `/app` |
 
