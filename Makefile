@@ -5,29 +5,42 @@
 REGISTRY ?= ghcr.io
 OWNER ?= $(shell git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 VERSION ?= $(shell date +%Y%m%d)
+# --- Infrastructure/Core ---
 JENKINS_VERSION ?= 2.541.3
 NGINX_VERSION ?= 1.29.4
 HTTPD_VERSION ?= 2.4.66
+
+# --- Databases/Storage ---
 REDIS_VERSION ?= 8.6.2
 MYSQL_VERSION ?= 8.4.8
+MARIADB_VERSION ?= 11.4.10
 MEMCACHED_VERSION ?= 1.6.41
-CADDY_VERSION ?= 2.11.2
-HAPROXY_VERSION ?= 3.3.0
+MINIO_VERSION ?= 2025.10.15
+ETCD_VERSION ?= 3.6.10
+
+# --- Languages/Frameworks ---
 RUBY_VERSION ?= 4.0.2
 RAILS_VERSION ?= 8.1.2
+
+# --- Messaging/Coordination ---
 KAFKA_VERSION ?= 4.2.0
 VALKEY_VERSION ?= 9.0.3
 NATS_VERSION ?= 2.12.6
-TRAEFIK_VERSION ?= 3.6.12
 RABBITMQ_VERSION ?= 4.2.5
-MINIO_VERSION ?= 2025.10.15
+
+# --- Ingress/Proxies ---
+CADDY_VERSION ?= 2.11.2
+HAPROXY_VERSION ?= 3.3.0
+TRAEFIK_VERSION ?= 3.6.12
+
+# --- Observability ---
 PROMETHEUS_VERSION ?= 3.10.0
 GRAFANA_VERSION ?= 12.4.1
-MARIADB_VERSION ?= 11.4.10
-ETCD_VERSION ?= 3.6.10
-VICTORIA_METRICS_VERSION ?= 1.139.0
 JAEGER_VERSION ?= 2.17.0
 OTELCOL_VERSION ?= 0.149.0
+VICTORIA_METRICS_VERSION ?= 1.139.0
+
+# --- Search/AI ---
 QDRANT_VERSION ?= 1.17.1
 OPENSEARCH_VERSION ?= 3.5.0
 

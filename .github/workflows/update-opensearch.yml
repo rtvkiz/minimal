@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Check for new OpenSearch versions
         id: check
@@ -25,43 +27,49 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Get latest OpenSearch 2.x tag (excluding -rc, etc.)
-          LATEST_2X=$(curl -sS --retry 3 --retry-delay 5 \
+          # Get current version from Makefile
+          CURRENT=$(grep '^OPENSEARCH_VERSION ?=' Makefile | awk '{print $3}')
+          MAJOR_VERSION=$(echo "$CURRENT" | cut -d. -f1)
+
+          echo "Current major version: $MAJOR_VERSION"
+          echo "Current full version: $CURRENT"
+
+          # Get latest OpenSearch version for the same major line
+          LATEST=$(curl -sS --retry 3 --retry-delay 5 \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/opensearch-project/OpenSearch/tags?per_page=100" | \
-            jq -r '[.[] | .name | select(test("^2\\.[0-9]+\\.[0-9]+$"))] | first')
+            jq -r --arg MAJOR "$MAJOR_VERSION" '[.[] | .name | select(test("^" + $MAJOR + "\\.[0-9]+\\.[0-9]+$"))] | first')
 
-          if [ -z "$LATEST_2X" ] || [ "$LATEST_2X" = "null" ]; then
-            echo "::error::Failed to fetch latest OpenSearch 2.x version"
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "::error::Failed to fetch latest OpenSearch $MAJOR_VERSION.x version"
             exit 1
           fi
 
-          # Get current version from Makefile
-          CURRENT=$(grep '^OPENSEARCH_VERSION ?=' Makefile | awk '{print $3}')
+          echo "Latest $MAJOR_VERSION.x version: $LATEST"
 
-          echo "Current version: $CURRENT"
-          echo "Latest 2.x version: $LATEST_2X"
-
-          if [ "$LATEST_2X" != "$CURRENT" ]; then
+          if [ "$LATEST" != "$CURRENT" ]; then
             echo "update_available=true" >> "$GITHUB_OUTPUT"
-            echo "new_version=$LATEST_2X" >> "$GITHUB_OUTPUT"
+            echo "new_version=$LATEST" >> "$GITHUB_OUTPUT"
             echo "current_version=$CURRENT" >> "$GITHUB_OUTPUT"
-            echo "Update available: $CURRENT -> $LATEST_2X"
+            echo "current_major=$MAJOR_VERSION" >> "$GITHUB_OUTPUT"
+            echo "Update available: $CURRENT -> $LATEST"
           else
             echo "update_available=false" >> "$GITHUB_OUTPUT"
-            echo "Up to date for 2.x line"
+            echo "current_major=$MAJOR_VERSION" >> "$GITHUB_OUTPUT"
+            echo "Up to date for $MAJOR_VERSION.x line"
           fi
 
-          # Check for new major version (3.x)
-          LATEST_3X=$(curl -sS --retry 3 --retry-delay 5 \
+          # Check for new major version (CURRENT_MAJOR + 1)
+          NEXT_MAJOR=$((MAJOR_VERSION + 1))
+          LATEST_NEXT_MAJOR=$(curl -sS --retry 3 --retry-delay 5 \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/opensearch-project/OpenSearch/tags?per_page=100" | \
-            jq -r '[.[] | .name | select(test("^3\\.[0-9]+\\.[0-9]+$"))] | first // empty')
+            jq -r --arg NEXT "$NEXT_MAJOR" '[.[] | .name | select(test("^" + $NEXT + "\\.[0-9]+\\.[0-9]+$"))] | first // empty')
           
-          if [ -n "$LATEST_3X" ]; then
-            echo "next_major_version=3" >> "$GITHUB_OUTPUT"
-            echo "next_major_tag=$LATEST_3X" >> "$GITHUB_OUTPUT"
-            echo "::warning::New major OpenSearch version detected: $LATEST_3X"
+          if [ -n "$LATEST_NEXT_MAJOR" ]; then
+            echo "next_major_version=$NEXT_MAJOR" >> "$GITHUB_OUTPUT"
+            echo "next_major_tag=$LATEST_NEXT_MAJOR" >> "$GITHUB_OUTPUT"
+            echo "::warning::New major OpenSearch version detected: $LATEST_NEXT_MAJOR"
           fi
 
       - name: Update version in all files
@@ -91,7 +99,7 @@ jobs:
 
             Updates OpenSearch version tracking from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
 
-            This image uses the `opensearch-2` Wolfi package, which is rebuilt daily. This PR updates the version metadata in the `Makefile` and `README.md` to reflect the latest release in the 2.x line.
+            This image uses the `opensearch-${{ steps.check.outputs.current_major }}` Wolfi package, which is rebuilt daily. This PR updates the version metadata in the `Makefile` and `README.md` to reflect the latest release in the ${{ steps.check.outputs.current_major }}.x line.
 
             ## Changes
 
@@ -145,7 +153,7 @@ jobs:
                 `### Checklist for upgrade:`,
                 ``,
                 `- [ ] Check if Wolfi has \`opensearch-${nextMajor}\` package available: \`apk index -R https://packages.wolfi.dev/os/x86_64/APKINDEX.tar.gz | grep opensearch-${nextMajor}\``,
-                `- [ ] Update \`opensearch/apko/opensearch.yaml\`: change \`opensearch-2\` to \`opensearch-${nextMajor}\``,
+                `- [ ] Update \`opensearch/apko/opensearch.yaml\`: change \`opensearch-${{ steps.check.outputs.current_major }}\` to \`opensearch-${nextMajor}\``,
                 `- [ ] Update \`Makefile\`: change \`OPENSEARCH_VERSION\` to \`${nextTag}\``,
                 `- [ ] Review [OpenSearch Breaking Changes](https://opensearch.org/docs/latest/version-history/)`,
                 `- [ ] Verify image build and run \`opensearch/test.sh\``,
