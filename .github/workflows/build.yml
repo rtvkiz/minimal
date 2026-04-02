@@ -350,7 +350,7 @@ jobs:
             primary_grep: "openjdk-[0-9].*-jre"
           - name: opensearch
             apko_config: opensearch/apko/opensearch.yaml
-            primary_grep: "opensearch-2"
+            primary_grep: "opensearch-3"
           - name: deno
             apko_config: deno/apko/deno.yaml
             primary_grep: "deno"
