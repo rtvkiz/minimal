@@ -13,6 +13,7 @@ contents:
 
     # OpenSearch 3.x from Wolfi (pulls openjdk-21-jre, bash, busybox, curl)
     - opensearch-3
+    - openjdk-21-default-jvm
 
     # Core runtime libraries
     - glibc
