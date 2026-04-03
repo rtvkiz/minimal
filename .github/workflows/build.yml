@@ -255,6 +255,14 @@ jobs:
             melange_config: qdrant/melange.yaml
             arch: aarch64
             runner: ubuntu-24.04-arm
+          - name: envoy
+            melange_config: envoy/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
+          - name: envoy
+            melange_config: envoy/melange.yaml
+            arch: aarch64
+            runner: ubuntu-24.04-arm
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -632,6 +640,10 @@ jobs:
           - name: qdrant
             apko_config: qdrant/apko/qdrant.yaml
             melange_config: qdrant/melange.yaml
+            arches: x86_64,aarch64
+          - name: envoy
+            apko_config: envoy/apko/envoy.yaml
+            melange_config: envoy/melange.yaml
             arches: x86_64,aarch64
 
     steps:
