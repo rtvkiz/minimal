@@ -7,6 +7,9 @@ contents:
     - wolfi-baselayout
     - envoy-minimal
     - ca-certificates-bundle
+    - glibc
+    - libstdc++
+    - libgcc
 
 accounts:
   groups:
