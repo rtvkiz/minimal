@@ -1,0 +1,60 @@
+package:
+  name: envoy-minimal
+  version: 1.37.1
+  epoch: 0
+  description: "Minimal Envoy proxy built from upstream releases"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256_x86: 8db90ee0aa085ae6873dbf21212816d29f6c455d4760c4aecf4d6593763db18c
+  sha256_arm: 65811e12ae8f79d4f4f6418d27a2d32febc4cc8a5233d5ae8a4da0e3e0f3fe75
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - curl
+      - glibc
+      - libstdc++
+      - libgcc
+      - ld-linux
+
+pipeline:
+  - runs: |
+      BUILD_ARCH=$(uname -m)
+      case "$BUILD_ARCH" in
+        x86_64) ARCH_NAME="x86_64" ;;
+        aarch64) ARCH_NAME="aarch_64" ;;
+        *) echo "Unsupported arch: $BUILD_ARCH"; exit 1 ;;
+      esac
+      
+      curl -fsSL "https://github.com/envoyproxy/envoy/releases/download/v${{package.version}}/envoy-${{package.version}}-linux-${ARCH_NAME}" \
+        -o /tmp/envoy
+      
+      if [ "$BUILD_ARCH" = "x86_64" ]; then
+        CHECKSUM="${{vars.sha256_x86}}"
+      else
+        CHECKSUM="${{vars.sha256_arm}}"
+      fi
+      
+      echo "${CHECKSUM}  /tmp/envoy" | sha256sum -c -
+      chmod +x /tmp/envoy
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /tmp/envoy "${{targets.destdir}}/usr/bin/envoy"
+
+  - runs: |
+      "${{targets.destdir}}/usr/bin/envoy" --version
+
+update:
+  enabled: true
+  github:
+    identifier: envoyproxy/envoy
+    use-tag: true
+    tag-filter: "v"

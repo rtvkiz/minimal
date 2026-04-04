@@ -32,6 +32,7 @@ RABBITMQ_VERSION ?= 4.2.5
 CADDY_VERSION ?= 2.11.2
 HAPROXY_VERSION ?= 3.3.0
 TRAEFIK_VERSION ?= 3.6.12
+ENVOY_VERSION ?= 1.37.1
 
 # --- Observability ---
 PROMETHEUS_VERSION ?= 3.11.0
@@ -46,16 +47,16 @@ OPENSEARCH_VERSION ?= 3.5.0
 
 .PHONY: all build scan clean help
 .PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen opensearch
-.PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange rabbitmq rabbitmq-melange minio minio-melange
+.PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange grafana grafana-melange mariadb mariadb-melange
 .PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno
 .PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno
-.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik rabbitmq minio opensearch prometheus grafana mariadb etcd victoria-metrics jaeger otelcol qdrant deno
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus grafana mariadb etcd victoria-metrics jaeger otelcol qdrant deno
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -408,6 +409,32 @@ traefik: traefik-melange
 		$(REGISTRY)/$(OWNER)/minimal-traefik:latest
 	@rm -f traefik.tar sbom-*.spdx.json
 	@echo "✓ minimal-traefik built (source build)"
+
+#------------------------------------------------------------------------------
+# ENVOY IMAGE (melange official binary release + apko)
+#------------------------------------------------------------------------------
+envoy-melange: keygen
+	@echo "Building Envoy $(ENVOY_VERSION) from upstream releases via melange..."
+	melange build envoy/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Envoy package built"
+
+envoy: envoy-melange
+	@echo "Assembling minimal-envoy image with apko..."
+	apko build envoy/apko/envoy.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-envoy:$(VERSION) \
+		envoy.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < envoy.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-envoy:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-envoy:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-envoy:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-envoy:latest
+	@rm -f envoy.tar sbom-*.spdx.json
+	@echo "✓ minimal-envoy built (upstream binary)"
 
 #------------------------------------------------------------------------------
 # RABBITMQ IMAGE (melange official binary release + apko)
@@ -871,7 +898,7 @@ kafka: kafka-melange
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -1005,6 +1032,12 @@ scan-traefik:
 		$(REGISTRY)/$(OWNER)/minimal-traefik:latest
 	@echo "✓ minimal-traefik: scan passed"
 
+scan-envoy:
+	@echo "Scanning minimal-envoy..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-envoy:latest
+	@echo "✓ minimal-envoy: scan passed"
+
 scan-rabbitmq:
 	@echo "Scanning minimal-rabbitmq..."
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
@@ -1126,7 +1159,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb
 
 test-python:
 	@echo "Testing Python image..."
@@ -1377,6 +1410,12 @@ test-traefik:
 		traefik/test.sh
 	@echo "✓ Traefik tests passed"
 
+test-envoy:
+	@echo "Testing Envoy image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-envoy:latest" && \
+		envoy/test.sh
+	@echo "✓ Envoy tests passed"
+
 test-rabbitmq:
 	@echo "Testing RabbitMQ image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest" && \
@@ -1495,6 +1534,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-nats:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-traefik:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-envoy:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-envoy:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION)
@@ -1570,6 +1611,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-traefik:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-envoy:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-envoy:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-envoy:latest 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest 2>/dev/null || true
@@ -1617,6 +1661,7 @@ help:
 	@echo "  make valkey          Build Valkey $(VALKEY_VERSION) (source build)"
 	@echo "  make nats            Build NATS $(NATS_VERSION) (source build)"
 	@echo "  make traefik         Build Traefik $(TRAEFIK_VERSION) (source build)"
+	@echo "  make envoy           Build Envoy $(ENVOY_VERSION) (upstream binary)"
 	@echo "  make rabbitmq        Build RabbitMQ $(RABBITMQ_VERSION) (official binary + Wolfi Erlang)"
 	@echo "  make minio           Build MinIO $(MINIO_VERSION) (source build)"
 	@echo "  make opensearch      Build OpenSearch $(OPENSEARCH_VERSION) (Wolfi package)"
