@@ -1,0 +1,153 @@
+name: Update Envoy Version
+
+on:
+  schedule:
+    # Check daily at 6:30am UTC
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check for new Envoy stable version
+        id: check
+        run: |
+          # Get latest stable release from GitHub API
+          LATEST=$(curl -sS --retry 3 --retry-delay 5 "https://api.github.com/repos/envoyproxy/envoy/releases" | \
+            python3 -c "
+import sys, json
+releases = json.load(sys.stdin)
+for r in releases:
+    if r.get('prerelease', False):
+        continue
+    print(r['tag_name'].lstrip('v'))
+    break
+" 2>/dev/null)
+
+          if [ -z "$LATEST" ]; then
+            echo "::error::Failed to fetch latest Envoy version from GitHub API"
+            exit 1
+          fi
+
+          # Validate version format (e.g., 1.37.1)
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Envoy version received: $LATEST"
+            exit 1
+          fi
+
+          # Get current version from melange.yaml
+          CURRENT=$(grep '^  version:' envoy/melange.yaml | awk '{print $2}')
+
+          echo "Current version: $CURRENT"
+          echo "Latest version: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+            echo "Update available: $CURRENT -> $LATEST"
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            echo "Already up to date"
+          fi
+
+      - name: Update version and checksums in all files
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          echo "Updating to Envoy $VERSION"
+
+          # Download checksums and compute SHA256 for both architectures
+          echo "Fetching checksums for Envoy $VERSION..."
+          CHECKSUMS=$(curl -fsSL --retry 3 --retry-delay 5 "https://github.com/envoyproxy/envoy/releases/download/v${VERSION}/checksums.txt.asc" 2>/dev/null || echo "")
+
+          # For x86_64
+          SHA256_X86=$(echo "$CHECKSUMS" | grep "envoy-${VERSION}-linux-x86_64" | awk '{print $1}')
+          # For aarch64 (note: Envoy uses "aarch_64" not "aarch64")
+          SHA256_ARM=$(echo "$CHECKSUMS" | grep "envoy-${VERSION}-linux-aarch_64" | awk '{print $1}')
+
+          if [ -z "$SHA256_X86" ] || [ -z "$SHA256_ARM" ]; then
+            echo "Warning: Could not fetch checksums from signed file, downloading directly..."
+
+            # Download x86_64 and compute checksum
+            curl -fsSL --retry 3 --retry-delay 5 "https://github.com/envoyproxy/envoy/releases/download/v${VERSION}/envoy-${VERSION}-linux-x86_64" \
+              -o /tmp/envoy-x86_64
+            SHA256_X86=$(sha256sum /tmp/envoy-x86_64 | awk '{print $1}')
+
+            # Download aarch64 and compute checksum
+            curl -fsSL --retry 3 --retry-delay 5 "https://github.com/envoyproxy/envoy/releases/download/v${VERSION}/envoy-${VERSION}-linux-aarch_64" \
+              -o /tmp/envoy-aarch_64
+            SHA256_ARM=$(sha256sum /tmp/envoy-aarch_64 | awk '{print $1}')
+
+            rm -f /tmp/envoy-x86_64 /tmp/envoy-aarch_64
+          fi
+
+          echo "SHA256 x86_64: $SHA256_X86"
+          echo "SHA256 aarch64: $SHA256_ARM"
+
+          # Update envoy/melange.yaml - version
+          sed -i "s/^  version: .*/  version: $VERSION/" envoy/melange.yaml
+
+          # Update envoy/melange.yaml - checksums
+          sed -i "s/^  sha256_x86: .*/  sha256_x86: $SHA256_X86/" envoy/melange.yaml
+          sed -i "s/^  sha256_arm: .*/  sha256_arm: $SHA256_ARM/" envoy/melange.yaml
+
+          # Reset epoch to 0 for new upstream version
+          sed -i "s/^  epoch: .*/  epoch: 0/" envoy/melange.yaml
+
+          # Update Makefile
+          sed -i "s/^ENVOY_VERSION ?= .*/ENVOY_VERSION ?= $VERSION/" Makefile
+
+          # Verify changes
+          echo "=== envoy/melange.yaml ==="
+          grep -E '(version:|sha256_)' envoy/melange.yaml | head -3
+          echo "=== Makefile ==="
+          grep 'ENVOY_VERSION' Makefile
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(envoy): bump to ${{ steps.check.outputs.new_version }}"
+          body: |
+            ## Summary
+
+            Updates Envoy from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+            ## Changes
+
+            - `envoy/melange.yaml` - package version, SHA256 checksums, epoch reset
+            - `Makefile` - ENVOY_VERSION variable
+
+            ## Image Tag
+
+            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-envoy:${{ steps.check.outputs.new_version }}-r0`
+
+            ## Links
+
+            - [Envoy Releases](https://github.com/envoyproxy/envoy/releases)
+            - [Release Notes for ${{ steps.check.outputs.new_version }}](https://github.com/envoyproxy/envoy/releases/tag/v${{ steps.check.outputs.new_version }})
+
+            ---
+
+            This PR was automatically created by the [update-envoy](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-envoy.yml) workflow.
+          branch: update-envoy-${{ steps.check.outputs.new_version }}
+          commit-message: |
+            chore(envoy): bump to ${{ steps.check.outputs.new_version }}
+
+            Updates Envoy from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
+          delete-branch: true
+          labels: |
+            dependencies
+            envoy
