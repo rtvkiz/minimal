@@ -10,6 +10,7 @@ contents:
     - glibc
     - libstdc++
     - libgcc
+    - ld-linux
 
 accounts:
   groups:
