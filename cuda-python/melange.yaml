@@ -1,0 +1,180 @@
+# Melange build configuration for CUDA runtime libraries
+# Downloads pre-compiled NVIDIA redistributable tarballs and packages them
+# Source: https://developer.download.nvidia.com/compute/cuda/redist/
+
+package:
+  name: cuda-runtime
+  version: 12.9.0
+  epoch: 0
+  description: "NVIDIA CUDA 12.9 runtime libraries + cuDNN 9.10.1 (from NVIDIA redistributables)"
+  copyright:
+    - license: LicenseRef-NVIDIA-CUDA-EULA
+
+vars:
+  # CUDA 12.9.0 component versions (from redistrib_12.9.0.json)
+  cudart_version: "12.9.37"
+  cublas_version: "12.9.0.13"
+  cufft_version: "11.4.0.6"
+  curand_version: "10.3.10.19"
+  cusolver_version: "11.7.4.40"
+  cusparse_version: "12.5.9.5"
+  nvtx_version: "12.9.19"
+  nvjitlink_version: "12.9.41"
+  cudnn_version: "9.10.1.4"
+
+  # SHA256 checksums (from NVIDIA redistrib JSON manifests)
+  cudart_sha256: "db950a2443a34daa10069c8df1bccec868af3144cb898cd1d903a9ea04cccfa4"
+  cublas_sha256: "bc51ee77e5891614e070066c0dabc52b609302bac2127aff850020b14f35716b"
+  cufft_sha256: "31c2e800afc3111b966c63918cc9c257f5e7917ae4c881e97a67850a8caf3cb9"
+  curand_sha256: "48281b4caadb1cf790d44ac76b23c77d06f474c0b1799814f314aafec9258ad6"
+  cusolver_sha256: "d641c40ff8559c456663e23682bee9cadf2e85d5cc60661213030c98ee1e61f2"
+  cusparse_sha256: "4f5a6ba0c95b57d0678f0033da329015c8628075e0d54a890250c3b2f12bda38"
+  nvtx_sha256: "bfb73b62a07d54321f700510d553f3bad87ea17838b1964b19fa742f1c670510"
+  nvjitlink_sha256: "cfe144b33a01e720b9b8112750e11c21ded2964abecf6c4174d160e8cd84aa5a"
+  cudnn_sha256: "be759754e5bd1fcd9b490e224796c87f093c1e92b2b6357854d5371b6aeeb8be"
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - xz
+
+pipeline:
+  # Uses 'fetch' pipeline steps for built-in caching via --cache-dir.
+  # Each component: fetch (extract: false) -> runs (extract to tmp, copy .so, cleanup).
+  # One at a time to avoid exhausting disk space (~3.2 GB compressed total).
+  # Note: BusyBox tar doesn't support --wildcards, so we extract fully then copy .so files.
+
+  - runs: mkdir -p "${{targets.destdir}}/usr/lib"
+
+  # Helper function sourced by each extraction step
+  - runs: |
+      cat > /tmp/install-libs.sh << 'SCRIPT'
+      install_libs() {
+        local tarball="$1" name="$2"
+        echo "=== ${name}: extracting ==="
+        mkdir -p /tmp/extract
+        tar -xf "${tarball}" --strip-components=1 -C /tmp/extract
+        find /tmp/extract/lib -name '*.so*' -exec cp -a {} "$DESTDIR/usr/lib/" \;
+        rm -rf /tmp/extract "${tarball}"
+        echo "=== ${name}: done ==="
+      }
+      SCRIPT
+
+  # --- cuda_cudart ---
+  - uses: fetch
+    with:
+      uri: https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/linux-x86_64/cuda_cudart-linux-x86_64-${{vars.cudart_version}}-archive.tar.xz
+      expected-sha256: ${{vars.cudart_sha256}}
+      extract: false
+  - runs: |
+      DESTDIR="${{targets.destdir}}" && . /tmp/install-libs.sh
+      # Extract LICENSE from cudart tarball for SBOM compliance
+      mkdir -p /tmp/license-extract
+      tar -xf cuda_cudart-linux-x86_64-${{vars.cudart_version}}-archive.tar.xz --strip-components=1 -C /tmp/license-extract
+      mkdir -p "${{targets.destdir}}/usr/share/licenses/cuda-runtime"
+      cp /tmp/license-extract/LICENSE "${{targets.destdir}}/usr/share/licenses/cuda-runtime/LICENSE" 2>/dev/null || \
+        echo "NVIDIA CUDA End User License Agreement - https://docs.nvidia.com/cuda/eula/" > "${{targets.destdir}}/usr/share/licenses/cuda-runtime/LICENSE"
+      rm -rf /tmp/license-extract
+      install_libs cuda_cudart-linux-x86_64-${{vars.cudart_version}}-archive.tar.xz cuda_cudart
+      # Remove driver stub - real libcuda.so comes from host via nvidia-container-runtime
+      rm -f "${{targets.destdir}}/usr/lib/libcuda.so"
+
+  # --- libcublas ---
+  - uses: fetch
+    with:
+      uri: https://developer.download.nvidia.com/compute/cuda/redist/libcublas/linux-x86_64/libcublas-linux-x86_64-${{vars.cublas_version}}-archive.tar.xz
+      expected-sha256: ${{vars.cublas_sha256}}
+      extract: false
+  - runs: |
+      DESTDIR="${{targets.destdir}}" && . /tmp/install-libs.sh
+      install_libs libcublas-linux-x86_64-${{vars.cublas_version}}-archive.tar.xz libcublas
+
+  # --- libcufft ---
+  - uses: fetch
+    with:
+      uri: https://developer.download.nvidia.com/compute/cuda/redist/libcufft/linux-x86_64/libcufft-linux-x86_64-${{vars.cufft_version}}-archive.tar.xz
+      expected-sha256: ${{vars.cufft_sha256}}
+      extract: false
+  - runs: |
+      DESTDIR="${{targets.destdir}}" && . /tmp/install-libs.sh
+      install_libs libcufft-linux-x86_64-${{vars.cufft_version}}-archive.tar.xz libcufft
+
+  # --- libcurand ---
+  - uses: fetch
+    with:
+      uri: https://developer.download.nvidia.com/compute/cuda/redist/libcurand/linux-x86_64/libcurand-linux-x86_64-${{vars.curand_version}}-archive.tar.xz
+      expected-sha256: ${{vars.curand_sha256}}
+      extract: false
+  - runs: |
+      DESTDIR="${{targets.destdir}}" && . /tmp/install-libs.sh
+      install_libs libcurand-linux-x86_64-${{vars.curand_version}}-archive.tar.xz libcurand
+
+  # --- libcusolver ---
+  - uses: fetch
+    with:
+      uri: https://developer.download.nvidia.com/compute/cuda/redist/libcusolver/linux-x86_64/libcusolver-linux-x86_64-${{vars.cusolver_version}}-archive.tar.xz
+      expected-sha256: ${{vars.cusolver_sha256}}
+      extract: false
+  - runs: |
+      DESTDIR="${{targets.destdir}}" && . /tmp/install-libs.sh
+      install_libs libcusolver-linux-x86_64-${{vars.cusolver_version}}-archive.tar.xz libcusolver
+
+  # --- libcusparse ---
+  - uses: fetch
+    with:
+      uri: https://developer.download.nvidia.com/compute/cuda/redist/libcusparse/linux-x86_64/libcusparse-linux-x86_64-${{vars.cusparse_version}}-archive.tar.xz
+      expected-sha256: ${{vars.cusparse_sha256}}
+      extract: false
+  - runs: |
+      DESTDIR="${{targets.destdir}}" && . /tmp/install-libs.sh
+      install_libs libcusparse-linux-x86_64-${{vars.cusparse_version}}-archive.tar.xz libcusparse
+
+  # --- cuda_nvtx ---
+  - uses: fetch
+    with:
+      uri: https://developer.download.nvidia.com/compute/cuda/redist/cuda_nvtx/linux-x86_64/cuda_nvtx-linux-x86_64-${{vars.nvtx_version}}-archive.tar.xz
+      expected-sha256: ${{vars.nvtx_sha256}}
+      extract: false
+  - runs: |
+      DESTDIR="${{targets.destdir}}" && . /tmp/install-libs.sh
+      install_libs cuda_nvtx-linux-x86_64-${{vars.nvtx_version}}-archive.tar.xz cuda_nvtx
+
+  # --- libnvjitlink ---
+  - uses: fetch
+    with:
+      uri: https://developer.download.nvidia.com/compute/cuda/redist/libnvjitlink/linux-x86_64/libnvjitlink-linux-x86_64-${{vars.nvjitlink_version}}-archive.tar.xz
+      expected-sha256: ${{vars.nvjitlink_sha256}}
+      extract: false
+  - runs: |
+      DESTDIR="${{targets.destdir}}" && . /tmp/install-libs.sh
+      install_libs libnvjitlink-linux-x86_64-${{vars.nvjitlink_version}}-archive.tar.xz libnvjitlink
+
+  # --- cuDNN ---
+  - uses: fetch
+    with:
+      uri: https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-x86_64/cudnn-linux-x86_64-${{vars.cudnn_version}}_cuda12-archive.tar.xz
+      expected-sha256: ${{vars.cudnn_sha256}}
+      extract: false
+  - runs: |
+      DESTDIR="${{targets.destdir}}" && . /tmp/install-libs.sh
+      install_libs cudnn-linux-x86_64-${{vars.cudnn_version}}_cuda12-archive.tar.xz cuDNN
+
+  # --- Summary and verification ---
+  - runs: |
+      echo "Installed CUDA libraries:"
+      ls -lh "${{targets.destdir}}/usr/lib/" | head -30
+      echo "Total library count: $(find "${{targets.destdir}}/usr/lib" -name '*.so*' | wc -l)"
+
+      echo "Verifying critical libraries..."
+      for lib in libcudart libcublas libcudnn; do
+        test -n "$(find "${{targets.destdir}}/usr/lib" -name "${lib}.so*" -print -quit)" || \
+          (echo "FATAL: ${lib}.so not found" && exit 1)
+        echo "${lib}: OK"
+      done
+      echo "All critical CUDA libraries verified."
