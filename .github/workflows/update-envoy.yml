@@ -24,15 +24,7 @@ jobs:
         run: |
           # Get latest stable release from GitHub API
           LATEST=$(curl -sS --retry 3 --retry-delay 5 "https://api.github.com/repos/envoyproxy/envoy/releases" | \
-            python3 -c "
-import sys, json
-releases = json.load(sys.stdin)
-for r in releases:
-    if r.get('prerelease', False):
-        continue
-    print(r['tag_name'].lstrip('v'))
-    break
-" 2>/dev/null)
+            jq -r '[.[] | select(.prerelease == false)] | first | .tag_name | ltrimstr("v")' 2>/dev/null)
 
           if [ -z "$LATEST" ]; then
             echo "::error::Failed to fetch latest Envoy version from GitHub API"
