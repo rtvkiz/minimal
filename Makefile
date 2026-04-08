@@ -43,7 +43,7 @@ VICTORIA_METRICS_VERSION ?= 1.139.0
 
 # --- Search/AI ---
 QDRANT_VERSION ?= 1.17.1
-OPENSEARCH_VERSION ?= 3.5.0
+OPENSEARCH_VERSION ?= 3.6.0
 
 .PHONY: all build scan clean help
 .PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen opensearch
