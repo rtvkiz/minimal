@@ -31,7 +31,7 @@ RABBITMQ_VERSION ?= 4.2.5
 # --- Ingress/Proxies ---
 CADDY_VERSION ?= 2.11.2
 HAPROXY_VERSION ?= 3.3.0
-TRAEFIK_VERSION ?= 3.6.12
+TRAEFIK_VERSION ?= 3.6.13
 ENVOY_VERSION ?= 1.37.1
 
 # --- Observability ---
