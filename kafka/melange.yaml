@@ -35,7 +35,7 @@ pipeline:
   # Download and verify Kafka binary release
   - runs: |
       mkdir -p /home/build
-      curl -fsSL \
+      curl -fsSL --retry 5 --retry-delay 5 \
         "https://downloads.apache.org/kafka/${{package.version}}/kafka_${{vars.scala_version}}-${{package.version}}.tgz" \
         -o /home/build/kafka.tgz
 
