@@ -97,14 +97,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" haproxy/melange.yaml
 
-          # Update Makefile
-          sed -i "s/HAPROXY_VERSION ?= .*/HAPROXY_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== haproxy/melange.yaml ==="
           grep -E '(version:|sha256:)' haproxy/melange.yaml | head -2
-          echo "=== Makefile ==="
-          grep 'HAPROXY_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -120,7 +116,6 @@ jobs:
             ## Changes
 
             - `haproxy/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - HAPROXY_VERSION variable
 
             ## Image Tag
 

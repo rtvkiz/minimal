@@ -98,14 +98,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" mysql/melange.yaml
 
-          # Update Makefile
-          sed -i "s/MYSQL_VERSION ?= .*/MYSQL_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== mysql/melange.yaml ==="
           grep -E '(version:|sha256:)' mysql/melange.yaml | head -2
-          echo "=== Makefile ==="
-          grep 'MYSQL_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -121,7 +117,6 @@ jobs:
             ## Changes
 
             - `mysql/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - MYSQL_VERSION variable
 
             ## Image Tag
 

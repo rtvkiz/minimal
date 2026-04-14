@@ -84,14 +84,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" rabbitmq/melange.yaml
 
-          # Update Makefile
-          sed -i "s/RABBITMQ_VERSION ?= .*/RABBITMQ_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== rabbitmq/melange.yaml ==="
           grep -E '(version:|sha256:)' rabbitmq/melange.yaml | head -2
-          echo "=== Makefile ==="
-          grep 'RABBITMQ_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -107,7 +103,6 @@ jobs:
             ## Changes
 
             - `rabbitmq/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - RABBITMQ_VERSION variable
 
             ## Image Tag
 

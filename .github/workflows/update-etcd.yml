@@ -71,10 +71,8 @@ jobs:
           sed -i "s/^  version: .*/  version: $VERSION/" etcd/melange.yaml
           sed -i "s/^  sha256: .*/  sha256: $SHA256/" etcd/melange.yaml
           sed -i "s/^  epoch: .*/  epoch: 0/" etcd/melange.yaml
-          sed -i "s/ETCD_VERSION ?= .*/ETCD_VERSION ?= $VERSION/" Makefile
 
           echo "=== etcd/melange.yaml ===" && grep -E '(version:|sha256:)' etcd/melange.yaml | head -2
-          echo "=== Makefile ===" && grep 'ETCD_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -90,7 +88,6 @@ jobs:
             ## Changes
 
             - `etcd/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - ETCD_VERSION variable
 
             ## Image Tag
 

@@ -79,14 +79,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" mariadb/melange.yaml
 
-          # Update Makefile
-          sed -i "s/MARIADB_VERSION ?= .*/MARIADB_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== mariadb/melange.yaml ==="
           grep -E '(version:|sha256:)' mariadb/melange.yaml | head -2
-          echo "=== Makefile ==="
-          grep 'MARIADB_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -102,7 +98,6 @@ jobs:
             ## Changes
 
             - `mariadb/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - MARIADB_VERSION variable
 
             ## Image Tag
 

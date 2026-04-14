@@ -98,14 +98,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" kafka/melange.yaml
 
-          # Update Makefile
-          sed -i "s/KAFKA_VERSION ?= .*/KAFKA_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== kafka/melange.yaml ==="
           grep -E '(version:|sha512:|epoch:)' kafka/melange.yaml | head -3
-          echo "=== Makefile ==="
-          grep 'KAFKA_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -121,7 +117,6 @@ jobs:
             ## Changes
 
             - `kafka/melange.yaml` - package version, SHA512 checksum, epoch reset
-            - `Makefile` - KAFKA_VERSION variable
 
             ## Image Tag
 

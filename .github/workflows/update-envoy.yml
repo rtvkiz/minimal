@@ -97,14 +97,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" envoy/melange.yaml
 
-          # Update Makefile
-          sed -i "s/^ENVOY_VERSION ?= .*/ENVOY_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== envoy/melange.yaml ==="
           grep -E '(version:|sha256_)' envoy/melange.yaml | head -3
-          echo "=== Makefile ==="
-          grep 'ENVOY_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -120,7 +116,6 @@ jobs:
             ## Changes
 
             - `envoy/melange.yaml` - package version, SHA256 checksums, epoch reset
-            - `Makefile` - ENVOY_VERSION variable
 
             ## Image Tag
 

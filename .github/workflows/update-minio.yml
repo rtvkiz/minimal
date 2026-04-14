@@ -93,14 +93,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" minio/melange.yaml
 
-          # Update Makefile
-          sed -i "s/MINIO_VERSION ?= .*/MINIO_VERSION ?= $NEW_VERSION/" Makefile
 
           # Verify changes
           echo "=== minio/melange.yaml ==="
           grep -E '(version:|minio_release:|sha256:)' minio/melange.yaml | head -3
-          echo "=== Makefile ==="
-          grep 'MINIO_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -116,7 +112,6 @@ jobs:
             ## Changes
 
             - `minio/melange.yaml` - package version (`${{ steps.check.outputs.new_version }}`), release tag, SHA256 checksum, epoch reset
-            - `Makefile` - MINIO_VERSION variable
 
             ## Image Tag
 

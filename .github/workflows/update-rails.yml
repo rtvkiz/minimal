@@ -316,14 +316,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" rails/melange.yaml
 
-          # Update Makefile
-          sed -i "s/RUBY_VERSION ?= .*/RUBY_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== rails/melange.yaml ==="
           grep -E '(version:|ruby_version:|sha256:|epoch:)' rails/melange.yaml | head -4
-          echo "=== Makefile ==="
-          grep 'RUBY_VERSION' Makefile
 
       - name: Create Ruby patch update PR
         if: steps.check-ruby.outputs.update_available == 'true'
@@ -339,7 +335,6 @@ jobs:
             ## Changes
 
             - `rails/melange.yaml` - package version, ruby_version, SHA256 checksum, epoch reset
-            - `Makefile` - RUBY_VERSION variable
 
             ## Image Tag
 
@@ -414,7 +409,6 @@ jobs:
                 `  - \`tag-filter\` from \`"v${currentSeries.replace(/\./g, '_')}_"\` to \`"v${newSeries.replace(/\./g, '_')}_"\``,
                 `- [ ] Update \`rails/apko/rails.yaml\`:`,
                 `  - Gem paths if Ruby major version changed (e.g. \`gems/4.0.0\` → \`gems/${newSeries.split('.')[0]}.0.0\`)`,
-                `- [ ] Update \`Makefile\` — \`RUBY_VERSION\``,
                 `- [ ] Build and test locally (\`make rails\`)`,
                 `- [ ] Verify CI passes`,
                 ``,

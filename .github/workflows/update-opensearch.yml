@@ -27,7 +27,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Get current version from Makefile
+          # Get current version from Makefile (opensearch has no melange.yaml)
           CURRENT=$(grep '^OPENSEARCH_VERSION ?=' Makefile | awk '{print $3}')
           MAJOR_VERSION=$(echo "$CURRENT" | cut -d. -f1)
 
@@ -79,8 +79,9 @@ jobs:
           OLD="${{ steps.check.outputs.current_version }}"
           echo "Updating to OpenSearch $NEW"
 
-          # Update Makefile
+          # Update Makefile (opensearch has no melange.yaml — Makefile is source of truth)
           sed -i "s/OPENSEARCH_VERSION ?= $OLD/OPENSEARCH_VERSION ?= $NEW/" Makefile
+
 
           # Update README.md version table (line 295: | OpenSearch | X.Y.Z | ...)
           # We update 2.19.x or similar pattern
@@ -99,7 +100,7 @@ jobs:
 
             Updates OpenSearch version tracking from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
 
-            This image uses the `opensearch-${{ steps.check.outputs.current_major }}` Wolfi package, which is rebuilt daily. This PR updates the version metadata in the `Makefile` and `README.md` to reflect the latest release in the ${{ steps.check.outputs.current_major }}.x line.
+            This image uses the `opensearch-${{ steps.check.outputs.current_major }}` Wolfi package, which is rebuilt daily. This PR updates the version metadata in `Makefile` and `README.md` to reflect the latest release in the ${{ steps.check.outputs.current_major }}.x line.
 
             ## Changes
 
@@ -154,7 +155,6 @@ jobs:
                 ``,
                 `- [ ] Check if Wolfi has \`opensearch-${nextMajor}\` package available: \`apk index -R https://packages.wolfi.dev/os/x86_64/APKINDEX.tar.gz | grep opensearch-${nextMajor}\``,
                 `- [ ] Update \`opensearch/apko/opensearch.yaml\`: change \`opensearch-${{ steps.check.outputs.current_major }}\` to \`opensearch-${nextMajor}\``,
-                `- [ ] Update \`Makefile\`: change \`OPENSEARCH_VERSION\` to \`${nextTag}\``,
                 `- [ ] Review [OpenSearch Breaking Changes](https://opensearch.org/docs/latest/version-history/)`,
                 `- [ ] Verify image build and run \`opensearch/test.sh\``,
                 ``,

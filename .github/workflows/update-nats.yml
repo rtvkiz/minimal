@@ -96,14 +96,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" nats/melange.yaml
 
-          # Update Makefile
-          sed -i "s/NATS_VERSION ?= .*/NATS_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== nats/melange.yaml ==="
           grep -E '(version:|sha256:)' nats/melange.yaml | head -2
-          echo "=== Makefile ==="
-          grep 'NATS_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -119,7 +115,6 @@ jobs:
             ## Changes
 
             - `nats/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - NATS_VERSION variable
 
             ## Image Tag
 
