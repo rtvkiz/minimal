@@ -69,7 +69,6 @@ jobs:
           sed -i "s/^  version: .*/  version: $VERSION/" otelcol/melange.yaml
           sed -i "s/^  sha256: .*/  sha256: $SHA256/" otelcol/melange.yaml
           sed -i "s/^  epoch: .*/  epoch: 0/" otelcol/melange.yaml
-          sed -i "s/OTELCOL_VERSION ?= .*/OTELCOL_VERSION ?= $VERSION/" Makefile
 
           echo "=== otelcol/melange.yaml ===" && grep -E '(version:|sha256:)' otelcol/melange.yaml | head -2
 
@@ -87,7 +86,6 @@ jobs:
             ## Changes
 
             - `otelcol/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - OTELCOL_VERSION variable
 
             ## Image Tag
 

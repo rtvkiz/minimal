@@ -4,14 +4,14 @@
 
 package:
   name: victoria-metrics-minimal
-  version: 1.139.0
+  version: 1.140.0
   epoch: 0
   description: "Minimal VictoriaMetrics time-series database built from source"
   copyright:
     - license: Apache-2.0
 
 vars:
-  sha256: 9e622fa1c59f89bc9b9c8e34cc8d9458eecc30b58961c8aa97012ef08b9bd293
+  sha256: ae77aaee7206fd1474990048baae78812fb36d12434698b93647f029d1a37d61
 
 environment:
   contents:

@@ -68,7 +68,6 @@ jobs:
           sed -i "s/^  version: .*/  version: $VERSION/" victoria-metrics/melange.yaml
           sed -i "s/^  sha256: .*/  sha256: $SHA256/" victoria-metrics/melange.yaml
           sed -i "s/^  epoch: .*/  epoch: 0/" victoria-metrics/melange.yaml
-          sed -i "s/VICTORIA_METRICS_VERSION ?= .*/VICTORIA_METRICS_VERSION ?= $VERSION/" Makefile
 
           echo "=== victoria-metrics/melange.yaml ===" && grep -E '(version:|sha256:)' victoria-metrics/melange.yaml | head -2
 
@@ -86,7 +85,6 @@ jobs:
             ## Changes
 
             - `victoria-metrics/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - VICTORIA_METRICS_VERSION variable
 
             ## Image Tag
 

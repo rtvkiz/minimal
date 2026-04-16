@@ -80,14 +80,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" memcached/melange.yaml
 
-          # Update Makefile
-          sed -i "s/MEMCACHED_VERSION ?= .*/MEMCACHED_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== memcached/melange.yaml ==="
           grep -E '(version:|sha256:)' memcached/melange.yaml | head -2
-          echo "=== Makefile ==="
-          grep 'MEMCACHED_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -103,7 +99,6 @@ jobs:
             ## Changes
 
             - `memcached/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - MEMCACHED_VERSION variable
 
             ## Image Tag
 

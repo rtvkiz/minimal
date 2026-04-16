@@ -24,15 +24,7 @@ jobs:
         run: |
           # Get latest stable release from GitHub API
           LATEST=$(curl -sS --retry 3 --retry-delay 5 "https://api.github.com/repos/envoyproxy/envoy/releases" | \
-            python3 -c "
-import sys, json
-releases = json.load(sys.stdin)
-for r in releases:
-    if r.get('prerelease', False):
-        continue
-    print(r['tag_name'].lstrip('v'))
-    break
-" 2>/dev/null)
+            jq -r '[.[] | select(.prerelease == false)] | first | .tag_name | ltrimstr("v")' 2>/dev/null)
 
           if [ -z "$LATEST" ]; then
             echo "::error::Failed to fetch latest Envoy version from GitHub API"
@@ -69,7 +61,7 @@ for r in releases:
 
           # Download checksums and compute SHA256 for both architectures
           echo "Fetching checksums for Envoy $VERSION..."
-          CHECKSUMS=$(curl -fsSL --retry 3 --retry-delay 5 "https://github.com/envoyproxy/envoy/releases/download/v${VERSION}/checksums.txt.asc" 2>/dev/null || echo "")
+          CHECKSUMS=$(curl -fsSL --retry 3 --retry-delay 5 "https://github.com/envoyproxy/envoy/releases/download/v${VERSION}/checksums.txt" 2>/dev/null || echo "")
 
           # For x86_64
           SHA256_X86=$(echo "$CHECKSUMS" | grep "envoy-${VERSION}-linux-x86_64" | awk '{print $1}')
@@ -105,14 +97,10 @@ for r in releases:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" envoy/melange.yaml
 
-          # Update Makefile
-          sed -i "s/^ENVOY_VERSION ?= .*/ENVOY_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== envoy/melange.yaml ==="
           grep -E '(version:|sha256_)' envoy/melange.yaml | head -3
-          echo "=== Makefile ==="
-          grep 'ENVOY_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -128,7 +116,6 @@ for r in releases:
             ## Changes
 
             - `envoy/melange.yaml` - package version, SHA256 checksums, epoch reset
-            - `Makefile` - ENVOY_VERSION variable
 
             ## Image Tag
 

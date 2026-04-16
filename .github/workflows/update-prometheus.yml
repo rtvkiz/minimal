@@ -84,14 +84,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" prometheus/melange.yaml
 
-          # Update Makefile
-          sed -i "s/PROMETHEUS_VERSION ?= .*/PROMETHEUS_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== prometheus/melange.yaml ==="
           grep -E '(version:|sha256:)' prometheus/melange.yaml | head -2
-          echo "=== Makefile ==="
-          grep 'PROMETHEUS_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -107,7 +103,6 @@ jobs:
             ## Changes
 
             - `prometheus/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - PROMETHEUS_VERSION variable
 
             ## Image Tag
 

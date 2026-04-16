@@ -81,14 +81,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" jenkins/melange.yaml
 
-          # Update Makefile
-          sed -i "s/JENKINS_VERSION ?= .*/JENKINS_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== jenkins/melange.yaml ==="
           grep -E '(version:|sha256:)' jenkins/melange.yaml | head -2
-          echo "=== Makefile ==="
-          grep 'JENKINS_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -104,7 +100,6 @@ jobs:
             ## Changes
 
             - `jenkins/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - JENKINS_VERSION variable
 
             ## Image Tag
 

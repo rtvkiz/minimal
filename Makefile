@@ -5,45 +5,48 @@
 REGISTRY ?= ghcr.io
 OWNER ?= $(shell git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 VERSION ?= $(shell date +%Y%m%d)
+
+# Helper: extract version from a melange.yaml (single source of truth)
+melange_version = $(shell grep '^  version:' $(1) 2>/dev/null | awk '{print $$2}')
+
 # --- Infrastructure/Core ---
-JENKINS_VERSION ?= 2.541.3
+JENKINS_VERSION ?= $(call melange_version,jenkins/melange.yaml)
 NGINX_VERSION ?= 1.29.4
 HTTPD_VERSION ?= 2.4.66
 
 # --- Databases/Storage ---
-REDIS_VERSION ?= 8.6.2
-MYSQL_VERSION ?= 8.4.8
-MARIADB_VERSION ?= 11.4.10
-MEMCACHED_VERSION ?= 1.6.41
-MINIO_VERSION ?= 2025.10.15
-ETCD_VERSION ?= 3.6.10
+REDIS_VERSION ?= $(call melange_version,redis-slim/melange.yaml)
+MYSQL_VERSION ?= $(call melange_version,mysql/melange.yaml)
+MARIADB_VERSION ?= $(call melange_version,mariadb/melange.yaml)
+MEMCACHED_VERSION ?= $(call melange_version,memcached/melange.yaml)
+MINIO_VERSION ?= $(call melange_version,minio/melange.yaml)
+ETCD_VERSION ?= $(call melange_version,etcd/melange.yaml)
 
 # --- Languages/Frameworks ---
-RUBY_VERSION ?= 4.0.2
-RAILS_VERSION ?= 8.1.2
+RUBY_VERSION ?= $(call melange_version,rails/melange.yaml)
+RAILS_VERSION ?= $(shell grep '^  rails_version:' rails/melange.yaml 2>/dev/null | awk '{print $$2}')
 
 # --- Messaging/Coordination ---
-KAFKA_VERSION ?= 4.2.0
-VALKEY_VERSION ?= 9.0.3
-NATS_VERSION ?= 2.12.6
-RABBITMQ_VERSION ?= 4.2.5
+KAFKA_VERSION ?= $(call melange_version,kafka/melange.yaml)
+VALKEY_VERSION ?= $(call melange_version,valkey/melange.yaml)
+NATS_VERSION ?= $(call melange_version,nats/melange.yaml)
+RABBITMQ_VERSION ?= $(call melange_version,rabbitmq/melange.yaml)
 
 # --- Ingress/Proxies ---
-CADDY_VERSION ?= 2.11.2
-HAPROXY_VERSION ?= 3.3.0
-TRAEFIK_VERSION ?= 3.6.12
-ENVOY_VERSION ?= 1.37.1
+CADDY_VERSION ?= $(call melange_version,caddy/melange.yaml)
+HAPROXY_VERSION ?= $(call melange_version,haproxy/melange.yaml)
+TRAEFIK_VERSION ?= $(call melange_version,traefik/melange.yaml)
+ENVOY_VERSION ?= $(call melange_version,envoy/melange.yaml)
 
 # --- Observability ---
-PROMETHEUS_VERSION ?= 3.11.0
-GRAFANA_VERSION ?= 12.4.1
-JAEGER_VERSION ?= 2.17.0
-OTELCOL_VERSION ?= 0.149.0
-VICTORIA_METRICS_VERSION ?= 1.139.0
+PROMETHEUS_VERSION ?= $(call melange_version,prometheus/melange.yaml)
+JAEGER_VERSION ?= $(call melange_version,jaeger/melange.yaml)
+OTELCOL_VERSION ?= $(call melange_version,otelcol/melange.yaml)
+VICTORIA_METRICS_VERSION ?= $(call melange_version,victoria-metrics/melange.yaml)
 
 # --- Search/AI ---
-QDRANT_VERSION ?= 1.17.1
-OPENSEARCH_VERSION ?= 3.5.0
+QDRANT_VERSION ?= $(call melange_version,qdrant/melange.yaml)
+OPENSEARCH_VERSION ?= 3.6.0
 
 # --- AI/ML ---
 CUDA_VERSION ?= 12.9.0
@@ -51,16 +54,16 @@ CUDA_VERSION ?= 12.9.0
 .PHONY: all build scan clean help
 .PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen opensearch
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
-.PHONY: prometheus prometheus-melange grafana grafana-melange mariadb mariadb-melange
+.PHONY: prometheus prometheus-melange mariadb mariadb-melange
 .PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno
 .PHONY: cuda-python cuda-python-melange
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python
-.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus grafana mariadb etcd victoria-metrics jaeger otelcol qdrant deno cuda-python
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus mariadb etcd victoria-metrics jaeger otelcol qdrant deno cuda-python
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -518,31 +521,6 @@ prometheus: prometheus-melange
 	@rm -f prometheus.tar sbom-*.spdx.json
 	@echo "✓ minimal-prometheus built (source build)"
 
-#------------------------------------------------------------------------------
-# GRAFANA IMAGE (melange source build: Go backend + yarn 4 frontend + apko)
-#------------------------------------------------------------------------------
-grafana-melange: keygen
-	@echo "Building Grafana $(GRAFANA_VERSION) from source via melange..."
-	melange build grafana/melange.yaml \
-		--arch x86_64 \
-		--signing-key melange.rsa
-	@echo "✓ Grafana package built from source"
-
-grafana: grafana-melange
-	@echo "Assembling minimal-grafana image with apko..."
-	apko build grafana/apko/grafana.yaml \
-		$(REGISTRY)/$(OWNER)/minimal-grafana:$(VERSION) \
-		grafana.tar \
-		--arch x86_64 \
-		--repository-append ./packages \
-		--keyring-append melange.rsa.pub
-	docker load < grafana.tar
-	docker tag $(REGISTRY)/$(OWNER)/minimal-grafana:$(VERSION)-amd64 \
-		$(REGISTRY)/$(OWNER)/minimal-grafana:$(VERSION)
-	docker tag $(REGISTRY)/$(OWNER)/minimal-grafana:$(VERSION)-amd64 \
-		$(REGISTRY)/$(OWNER)/minimal-grafana:latest
-	@rm -f grafana.tar sbom-*.spdx.json
-	@echo "✓ minimal-grafana built (source build, Go + frontend)"
 
 #------------------------------------------------------------------------------
 # MARIADB IMAGE (melange source build + apko, LTS 11.4 track)
@@ -928,7 +906,7 @@ kafka: kafka-melange
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb scan-cuda-python
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-cuda-python
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -1092,11 +1070,6 @@ scan-prometheus:
 		$(REGISTRY)/$(OWNER)/minimal-prometheus:latest
 	@echo "✓ minimal-prometheus: scan passed"
 
-scan-grafana:
-	@echo "Scanning minimal-grafana..."
-	trivy image --exit-code 1 --severity CRITICAL,HIGH \
-		$(REGISTRY)/$(OWNER)/minimal-grafana:latest
-	@echo "✓ minimal-grafana: scan passed"
 
 scan-mariadb:
 	@echo "Scanning minimal-mariadb..."
@@ -1195,7 +1168,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb test-cuda-python
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-cuda-python
 
 test-python:
 	@echo "Testing Python image..."
@@ -1476,11 +1449,6 @@ test-prometheus:
 		prometheus/test.sh
 	@echo "✓ Prometheus tests passed"
 
-test-grafana:
-	@echo "Testing Grafana image..."
-	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-grafana:latest" && \
-		grafana/test.sh
-	@echo "✓ Grafana tests passed"
 
 test-mariadb:
 	@echo "Testing MariaDB image..."

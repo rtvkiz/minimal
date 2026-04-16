@@ -79,14 +79,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" redis-slim/melange.yaml
 
-          # Update Makefile
-          sed -i "s/REDIS_VERSION ?= .*/REDIS_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== redis-slim/melange.yaml ==="
           grep -E '(version:|sha256:)' redis-slim/melange.yaml | head -2
-          echo "=== Makefile ==="
-          grep 'REDIS_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -102,7 +98,6 @@ jobs:
             ## Changes
 
             - `redis-slim/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - REDIS_VERSION variable
 
             ## Image Tag
 

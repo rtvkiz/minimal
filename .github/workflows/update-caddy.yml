@@ -96,14 +96,10 @@ jobs:
           # Reset epoch to 0 for new upstream version
           sed -i "s/^  epoch: .*/  epoch: 0/" caddy/melange.yaml
 
-          # Update Makefile
-          sed -i "s/CADDY_VERSION ?= .*/CADDY_VERSION ?= $VERSION/" Makefile
 
           # Verify changes
           echo "=== caddy/melange.yaml ==="
           grep -E '(version:|sha256:)' caddy/melange.yaml | head -2
-          echo "=== Makefile ==="
-          grep 'CADDY_VERSION' Makefile
 
       - name: Create Pull Request
         if: steps.check.outputs.update_available == 'true'
@@ -119,7 +115,6 @@ jobs:
             ## Changes
 
             - `caddy/melange.yaml` - package version, SHA256 checksum, epoch reset
-            - `Makefile` - CADDY_VERSION variable
 
             ## Image Tag
 
