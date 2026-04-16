@@ -45,18 +45,22 @@ VICTORIA_METRICS_VERSION ?= 1.139.0
 QDRANT_VERSION ?= 1.17.1
 OPENSEARCH_VERSION ?= 3.5.0
 
+# --- AI/ML ---
+CUDA_VERSION ?= 12.9.0
+
 .PHONY: all build scan clean help
 .PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen opensearch
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange grafana grafana-melange mariadb mariadb-melange
 .PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno
-.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno
+.PHONY: cuda-python cuda-python-melange
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus grafana mariadb etcd victoria-metrics jaeger otelcol qdrant deno
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus grafana mariadb etcd victoria-metrics jaeger otelcol qdrant deno cuda-python
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -714,6 +718,32 @@ deno:
 	@echo "✓ minimal-deno built (Wolfi package, shell-less)"
 
 #------------------------------------------------------------------------------
+# CUDA PYTHON IMAGE (melange NVIDIA redist tarballs + Wolfi Python, x86_64 only)
+#------------------------------------------------------------------------------
+cuda-python-melange: keygen
+	@echo "Building CUDA $(CUDA_VERSION) runtime packages via melange..."
+	melange build cuda-python/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ CUDA runtime packages built"
+
+cuda-python: cuda-python-melange
+	@echo "Assembling minimal-cuda-python image with apko..."
+	apko build cuda-python/apko/cuda-python.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-cuda-python:$(VERSION) \
+		cuda-python.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < cuda-python.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-cuda-python:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-cuda-python:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-cuda-python:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-cuda-python:latest
+	@rm -f cuda-python.tar sbom-*.spdx.json
+	@echo "✓ minimal-cuda-python built (NVIDIA CUDA + Python, x86_64 only)"
+
+#------------------------------------------------------------------------------
 # POSTGRES SLIM IMAGE (Wolfi pre-built package)
 #------------------------------------------------------------------------------
 postgres-slim:
@@ -898,7 +928,7 @@ kafka: kafka-melange
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-grafana scan-mariadb scan-cuda-python
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -1110,6 +1140,12 @@ scan-deno:
 		$(REGISTRY)/$(OWNER)/minimal-deno:latest
 	@echo "✓ minimal-deno: scan passed"
 
+scan-cuda-python:
+	@echo "Scanning minimal-cuda-python..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-cuda-python:latest
+	@echo "✓ minimal-cuda-python: scan passed"
+
 # Full scan with all severities
 scan-all:
 	@echo "Full vulnerability scan..."
@@ -1159,7 +1195,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-grafana test-mariadb test-cuda-python
 
 test-python:
 	@echo "Testing Python image..."
@@ -1488,6 +1524,12 @@ test-deno:
 		deno/test.sh
 	@echo "✓ Deno tests passed"
 
+test-cuda-python:
+	@echo "Testing CUDA Python image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-cuda-python:latest" && \
+		cuda-python/test.sh
+	@echo "✓ CUDA Python tests passed"
+
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
@@ -1542,6 +1584,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-minio:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-opensearch:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-cuda-python:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-cuda-python:latest
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -1623,6 +1667,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-opensearch:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-cuda-python:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-cuda-python:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-cuda-python:latest 2>/dev/null || true
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
@@ -1665,6 +1712,7 @@ help:
 	@echo "  make rabbitmq        Build RabbitMQ $(RABBITMQ_VERSION) (official binary + Wolfi Erlang)"
 	@echo "  make minio           Build MinIO $(MINIO_VERSION) (source build)"
 	@echo "  make opensearch      Build OpenSearch $(OPENSEARCH_VERSION) (Wolfi package)"
+	@echo "  make cuda-python     Build CUDA Python $(CUDA_VERSION) (NVIDIA redist + Python, x86_64)"
 	@echo "  make build           Build all images"
 	@echo ""
 	@echo "Scanning:"
@@ -1695,5 +1743,6 @@ help:
 	@echo "  TRAEFIK_VERSION=$(TRAEFIK_VERSION)"
 	@echo "  RABBITMQ_VERSION=$(RABBITMQ_VERSION)"
 	@echo "  OPENSEARCH_VERSION=$(OPENSEARCH_VERSION)"
+	@echo "  CUDA_VERSION=$(CUDA_VERSION)"
 	@echo "  REGISTRY=$(REGISTRY)"
 	@echo "  OWNER=$(OWNER)"

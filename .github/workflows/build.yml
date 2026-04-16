@@ -263,6 +263,11 @@ jobs:
             melange_config: envoy/melange.yaml
             arch: aarch64
             runner: ubuntu-24.04-arm
+          # CUDA Python builds (x86_64 only - NVIDIA redist tarballs are x86_64)
+          - name: cuda-python
+            melange_config: cuda-python/melange.yaml
+            arch: x86_64
+            runner: ubuntu-latest
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -645,6 +650,10 @@ jobs:
             apko_config: envoy/apko/envoy.yaml
             melange_config: envoy/melange.yaml
             arches: x86_64,aarch64
+          - name: cuda-python
+            apko_config: cuda-python/apko/cuda-python.yaml
+            melange_config: cuda-python/melange.yaml
+            arches: x86_64
 
     steps:
       - name: Checkout repository

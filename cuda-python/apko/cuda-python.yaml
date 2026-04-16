@@ -82,8 +82,8 @@ paths:
     permissions: 0o755
   - path: /tmp
     type: directory
-    uid: 65532
-    gid: 65532
+    uid: 0
+    gid: 0
     permissions: 0o1777
 
 archs:
