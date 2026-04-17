@@ -5,7 +5,7 @@
 package:
   name: php-minimal
   version: 8.5.5
-  epoch: 2
+  epoch: 3
   description: "Minimal PHP CLI built from source"
   copyright:
     - license: PHP-3.01
@@ -44,17 +44,20 @@ pipeline:
       tar xzf php.tar.gz
       rm php.tar.gz
 
-  # Undo openssl-hardened-dev's restricted API surface.
-  # Wolfi's openssl-hardened-dev sets OPENSSL_CONFIGURED_API to 30600 and defines
-  # OPENSSL_NO_DEPRECATED, hiding RSA_PKCS1_PADDING, ERR_NUM_ERRORS, and other
-  # symbols that PHP's openssl extension still needs.
+  # Work around openssl-hardened-dev's restricted API surface.
+  # Wolfi's openssl-hardened-dev defines OPENSSL_NO_DEPRECATED and sets
+  # OPENSSL_CONFIGURED_API to 30600, which hides ERR_NUM_ERRORS (deprecated
+  # in 3.0), RSA_PKCS1_PADDING, and other symbols PHP's openssl ext needs.
+  # We strip OPENSSL_NO_DEPRECATED and compile with OPENSSL_API_COMPAT=10000
+  # to request the full pre-3.0 API surface while staying within the
+  # OPENSSL_CONFIGURED_API constraint.
   - runs: |
       sed -i 's/^#\s*define\s\+OPENSSL_NO_DEPRECATED$//' /usr/include/openssl/configuration.h
-      sed -i 's/^#\s*define\s\+OPENSSL_CONFIGURED_API\s\+30600/# define OPENSSL_CONFIGURED_API 0/' /usr/include/openssl/configuration.h
 
   # Configure and build PHP (minimal CLI only)
   - runs: |
       cd /home/build/php-${{package.version}}
+      CFLAGS="$CFLAGS -DOPENSSL_API_COMPAT=10000" \
       ./configure \
         --prefix=/usr \
         --disable-all \
