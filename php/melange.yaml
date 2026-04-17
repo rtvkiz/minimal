@@ -5,7 +5,7 @@
 package:
   name: php-minimal
   version: 8.5.5
-  epoch: 1
+  epoch: 2
   description: "Minimal PHP CLI built from source"
   copyright:
     - license: PHP-3.01
@@ -44,11 +44,13 @@ pipeline:
       tar xzf php.tar.gz
       rm php.tar.gz
 
-  # Undo openssl-hardened-dev's no-deprecated configuration.
-  # Wolfi's openssl-hardened-dev installs a configuration.h with OPENSSL_NO_DEPRECATED,
-  # which hides RSA_PKCS1_PADDING and other constants PHP's openssl extension needs.
+  # Undo openssl-hardened-dev's restricted API surface.
+  # Wolfi's openssl-hardened-dev sets OPENSSL_CONFIGURED_API to 30600 and defines
+  # OPENSSL_NO_DEPRECATED, hiding RSA_PKCS1_PADDING, ERR_NUM_ERRORS, and other
+  # symbols that PHP's openssl extension still needs.
   - runs: |
       sed -i 's/^#\s*define\s\+OPENSSL_NO_DEPRECATED$//' /usr/include/openssl/configuration.h
+      sed -i 's/^#\s*define\s\+OPENSSL_CONFIGURED_API\s\+30600/# define OPENSSL_CONFIGURED_API 0/' /usr/include/openssl/configuration.h
 
   # Configure and build PHP (minimal CLI only)
   - runs: |
