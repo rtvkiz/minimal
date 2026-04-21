@@ -4,7 +4,7 @@
 
 package:
   name: rails-minimal
-  version: 4.0.2
+  version: 4.0.3
   epoch: 0
   description: "Minimal Ruby + Rails built from source"
   copyright:
@@ -13,10 +13,10 @@ package:
     no-depends: true
 
 vars:
-  ruby_version: 4.0.2
+  ruby_version: 4.0.3
   rails_version: 8.1.3
   # SHA256 from https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.1.tar.gz
-  sha256: 51502b26b50b68df4963336ca41e368cde92c928faf91654de4c4c1791f82aac
+  sha256: 77964acc370d5c8375b9502e5ba6c13c03ef91ab9eb9f521c84fb42b9c9a6b0f
 
 environment:
   contents:
