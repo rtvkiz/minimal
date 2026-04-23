@@ -1,0 +1,77 @@
+# Melange build configuration for minimal Gitea
+# Builds Gitea from source (Go + Node.js frontend) with SQLite support
+# CGO_ENABLED=1 required for SQLite — produces dynamically linked binary
+
+package:
+  name: gitea-minimal
+  version: 1.26.0
+  epoch: 0
+  description: "Minimal Gitea git hosting server built from source"
+  copyright:
+    - license: MIT
+
+vars:
+  # SHA256 checksum of source tarball
+  sha256: c803dea6c60674312467b2f48cf39470e55f9b341710207eb71b37e9554f2f7f
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+      # Frontend build dependencies
+      - nodejs-22
+      - pnpm
+      # SQLite support (CGO_ENABLED=1)
+      - sqlite-dev
+
+pipeline:
+  # Download and verify Gitea source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL "https://github.com/go-gitea/gitea/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/gitea.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/gitea.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf gitea.tar.gz
+      rm gitea.tar.gz
+
+  # Build frontend assets and backend binary via Makefile
+  # make frontend: pnpm install + vite build
+  # make backend:  go generate (creates bindata.dat embeds) + go build
+  - runs: |
+      cd /home/build/gitea-${{package.version}}
+      TAGS="bindata sqlite sqlite_unlock_notify" \
+      CGO_ENABLED=1 \
+      EXTRA_GOFLAGS="-trimpath" \
+      GITEA_VERSION=${{package.version}} \
+      make build
+
+  # Install to destdir
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/gitea-${{package.version}}/gitea "${{targets.destdir}}/usr/bin/"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying Gitea build..."
+      "${{targets.destdir}}/usr/bin/gitea" --version
+      echo "Checking binary size..."
+      ls -lh "${{targets.destdir}}/usr/bin/gitea"
+
+update:
+  enabled: true
+  github:
+    identifier: go-gitea/gitea
+    use-tag: true
+    tag-filter: "v1."
