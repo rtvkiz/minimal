@@ -1,0 +1,97 @@
+# Minimal Gitea image - built from source via melange
+# CGO_ENABLED=1 build requires glibc + sqlite at runtime
+# Includes git (required for repository operations) and busybox (for shell)
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Our Gitea (built from source via melange)
+    - gitea-minimal
+
+    # Core runtime (CGO binary needs these)
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libstdc++
+
+    # SQLite runtime library
+    - sqlite-libs
+
+    # Git (required — Gitea shells out to git for repo operations)
+    - git
+
+    # Shell (required — Gitea uses sh for git hooks)
+    - busybox
+
+    # Netcat (healthcheck probes)
+    - netcat-openbsd
+
+    # TLS
+    - libssl3
+    - libcrypto3
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: gitea
+      gid: 65532
+  users:
+    - username: gitea
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/gitea web --config /etc/gitea/app.ini
+
+environment:
+  PATH: /usr/bin:/bin
+  GITEA_CUSTOM: /data/gitea
+  GITEA_WORK_DIR: /var/lib/gitea
+
+paths:
+  - path: /etc/gitea
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /data/gitea
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/gitea
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/gitea/repositories
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-gitea"
+  org.opencontainers.image.description: "Hardened Gitea git hosting image built from source via melange with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/gitea"
+  org.opencontainers.image.licenses: "MIT"
+
+archs:
+  - x86_64
+  - aarch64

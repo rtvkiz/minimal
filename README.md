@@ -12,7 +12,7 @@
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build Hardened Images"></a>
   <a href="https://rtvkiz.github.io/minimal/"><img src="https://img.shields.io/badge/Vulnerability_Report-View-0d9488" alt="Vulnerability Report"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Images-36-0d9488" alt="Images: 36">
+  <img src="https://img.shields.io/badge/Images-37-0d9488" alt="Images: 37">
   <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
 </p>
 
@@ -86,10 +86,12 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | **Envoy** | `docker pull ghcr.io/rtvkiz/minimal-envoy:latest` | No | Cloud-native service proxy and load balancer, upstream binary |
 | | | **AI/ML** | |
 | **CUDA Python** | `docker pull ghcr.io/rtvkiz/minimal-cuda-python:latest` | No | Python + CUDA 12.9 + cuDNN 9.10 for ML inference (x86_64 only) |
+| | | **Git Hosting** | |
+| **Gitea** | `docker pull ghcr.io/rtvkiz/minimal-gitea:latest` | Yes | Self-hosted Git service (built from source) |
 | | | **CI/CD** | |
 | **Jenkins** | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
 
-*\*HTTPD, Jenkins, Kafka may include shell(sh,busybox) via transitive Wolfi dependencies or KRaft init entrypoint. MySQL includes busybox for its auto-init entrypoint script. OpenSearch includes bash/busybox as transitive dependencies of the opensearch-2 Wolfi package. CI treats shell presence as informational.*
+*\*HTTPD, Jenkins, Kafka may include shell(sh,busybox) via transitive Wolfi dependencies or KRaft init entrypoint. MySQL includes busybox for its auto-init entrypoint script. OpenSearch includes bash/busybox as transitive dependencies of the opensearch-2 Wolfi package. Gitea includes busybox — required for git hooks which shell out to sh. CI treats shell presence as informational.*
 
 *The NATS image contains only [`nats-server`](https://github.com/nats-io/nats-server) (the broker). The NATS ecosystem also includes a separate CLI ([`natscli`](https://github.com/nats-io/natscli)) and client libraries — these are not included.*
 
@@ -149,6 +151,9 @@ docker run -d -p 9092:9092 -v kafkadata:/var/kafka/data ghcr.io/rtvkiz/minimal-k
 
 # RabbitMQ - AMQP message broker
 docker run -d -p 5672:5672 -v rabbitmqdata:/var/lib/rabbitmq ghcr.io/rtvkiz/minimal-rabbitmq:latest
+
+# Gitea - self-hosted Git service
+docker run -d -p 3000:3000 -v giteadata:/data/gitea ghcr.io/rtvkiz/minimal-gitea:latest
 ```
 
 ## Security Features
@@ -247,7 +252,7 @@ Every build is scanned for vulnerabilities; results appear in the job summary an
 
 ### Automated Version Updates
 
-Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails) and key services (OpenSearch) are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
+Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails, Gitea) and key services (OpenSearch) are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
 
 | Workflow | Watches | What It Does |
 |----------|---------|--------------|
@@ -266,6 +271,7 @@ Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails) and 
 | `update-qdrant.yml` | Qdrant v1.x GitHub releases | Updates version and SHA256; warns on major version change |
 | `update-etcd.yml` | etcd v3.x GitHub releases | Updates version and SHA256; warns on major version change |
 | `update-opensearch.yml` | OpenSearch 2.x GitHub releases | Updates version in Makefile and README.md; opens issue for major 3.x |
+| `update-gitea.yml` | Gitea v1.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
 | `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, Java, PostgreSQL, Deno package versions |
 
 Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g. PHP 8.5 → 8.6) create a GitHub Issue with a manual upgrade checklist, since configure flags or APIs may change.
@@ -303,6 +309,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | OTel Collector | 0.149.x | nonroot (65532) | `/usr/bin/otelcol` | `/` |
 | Qdrant | 1.17.x | nonroot (65532) | `/usr/bin/qdrant` | `/qdrant` |
 | Deno | 2.x | nonroot (65532) | `/usr/bin/deno` | `/app` |
+| Gitea | 1.26.x | gitea (65532) | `/usr/bin/gitea web --config /etc/gitea/app.ini` | `/var/lib/gitea` |
 
 </details>
 
@@ -314,7 +321,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 ```bash
 # Prerequisites
 go install chainguard.dev/apko@latest
-go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails, RabbitMQ
+go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails, RabbitMQ, Gitea
 brew install anchore/grype/grype  # or: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh
 
 # Build all images
@@ -339,6 +346,7 @@ make php
 make rails
 make kafka
 make rabbitmq
+make gitea
 
 # Scan for CVEs
 make scan
@@ -387,6 +395,9 @@ minimal/
 ├── kafka/
 │   ├── apko/kafka.yaml              # Kafka image
 │   └── melange.yaml                 # Apache binary + jlink JRE
+├── gitea/
+│   ├── apko/gitea.yaml              # Gitea image
+│   └── melange.yaml                 # Gitea source build (Go + Node.js frontend)
 ├── .github/workflows/
 │   ├── build.yml                 # Daily CI pipeline
 │   ├── update-jenkins.yml        # Jenkins version updates
@@ -396,6 +407,7 @@ minimal/
 │   ├── update-mysql.yml          # MySQL LTS version updates
 │   ├── update-memcached.yml      # Memcached version updates
 │   ├── update-kafka.yml          # Kafka version updates
+│   ├── update-gitea.yml          # Gitea version updates
 │   └── update-wolfi-packages.yml # Wolfi package updates
 ├── Makefile
 └── LICENSE
