@@ -4,7 +4,7 @@
 
 package:
   name: mysql-minimal
-  version: 8.4.8
+  version: 8.4.9
   epoch: 0
   description: "Minimal MySQL server and client built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-mysql.yml workflow
-  sha256: be9d96cdf87f276952a2cdd960f106b960a8860e46c115ed39c1b5f2e0387a20
+  sha256: e4aa8b39e42d1fe078f33bbd73695fac2b54dbc7bb137f0bdbe63f7be1a02d6b
 
 environment:
   contents:
