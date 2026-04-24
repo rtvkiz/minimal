@@ -35,12 +35,16 @@ pipeline:
   # Download and verify Kafka binary release
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --connect-timeout 30 --retry 2 --retry-delay 5 \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-delay 10 \
+        "https://dlcdn.apache.org/kafka/${{package.version}}/kafka_${{vars.scala_version}}-${{package.version}}.tgz" \
+        -o /home/build/kafka.tgz || \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-delay 10 \
         "https://downloads.apache.org/kafka/${{package.version}}/kafka_${{vars.scala_version}}-${{package.version}}.tgz" \
         -o /home/build/kafka.tgz || \
-      curl -fsSL --retry 3 --retry-delay 5 \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-delay 10 \
         "https://archive.apache.org/dist/kafka/${{package.version}}/kafka_${{vars.scala_version}}-${{package.version}}.tgz" \
         -o /home/build/kafka.tgz
+
 
       echo "${{vars.sha512}}  /home/build/kafka.tgz" | sha512sum -c -
 
