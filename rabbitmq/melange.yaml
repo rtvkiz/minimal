@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of rabbitmq-server-generic-unix-{version}.tar.xz - updated by update-rabbitmq.yml
-  sha256: 011f489260d6b9d1976451ddad7b3307d14bdea320e4d19ac0960beda8422126
+  sha256: 361be858e59e56c55d8f45b4d92b056a1c974d92de257357333d2c0740b99616
 
 environment:
   contents:
