@@ -1,14 +1,14 @@
 package:
   name: envoy-minimal
-  version: 1.37.2
+  version: 1.38.0
   epoch: 0
   description: "Minimal Envoy proxy built from upstream releases"
   copyright:
     - license: Apache-2.0
 
 vars:
-  sha256_x86: 32d3cc203b8abdce8c2ed916a298124364e0c48e83b7196f551e769b6a489bf8
-  sha256_arm: b0d7fbf29554384ce23e7190090257feb5ca136f145626b3adefabb2d53f878b
+  sha256_x86: cca312a7c3f91852f2849995c895130c59842e21ba787dc90bafa4026d6c5ecc
+  sha256_arm: 9f00678c0cc433d7a342c422415eb3fdd163e77414aee5c5b57c04bd7d579454
 
 environment:
   contents:
