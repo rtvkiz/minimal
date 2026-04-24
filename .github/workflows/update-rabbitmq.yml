@@ -71,6 +71,20 @@ jobs:
           curl -fsSL --retry 3 --retry-delay 5 \
             "https://github.com/rabbitmq/rabbitmq-server/releases/download/v${VERSION}/rabbitmq-server-generic-unix-${VERSION}.tar.xz" \
             -o /tmp/rabbitmq.tar.xz
+
+          # Verify the download succeeded and file is not empty/too small
+          if [ ! -s /tmp/rabbitmq.tar.xz ]; then
+            echo "::error::Failed to download RabbitMQ tarball or file is empty"
+            exit 1
+          fi
+
+          # Generic-unix tarball should be > 20MB
+          SIZE=$(stat -c%s /tmp/rabbitmq.tar.xz)
+          if [ "$SIZE" -lt 20000000 ]; then
+            echo "::error::Downloaded file is suspiciously small ($SIZE bytes). Likely an error page."
+            exit 1
+          fi
+
           SHA256=$(sha256sum /tmp/rabbitmq.tar.xz | awk '{print $1}')
           rm /tmp/rabbitmq.tar.xz
           echo "SHA256: $SHA256"
