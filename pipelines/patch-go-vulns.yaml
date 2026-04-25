@@ -1,4 +1,4 @@
-name: Update Go transitive dependencies to latest versions
+name: Update Go transitive dependencies to latest compatible versions
 
 needs:
   packages:
@@ -18,14 +18,20 @@ pipeline:
       echo "[patch-go-vulns] Updating deps in $(pwd) ..."
 
       # Ensure deps are fetched from the Go module proxy and verified
-      # against the Go checksum database (these are Go defaults, set
-      # explicitly here so builds never silently fall back to unverified
-      # sources even if the build environment overrides them)
+      # against the Go checksum database
       export GOPROXY="https://proxy.golang.org,direct"
       export GOSUMDB="sum.golang.org"
       export GONOSUMCHECK=""
       export GONOSUMDB=""
 
-      go get -u ./...
+      # Don't auto-download a newer Go toolchain
+      export GOTOOLCHAIN=local
+
+      # Try full minor+patch bumps first; if a dep needs a newer Go
+      # than what's available, fall back to patch-only bumps
+      if ! go get -u ./... 2>/dev/null; then
+        echo "[patch-go-vulns] Full update hit Go version ceiling, falling back to patch-only"
+        go get -u=patch ./...
+      fi
       go mod tidy
       echo "[patch-go-vulns] Done"
