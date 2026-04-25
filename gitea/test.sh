@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE="${1:-minimal-gitea:latest}"
 echo "Testing image: $IMAGE"
 
 # Test 1: Gitea binary exists and reports version
