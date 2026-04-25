@@ -42,6 +42,11 @@ pipeline:
       tar xzf nats.tar.gz
       rm nats.tar.gz
 
+  # Auto-patch vulnerable transitive deps
+  - uses: patch-go-vulns
+    with:
+      modroot: /home/build/nats-server-${{package.version}}
+
   # Build NATS from source (static binary)
   - runs: |
       cd /home/build/nats-server-${{package.version}}

@@ -46,6 +46,11 @@ pipeline:
       tar xzf minio.tar.gz
       rm minio.tar.gz
 
+  # Auto-patch vulnerable transitive deps
+  - uses: patch-go-vulns
+    with:
+      modroot: /home/build/minio-${{vars.minio_release}}
+
   # Build MinIO from source (static binary)
   - runs: |
       cd /home/build/minio-${{vars.minio_release}}

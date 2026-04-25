@@ -35,6 +35,11 @@ pipeline:
       echo "${{vars.sha256}}  /home/build/jaeger.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf jaeger.tar.gz && rm jaeger.tar.gz
 
+  # Auto-patch vulnerable transitive deps
+  - uses: patch-go-vulns
+    with:
+      modroot: /home/build/jaeger-${{package.version}}
+
   - runs: |
       cd /home/build/jaeger-${{package.version}}
       CGO_ENABLED=0 go build \

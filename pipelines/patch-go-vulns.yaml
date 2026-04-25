@@ -1,0 +1,31 @@
+name: Update Go transitive dependencies to latest versions
+
+needs:
+  packages:
+    - go
+    - git
+
+inputs:
+  modroot:
+    description: |
+      Directory containing go.mod. For monorepos with multiple modules,
+      call this pipeline once per module directory.
+    required: true
+
+pipeline:
+  - runs: |
+      cd "${{inputs.modroot}}"
+      echo "[patch-go-vulns] Updating deps in $(pwd) ..."
+
+      # Ensure deps are fetched from the Go module proxy and verified
+      # against the Go checksum database (these are Go defaults, set
+      # explicitly here so builds never silently fall back to unverified
+      # sources even if the build environment overrides them)
+      export GOPROXY="https://proxy.golang.org,direct"
+      export GOSUMDB="sum.golang.org"
+      export GONOSUMCHECK=""
+      export GONOSUMDB=""
+
+      go get -u ./...
+      go mod tidy
+      echo "[patch-go-vulns] Done"

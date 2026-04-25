@@ -315,7 +315,8 @@ jobs:
             --arch ${{ matrix.arch }} \
             --signing-key melange.rsa \
             --out-dir ./packages \
-            --runner docker
+            --runner docker \
+            --pipeline-dirs pipelines
 
       - name: Upload packages
         uses: actions/upload-artifact@v4

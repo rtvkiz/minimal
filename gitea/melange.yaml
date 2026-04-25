@@ -46,6 +46,11 @@ pipeline:
       tar xzf gitea.tar.gz
       rm gitea.tar.gz
 
+  # Auto-patch vulnerable transitive deps
+  - uses: patch-go-vulns
+    with:
+      modroot: /home/build/gitea-${{package.version}}
+
   # Build frontend assets and backend binary via Makefile
   # make frontend: pnpm install + vite build
   # make backend:  go generate (creates bindata.dat embeds) + go build

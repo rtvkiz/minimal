@@ -34,6 +34,11 @@ pipeline:
       echo "${{vars.sha256}}  /home/build/victoria-metrics.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf victoria-metrics.tar.gz && rm victoria-metrics.tar.gz
 
+  # Auto-patch vulnerable transitive deps
+  - uses: patch-go-vulns
+    with:
+      modroot: /home/build/VictoriaMetrics-${{package.version}}
+
   - runs: |
       cd /home/build/VictoriaMetrics-${{package.version}}
       CGO_ENABLED=0 go build \
