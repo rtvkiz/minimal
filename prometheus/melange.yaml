@@ -44,6 +44,15 @@ pipeline:
       tar xzf prometheus.tar.gz
       rm prometheus.tar.gz
 
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      cd /home/build/prometheus-${{package.version}}
+      go get github.com/buger/jsonparser@v1.1.2
+      go get go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.43.0
+      go get go.opentelemetry.io/otel/sdk@v1.43.0
+      go mod tidy
+  # end-patch-go-deps
+
   # Build Prometheus from source (static binary, no embedded web UI)
   - runs: |
       cd /home/build/prometheus-${{package.version}}

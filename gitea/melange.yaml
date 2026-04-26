@@ -46,6 +46,13 @@ pipeline:
       tar xzf gitea.tar.gz
       rm gitea.tar.gz
 
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      cd /home/build/gitea-${{package.version}}
+      go get github.com/Azure/go-ntlmssp@v0.1.1
+      go mod tidy
+  # end-patch-go-deps
+
   # Build frontend assets and backend binary via Makefile
   # make frontend: pnpm install + vite build
   # make backend:  go generate (creates bindata.dat embeds) + go build
