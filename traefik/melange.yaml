@@ -42,11 +42,6 @@ pipeline:
       tar xzf traefik.tar.gz
       rm traefik.tar.gz
 
-  # Auto-patch vulnerable transitive deps
-  - uses: patch-go-vulns
-    with:
-      modroot: /home/build/traefik-${{package.version}}
-
   # Build Traefik from source (static binary)
   - runs: |
       cd /home/build/traefik-${{package.version}}

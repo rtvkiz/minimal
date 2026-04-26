@@ -34,11 +34,6 @@ pipeline:
       echo "${{vars.sha256}}  /home/build/otelcol.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf otelcol.tar.gz && rm otelcol.tar.gz
 
-  # Auto-patch vulnerable transitive deps
-  - uses: patch-go-vulns
-    with:
-      modroot: /home/build/opentelemetry-collector-${{package.version}}/cmd/otelcorecol
-
   - runs: |
       cd /home/build/opentelemetry-collector-${{package.version}}/cmd/otelcorecol
       CGO_ENABLED=0 go build \

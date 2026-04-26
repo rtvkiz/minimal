@@ -33,17 +33,6 @@ pipeline:
       echo "${{vars.sha256}}  /home/build/etcd.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf etcd.tar.gz && rm etcd.tar.gz
 
-  # Auto-patch vulnerable transitive deps (each module separately)
-  - uses: patch-go-vulns
-    with:
-      modroot: /home/build/etcd-${{package.version}}/server
-  - uses: patch-go-vulns
-    with:
-      modroot: /home/build/etcd-${{package.version}}/etcdctl
-  - uses: patch-go-vulns
-    with:
-      modroot: /home/build/etcd-${{package.version}}/etcdutl
-
   - runs: |
       # etcd 3.6 is a multi-module monorepo: server/, etcdctl/, etcdutl/ each
       # have their own go.mod and must be built from within their directory.

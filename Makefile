@@ -294,8 +294,7 @@ caddy-melange: keygen
 	@echo "Building Caddy $(CADDY_VERSION) from source via melange..."
 	melange build caddy/melange.yaml \
 		--arch x86_64,aarch64 \
-		--signing-key melange.rsa \
-		--pipeline-dirs pipelines
+		--signing-key melange.rsa
 	@echo "✓ Caddy package built from source"
 
 caddy: caddy-melange
@@ -373,8 +372,7 @@ nats-melange: keygen
 	@echo "Building NATS $(NATS_VERSION) from source via melange..."
 	melange build nats/melange.yaml \
 		--arch x86_64,aarch64 \
-		--signing-key melange.rsa \
-		--pipeline-dirs pipelines
+		--signing-key melange.rsa
 	@echo "✓ NATS package built from source"
 
 nats: nats-melange
@@ -400,8 +398,7 @@ traefik-melange: keygen
 	@echo "Building Traefik $(TRAEFIK_VERSION) from source via melange..."
 	melange build traefik/melange.yaml \
 		--arch x86_64,aarch64 \
-		--signing-key melange.rsa \
-		--pipeline-dirs pipelines
+		--signing-key melange.rsa
 	@echo "✓ Traefik package built from source"
 
 traefik: traefik-melange
@@ -479,8 +476,7 @@ minio-melange: keygen
 	@echo "Building MinIO $(MINIO_VERSION) from source via melange..."
 	melange build minio/melange.yaml \
 		--arch x86_64,aarch64 \
-		--signing-key melange.rsa \
-		--pipeline-dirs pipelines
+		--signing-key melange.rsa
 	@echo "✓ MinIO package built from source"
 
 minio: minio-melange
@@ -506,8 +502,7 @@ prometheus-melange: keygen
 	@echo "Building Prometheus $(PROMETHEUS_VERSION) from source via melange..."
 	melange build prometheus/melange.yaml \
 		--arch x86_64,aarch64 \
-		--signing-key melange.rsa \
-		--pipeline-dirs pipelines
+		--signing-key melange.rsa
 	@echo "✓ Prometheus package built from source"
 
 prometheus: prometheus-melange
@@ -560,8 +555,7 @@ etcd-melange: keygen
 	@echo "Building etcd $(ETCD_VERSION) from source via melange..."
 	melange build etcd/melange.yaml \
 		--arch x86_64,aarch64 \
-		--signing-key melange.rsa \
-		--pipeline-dirs pipelines
+		--signing-key melange.rsa
 	@echo "✓ etcd package built from source"
 
 etcd: etcd-melange
@@ -587,8 +581,7 @@ victoria-metrics-melange: keygen
 	@echo "Building VictoriaMetrics $(VICTORIA_METRICS_VERSION) from source via melange..."
 	melange build victoria-metrics/melange.yaml \
 		--arch x86_64,aarch64 \
-		--signing-key melange.rsa \
-		--pipeline-dirs pipelines
+		--signing-key melange.rsa
 	@echo "✓ VictoriaMetrics package built from source"
 
 victoria-metrics: victoria-metrics-melange
@@ -614,8 +607,7 @@ jaeger-melange: keygen
 	@echo "Building Jaeger $(JAEGER_VERSION) from source via melange..."
 	melange build jaeger/melange.yaml \
 		--arch x86_64,aarch64 \
-		--signing-key melange.rsa \
-		--pipeline-dirs pipelines
+		--signing-key melange.rsa
 	@echo "✓ Jaeger package built from source"
 
 jaeger: jaeger-melange
@@ -641,8 +633,7 @@ otelcol-melange: keygen
 	@echo "Building OTel Collector $(OTELCOL_VERSION) from source via melange..."
 	melange build otelcol/melange.yaml \
 		--arch x86_64,aarch64 \
-		--signing-key melange.rsa \
-		--pipeline-dirs pipelines
+		--signing-key melange.rsa
 	@echo "✓ OTel Collector package built from source"
 
 otelcol: otelcol-melange

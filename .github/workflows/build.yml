@@ -7,7 +7,6 @@ on:
       - '*/apko/*.yaml'
       - '*/melange.yaml'
       - '*/test.sh'
-      - 'pipelines/*.yaml'
       - '.github/workflows/build.yml'
   pull_request:
     branches: [main]
@@ -316,8 +315,7 @@ jobs:
             --arch ${{ matrix.arch }} \
             --signing-key melange.rsa \
             --out-dir ./packages \
-            --runner docker \
-            --pipeline-dirs pipelines
+            --runner docker
 
       - name: Upload packages
         uses: actions/upload-artifact@v4

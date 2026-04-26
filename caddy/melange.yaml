@@ -42,11 +42,6 @@ pipeline:
       tar xzf caddy.tar.gz
       rm caddy.tar.gz
 
-  # Auto-patch vulnerable transitive deps
-  - uses: patch-go-vulns
-    with:
-      modroot: /home/build/caddy-${{package.version}}
-
   # Build Caddy from source (static binary)
   - runs: |
       cd /home/build/caddy-${{package.version}}

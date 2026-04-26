@@ -1,0 +1,196 @@
+name: Patch Go Transitive Dependencies
+
+on:
+  schedule:
+    # Run at 1am UTC daily, 1 hour before the 2am daily rebuild
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: read
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  patch-go-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Grype
+        run: |
+          GRYPE_VERSION=$(curl -sfL --retry 3 --retry-delay 5 https://api.github.com/repos/anchore/grype/releases/latest | jq -r '.tag_name // empty')
+          if [ -z "$GRYPE_VERSION" ] || [ "$GRYPE_VERSION" = "null" ]; then
+            GRYPE_VERSION="v0.109.1"
+          fi
+          curl -fL --retry 5 --retry-delay 5 -o /tmp/grype.tar.gz \
+            "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
+          tar -xzf /tmp/grype.tar.gz -C /usr/local/bin grype
+          rm -f /tmp/grype.tar.gz
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Scan Go images and generate patches
+        id: scan
+        run: |
+          # Map of image name -> modroot (using melange template vars)
+          declare -A MODROOTS=(
+            [caddy]='/home/build/caddy-${{package.version}}'
+            [traefik]='/home/build/traefik-${{package.version}}'
+            [nats]='/home/build/nats-server-${{package.version}}'
+            [minio]='/home/build/minio-${{vars.minio_release}}'
+            [prometheus]='/home/build/prometheus-${{package.version}}'
+            [etcd]='/home/build/etcd-${{package.version}}'
+            [jaeger]='/home/build/jaeger-${{package.version}}'
+            [victoria-metrics]='/home/build/VictoriaMetrics-${{package.version}}'
+            [otelcol]='/home/build/opentelemetry-collector-${{package.version}}/cmd/otelcorecol'
+            [gitea]='/home/build/gitea-${{package.version}}'
+          )
+
+          # Build step markers to insert before
+          declare -A BUILD_MARKERS=(
+            [caddy]='# Build Caddy from source'
+            [traefik]='# Build Traefik from source'
+            [nats]='# Build NATS from source'
+            [minio]='# Build MinIO from source'
+            [prometheus]='# Build Prometheus from source'
+            [etcd]='# etcd 3.6 is a multi-module monorepo'
+            [jaeger]='CGO_ENABLED=0 go build'
+            [victoria-metrics]='CGO_ENABLED=0 go build'
+            [otelcol]='CGO_ENABLED=0 go build'
+            [gitea]='# Build frontend assets'
+          )
+
+          HAS_PATCHES=false
+          PATCHED_LIST=""
+          SUMMARY=""
+
+          for IMAGE in "${!MODROOTS[@]}"; do
+            echo "=== Scanning $IMAGE ==="
+            FULL_IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${IMAGE}:latest"
+
+            # Scan with grype, extract go-module CVEs with fix versions (skip stdlib)
+            FIXES=$(grype "$FULL_IMAGE" -o json 2>/dev/null | \
+              jq -r '
+                [.matches[]
+                  | select(.artifact.type == "go-module")
+                  | select(.artifact.name != "stdlib")
+                  | select(.vulnerability.fix.versions | length > 0)
+                  | {pkg: .artifact.name, fix: .vulnerability.fix.versions[0]}
+                ]
+                | unique_by(.pkg)
+                | .[]
+                | "\(.pkg)@v\(.fix)"
+              ' 2>/dev/null | sed 's/@vv/@v/g' | sort -u || true)
+
+            if [ -z "$FIXES" ]; then
+              echo "  No fixable Go dep CVEs"
+              continue
+            fi
+
+            MELANGE_FILE="${IMAGE}/melange.yaml"
+            MODROOT="${MODROOTS[$IMAGE]}"
+            MARKER="${BUILD_MARKERS[$IMAGE]}"
+
+            # Remove any existing auto-generated patch block
+            if grep -q "# patch-go-deps: auto-generated" "$MELANGE_FILE"; then
+              # Use awk to remove lines between markers (inclusive)
+              awk '/# patch-go-deps: auto-generated/{skip=1} /# end-patch-go-deps/{skip=0; next} !skip' \
+                "$MELANGE_FILE" > "${MELANGE_FILE}.tmp" && mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
+            fi
+
+            # Build go get commands
+            GO_GETS=""
+            while IFS= read -r mod_ver; do
+              [ -z "$mod_ver" ] && continue
+              GO_GETS="${GO_GETS}      go get ${mod_ver}\n"
+            done <<< "$FIXES"
+
+            # Create the patch block
+            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      cd ${MODROOT}\n${GO_GETS}      go mod tidy\n  # end-patch-go-deps\n"
+
+            # Find the marker line and insert before it
+            MARKER_LINE=$(grep -n "$MARKER" "$MELANGE_FILE" | head -1 | cut -d: -f1)
+
+            if [ -z "$MARKER_LINE" ]; then
+              echo "  WARN: could not find build marker '$MARKER' in $MELANGE_FILE, skipping"
+              continue
+            fi
+
+            # For markers that are inside a - runs: block (jaeger, victoria-metrics, otelcol),
+            # we need to insert before the "- runs:" that contains the marker
+            if [[ "$MARKER" == "CGO_ENABLED=0 go build" ]]; then
+              # Find the "- runs:" line that precedes this CGO_ENABLED line
+              RUNS_LINE=$(head -n "$MARKER_LINE" "$MELANGE_FILE" | grep -n "  - runs:" | tail -1 | cut -d: -f1)
+              if [ -n "$RUNS_LINE" ]; then
+                MARKER_LINE=$RUNS_LINE
+              fi
+            fi
+
+            # Insert patch block before the marker line
+            head -n $((MARKER_LINE - 1)) "$MELANGE_FILE" > "${MELANGE_FILE}.tmp"
+            echo -e "$PATCH_BLOCK" >> "${MELANGE_FILE}.tmp"
+            tail -n +${MARKER_LINE} "$MELANGE_FILE" >> "${MELANGE_FILE}.tmp"
+            mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
+
+            COUNT=$(echo "$FIXES" | wc -l)
+            HAS_PATCHES=true
+            PATCHED_LIST="${PATCHED_LIST} ${IMAGE}"
+            SUMMARY="${SUMMARY}- **${IMAGE}**: ${COUNT} dep(s) bumped\n"
+
+            echo "  Patched $COUNT deps"
+          done
+
+          PATCHED_LIST=$(echo "$PATCHED_LIST" | xargs)
+
+          if [ "$HAS_PATCHES" = true ]; then
+            echo "has_patches=true" >> "$GITHUB_OUTPUT"
+            echo "patched_images=$PATCHED_LIST" >> "$GITHUB_OUTPUT"
+            {
+              echo "summary<<EOF"
+              echo -e "$SUMMARY"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "has_patches=false" >> "$GITHUB_OUTPUT"
+            echo "No Go dep patches needed"
+          fi
+
+      - name: Create Pull Request
+        if: steps.scan.outputs.has_patches == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "fix(go-deps): patch vulnerable transitive dependencies"
+          body: |
+            ## Summary
+
+            Scans published Go images with grype, identifies transitive dependencies
+            with known CVE fixes, and adds targeted `go get` commands to each
+            image's melange.yaml.
+
+            ## Patched images
+
+            ${{ steps.scan.outputs.summary }}
+
+            ## Verification
+
+            CI builds all images — if this PR is green, the dep bumps compile correctly.
+
+            ---
+            Auto-generated by [patch-go-deps](${{ github.server_url }}/${{ github.repository }}/actions/workflows/patch-go-deps.yml).
+          branch: patch-go-deps
+          commit-message: "fix(go-deps): patch vulnerable transitive dependencies"
+          delete-branch: true
+          labels: |
+            dependencies
+            security
