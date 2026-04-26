@@ -42,18 +42,18 @@ jobs:
       - name: Scan Go images and generate patches
         id: scan
         run: |
-          # Map of image name -> modroot (using melange template vars)
+          # Map of image name -> modroot (melange template vars escaped for GHA)
           declare -A MODROOTS=(
-            [caddy]='/home/build/caddy-${{package.version}}'
-            [traefik]='/home/build/traefik-${{package.version}}'
-            [nats]='/home/build/nats-server-${{package.version}}'
-            [minio]='/home/build/minio-${{vars.minio_release}}'
-            [prometheus]='/home/build/prometheus-${{package.version}}'
-            [etcd]='/home/build/etcd-${{package.version}}'
-            [jaeger]='/home/build/jaeger-${{package.version}}'
-            [victoria-metrics]='/home/build/VictoriaMetrics-${{package.version}}'
-            [otelcol]='/home/build/opentelemetry-collector-${{package.version}}/cmd/otelcorecol'
-            [gitea]='/home/build/gitea-${{package.version}}'
+            [caddy]="/home/build/caddy-${{ '${{package.version}}' }}"
+            [traefik]="/home/build/traefik-${{ '${{package.version}}' }}"
+            [nats]="/home/build/nats-server-${{ '${{package.version}}' }}"
+            [minio]="/home/build/minio-${{ '${{vars.minio_release}}' }}"
+            [prometheus]="/home/build/prometheus-${{ '${{package.version}}' }}"
+            [etcd]="/home/build/etcd-${{ '${{package.version}}' }}"
+            [jaeger]="/home/build/jaeger-${{ '${{package.version}}' }}"
+            [victoria-metrics]="/home/build/VictoriaMetrics-${{ '${{package.version}}' }}"
+            [otelcol]="/home/build/opentelemetry-collector-${{ '${{package.version}}' }}/cmd/otelcorecol"
+            [gitea]="/home/build/gitea-${{ '${{package.version}}' }}"
           )
 
           # Build step markers to insert before
