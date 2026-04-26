@@ -134,11 +134,12 @@ jobs:
               continue
             fi
 
-            # For markers that are inside a - runs: block (jaeger, victoria-metrics, otelcol),
-            # we need to insert before the "- runs:" that contains the marker
-            if [[ "$MARKER" == "CGO_ENABLED=0 go build" ]]; then
-              # Find the "- runs:" line that precedes this CGO_ENABLED line
-              RUNS_LINE=$(head -n "$MARKER_LINE" "$MELANGE_FILE" | grep -n "  - runs:" | tail -1 | cut -d: -f1)
+            # If the marker is deeply indented (inside a "- runs: |" block),
+            # backtrack to the "- runs:" line so we insert a new pipeline step
+            # before the whole block rather than splitting it.
+            MARKER_INDENT=$(sed -n "${MARKER_LINE}p" "$MELANGE_FILE" | sed 's/[^ ].*//' | wc -c)
+            if [ "$MARKER_INDENT" -gt 4 ]; then
+              RUNS_LINE=$(head -n "$MARKER_LINE" "$MELANGE_FILE" | grep -n "^  - runs:" | tail -1 | cut -d: -f1)
               if [ -n "$RUNS_LINE" ]; then
                 MARKER_LINE=$RUNS_LINE
               fi
