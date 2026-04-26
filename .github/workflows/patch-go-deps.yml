@@ -13,6 +13,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
+  GRYPE_VERSION: v0.109.1
 
 jobs:
   patch-go-deps:
@@ -21,14 +22,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache Grype binary
+        id: grype-cache
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/bin/grype
+          key: grype-${{ env.GRYPE_VERSION }}-linux-amd64
+
       - name: Install Grype
+        if: steps.grype-cache.outputs.cache-hit != 'true'
         run: |
-          GRYPE_VERSION=$(curl -sfL --retry 3 --retry-delay 5 https://api.github.com/repos/anchore/grype/releases/latest | jq -r '.tag_name // empty')
-          if [ -z "$GRYPE_VERSION" ] || [ "$GRYPE_VERSION" = "null" ]; then
-            GRYPE_VERSION="v0.109.1"
-          fi
-          curl -fL --retry 5 --retry-delay 5 -o /tmp/grype.tar.gz \
+          curl -fL --retry 5 --retry-delay 10 -o /tmp/grype.tar.gz \
             "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
+          tar -tzf /tmp/grype.tar.gz > /dev/null
           tar -xzf /tmp/grype.tar.gz -C /usr/local/bin grype
           rm -f /tmp/grype.tar.gz
 
