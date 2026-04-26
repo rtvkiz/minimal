@@ -27,6 +27,138 @@ env:
 
 jobs:
   #----------------------------------------------------------------------------
+  # DETECT CHANGED IMAGES — only build what changed (full rebuild on cron/dispatch)
+  #----------------------------------------------------------------------------
+  detect-changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      melange-matrix: ${{ steps.filter.outputs.melange-matrix }}
+      apko-matrix: ${{ steps.filter.outputs.apko-matrix }}
+      build-melange-matrix: ${{ steps.filter.outputs.build-melange-matrix }}
+      has-melange: ${{ steps.filter.outputs.has-melange }}
+      has-apko: ${{ steps.filter.outputs.has-apko }}
+      has-build-melange: ${{ steps.filter.outputs.has-build-melange }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes and generate matrices
+        id: filter
+        run: |
+          # Image configuration
+          MELANGE_IMAGES='[
+            {"name":"jenkins"},
+            {"name":"redis-slim","apko":"redis-slim/apko/redis.yaml"},
+            {"name":"mysql"},{"name":"memcached"},{"name":"caddy"},
+            {"name":"haproxy"},{"name":"php"},{"name":"rails"},
+            {"name":"kafka"},{"name":"valkey"},{"name":"nats"},
+            {"name":"traefik"},{"name":"rabbitmq"},{"name":"minio"},
+            {"name":"prometheus"},{"name":"mariadb"},{"name":"etcd"},
+            {"name":"victoria-metrics"},{"name":"jaeger"},{"name":"otelcol"},
+            {"name":"qdrant"},{"name":"envoy"},{"name":"gitea"},
+            {"name":"cuda-python","arches":"x86_64"}
+          ]'
+          APKO_IMAGES='[
+            {"name":"python","grep":"python-[0-9]"},
+            {"name":"node-slim","apko":"node-slim/apko/node.yaml","grep":"nodejs-[0-9]"},
+            {"name":"go","grep":"go-[0-9]"},
+            {"name":"nginx","grep":"nginx-mainline"},
+            {"name":"httpd","grep":"apache2"},
+            {"name":"postgres-slim","apko":"postgres-slim/apko/postgres.yaml","grep":"postgresql-[0-9]"},
+            {"name":"bun","grep":"bun"},
+            {"name":"sqlite","grep":"sqlite"},
+            {"name":"dotnet","grep":"dotnet-[0-9].*-runtime"},
+            {"name":"java","grep":"openjdk-[0-9].*-jre"},
+            {"name":"opensearch","grep":"opensearch-3"},
+            {"name":"deno","grep":"deno"}
+          ]'
+
+          # Determine if full rebuild is needed
+          EVENT="${{ github.event_name }}"
+          FULL_REBUILD=false
+
+          if [[ "$EVENT" == "schedule" ]] || [[ "$EVENT" == "workflow_dispatch" ]]; then
+            FULL_REBUILD=true
+          else
+            if [[ "$EVENT" == "pull_request" ]]; then
+              DIFF_BASE="${{ github.event.pull_request.base.sha }}"
+            else
+              DIFF_BASE="${{ github.event.before }}"
+            fi
+            if [[ "$DIFF_BASE" == "0000000000000000000000000000000000000000" ]]; then
+              FULL_REBUILD=true
+            else
+              CHANGED_FILES=$(git diff --name-only "$DIFF_BASE" "${{ github.sha }}" 2>/dev/null || echo ".github/workflows/build.yml")
+              if echo "$CHANGED_FILES" | grep -q "^\.github/workflows/build\.yml$"; then
+                FULL_REBUILD=true
+              fi
+            fi
+          fi
+
+          echo "Event: $EVENT, Full rebuild: $FULL_REBUILD"
+
+          if [ "$FULL_REBUILD" = true ]; then
+            CHANGED=$(echo "$MELANGE_IMAGES $APKO_IMAGES" | jq -s 'add | [.[].name]')
+          else
+            CHANGED=$(echo "$CHANGED_FILES" | grep -E '^[^./][^/]*/' | sed 's|/.*||' | sort -u | jq -R . | jq -s .)
+            echo "Changed dirs: $CHANGED"
+          fi
+
+          # Generate melange-build matrix (per-arch entries)
+          MELANGE_MATRIX=$(echo "$MELANGE_IMAGES" | jq -c --argjson changed "$CHANGED" '{include: [
+            .[] | select(.name as $n | $changed | index($n)) |
+            ((.arches // "x86_64,aarch64") | split(","))[] as $arch |
+            {
+              name: .name,
+              melange_config: (.name + "/melange.yaml"),
+              arch: $arch,
+              runner: (if $arch == "aarch64" then "ubuntu-24.04-arm" else "ubuntu-latest" end)
+            }
+          ]}')
+
+          # Generate build-melange matrix (one entry per image)
+          BUILD_MELANGE_MATRIX=$(echo "$MELANGE_IMAGES" | jq -c --argjson changed "$CHANGED" '{include: [
+            .[] | select(.name as $n | $changed | index($n)) |
+            {
+              name: .name,
+              apko_config: (.apko // (.name + "/apko/" + .name + ".yaml")),
+              melange_config: (.name + "/melange.yaml"),
+              arches: (.arches // "x86_64,aarch64")
+            }
+          ]}')
+
+          # Generate build-apko matrix
+          APKO_MATRIX=$(echo "$APKO_IMAGES" | jq -c --argjson changed "$CHANGED" '{include: [
+            .[] | select(.name as $n | $changed | index($n)) |
+            {
+              name: .name,
+              apko_config: (.apko // (.name + "/apko/" + .name + ".yaml")),
+              primary_grep: .grep
+            }
+          ]}')
+
+          # Output matrices and flags
+          {
+            echo "melange-matrix=$MELANGE_MATRIX"
+            echo "apko-matrix=$APKO_MATRIX"
+            echo "build-melange-matrix=$BUILD_MELANGE_MATRIX"
+            echo "has-melange=$(echo "$MELANGE_MATRIX" | jq '.include | length > 0')"
+            echo "has-apko=$(echo "$APKO_MATRIX" | jq '.include | length > 0')"
+            echo "has-build-melange=$(echo "$BUILD_MELANGE_MATRIX" | jq '.include | length > 0')"
+          } >> "$GITHUB_OUTPUT"
+
+          # Summary
+          echo "### Build Matrix" >> $GITHUB_STEP_SUMMARY
+          echo "- Melange builds: $(echo "$MELANGE_MATRIX" | jq '.include | length')" >> $GITHUB_STEP_SUMMARY
+          echo "- Apko builds: $(echo "$APKO_MATRIX" | jq '.include | length')" >> $GITHUB_STEP_SUMMARY
+          echo "- Image assemblies: $(echo "$BUILD_MELANGE_MATRIX" | jq '.include | length')" >> $GITHUB_STEP_SUMMARY
+
+  #----------------------------------------------------------------------------
   # GENERATE EPHEMERAL SIGNING KEY (PRs only - secrets not available for forks)
   #----------------------------------------------------------------------------
   keygen:
@@ -58,226 +190,13 @@ jobs:
   # BUILD MELANGE PACKAGES (native runners per architecture)
   #----------------------------------------------------------------------------
   melange-build:
-    needs: [keygen]
-    # Always run, but keygen may be skipped (non-PR events)
-    if: always()
+    needs: [detect-changes, keygen]
+    if: always() && needs.detect-changes.outputs.has-melange == 'true'
     permissions:
       contents: read
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          # Jenkins builds
-          - name: jenkins
-            melange_config: jenkins/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: jenkins
-            melange_config: jenkins/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # Redis builds
-          - name: redis-slim
-            melange_config: redis-slim/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: redis-slim
-            melange_config: redis-slim/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # MySQL builds
-          - name: mysql
-            melange_config: mysql/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: mysql
-            melange_config: mysql/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # Memcached builds
-          - name: memcached
-            melange_config: memcached/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: memcached
-            melange_config: memcached/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # Caddy builds
-          - name: caddy
-            melange_config: caddy/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: caddy
-            melange_config: caddy/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # HAProxy builds
-          - name: haproxy
-            melange_config: haproxy/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: haproxy
-            melange_config: haproxy/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # PHP builds
-          - name: php
-            melange_config: php/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: php
-            melange_config: php/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # Rails builds
-          - name: rails
-            melange_config: rails/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: rails
-            melange_config: rails/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # Kafka builds
-          - name: kafka
-            melange_config: kafka/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: kafka
-            melange_config: kafka/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # Valkey builds
-          - name: valkey
-            melange_config: valkey/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: valkey
-            melange_config: valkey/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # NATS builds
-          - name: nats
-            melange_config: nats/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: nats
-            melange_config: nats/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # Traefik builds
-          - name: traefik
-            melange_config: traefik/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: traefik
-            melange_config: traefik/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # RabbitMQ builds
-          - name: rabbitmq
-            melange_config: rabbitmq/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: rabbitmq
-            melange_config: rabbitmq/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # MinIO builds
-          - name: minio
-            melange_config: minio/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: minio
-            melange_config: minio/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # Prometheus builds
-          - name: prometheus
-            melange_config: prometheus/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: prometheus
-            melange_config: prometheus/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # MariaDB builds
-          - name: mariadb
-            melange_config: mariadb/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: mariadb
-            melange_config: mariadb/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # etcd builds
-          - name: etcd
-            melange_config: etcd/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: etcd
-            melange_config: etcd/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # VictoriaMetrics builds
-          - name: victoria-metrics
-            melange_config: victoria-metrics/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: victoria-metrics
-            melange_config: victoria-metrics/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # Jaeger builds
-          - name: jaeger
-            melange_config: jaeger/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: jaeger
-            melange_config: jaeger/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # OTel Collector builds
-          - name: otelcol
-            melange_config: otelcol/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: otelcol
-            melange_config: otelcol/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # Qdrant builds
-          - name: qdrant
-            melange_config: qdrant/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: qdrant
-            melange_config: qdrant/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          - name: envoy
-            melange_config: envoy/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: envoy
-            melange_config: envoy/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # Gitea builds
-          - name: gitea
-            melange_config: gitea/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
-          - name: gitea
-            melange_config: gitea/melange.yaml
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          # CUDA Python builds (x86_64 only - NVIDIA redist tarballs are x86_64)
-          - name: cuda-python
-            melange_config: cuda-python/melange.yaml
-            arch: x86_64
-            runner: ubuntu-latest
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.melange-matrix) }}
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -331,6 +250,8 @@ jobs:
   # BUILD APKO-ONLY IMAGES (no melange dependency)
   #----------------------------------------------------------------------------
   build-apko:
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.has-apko == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -341,44 +262,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: python
-            apko_config: python/apko/python.yaml
-            primary_grep: "python-[0-9]"
-          - name: node-slim
-            apko_config: node-slim/apko/node.yaml
-            primary_grep: "nodejs-[0-9]"
-          - name: go
-            apko_config: go/apko/go.yaml
-            primary_grep: "go-[0-9]"
-          - name: nginx
-            apko_config: nginx/apko/nginx.yaml
-            primary_grep: "nginx-mainline"
-          - name: httpd
-            apko_config: httpd/apko/httpd.yaml
-            primary_grep: "apache2"
-          - name: postgres-slim
-            apko_config: postgres-slim/apko/postgres.yaml
-            primary_grep: "postgresql-[0-9]"
-          - name: bun
-            apko_config: bun/apko/bun.yaml
-            primary_grep: "bun"
-          - name: sqlite
-            apko_config: sqlite/apko/sqlite.yaml
-            primary_grep: "sqlite"
-          - name: dotnet
-            apko_config: dotnet/apko/dotnet.yaml
-            primary_grep: "dotnet-[0-9].*-runtime"
-          - name: java
-            apko_config: java/apko/java.yaml
-            primary_grep: "openjdk-[0-9].*-jre"
-          - name: opensearch
-            apko_config: opensearch/apko/opensearch.yaml
-            primary_grep: "opensearch-3"
-          - name: deno
-            apko_config: deno/apko/deno.yaml
-            primary_grep: "deno"
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.apko-matrix) }}
 
     steps:
       - name: Checkout repository
@@ -565,9 +449,10 @@ jobs:
   # BUILD MELANGE-BASED IMAGES (needs packages from melange-build)
   #----------------------------------------------------------------------------
   build-melange:
-    needs: [melange-build]
-    # Always run (keygen ancestor may be skipped), but only if melange-build succeeded
-    if: always() && needs.melange-build.result == 'success'
+    needs: [detect-changes, melange-build]
+    # Run even if some melange-build entries failed — individual images whose
+    # packages failed will error at artifact download, not cascade to others
+    if: always() && needs.detect-changes.outputs.has-build-melange == 'true' && needs.melange-build.result != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -578,104 +463,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: jenkins
-            apko_config: jenkins/apko/jenkins.yaml
-            melange_config: jenkins/melange.yaml
-            arches: x86_64,aarch64
-          - name: redis-slim
-            apko_config: redis-slim/apko/redis.yaml
-            melange_config: redis-slim/melange.yaml
-            arches: x86_64,aarch64
-          - name: mysql
-            apko_config: mysql/apko/mysql.yaml
-            melange_config: mysql/melange.yaml
-            arches: x86_64,aarch64
-          - name: memcached
-            apko_config: memcached/apko/memcached.yaml
-            melange_config: memcached/melange.yaml
-            arches: x86_64,aarch64
-          - name: caddy
-            apko_config: caddy/apko/caddy.yaml
-            melange_config: caddy/melange.yaml
-            arches: x86_64,aarch64
-          - name: haproxy
-            apko_config: haproxy/apko/haproxy.yaml
-            melange_config: haproxy/melange.yaml
-            arches: x86_64,aarch64
-          - name: php
-            apko_config: php/apko/php.yaml
-            melange_config: php/melange.yaml
-            arches: x86_64,aarch64
-          - name: rails
-            apko_config: rails/apko/rails.yaml
-            melange_config: rails/melange.yaml
-            arches: x86_64,aarch64
-          - name: kafka
-            apko_config: kafka/apko/kafka.yaml
-            melange_config: kafka/melange.yaml
-            arches: x86_64,aarch64
-          - name: valkey
-            apko_config: valkey/apko/valkey.yaml
-            melange_config: valkey/melange.yaml
-            arches: x86_64,aarch64
-          - name: nats
-            apko_config: nats/apko/nats.yaml
-            melange_config: nats/melange.yaml
-            arches: x86_64,aarch64
-          - name: traefik
-            apko_config: traefik/apko/traefik.yaml
-            melange_config: traefik/melange.yaml
-            arches: x86_64,aarch64
-          - name: rabbitmq
-            apko_config: rabbitmq/apko/rabbitmq.yaml
-            melange_config: rabbitmq/melange.yaml
-            arches: x86_64,aarch64
-          - name: minio
-            apko_config: minio/apko/minio.yaml
-            melange_config: minio/melange.yaml
-            arches: x86_64,aarch64
-          - name: prometheus
-            apko_config: prometheus/apko/prometheus.yaml
-            melange_config: prometheus/melange.yaml
-            arches: x86_64,aarch64
-          - name: mariadb
-            apko_config: mariadb/apko/mariadb.yaml
-            melange_config: mariadb/melange.yaml
-            arches: x86_64,aarch64
-          - name: etcd
-            apko_config: etcd/apko/etcd.yaml
-            melange_config: etcd/melange.yaml
-            arches: x86_64,aarch64
-          - name: victoria-metrics
-            apko_config: victoria-metrics/apko/victoria-metrics.yaml
-            melange_config: victoria-metrics/melange.yaml
-            arches: x86_64,aarch64
-          - name: jaeger
-            apko_config: jaeger/apko/jaeger.yaml
-            melange_config: jaeger/melange.yaml
-            arches: x86_64,aarch64
-          - name: otelcol
-            apko_config: otelcol/apko/otelcol.yaml
-            melange_config: otelcol/melange.yaml
-            arches: x86_64,aarch64
-          - name: qdrant
-            apko_config: qdrant/apko/qdrant.yaml
-            melange_config: qdrant/melange.yaml
-            arches: x86_64,aarch64
-          - name: envoy
-            apko_config: envoy/apko/envoy.yaml
-            melange_config: envoy/melange.yaml
-            arches: x86_64,aarch64
-          - name: gitea
-            apko_config: gitea/apko/gitea.yaml
-            melange_config: gitea/melange.yaml
-            arches: x86_64,aarch64
-          - name: cuda-python
-            apko_config: cuda-python/apko/cuda-python.yaml
-            melange_config: cuda-python/melange.yaml
-            arches: x86_64
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.build-melange-matrix) }}
 
     steps:
       - name: Checkout repository
@@ -892,22 +680,33 @@ jobs:
   # SUMMARY
   #----------------------------------------------------------------------------
   summary:
-    needs: [build-apko, build-melange]
+    needs: [detect-changes, build-apko, build-melange]
     runs-on: ubuntu-latest
     if: always()
     permissions: {}
     steps:
       - name: Check results
         run: |
+          HAS_APKO="${{ needs.detect-changes.outputs.has-apko }}"
+          HAS_MELANGE="${{ needs.detect-changes.outputs.has-build-melange }}"
           APKO="${{ needs.build-apko.result }}"
           MELANGE="${{ needs.build-melange.result }}"
-          echo "build-apko: $APKO"
-          echo "build-melange: $MELANGE"
-          if [ "$APKO" != "success" ] || [ "$MELANGE" != "success" ]; then
-            echo "::error::One or more image builds did not succeed (build-apko=$APKO, build-melange=$MELANGE)"
+          echo "build-apko: $APKO (expected: $HAS_APKO)"
+          echo "build-melange: $MELANGE (expected: $HAS_MELANGE)"
+
+          FAILED=false
+          if [ "$HAS_APKO" = "true" ] && [ "$APKO" != "success" ]; then
+            echo "::error::build-apko did not succeed: $APKO"
+            FAILED=true
+          fi
+          if [ "$HAS_MELANGE" = "true" ] && [ "$MELANGE" != "success" ]; then
+            echo "::error::build-melange did not succeed: $MELANGE"
+            FAILED=true
+          fi
+          if [ "$FAILED" = true ]; then
             exit 1
           fi
-          echo "All hardened images built successfully!"
+          echo "All expected builds succeeded!"
 
   #----------------------------------------------------------------------------
   # PUBLISH VULNERABILITY REPORT TO GITHUB PAGES
@@ -915,7 +714,9 @@ jobs:
   publish-vuln-report:
     needs: [build-apko, build-melange]
     runs-on: ubuntu-latest
-    if: always() && github.event_name != 'pull_request'
+    # Only publish on full rebuilds (schedule/dispatch) — partial push builds
+    # would overwrite the full report page with incomplete data
+    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     permissions:
       pages: write
       id-token: write
