@@ -42,6 +42,15 @@ pipeline:
       tar xzf traefik.tar.gz
       rm traefik.tar.gz
 
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      cd /home/build/traefik-${{package.version}}
+      go get go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp@v0.19.0
+      go get go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v1.43.0
+      go get go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.43.0
+      go mod tidy
+  # end-patch-go-deps
+
   # Build Traefik from source (static binary)
   - runs: |
       cd /home/build/traefik-${{package.version}}

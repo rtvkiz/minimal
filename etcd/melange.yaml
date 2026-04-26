@@ -34,6 +34,14 @@ pipeline:
       cd /home/build && tar xzf etcd.tar.gz && rm etcd.tar.gz
 
   - runs: |
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      cd /home/build/etcd-${{package.version}}
+      go get go.opentelemetry.io/otel/sdk@v1.43.0
+      go get go.opentelemetry.io/otel@v1.41.0
+      go mod tidy
+  # end-patch-go-deps
+
       # etcd 3.6 is a multi-module monorepo: server/, etcdctl/, etcdutl/ each
       # have their own go.mod and must be built from within their directory.
 
