@@ -32,7 +32,7 @@ pipeline:
   # Download and verify Caddy source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL "https://github.com/caddyserver/caddy/archive/refs/tags/v${{package.version}}.tar.gz" \
+      curl -fsSL --retry 5 --retry-delay 10 "https://github.com/caddyserver/caddy/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/caddy.tar.gz
 
       # Verify checksum

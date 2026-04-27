@@ -41,7 +41,7 @@ pipeline:
   # Download and verify Ruby source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL "https://cache.ruby-lang.org/pub/ruby/4.0/ruby-${{vars.ruby_version}}.tar.gz" \
+      curl -fsSL --retry 5 --retry-delay 10 "https://cache.ruby-lang.org/pub/ruby/4.0/ruby-${{vars.ruby_version}}.tar.gz" \
         -o /home/build/ruby.tar.gz
       echo "${{vars.sha256}}  /home/build/ruby.tar.gz" | sha256sum -c -
       cd /home/build

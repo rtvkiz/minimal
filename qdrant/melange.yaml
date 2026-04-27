@@ -34,7 +34,7 @@ environment:
 pipeline:
   - runs: |
       mkdir -p /home/build
-      curl -fsSL "https://github.com/qdrant/qdrant/archive/refs/tags/v${{package.version}}.tar.gz" \
+      curl -fsSL --retry 5 --retry-delay 10 "https://github.com/qdrant/qdrant/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/qdrant.tar.gz
       echo "${{vars.sha256}}  /home/build/qdrant.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf qdrant.tar.gz && rm qdrant.tar.gz

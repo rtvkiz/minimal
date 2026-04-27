@@ -32,7 +32,7 @@ pipeline:
   # Download and verify Traefik source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL "https://github.com/traefik/traefik/archive/refs/tags/v${{package.version}}.tar.gz" \
+      curl -fsSL --retry 5 --retry-delay 10 "https://github.com/traefik/traefik/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/traefik.tar.gz
 
       # Verify checksum

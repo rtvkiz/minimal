@@ -30,7 +30,7 @@ pipeline:
   # Download and verify RabbitMQ generic-unix release
   - runs: |
       mkdir -p /home/build
-      curl -fsSL \
+      curl -fsSL --retry 5 --retry-delay 10 \
         "https://github.com/rabbitmq/rabbitmq-server/releases/download/v${{package.version}}/rabbitmq-server-generic-unix-${{package.version}}.tar.xz" \
         -o /home/build/rabbitmq.tar.xz
 

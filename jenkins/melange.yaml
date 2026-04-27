@@ -39,7 +39,7 @@ pipeline:
   # Download and verify Jenkins WAR
   - runs: |
       mkdir -p /home/build/jenkins
-      curl -fsSL "https://get.jenkins.io/war-stable/${{package.version}}/jenkins.war" \
+      curl -fsSL --retry 5 --retry-delay 10 "https://get.jenkins.io/war-stable/${{package.version}}/jenkins.war" \
         -o /home/build/jenkins/jenkins.war
 
       # Verify against pinned checksum (stored in repo, not fetched dynamically)
