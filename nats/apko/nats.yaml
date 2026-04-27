@@ -16,11 +16,6 @@ contents:
     # Our NATS (built from source via melange)
     - nats-minimal
 
-    # Core libraries (minimal - static Go binary)
-    - glibc
-    - glibc-locale-posix
-    - ld-linux
-
     # Certificates
     - ca-certificates-bundle
 

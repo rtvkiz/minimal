@@ -16,11 +16,6 @@ contents:
     # Our Traefik (built from source via melange)
     - traefik-minimal
 
-    # Core libraries (minimal - static Go binary)
-    - glibc
-    - glibc-locale-posix
-    - ld-linux
-
     # Certificates
     - ca-certificates-bundle
 

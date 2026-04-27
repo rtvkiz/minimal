@@ -64,7 +64,7 @@ pipeline:
   # Build MinIO from source (static binary)
   - runs: |
       cd /home/build/minio-${{vars.minio_release}}
-      CGO_ENABLED=0 go build \
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w \
           -X github.com/minio/minio/cmd.Version=${{vars.minio_release}} \

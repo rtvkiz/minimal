@@ -58,6 +58,7 @@ pipeline:
   # make backend:  go generate (creates bindata.dat embeds) + go build
   - runs: |
       cd /home/build/gitea-${{package.version}}
+      GOTOOLCHAIN=local \
       TAGS="bindata sqlite sqlite_unlock_notify" \
       CGO_ENABLED=1 \
       EXTRA_GOFLAGS="-trimpath" \

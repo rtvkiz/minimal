@@ -8,9 +8,6 @@ contents:
   packages:
     - wolfi-baselayout
     - otelcol-minimal
-    - glibc
-    - glibc-locale-posix
-    - ld-linux
     - ca-certificates-bundle
 
 accounts:

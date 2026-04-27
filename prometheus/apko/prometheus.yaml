@@ -15,11 +15,6 @@ contents:
     # Our Prometheus (built from source via melange)
     - prometheus-minimal
 
-    # Core libraries
-    - glibc
-    - glibc-locale-posix
-    - ld-linux
-
     # Certificates (needed for scraping HTTPS targets)
     - ca-certificates-bundle
 

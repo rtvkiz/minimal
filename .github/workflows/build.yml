@@ -228,6 +228,28 @@ jobs:
           echo "${{ secrets.MELANGE_SIGNING_KEY_PUB }}" > melange.rsa.pub
           chmod 600 melange.rsa
 
+      - name: Pin latest Go from Wolfi
+        run: |
+          # Resolve the latest go-1.XX package from Wolfi's APKINDEX
+          # This ensures builds always use the latest patched Go, preventing
+          # stale stdlib CVEs from Go's toolchain auto-download fetching .0 releases
+          ARCH=${{ matrix.arch }}
+          curl -sfL "https://packages.wolfi.dev/os/${ARCH}/APKINDEX.tar.gz" -o /tmp/apkindex.tar.gz
+          tar xzf /tmp/apkindex.tar.gz -C /tmp APKINDEX
+          LATEST_GO=$(grep '^P:go-1\.' /tmp/APKINDEX \
+            | grep -vE '(doc|asm|covdata|cover|nm|objdump|test2json)' \
+            | sed 's/^P://' | sort -t. -k2 -n | tail -1)
+          rm -f /tmp/apkindex.tar.gz /tmp/APKINDEX
+          echo "Latest Go in Wolfi: $LATEST_GO"
+          # Replace go-1.XX (any pinned version) or bare 'go' with the latest
+          if grep -q '^\s*- go-1\.' "${{ matrix.melange_config }}"; then
+            sed -i "s/- go-1\.[0-9]*/- ${LATEST_GO}/" "${{ matrix.melange_config }}"
+          elif grep -q '^\s*- go$' "${{ matrix.melange_config }}"; then
+            sed -i "s/- go$/- ${LATEST_GO}/" "${{ matrix.melange_config }}"
+          fi
+          echo "Go package in config:"
+          grep -E '^\s*- go' "${{ matrix.melange_config }}" || true
+
       - name: Build package with melange
         run: |
           chmod 600 melange.rsa

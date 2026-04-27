@@ -16,11 +16,6 @@ contents:
     # Our MinIO (built from source via melange)
     - minio-minimal
 
-    # Core libraries (minimal - static Go binary)
-    - glibc
-    - glibc-locale-posix
-    - ld-linux
-
     # Certificates (required for TLS and S3 client connections)
     - ca-certificates-bundle
 

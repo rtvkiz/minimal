@@ -61,7 +61,7 @@ pipeline:
   # Build Caddy from source (static binary)
   - runs: |
       cd /home/build/caddy-${{package.version}}
-      CGO_ENABLED=0 go build \
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w -X github.com/caddyserver/caddy/v2.CustomVersion=v${{package.version}}" \
         -o caddy \

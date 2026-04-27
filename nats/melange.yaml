@@ -45,7 +45,7 @@ pipeline:
   # Build NATS from source (static binary)
   - runs: |
       cd /home/build/nats-server-${{package.version}}
-      CGO_ENABLED=0 go build \
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w -X github.com/nats-io/nats-server/v2/server.VERSION=${{package.version}}" \
         -o nats-server \

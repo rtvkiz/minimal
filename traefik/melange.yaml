@@ -54,7 +54,7 @@ pipeline:
   # Build Traefik from source (static binary)
   - runs: |
       cd /home/build/traefik-${{package.version}}
-      CGO_ENABLED=0 go build \
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w -X github.com/traefik/traefik/v3/pkg/version.Version=v${{package.version}}" \
         -o traefik \

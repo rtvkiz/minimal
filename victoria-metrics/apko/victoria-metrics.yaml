@@ -9,9 +9,6 @@ contents:
   packages:
     - wolfi-baselayout
     - victoria-metrics-minimal
-    - glibc
-    - glibc-locale-posix
-    - ld-linux
     - ca-certificates-bundle
 
 accounts:

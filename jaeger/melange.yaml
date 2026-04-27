@@ -48,7 +48,7 @@ pipeline:
 
   - runs: |
       cd /home/build/jaeger-${{package.version}}
-      CGO_ENABLED=0 go build \
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w \
           -X github.com/jaegertracing/jaeger/internal/version.commitSHA=release \

@@ -36,7 +36,7 @@ pipeline:
 
   - runs: |
       cd /home/build/VictoriaMetrics-${{package.version}}
-      CGO_ENABLED=0 go build \
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w \
           -X github.com/VictoriaMetrics/VictoriaMetrics/lib/buildinfo.Version=${{package.version}}" \

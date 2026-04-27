@@ -36,7 +36,7 @@ pipeline:
 
   - runs: |
       cd /home/build/opentelemetry-collector-${{package.version}}/cmd/otelcorecol
-      CGO_ENABLED=0 go build \
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w \
           -X go.opentelemetry.io/collector/internal/version.Version=${{package.version}}" \
