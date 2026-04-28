@@ -46,18 +46,12 @@ pipeline:
       tar xzf minio.tar.gz
       rm minio.tar.gz
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       cd /home/build/minio-${{vars.minio_release}}
-      go get filippo.io/edwards25519@v1.1.1
-      go get github.com/Azure/go-ntlmssp@v0.1.1
-      go get github.com/buger/jsonparser@v1.1.2
-      go get github.com/eclipse/paho.mqtt.golang@v1.5.1
-      go get github.com/go-jose/go-jose/v4@v4.1.4
       go get github.com/prometheus/prometheus@v0.311.2-0.20260410083055-07c6232d159b
-      go get go.opentelemetry.io/otel/sdk@v1.40.0
-      go get golang.org/x/crypto@v0.45.0
-      go get google.golang.org/grpc@v1.79.3
+      go get go.opentelemetry.io/otel/sdk@v1.43.0
       go mod tidy
   # end-patch-go-deps
 
