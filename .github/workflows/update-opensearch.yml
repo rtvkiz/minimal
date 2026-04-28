@@ -15,12 +15,21 @@ jobs:
       issues: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
+        with:
 
-      - name: Check for new OpenSearch versions
+
+            - name: Check for new OpenSearch versions
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -89,37 +98,42 @@ jobs:
           # Also try direct replacement of the old version if it was not .x
           sed -i "s/| OpenSearch | $OLD /| OpenSearch | $NEW /" README.md || true
 
-      - name: Create Pull Request
+      - name: Create PR and enable auto-merge
         if: steps.check.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(opensearch): bump to ${{ steps.check.outputs.new_version }}"
-          body: |
-            ## Summary
-
-            Updates OpenSearch version tracking from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
-
-            This image uses the `opensearch-${{ steps.check.outputs.current_major }}` Wolfi package, which is rebuilt daily. This PR updates the version metadata in `Makefile` and `README.md` to reflect the latest release in the ${{ steps.check.outputs.current_major }}.x line.
-
-            ## Changes
-
-            - `Makefile` - `OPENSEARCH_VERSION` variable
-            - `README.md` - Version Table
-
-            ## Links
-
-            - [OpenSearch Release Notes](https://opensearch.org/docs/latest/version-history/)
-
-            ---
-
-            This PR was automatically created by the [update-opensearch](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-opensearch.yml) workflow.
-          branch: update-opensearch-${{ steps.check.outputs.new_version }}
-          commit-message: "chore(opensearch): bump to ${{ steps.check.outputs.new_version }}"
-          delete-branch: true
-          labels: |
-            dependencies
-            opensearch
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-opensearch-${{ steps.check.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(opensearch): bump to ${{ steps.check.outputs.new_version }}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(opensearch): bump to ${{ steps.check.outputs.new_version }}" \
+            --label dependencies --label opensearch --label  \
+            --body "$(cat <<'PRBODY'
+          ## Summary
+          
+          Updates OpenSearch version tracking from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+          
+          This image uses the `opensearch-${{ steps.check.outputs.current_major }}` Wolfi package, which is rebuilt daily. This PR updates the version metadata in `Makefile` and `README.md` to reflect the latest release in the ${{ steps.check.outputs.current_major }}.x line.
+          
+          ## Changes
+          
+          - `Makefile` - `OPENSEARCH_VERSION` variable
+          - `README.md` - Version Table
+          
+          ## Links
+          
+          - [OpenSearch Release Notes](https://opensearch.org/docs/latest/version-history/)
+          
+          ---
+          
+          This PR was automatically created by the [update-opensearch](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-opensearch.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
       - name: Create new major version issue
         if: steps.check.outputs.next_major_version != ''

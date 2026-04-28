@@ -14,12 +14,21 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
+        with:
 
-      - name: Check for new RabbitMQ stable version
+
+            - name: Check for new RabbitMQ stable version
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -103,40 +112,43 @@ jobs:
           echo "=== rabbitmq/melange.yaml ==="
           grep -E '(version:|sha256:)' rabbitmq/melange.yaml | head -2
 
-      - name: Create Pull Request
+      - name: Create PR and enable auto-merge
         if: steps.check.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(rabbitmq): bump to ${{ steps.check.outputs.new_version }}"
-          body: |
-            ## Summary
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-rabbitmq-${{ steps.check.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(rabbitmq): bump to ${{ steps.check.outputs.new_version }}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(rabbitmq): bump to ${{ steps.check.outputs.new_version }}" \
+            --label dependencies --label rabbitmq \
+            --body "$(cat <<'PRBODY'
+          ## Summary
+          
+          Updates RabbitMQ from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+          
+          ## Changes
+          
+          - `rabbitmq/melange.yaml` - package version, SHA256 checksum, epoch reset
+          
+          ## Image Tag
+          
+          Once merged, this will publish: `ghcr.io/rtvkiz/minimal-rabbitmq:${{ steps.check.outputs.new_version }}-r0`
+          
+          ## Links
+          
+          - [RabbitMQ Releases](https://github.com/rabbitmq/rabbitmq-server/releases)
+          - [Release Notes for ${{ steps.check.outputs.new_version }}](https://github.com/rabbitmq/rabbitmq-server/releases/tag/v${{ steps.check.outputs.new_version }})
+          - [RabbitMQ Changelog](https://www.rabbitmq.com/release-notes/index.html)
+          
+          ---
+          
+          This PR was automatically created by the [update-rabbitmq](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-rabbitmq.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
-            Updates RabbitMQ from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
-
-            ## Changes
-
-            - `rabbitmq/melange.yaml` - package version, SHA256 checksum, epoch reset
-
-            ## Image Tag
-
-            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-rabbitmq:${{ steps.check.outputs.new_version }}-r0`
-
-            ## Links
-
-            - [RabbitMQ Releases](https://github.com/rabbitmq/rabbitmq-server/releases)
-            - [Release Notes for ${{ steps.check.outputs.new_version }}](https://github.com/rabbitmq/rabbitmq-server/releases/tag/v${{ steps.check.outputs.new_version }})
-            - [RabbitMQ Changelog](https://www.rabbitmq.com/release-notes/index.html)
-
-            ---
-
-            This PR was automatically created by the [update-rabbitmq](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-rabbitmq.yml) workflow.
-          branch: update-rabbitmq-${{ steps.check.outputs.new_version }}
-          commit-message: |
-            chore(rabbitmq): bump to ${{ steps.check.outputs.new_version }}
-
-            Updates RabbitMQ from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
-          delete-branch: true
-          labels: |
-            dependencies
-            rabbitmq

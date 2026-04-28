@@ -15,11 +15,19 @@ jobs:
       issues: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
 
+      
       - name: Check for new Rails gem version
         id: check-rails
         run: |
@@ -84,43 +92,40 @@ jobs:
           echo "=== rails/melange.yaml ==="
           grep 'rails_version:' rails/melange.yaml
 
-      - name: Create Rails patch update PR
+      - name: Create Rails PR and enable auto-merge
         if: steps.check-rails.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(rails): bump Rails gem to ${{ steps.check-rails.outputs.new_version }}"
-          body: |
-            ## Summary
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-rails-gem-${{ steps.check-rails.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(rails): bump Rails gem to ${{ steps.check-rails.outputs.new_version }}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(rails): bump Rails gem to ${{ steps.check-rails.outputs.new_version }}" \
+            --label dependencies --label rails \
+            --body "$(cat <<'PRBODY'
+          ## Summary
 
-            Updates Rails gem from `${{ steps.check-rails.outputs.current_version }}` to `${{ steps.check-rails.outputs.new_version }}`.
+          Updates Rails gem from `${{ steps.check-rails.outputs.current_version }}` to `${{ steps.check-rails.outputs.new_version }}`.
 
-            ## Changes
+          ## Changes
 
-            - `rails/melange.yaml` - rails_version variable
+          - `rails/melange.yaml` - rails_version variable
 
-            ## Note
+          ## Links
 
-            The image tag is derived from the Ruby version, not the Rails gem version.
-            The current Ruby version determines the published tag.
+          - [Rails Releases](https://rubyonrails.org/category/releases)
+          - [RubyGems](https://rubygems.org/gems/rails)
 
-            ## Links
+          ---
 
-            - [Rails Releases](https://rubyonrails.org/category/releases)
-            - [RubyGems](https://rubygems.org/gems/rails)
-
-            ---
-
-            This PR was automatically created by the [update-rails](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-rails.yml) workflow.
-          branch: update-rails-gem-${{ steps.check-rails.outputs.new_version }}
-          commit-message: |
-            chore(rails): bump Rails gem to ${{ steps.check-rails.outputs.new_version }}
-
-            Updates Rails from ${{ steps.check-rails.outputs.current_version }} to ${{ steps.check-rails.outputs.new_version }}.
-          delete-branch: true
-          labels: |
-            dependencies
-            rails
+          This PR was automatically created by the [update-rails](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-rails.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
       - name: Create new Rails series issue
         if: steps.check-rails.outputs.new_series != ''
@@ -187,11 +192,19 @@ jobs:
       issues: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
 
+      
       - name: Check for new Ruby version
         id: check-ruby
         env:
@@ -321,50 +334,40 @@ jobs:
           echo "=== rails/melange.yaml ==="
           grep -E '(version:|ruby_version:|sha256:|epoch:)' rails/melange.yaml | head -4
 
-      - name: Create Ruby patch update PR
+      - name: Create Ruby PR and enable auto-merge
         if: steps.check-ruby.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(rails): bump Ruby to ${{ steps.check-ruby.outputs.new_version }}"
-          body: |
-            ## Summary
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-rails-ruby-${{ steps.check-ruby.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(rails): bump Ruby to ${{ steps.check-ruby.outputs.new_version }}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(rails): bump Ruby to ${{ steps.check-ruby.outputs.new_version }}" \
+            --label dependencies --label rails \
+            --body "$(cat <<'PRBODY'
+          ## Summary
 
-            Updates Ruby from `${{ steps.check-ruby.outputs.current_version }}` to `${{ steps.check-ruby.outputs.new_version }}`.
+          Updates Ruby from `${{ steps.check-ruby.outputs.current_version }}` to `${{ steps.check-ruby.outputs.new_version }}`.
 
-            ## Changes
+          ## Changes
 
-            - `rails/melange.yaml` - package version, ruby_version, SHA256 checksum, epoch reset
+          - `rails/melange.yaml` - package version, ruby_version, SHA256 checksum, epoch reset
 
-            ## Image Tag
+          ## Links
 
-            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-rails:${{ steps.check-ruby.outputs.new_version }}-r0`
+          - [Ruby Releases](https://www.ruby-lang.org/en/downloads/)
+          - [Ruby News](https://www.ruby-lang.org/en/news/)
 
-            ## Verification
+          ---
 
-            The CI pipeline will build Ruby from source and run tests automatically.
-
-            - **Source**: https://cache.ruby-lang.org/pub/ruby/${{ steps.check-ruby.outputs.series }}/ruby-${{ steps.check-ruby.outputs.new_version }}.tar.gz
-            - **SHA256**: `${{ steps.check-ruby.outputs.sha256 }}`
-
-            ## Links
-
-            - [Ruby Releases](https://www.ruby-lang.org/en/downloads/)
-            - [Ruby News](https://www.ruby-lang.org/en/news/)
-
-            ---
-
-            This PR was automatically created by the [update-rails](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-rails.yml) workflow.
-          branch: update-rails-ruby-${{ steps.check-ruby.outputs.new_version }}
-          commit-message: |
-            chore(rails): bump Ruby to ${{ steps.check-ruby.outputs.new_version }}
-
-            Updates Ruby from ${{ steps.check-ruby.outputs.current_version }} to ${{ steps.check-ruby.outputs.new_version }}.
-            SHA256: ${{ steps.check-ruby.outputs.sha256 }}
-          delete-branch: true
-          labels: |
-            dependencies
-            rails
+          This PR was automatically created by the [update-rails](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-rails.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
       - name: Create new Ruby series issue
         if: steps.check-ruby.outputs.new_series != ''

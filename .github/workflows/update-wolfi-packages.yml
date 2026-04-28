@@ -14,11 +14,19 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
 
+      
       - name: Download and parse Wolfi APKINDEX
         id: check
         run: |
@@ -166,284 +174,153 @@ jobs:
           fi
 
       # --- Python PR ---
-      - name: Update Python version
+      - name: Create Python PR
         if: steps.check.outputs.python_update == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           OLD="${{ steps.check.outputs.python_current }}"
           NEW="${{ steps.check.outputs.python_latest }}"
           sed -i "s/$OLD/$NEW/g" python/apko/python.yaml
-          echo "Updated python/apko/python.yaml: $OLD -> $NEW"
+          BRANCH="update-python-${NEW}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(python): upgrade to ${NEW}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(python): upgrade to ${NEW}" \
+            --label dependencies --label python \
+            --body "Upgrades Python from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
 
-      - name: Create Python PR
-        if: steps.check.outputs.python_update == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(python): upgrade to ${{ steps.check.outputs.python_latest }}"
-          body: |
-            ## Summary
-
-            Upgrades Python from `${{ steps.check.outputs.python_current }}` to `${{ steps.check.outputs.python_latest }}`.
-
-            This is a **minor/major version upgrade** detected from Wolfi's package repository.
-
-            ## Changes
-
-            - `python/apko/python.yaml` - updated package reference
-
-            ## Before Merging
-
-            - [ ] Review [Python changelog](https://docs.python.org/3/whatsnew/)
-            - [ ] Verify CI passes (image builds and tests succeed)
-            - [ ] Check for breaking changes that may affect users
-
-            ---
-
-            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
-          branch: update-python-${{ steps.check.outputs.python_latest }}
-          commit-message: "chore(python): upgrade to ${{ steps.check.outputs.python_latest }}"
-          delete-branch: true
-          labels: |
-            dependencies
-            python
-
-      - name: Reset for next PR
-        if: steps.check.outputs.python_update == 'true'
-        run: git checkout -- .
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml).")
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
+          git checkout main
+          git checkout -- .
 
       # --- Go PR ---
-      - name: Update Go version
+      - name: Create Go PR
         if: steps.check.outputs.go_update == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           OLD="${{ steps.check.outputs.go_current }}"
           NEW="${{ steps.check.outputs.go_latest }}"
           sed -i "s/$OLD/$NEW/g" go/apko/go.yaml
-          echo "Updated go/apko/go.yaml: $OLD -> $NEW"
+          BRANCH="update-go-${NEW}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(go): upgrade to ${NEW}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(go): upgrade to ${NEW}" \
+            --label dependencies --label go \
+            --body "Upgrades Go from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
 
-      - name: Create Go PR
-        if: steps.check.outputs.go_update == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(go): upgrade to ${{ steps.check.outputs.go_latest }}"
-          body: |
-            ## Summary
-
-            Upgrades Go from `${{ steps.check.outputs.go_current }}` to `${{ steps.check.outputs.go_latest }}`.
-
-            This is a **minor/major version upgrade** detected from Wolfi's package repository.
-
-            ## Changes
-
-            - `go/apko/go.yaml` - updated package reference
-
-            ## Before Merging
-
-            - [ ] Review [Go release notes](https://go.dev/doc/devel/release)
-            - [ ] Verify CI passes (image builds and tests succeed)
-            - [ ] Check for breaking changes that may affect users
-
-            ---
-
-            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
-          branch: update-go-${{ steps.check.outputs.go_latest }}
-          commit-message: "chore(go): upgrade to ${{ steps.check.outputs.go_latest }}"
-          delete-branch: true
-          labels: |
-            dependencies
-            go
-
-      - name: Reset for next PR
-        if: steps.check.outputs.go_update == 'true'
-        run: git checkout -- .
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml).")
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
+          git checkout main
+          git checkout -- .
 
       # --- Node.js PR ---
-      - name: Update Node.js version
+      - name: Create Node.js PR
         if: steps.check.outputs.node_update == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           OLD="${{ steps.check.outputs.node_current }}"
           NEW="${{ steps.check.outputs.node_latest }}"
           sed -i "s/$OLD/$NEW/g" node-slim/apko/node.yaml
-          echo "Updated node-slim/apko/node.yaml: $OLD -> $NEW"
+          BRANCH="update-node-${NEW}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(node): upgrade to ${NEW}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(node): upgrade to ${NEW}" \
+            --label dependencies --label nodejs \
+            --body "Upgrades Node.js from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
 
-      - name: Create Node.js PR
-        if: steps.check.outputs.node_update == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(node): upgrade to ${{ steps.check.outputs.node_latest }}"
-          body: |
-            ## Summary
-
-            Upgrades Node.js from `${{ steps.check.outputs.node_current }}` to `${{ steps.check.outputs.node_latest }}`.
-
-            This is a **minor/major version upgrade** detected from Wolfi's package repository.
-
-            ## Changes
-
-            - `node-slim/apko/node.yaml` - updated package reference
-
-            ## Before Merging
-
-            - [ ] Review [Node.js changelog](https://nodejs.org/en/blog/)
-            - [ ] Verify CI passes (image builds and tests succeed)
-            - [ ] Check for breaking changes that may affect users
-
-            ---
-
-            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
-          branch: update-node-${{ steps.check.outputs.node_latest }}
-          commit-message: "chore(node): upgrade to ${{ steps.check.outputs.node_latest }}"
-          delete-branch: true
-          labels: |
-            dependencies
-            nodejs
-
-      - name: Reset for next PR
-        if: steps.check.outputs.node_update == 'true'
-        run: git checkout -- .
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml).")
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
+          git checkout main
+          git checkout -- .
 
       # --- .NET PR ---
-      - name: Update .NET version
+      - name: Create .NET PR
         if: steps.check.outputs.dotnet_update == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           OLD="${{ steps.check.outputs.dotnet_current }}"
           NEW="${{ steps.check.outputs.dotnet_latest }}"
           sed -i "s/$OLD/$NEW/g" dotnet/apko/dotnet.yaml
-          echo "Updated dotnet/apko/dotnet.yaml: $OLD -> $NEW"
+          BRANCH="update-dotnet-${NEW}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(dotnet): upgrade to ${NEW}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(dotnet): upgrade to ${NEW}" \
+            --label dependencies --label dotnet \
+            --body "Upgrades .NET Runtime from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
 
-      - name: Create .NET PR
-        if: steps.check.outputs.dotnet_update == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(dotnet): upgrade to ${{ steps.check.outputs.dotnet_latest }}"
-          body: |
-            ## Summary
-
-            Upgrades .NET Runtime from `${{ steps.check.outputs.dotnet_current }}` to `${{ steps.check.outputs.dotnet_latest }}`.
-
-            This is a **major version upgrade** detected from Wolfi's package repository.
-
-            ## Changes
-
-            - `dotnet/apko/dotnet.yaml` - updated package reference
-
-            ## Before Merging
-
-            - [ ] Review [.NET release notes](https://learn.microsoft.com/en-us/dotnet/core/whats-new/)
-            - [ ] Verify CI passes (image builds and tests succeed)
-            - [ ] Check for breaking changes that may affect users
-
-            ---
-
-            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
-          branch: update-dotnet-${{ steps.check.outputs.dotnet_latest }}
-          commit-message: "chore(dotnet): upgrade to ${{ steps.check.outputs.dotnet_latest }}"
-          delete-branch: true
-          labels: |
-            dependencies
-            dotnet
-
-      - name: Reset for next PR
-        if: steps.check.outputs.dotnet_update == 'true'
-        run: git checkout -- .
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml).")
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
+          git checkout main
+          git checkout -- .
 
       # --- OpenJDK PR ---
-      - name: Update OpenJDK version
+      - name: Create OpenJDK PR
         if: steps.check.outputs.jdk_update == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           OLD="${{ steps.check.outputs.jdk_current }}"
           NEW="${{ steps.check.outputs.jdk_latest }}"
-          # Extract version numbers (e.g., "21" from "openjdk-21-jre")
           OLD_VER=$(echo "$OLD" | grep -oP '\d+')
           NEW_VER=$(echo "$NEW" | grep -oP '\d+')
-          # Update package names (openjdk-21-jre, openjdk-21-default-jvm)
           sed -i "s/openjdk-${OLD_VER}-jre/openjdk-${NEW_VER}-jre/g" java/apko/java.yaml
           sed -i "s/openjdk-${OLD_VER}-default-jvm/openjdk-${NEW_VER}-default-jvm/g" java/apko/java.yaml
-          # Update JAVA_HOME and PATH (java-21-openjdk -> java-25-openjdk)
           sed -i "s/java-${OLD_VER}-openjdk/java-${NEW_VER}-openjdk/g" java/apko/java.yaml
-          echo "Updated java/apko/java.yaml: openjdk-${OLD_VER} -> openjdk-${NEW_VER}"
+          BRANCH="update-java-${NEW}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(java): upgrade to ${NEW}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(java): upgrade to ${NEW}" \
+            --label dependencies --label java \
+            --body "Upgrades OpenJDK JRE from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
 
-      - name: Create OpenJDK PR
-        if: steps.check.outputs.jdk_update == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(java): upgrade to ${{ steps.check.outputs.jdk_latest }}"
-          body: |
-            ## Summary
-
-            Upgrades OpenJDK JRE from `${{ steps.check.outputs.jdk_current }}` to `${{ steps.check.outputs.jdk_latest }}`.
-
-            This is a **major version upgrade** detected from Wolfi's package repository.
-
-            ## Changes
-
-            - `java/apko/java.yaml` - updated package reference
-
-            ## Before Merging
-
-            - [ ] Review [OpenJDK release notes](https://openjdk.org/projects/jdk/)
-            - [ ] Verify CI passes (image builds and tests succeed)
-            - [ ] Check for breaking changes that may affect users
-
-            ---
-
-            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
-          branch: update-java-${{ steps.check.outputs.jdk_latest }}
-          commit-message: "chore(java): upgrade to ${{ steps.check.outputs.jdk_latest }}"
-          delete-branch: true
-          labels: |
-            dependencies
-            java
-
-      - name: Reset for next PR
-        if: steps.check.outputs.jdk_update == 'true'
-        run: git checkout -- .
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml).")
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
+          git checkout main
+          git checkout -- .
 
       # --- PostgreSQL PR ---
-      - name: Update PostgreSQL version
+      - name: Create PostgreSQL PR
         if: steps.check.outputs.pg_update == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           OLD="${{ steps.check.outputs.pg_current }}"
           NEW="${{ steps.check.outputs.pg_latest }}"
           sed -i "s/$OLD/$NEW/g" postgres-slim/apko/postgres.yaml
-          echo "Updated postgres-slim/apko/postgres.yaml: $OLD -> $NEW"
+          BRANCH="update-postgres-${NEW}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(postgres): upgrade to ${NEW}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(postgres): upgrade to ${NEW}" \
+            --label dependencies --label postgresql \
+            --body "Upgrades PostgreSQL from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
 
-      - name: Create PostgreSQL PR
-        if: steps.check.outputs.pg_update == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(postgres): upgrade to ${{ steps.check.outputs.pg_latest }}"
-          body: |
-            ## Summary
-
-            Upgrades PostgreSQL from `${{ steps.check.outputs.pg_current }}` to `${{ steps.check.outputs.pg_latest }}`.
-
-            This is a **minor/major version upgrade** detected from Wolfi's package repository.
-
-            ## Changes
-
-            - `postgres-slim/apko/postgres.yaml` - updated package references
-
-            ## Before Merging
-
-            - [ ] Review [PostgreSQL release notes](https://www.postgresql.org/docs/release/)
-            - [ ] Verify CI passes (image builds and tests succeed)
-            - [ ] Check for breaking changes that may affect users
-
-            ---
-
-            Automatically created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml) workflow.
-          branch: update-postgres-${{ steps.check.outputs.pg_latest }}
-          commit-message: "chore(postgres): upgrade to ${{ steps.check.outputs.pg_latest }}"
-          delete-branch: true
-          labels: |
-            dependencies
-            postgresql
-
-      - name: Reset for next PR
-        if: steps.check.outputs.pg_update == 'true'
-        run: git checkout -- .
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml).")
+          gh pr merge "$PR_URL" --auto --squash --delete-branch

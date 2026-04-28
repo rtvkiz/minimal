@@ -15,12 +15,21 @@ jobs:
       issues: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
+        with:
 
-      - name: Check for new MinIO release
+
+            - name: Check for new MinIO release
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -98,39 +107,42 @@ jobs:
           echo "=== minio/melange.yaml ==="
           grep -E '(version:|minio_release:|sha256:)' minio/melange.yaml | head -3
 
-      - name: Create Pull Request
+      - name: Create PR and enable auto-merge
         if: steps.check.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(minio): bump to ${{ steps.check.outputs.new_tag }}"
-          body: |
-            ## Summary
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-minio-${{ steps.check.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(minio): bump to ${{ steps.check.outputs.new_tag }}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(minio): bump to ${{ steps.check.outputs.new_tag }}" \
+            --label dependencies --label minio \
+            --body "$(cat <<'PRBODY'
+          ## Summary
+          
+          Updates MinIO from `${{ steps.check.outputs.current_tag }}` to `${{ steps.check.outputs.new_tag }}`.
+          
+          ## Changes
+          
+          - `minio/melange.yaml` - package version (`${{ steps.check.outputs.new_version }}`), release tag, SHA256 checksum, epoch reset
+          
+          ## Image Tag
+          
+          Once merged, this will publish: `ghcr.io/rtvkiz/minimal-minio:${{ steps.check.outputs.new_version }}-r0`
+          
+          ## Links
+          
+          - [MinIO Releases](https://github.com/minio/minio/releases)
+          - [Release Notes for ${{ steps.check.outputs.new_tag }}](https://github.com/minio/minio/releases/tag/${{ steps.check.outputs.new_tag }})
+          
+          ---
+          
+          This PR was automatically created by the [update-minio](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-minio.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
-            Updates MinIO from `${{ steps.check.outputs.current_tag }}` to `${{ steps.check.outputs.new_tag }}`.
-
-            ## Changes
-
-            - `minio/melange.yaml` - package version (`${{ steps.check.outputs.new_version }}`), release tag, SHA256 checksum, epoch reset
-
-            ## Image Tag
-
-            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-minio:${{ steps.check.outputs.new_version }}-r0`
-
-            ## Links
-
-            - [MinIO Releases](https://github.com/minio/minio/releases)
-            - [Release Notes for ${{ steps.check.outputs.new_tag }}](https://github.com/minio/minio/releases/tag/${{ steps.check.outputs.new_tag }})
-
-            ---
-
-            This PR was automatically created by the [update-minio](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-minio.yml) workflow.
-          branch: update-minio-${{ steps.check.outputs.new_version }}
-          commit-message: |
-            chore(minio): bump to ${{ steps.check.outputs.new_tag }}
-
-            Updates MinIO from ${{ steps.check.outputs.current_tag }} to ${{ steps.check.outputs.new_tag }}.
-          delete-branch: true
-          labels: |
-            dependencies
-            minio

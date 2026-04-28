@@ -15,12 +15,21 @@ jobs:
       issues: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
+        with:
 
-      - name: Check for new Traefik stable version
+
+            - name: Check for new Traefik stable version
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -101,42 +110,44 @@ jobs:
           echo "=== traefik/melange.yaml ==="
           grep -E '(version:|sha256:)' traefik/melange.yaml | head -2
 
-      - name: Create Pull Request
+      - name: Create PR and enable auto-merge
         if: steps.check.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(traefik): bump to ${{ steps.check.outputs.new_version }}"
-          body: |
-            ## Summary
-
-            Updates Traefik from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
-
-            ## Changes
-
-            - `traefik/melange.yaml` - package version, SHA256 checksum, epoch reset
-
-            ## Image Tag
-
-            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-traefik:${{ steps.check.outputs.new_version }}-r0`
-
-            ## Links
-
-            - [Traefik Releases](https://github.com/traefik/traefik/releases)
-            - [Release Notes for v${{ steps.check.outputs.new_version }}](https://github.com/traefik/traefik/releases/tag/v${{ steps.check.outputs.new_version }})
-
-            ---
-
-            This PR was automatically created by the [update-traefik](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-traefik.yml) workflow.
-          branch: update-traefik-${{ steps.check.outputs.new_version }}
-          commit-message: |
-            chore(traefik): bump to ${{ steps.check.outputs.new_version }}
-
-            Updates Traefik from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
-          delete-branch: true
-          labels: |
-            dependencies
-            traefik
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-traefik-${{ steps.check.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(traefik): bump to ${{ steps.check.outputs.new_version }}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(traefik): bump to ${{ steps.check.outputs.new_version }}" \
+            --label dependencies --label traefik --label  \
+            --body "$(cat <<'PRBODY'
+          ## Summary
+          
+          Updates Traefik from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+          
+          ## Changes
+          
+          - `traefik/melange.yaml` - package version, SHA256 checksum, epoch reset
+          
+          ## Image Tag
+          
+          Once merged, this will publish: `ghcr.io/rtvkiz/minimal-traefik:${{ steps.check.outputs.new_version }}-r0`
+          
+          ## Links
+          
+          - [Traefik Releases](https://github.com/traefik/traefik/releases)
+          - [Release Notes for v${{ steps.check.outputs.new_version }}](https://github.com/traefik/traefik/releases/tag/v${{ steps.check.outputs.new_version }})
+          
+          ---
+          
+          This PR was automatically created by the [update-traefik](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-traefik.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
       - name: Create new major version issue
         if: steps.check.outputs.next_major_version != ''

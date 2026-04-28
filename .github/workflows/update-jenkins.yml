@@ -14,12 +14,21 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
+        with:
 
-      - name: Check for new Jenkins LTS version
+
+            - name: Check for new Jenkins LTS version
         id: check
         shell: bash
         run: |
@@ -86,39 +95,42 @@ jobs:
           echo "=== jenkins/melange.yaml ==="
           grep -E '(version:|sha256:)' jenkins/melange.yaml | head -2
 
-      - name: Create Pull Request
+      - name: Create PR and enable auto-merge
         if: steps.check.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(jenkins): bump to ${{ steps.check.outputs.new_version }}"
-          body: |
-            ## Summary
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-jenkins-${{ steps.check.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(jenkins): bump to ${{ steps.check.outputs.new_version }}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(jenkins): bump to ${{ steps.check.outputs.new_version }}" \
+            --label dependencies --label jenkins \
+            --body "$(cat <<'PRBODY'
+          ## Summary
+          
+          Updates Jenkins LTS from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+          
+          ## Changes
+          
+          - `jenkins/melange.yaml` - package version, SHA256 checksum, epoch reset
+          
+          ## Image Tag
+          
+          Once merged, this will publish: `ghcr.io/rtvkiz/minimal-jenkins:${{ steps.check.outputs.new_version }}-r0`
+          
+          ## Links
+          
+          - [Jenkins LTS Changelog](https://www.jenkins.io/changelog-stable/)
+          - [Release Notes for ${{ steps.check.outputs.new_version }}](https://www.jenkins.io/changelog-stable/#v${{ steps.check.outputs.new_version }})
+          
+          ---
+          
+          This PR was automatically created by the [update-jenkins](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-jenkins.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
-            Updates Jenkins LTS from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
-
-            ## Changes
-
-            - `jenkins/melange.yaml` - package version, SHA256 checksum, epoch reset
-
-            ## Image Tag
-
-            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-jenkins:${{ steps.check.outputs.new_version }}-r0`
-
-            ## Links
-
-            - [Jenkins LTS Changelog](https://www.jenkins.io/changelog-stable/)
-            - [Release Notes for ${{ steps.check.outputs.new_version }}](https://www.jenkins.io/changelog-stable/#v${{ steps.check.outputs.new_version }})
-
-            ---
-
-            This PR was automatically created by the [update-jenkins](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-jenkins.yml) workflow.
-          branch: update-jenkins-${{ steps.check.outputs.new_version }}
-          commit-message: |
-            chore(jenkins): bump to ${{ steps.check.outputs.new_version }}
-
-            Updates Jenkins LTS from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
-          delete-branch: true
-          labels: |
-            dependencies
-            jenkins

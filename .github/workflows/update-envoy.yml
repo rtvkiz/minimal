@@ -14,12 +14,21 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
+        with:
 
-      - name: Check for new Envoy stable version
+
+            - name: Check for new Envoy stable version
         id: check
         run: |
           # Get latest stable release from GitHub API
@@ -102,39 +111,42 @@ jobs:
           echo "=== envoy/melange.yaml ==="
           grep -E '(version:|sha256_)' envoy/melange.yaml | head -3
 
-      - name: Create Pull Request
+      - name: Create PR and enable auto-merge
         if: steps.check.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(envoy): bump to ${{ steps.check.outputs.new_version }}"
-          body: |
-            ## Summary
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-envoy-${{ steps.check.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(envoy): bump to ${{ steps.check.outputs.new_version }}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(envoy): bump to ${{ steps.check.outputs.new_version }}" \
+            --label dependencies --label envoy \
+            --body "$(cat <<'PRBODY'
+          ## Summary
+          
+          Updates Envoy from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+          
+          ## Changes
+          
+          - `envoy/melange.yaml` - package version, SHA256 checksums, epoch reset
+          
+          ## Image Tag
+          
+          Once merged, this will publish: `ghcr.io/rtvkiz/minimal-envoy:${{ steps.check.outputs.new_version }}-r0`
+          
+          ## Links
+          
+          - [Envoy Releases](https://github.com/envoyproxy/envoy/releases)
+          - [Release Notes for ${{ steps.check.outputs.new_version }}](https://github.com/envoyproxy/envoy/releases/tag/v${{ steps.check.outputs.new_version }})
+          
+          ---
+          
+          This PR was automatically created by the [update-envoy](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-envoy.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
-            Updates Envoy from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
-
-            ## Changes
-
-            - `envoy/melange.yaml` - package version, SHA256 checksums, epoch reset
-
-            ## Image Tag
-
-            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-envoy:${{ steps.check.outputs.new_version }}-r0`
-
-            ## Links
-
-            - [Envoy Releases](https://github.com/envoyproxy/envoy/releases)
-            - [Release Notes for ${{ steps.check.outputs.new_version }}](https://github.com/envoyproxy/envoy/releases/tag/v${{ steps.check.outputs.new_version }})
-
-            ---
-
-            This PR was automatically created by the [update-envoy](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-envoy.yml) workflow.
-          branch: update-envoy-${{ steps.check.outputs.new_version }}
-          commit-message: |
-            chore(envoy): bump to ${{ steps.check.outputs.new_version }}
-
-            Updates Envoy from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
-          delete-branch: true
-          labels: |
-            dependencies
-            envoy

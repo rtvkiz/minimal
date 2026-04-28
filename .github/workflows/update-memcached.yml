@@ -14,12 +14,21 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
+        with:
 
-      - name: Check for new Memcached stable version
+
+            - name: Check for new Memcached stable version
         id: check
         run: |
           # Get latest stable version from the Memcached homepage.
@@ -85,39 +94,42 @@ jobs:
           echo "=== memcached/melange.yaml ==="
           grep -E '(version:|sha256:)' memcached/melange.yaml | head -2
 
-      - name: Create Pull Request
+      - name: Create PR and enable auto-merge
         if: steps.check.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(memcached): bump to ${{ steps.check.outputs.new_version }}"
-          body: |
-            ## Summary
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-memcached-${{ steps.check.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(memcached): bump to ${{ steps.check.outputs.new_version }}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(memcached): bump to ${{ steps.check.outputs.new_version }}" \
+            --label dependencies --label memcached \
+            --body "$(cat <<'PRBODY'
+          ## Summary
+          
+          Updates Memcached from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+          
+          ## Changes
+          
+          - `memcached/melange.yaml` - package version, SHA256 checksum, epoch reset
+          
+          ## Image Tag
+          
+          Once merged, this will publish: `ghcr.io/rtvkiz/minimal-memcached:${{ steps.check.outputs.new_version }}-r0`
+          
+          ## Links
+          
+          - [Memcached Releases](https://github.com/memcached/memcached/releases)
+          - [Release Notes for ${{ steps.check.outputs.new_version }}](https://github.com/memcached/memcached/releases/tag/${{ steps.check.outputs.new_version }})
+          
+          ---
+          
+          This PR was automatically created by the [update-memcached](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-memcached.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
-            Updates Memcached from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
-
-            ## Changes
-
-            - `memcached/melange.yaml` - package version, SHA256 checksum, epoch reset
-
-            ## Image Tag
-
-            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-memcached:${{ steps.check.outputs.new_version }}-r0`
-
-            ## Links
-
-            - [Memcached Releases](https://github.com/memcached/memcached/releases)
-            - [Release Notes for ${{ steps.check.outputs.new_version }}](https://github.com/memcached/memcached/releases/tag/${{ steps.check.outputs.new_version }})
-
-            ---
-
-            This PR was automatically created by the [update-memcached](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-memcached.yml) workflow.
-          branch: update-memcached-${{ steps.check.outputs.new_version }}
-          commit-message: |
-            chore(memcached): bump to ${{ steps.check.outputs.new_version }}
-
-            Updates Memcached from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
-          delete-branch: true
-          labels: |
-            dependencies
-            memcached

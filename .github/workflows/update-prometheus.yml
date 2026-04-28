@@ -14,12 +14,21 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
+        with:
 
-      - name: Check for new Prometheus stable version
+
+            - name: Check for new Prometheus stable version
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -89,39 +98,42 @@ jobs:
           echo "=== prometheus/melange.yaml ==="
           grep -E '(version:|sha256:)' prometheus/melange.yaml | head -2
 
-      - name: Create Pull Request
+      - name: Create PR and enable auto-merge
         if: steps.check.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(prometheus): bump to ${{ steps.check.outputs.new_version }}"
-          body: |
-            ## Summary
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-prometheus-${{ steps.check.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(prometheus): bump to ${{ steps.check.outputs.new_version }}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(prometheus): bump to ${{ steps.check.outputs.new_version }}" \
+            --label dependencies --label prometheus \
+            --body "$(cat <<'PRBODY'
+          ## Summary
+          
+          Updates Prometheus from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+          
+          ## Changes
+          
+          - `prometheus/melange.yaml` - package version, SHA256 checksum, epoch reset
+          
+          ## Image Tag
+          
+          Once merged, this will publish: `ghcr.io/rtvkiz/minimal-prometheus:${{ steps.check.outputs.new_version }}-r0`
+          
+          ## Links
+          
+          - [Prometheus Releases](https://github.com/prometheus/prometheus/releases)
+          - [Release Notes for ${{ steps.check.outputs.new_version }}](https://github.com/prometheus/prometheus/releases/tag/v${{ steps.check.outputs.new_version }})
+          
+          ---
+          
+          This PR was automatically created by the [update-prometheus](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-prometheus.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
-            Updates Prometheus from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
-
-            ## Changes
-
-            - `prometheus/melange.yaml` - package version, SHA256 checksum, epoch reset
-
-            ## Image Tag
-
-            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-prometheus:${{ steps.check.outputs.new_version }}-r0`
-
-            ## Links
-
-            - [Prometheus Releases](https://github.com/prometheus/prometheus/releases)
-            - [Release Notes for ${{ steps.check.outputs.new_version }}](https://github.com/prometheus/prometheus/releases/tag/v${{ steps.check.outputs.new_version }})
-
-            ---
-
-            This PR was automatically created by the [update-prometheus](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-prometheus.yml) workflow.
-          branch: update-prometheus-${{ steps.check.outputs.new_version }}
-          commit-message: |
-            chore(prometheus): bump to ${{ steps.check.outputs.new_version }}
-
-            Updates Prometheus from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
-          delete-branch: true
-          labels: |
-            dependencies
-            prometheus

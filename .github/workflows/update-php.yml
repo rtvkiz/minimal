@@ -14,11 +14,19 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
 
+      
       - name: Check for new PHP patch release
         id: check
         shell: bash
@@ -141,50 +149,44 @@ jobs:
           echo "=== php/melange.yaml ==="
           grep -E '(version:|sha256:|epoch:)' php/melange.yaml | head -3
 
-      - name: Create patch update PR
+      - name: Create PR and enable auto-merge
         if: steps.check.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(php): bump to ${{ steps.check.outputs.new_version }}"
-          body: |
-            ## Summary
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-php-${{ steps.check.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(php): bump to ${{ steps.check.outputs.new_version }}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(php): bump to ${{ steps.check.outputs.new_version }}" \
+            --label dependencies --label php \
+            --body "$(cat <<'PRBODY'
+          ## Summary
 
-            Updates PHP from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+          Updates PHP from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
 
-            ## Changes
+          ## Changes
 
-            - `php/melange.yaml` - package version, SHA256 checksum, epoch reset
+          - `php/melange.yaml` - package version, SHA256 checksum, epoch reset
 
-            ## Image Tag
+          ## Image Tag
 
-            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-php:${{ steps.check.outputs.new_version }}-r0`
+          Once merged, this will publish: `ghcr.io/rtvkiz/minimal-php:${{ steps.check.outputs.new_version }}-r0`
 
-            ## Verification
+          ## Links
 
-            The CI pipeline will build PHP from source and run tests automatically.
+          - [PHP ChangeLog](https://www.php.net/ChangeLog-${{ steps.check.outputs.series }}.php)
+          - [PHP Downloads](https://www.php.net/downloads)
 
-            - **Source**: https://www.php.net/distributions/php-${{ steps.check.outputs.new_version }}.tar.gz
-            - **SHA256**: `${{ steps.check.outputs.sha256 }}`
+          ---
 
-            ## Links
-
-            - [PHP ChangeLog](https://www.php.net/ChangeLog-${{ steps.check.outputs.series }}.php)
-            - [PHP Downloads](https://www.php.net/downloads)
-
-            ---
-
-            This PR was automatically created by the [update-php](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-php.yml) workflow.
-          branch: update-php-${{ steps.check.outputs.new_version }}
-          commit-message: |
-            chore(php): bump to ${{ steps.check.outputs.new_version }}
-
-            Updates PHP from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
-            SHA256: ${{ steps.check.outputs.sha256 }}
-          delete-branch: true
-          labels: |
-            dependencies
-            php
+          This PR was automatically created by the [update-php](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-php.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
       - name: Create new series issue
         if: steps.check.outputs.new_series != ''

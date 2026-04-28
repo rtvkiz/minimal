@@ -15,11 +15,19 @@ jobs:
       issues: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
 
+      
       - name: Check for new Caddy stable version
         id: check
         env:
@@ -101,42 +109,43 @@ jobs:
           echo "=== caddy/melange.yaml ==="
           grep -E '(version:|sha256:)' caddy/melange.yaml | head -2
 
-      - name: Create Pull Request
+      - name: Create PR and enable auto-merge
         if: steps.check.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(caddy): bump to ${{ steps.check.outputs.new_version }}"
-          body: |
-            ## Summary
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-caddy-${{ steps.check.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add caddy/melange.yaml
+          git commit -m "chore(caddy): bump to ${{ steps.check.outputs.new_version }}
 
-            Updates Caddy from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+          Updates Caddy from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}."
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(caddy): bump to ${{ steps.check.outputs.new_version }}" \
+            --label dependencies --label caddy \
+            --body "## Summary
 
-            ## Changes
+          Updates Caddy from \`${{ steps.check.outputs.current_version }}\` to \`${{ steps.check.outputs.new_version }}\`.
 
-            - `caddy/melange.yaml` - package version, SHA256 checksum, epoch reset
+          ## Changes
 
-            ## Image Tag
+          - \`caddy/melange.yaml\` - package version, SHA256 checksum, epoch reset
 
-            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-caddy:${{ steps.check.outputs.new_version }}-r0`
+          ## Image Tag
 
-            ## Links
+          Once merged, this will publish: \`ghcr.io/rtvkiz/minimal-caddy:${{ steps.check.outputs.new_version }}-r0\`
 
-            - [Caddy Releases](https://github.com/caddyserver/caddy/releases)
-            - [Release Notes for v${{ steps.check.outputs.new_version }}](https://github.com/caddyserver/caddy/releases/tag/v${{ steps.check.outputs.new_version }})
+          ## Links
 
-            ---
+          - [Caddy Releases](https://github.com/caddyserver/caddy/releases)
+          - [Release Notes for v${{ steps.check.outputs.new_version }}](https://github.com/caddyserver/caddy/releases/tag/v${{ steps.check.outputs.new_version }})
 
-            This PR was automatically created by the [update-caddy](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-caddy.yml) workflow.
-          branch: update-caddy-${{ steps.check.outputs.new_version }}
-          commit-message: |
-            chore(caddy): bump to ${{ steps.check.outputs.new_version }}
+          ---
 
-            Updates Caddy from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
-          delete-branch: true
-          labels: |
-            dependencies
-            caddy
+          This PR was automatically created by the [update-caddy](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-caddy.yml) workflow.")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
       - name: Create new major version issue
         if: steps.check.outputs.next_major_version != ''
@@ -188,3 +197,5 @@ jobs:
                 `*Detected by the [update-caddy](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/update-caddy.yml) workflow.*`,
               ].join('\n'),
             });
+
+

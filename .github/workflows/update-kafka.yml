@@ -15,12 +15,21 @@ jobs:
       issues: write
 
     steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
+        with:
 
-      - name: Check for new Kafka 4.x release
+
+            - name: Check for new Kafka 4.x release
         id: check
         run: |
           # Get latest 4.x release from the Apache dist server directory listing.
@@ -108,42 +117,44 @@ jobs:
           echo "=== kafka/melange.yaml ==="
           grep -E '(version:|sha512:|epoch:)' kafka/melange.yaml | head -3
 
-      - name: Create Pull Request
+      - name: Create PR and enable auto-merge
         if: steps.check.outputs.update_available == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "chore(kafka): bump to ${{ steps.check.outputs.new_version }}"
-          body: |
-            ## Summary
-
-            Updates Apache Kafka from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
-
-            ## Changes
-
-            - `kafka/melange.yaml` - package version, SHA512 checksum, epoch reset
-
-            ## Image Tag
-
-            Once merged, this will publish: `ghcr.io/rtvkiz/minimal-kafka:${{ steps.check.outputs.new_version }}-r0`
-
-            ## Links
-
-            - [Apache Kafka Releases](https://kafka.apache.org/downloads)
-            - [Release Notes for ${{ steps.check.outputs.new_version }}](https://archive.apache.org/dist/kafka/${{ steps.check.outputs.new_version }}/RELEASE_NOTES.html)
-
-            ---
-
-            This PR was automatically created by the [update-kafka](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-kafka.yml) workflow.
-          branch: update-kafka-${{ steps.check.outputs.new_version }}
-          commit-message: |
-            chore(kafka): bump to ${{ steps.check.outputs.new_version }}
-
-            Updates Apache Kafka from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}.
-          delete-branch: true
-          labels: |
-            dependencies
-            kafka
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-kafka-${{ steps.check.outputs.new_version }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(kafka): bump to ${{ steps.check.outputs.new_version }}"
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(kafka): bump to ${{ steps.check.outputs.new_version }}" \
+            --label dependencies --label kafka --label  \
+            --body "$(cat <<'PRBODY'
+          ## Summary
+          
+          Updates Apache Kafka from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+          
+          ## Changes
+          
+          - `kafka/melange.yaml` - package version, SHA512 checksum, epoch reset
+          
+          ## Image Tag
+          
+          Once merged, this will publish: `ghcr.io/rtvkiz/minimal-kafka:${{ steps.check.outputs.new_version }}-r0`
+          
+          ## Links
+          
+          - [Apache Kafka Releases](https://kafka.apache.org/downloads)
+          - [Release Notes for ${{ steps.check.outputs.new_version }}](https://archive.apache.org/dist/kafka/${{ steps.check.outputs.new_version }}/RELEASE_NOTES.html)
+          
+          ---
+          
+          This PR was automatically created by the [update-kafka](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-kafka.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
 
       - name: Create new major version issue
         if: steps.check.outputs.next_major_version != ''
