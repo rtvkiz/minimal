@@ -18,8 +18,9 @@ on:
 permissions: {}
 
 concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
+  # Schedule/dispatch get unique groups (never cancelled); push/PR cancel previous on same ref
+  group: build-${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
 env:
   REGISTRY: ghcr.io
@@ -230,23 +231,24 @@ jobs:
 
       - name: Pin latest Go from Wolfi
         run: |
+          # Skip for non-Go images (kafka, jenkins, qdrant, etc.)
+          if ! grep -q '^\s*- go$' "${{ matrix.melange_config }}"; then
+            echo "No bare 'go' package in config — skipping"
+            exit 0
+          fi
           # Resolve the latest go-1.XX package from Wolfi's APKINDEX
           # This ensures builds always use the latest patched Go, preventing
           # stale stdlib CVEs from Go's toolchain auto-download fetching .0 releases
           ARCH=${{ matrix.arch }}
-          curl -sfL "https://packages.wolfi.dev/os/${ARCH}/APKINDEX.tar.gz" -o /tmp/apkindex.tar.gz
+          curl -sfL --retry 5 --retry-delay 10 \
+            "https://packages.wolfi.dev/os/${ARCH}/APKINDEX.tar.gz" -o /tmp/apkindex.tar.gz
           tar xzf /tmp/apkindex.tar.gz -C /tmp APKINDEX
           LATEST_GO=$(grep '^P:go-1\.' /tmp/APKINDEX \
             | grep -vE '(doc|asm|covdata|cover|nm|objdump|test2json)' \
             | sed 's/^P://' | sort -t. -k2 -n | tail -1)
           rm -f /tmp/apkindex.tar.gz /tmp/APKINDEX
           echo "Latest Go in Wolfi: $LATEST_GO"
-          # Replace go-1.XX (any pinned version) or bare 'go' with the latest
-          if grep -q '^\s*- go-1\.' "${{ matrix.melange_config }}"; then
-            sed -i "s/- go-1\.[0-9]*/- ${LATEST_GO}/" "${{ matrix.melange_config }}"
-          elif grep -q '^\s*- go$' "${{ matrix.melange_config }}"; then
-            sed -i "s/- go$/- ${LATEST_GO}/" "${{ matrix.melange_config }}"
-          fi
+          sed -i "s/- go$/- ${LATEST_GO}/" "${{ matrix.melange_config }}"
           echo "Go package in config:"
           grep -E '^\s*- go' "${{ matrix.melange_config }}" || true
 
@@ -304,11 +306,11 @@ jobs:
 
       - name: Log in to Container Registry
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: nick-fields/retry@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          timeout_minutes: 2
+          max_attempts: 3
+          command: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
       - name: Build image with apko
         run: |
@@ -505,11 +507,11 @@ jobs:
 
       - name: Log in to Container Registry
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: nick-fields/retry@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          timeout_minutes: 2
+          max_attempts: 3
+          command: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
       - name: Download x86_64 packages
         uses: actions/download-artifact@v4
