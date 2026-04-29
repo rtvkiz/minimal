@@ -40,7 +40,7 @@ pipeline:
   # Download and verify MySQL source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-delay 10 "https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-${{package.version}}.tar.gz" \
+      curl -fsSL --retry 5 --retry-all-errors "https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-${{package.version}}.tar.gz" \
         -o /home/build/mysql.tar.gz
 
       # Verify checksum

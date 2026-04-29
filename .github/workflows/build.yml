@@ -257,7 +257,7 @@ jobs:
           # This ensures builds always use the latest patched Go, preventing
           # stale stdlib CVEs from Go's toolchain auto-download fetching .0 releases
           ARCH=${{ matrix.arch }}
-          curl -sfL --retry 5 --retry-delay 10 \
+          curl -sfL --retry 5 --retry-all-errors \
             "https://packages.wolfi.dev/os/${ARCH}/APKINDEX.tar.gz" -o /tmp/apkindex.tar.gz
           tar xzf /tmp/apkindex.tar.gz -C /tmp APKINDEX
           LATEST_GO=$(grep '^P:go-1\.' /tmp/APKINDEX \
@@ -363,7 +363,7 @@ jobs:
       - name: Install Grype
         if: steps.grype-cache.outputs.cache-hit != 'true'
         run: |
-          curl -fL --retry 5 --retry-delay 10 -o /tmp/grype.tar.gz \
+          curl -fL --retry 5 --retry-all-errors -o /tmp/grype.tar.gz \
             "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
           tar -tzf /tmp/grype.tar.gz > /dev/null
           tar -xzf /tmp/grype.tar.gz -C /usr/local/bin grype
@@ -606,7 +606,7 @@ jobs:
       - name: Install Grype
         if: steps.grype-cache.outputs.cache-hit != 'true'
         run: |
-          curl -fL --retry 5 --retry-delay 10 -o /tmp/grype.tar.gz \
+          curl -fL --retry 5 --retry-all-errors -o /tmp/grype.tar.gz \
             "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
           tar -tzf /tmp/grype.tar.gz > /dev/null
           tar -xzf /tmp/grype.tar.gz -C /usr/local/bin grype

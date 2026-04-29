@@ -89,13 +89,13 @@ jobs:
           SCALA_VERSION="2.13"
           echo "Updating to Kafka $VERSION"
 
-          curl -fsSL --connect-timeout 20 --retry 5 --retry-delay 10 \
+          curl -fsSL --connect-timeout 20 --retry 5 --retry-all-errors \
             "https://dlcdn.apache.org/kafka/${VERSION}/kafka_${SCALA_VERSION}-${VERSION}.tgz" \
             -o /tmp/kafka.tgz || \
-          curl -fsSL --connect-timeout 20 --retry 5 --retry-delay 10 \
+          curl -fsSL --connect-timeout 20 --retry 5 --retry-all-errors \
             "https://downloads.apache.org/kafka/${VERSION}/kafka_${SCALA_VERSION}-${VERSION}.tgz" \
             -o /tmp/kafka.tgz || \
-          curl -fsSL --connect-timeout 20 --retry 5 --retry-delay 10 \
+          curl -fsSL --connect-timeout 20 --retry 5 --retry-all-errors \
             "https://archive.apache.org/dist/kafka/${VERSION}/kafka_${SCALA_VERSION}-${VERSION}.tgz" \
             -o /tmp/kafka.tgz
 

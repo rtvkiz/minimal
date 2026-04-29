@@ -33,7 +33,7 @@ pipeline:
   # Download and verify Memcached source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-delay 10 "https://memcached.org/files/memcached-${{package.version}}.tar.gz" \
+      curl -fsSL --retry 5 --retry-all-errors "https://memcached.org/files/memcached-${{package.version}}.tar.gz" \
         -o /home/build/memcached.tar.gz
 
       # Verify checksum

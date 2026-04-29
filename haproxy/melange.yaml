@@ -35,7 +35,7 @@ pipeline:
   - runs: |
       mkdir -p /home/build
       MINOR_VER=$(echo "${{package.version}}" | cut -d. -f1,2)
-      curl -fsSL --retry 5 --retry-delay 10 "https://www.haproxy.org/download/${MINOR_VER}/src/haproxy-${{package.version}}.tar.gz" \
+      curl -fsSL --retry 5 --retry-all-errors "https://www.haproxy.org/download/${MINOR_VER}/src/haproxy-${{package.version}}.tar.gz" \
         -o /home/build/haproxy.tar.gz
 
       # Verify checksum

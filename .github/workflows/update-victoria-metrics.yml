@@ -35,7 +35,7 @@ jobs:
         run: |
           CURRENT=$(grep '^  version:' victoria-metrics/melange.yaml | awk '{print $2}')
 
-          LATEST_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+          LATEST_TAG=$(curl -sS --retry 3 --retry-all-errors \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/VictoriaMetrics/VictoriaMetrics/releases/latest" | \
             jq -r '.tag_name')
@@ -68,7 +68,7 @@ jobs:
         if: steps.check.outputs.update_available == 'true'
         run: |
           VERSION="${{ steps.check.outputs.new_version }}"
-          curl -fsSL --retry 3 --retry-delay 5 \
+          curl -fsSL --retry 3 --retry-all-errors \
             "https://github.com/VictoriaMetrics/VictoriaMetrics/archive/refs/tags/v${VERSION}.tar.gz" \
             -o /tmp/victoria-metrics.tar.gz
           SHA256=$(sha256sum /tmp/victoria-metrics.tar.gz | awk '{print $1}')

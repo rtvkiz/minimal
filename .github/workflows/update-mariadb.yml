@@ -33,7 +33,7 @@ jobs:
         run: |
           # Get latest 11.4.x release from the MariaDB downloads REST API.
           # No auth required; returns a stable JSON API.
-          LATEST=$(curl -fsSL --retry 3 --retry-delay 5 \
+          LATEST=$(curl -fsSL --retry 3 --retry-all-errors \
             "https://downloads.mariadb.org/rest-api/mariadb/11.4/" | \
             jq -r '[.releases | keys[] | select(test("^11\\.4\\."))] | sort_by(split(".") | map(tonumber)) | last')
 
@@ -72,7 +72,7 @@ jobs:
 
           # Download source tarball and compute SHA256 checksum
           echo "Downloading MariaDB $VERSION tarball..."
-          curl -fsSL --retry 3 --retry-delay 5 \
+          curl -fsSL --retry 3 --retry-all-errors \
             "https://archive.mariadb.org/mariadb-${VERSION}/source/mariadb-${VERSION}.tar.gz" \
             -o /tmp/mariadb.tar.gz
           SHA256=$(sha256sum /tmp/mariadb.tar.gz | awk '{print $1}')

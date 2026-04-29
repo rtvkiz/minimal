@@ -36,7 +36,7 @@ pipeline:
   # Download and verify MinIO source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-delay 10 "https://github.com/minio/minio/archive/refs/tags/${{vars.minio_release}}.tar.gz" \
+      curl -fsSL --retry 5 --retry-all-errors "https://github.com/minio/minio/archive/refs/tags/${{vars.minio_release}}.tar.gz" \
         -o /home/build/minio.tar.gz
 
       # Verify checksum

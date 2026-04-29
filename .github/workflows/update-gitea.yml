@@ -35,7 +35,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Get latest stable v1.x release from GitHub (sorted by semver, not creation date)
-          LATEST=$(curl -sS --retry 3 --retry-delay 5 \
+          LATEST=$(curl -sS --retry 3 --retry-all-errors \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/go-gitea/gitea/tags?per_page=100" | \
             jq -r '[.[] | .name | select(test("^v1\\.[0-9]+\\.[0-9]+$")) | ltrimstr("v")] | sort_by(split(".") | map(tonumber)) | last')
@@ -71,7 +71,7 @@ jobs:
           CURRENT_MAJOR=$(echo "$CURRENT" | cut -d. -f1)
           NEXT_MAJOR=$((CURRENT_MAJOR + 1))
           echo "tracked_version=$CURRENT" >> $GITHUB_OUTPUT
-          NEXT_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+          NEXT_TAG=$(curl -sS --retry 3 --retry-all-errors \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/go-gitea/gitea/tags?per_page=100" | \
             jq -r --arg next "v${NEXT_MAJOR}." \
@@ -90,7 +90,7 @@ jobs:
 
           # Download tarball and compute SHA256 checksum
           echo "Downloading Gitea $VERSION tarball..."
-          curl -fsSL --retry 3 --retry-delay 5 "https://github.com/go-gitea/gitea/archive/refs/tags/v${VERSION}.tar.gz" \
+          curl -fsSL --retry 3 --retry-all-errors "https://github.com/go-gitea/gitea/archive/refs/tags/v${VERSION}.tar.gz" \
             -o /tmp/gitea.tar.gz
           SHA256=$(sha256sum /tmp/gitea.tar.gz | awk '{print $1}')
           rm /tmp/gitea.tar.gz

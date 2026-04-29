@@ -44,7 +44,7 @@ jobs:
           echo "Current full version: $CURRENT"
 
           # Get latest OpenSearch version for the same major line
-          LATEST=$(curl -sS --retry 3 --retry-delay 5 \
+          LATEST=$(curl -sS --retry 3 --retry-all-errors \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/opensearch-project/OpenSearch/tags?per_page=100" | \
             jq -r --arg MAJOR "$MAJOR_VERSION" '[.[] | .name | select(test("^" + $MAJOR + "\\.[0-9]+\\.[0-9]+$"))] | first')
@@ -70,7 +70,7 @@ jobs:
 
           # Check for new major version (CURRENT_MAJOR + 1)
           NEXT_MAJOR=$((MAJOR_VERSION + 1))
-          LATEST_NEXT_MAJOR=$(curl -sS --retry 3 --retry-delay 5 \
+          LATEST_NEXT_MAJOR=$(curl -sS --retry 3 --retry-all-errors \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/opensearch-project/OpenSearch/tags?per_page=100" | \
             jq -r --arg NEXT "$NEXT_MAJOR" '[.[] | .name | select(test("^" + $NEXT + "\\.[0-9]+\\.[0-9]+$"))] | first // empty')

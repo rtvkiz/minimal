@@ -29,7 +29,7 @@ environment:
 pipeline:
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-delay 10 "https://github.com/open-telemetry/opentelemetry-collector/archive/refs/tags/v${{package.version}}.tar.gz" \
+      curl -fsSL --retry 5 --retry-all-errors "https://github.com/open-telemetry/opentelemetry-collector/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/otelcol.tar.gz
       echo "${{vars.sha256}}  /home/build/otelcol.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf otelcol.tar.gz && rm otelcol.tar.gz

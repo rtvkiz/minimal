@@ -53,7 +53,7 @@ jobs:
           # --- Patch update check via php.net releases API ---
           # Returns {"version":"8.5.4","source":[...],...} for known series,
           # or {"error":"Unknown version"} for series that don't exist yet.
-          LATEST_RESP=$(curl -fsSL --retry 3 --retry-delay 5 \
+          LATEST_RESP=$(curl -fsSL --retry 3 --retry-all-errors \
             "https://www.php.net/releases/index.php?json&version=${SERIES}")
           LATEST=$(echo "$LATEST_RESP" | jq -r '.version // empty')
 
@@ -73,7 +73,7 @@ jobs:
           if [ "$LATEST" != "$CURRENT" ]; then
             # Download tarball from php.net and compute SHA256 locally
             echo "Downloading PHP $LATEST tarball to compute SHA256..."
-            curl -fsSL --retry 3 --retry-delay 5 \
+            curl -fsSL --retry 3 --retry-all-errors \
               "https://www.php.net/distributions/php-${LATEST}.tar.gz" \
               -o /tmp/php.tar.gz
             SHA256=$(sha256sum /tmp/php.tar.gz | awk '{print $1}')
@@ -110,7 +110,7 @@ jobs:
           NEW_SERIES=""
           # Check next minor (e.g. 8.6); failures are non-fatal — series may not exist yet.
           # php.net returns {"error":"Unknown version"} for non-existent series (no .version field).
-          MINOR_RESP=$(curl -sS --retry 3 --retry-delay 5 \
+          MINOR_RESP=$(curl -sS --retry 3 --retry-all-errors \
             "https://www.php.net/releases/index.php?json&version=${NEXT_MINOR}" || echo '{}')
           MINOR_EXISTS=$(echo "$MINOR_RESP" | jq -r '.version // empty' 2>/dev/null || echo '')
           if [ -n "$MINOR_EXISTS" ]; then
@@ -119,7 +119,7 @@ jobs:
           fi
 
           # Check next major (e.g. 9.0)
-          MAJOR_RESP=$(curl -sS --retry 3 --retry-delay 5 \
+          MAJOR_RESP=$(curl -sS --retry 3 --retry-all-errors \
             "https://www.php.net/releases/index.php?json&version=${NEXT_MAJOR}" || echo '{}')
           MAJOR_EXISTS=$(echo "$MAJOR_RESP" | jq -r '.version // empty' 2>/dev/null || echo '')
           if [ -n "$MAJOR_EXISTS" ]; then

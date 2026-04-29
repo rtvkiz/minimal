@@ -32,7 +32,7 @@ jobs:
         id: check
         run: |
           # Get latest stable release from GitHub API
-          LATEST=$(curl -sS --retry 3 --retry-delay 5 "https://api.github.com/repos/envoyproxy/envoy/releases" | \
+          LATEST=$(curl -sS --retry 3 --retry-all-errors "https://api.github.com/repos/envoyproxy/envoy/releases" | \
             jq -r '[.[] | select(.prerelease == false)] | first | .tag_name | ltrimstr("v")' 2>/dev/null)
 
           if [ -z "$LATEST" ]; then
@@ -70,7 +70,7 @@ jobs:
 
           # Download checksums and compute SHA256 for both architectures
           echo "Fetching checksums for Envoy $VERSION..."
-          CHECKSUMS=$(curl -fsSL --retry 3 --retry-delay 5 "https://github.com/envoyproxy/envoy/releases/download/v${VERSION}/checksums.txt" 2>/dev/null || echo "")
+          CHECKSUMS=$(curl -fsSL --retry 3 --retry-all-errors "https://github.com/envoyproxy/envoy/releases/download/v${VERSION}/checksums.txt" 2>/dev/null || echo "")
 
           # For x86_64
           SHA256_X86=$(echo "$CHECKSUMS" | grep "envoy-${VERSION}-linux-x86_64" | awk '{print $1}')
@@ -81,12 +81,12 @@ jobs:
             echo "Warning: Could not fetch checksums from signed file, downloading directly..."
 
             # Download x86_64 and compute checksum
-            curl -fsSL --retry 3 --retry-delay 5 "https://github.com/envoyproxy/envoy/releases/download/v${VERSION}/envoy-${VERSION}-linux-x86_64" \
+            curl -fsSL --retry 3 --retry-all-errors "https://github.com/envoyproxy/envoy/releases/download/v${VERSION}/envoy-${VERSION}-linux-x86_64" \
               -o /tmp/envoy-x86_64
             SHA256_X86=$(sha256sum /tmp/envoy-x86_64 | awk '{print $1}')
 
             # Download aarch64 and compute checksum
-            curl -fsSL --retry 3 --retry-delay 5 "https://github.com/envoyproxy/envoy/releases/download/v${VERSION}/envoy-${VERSION}-linux-aarch_64" \
+            curl -fsSL --retry 3 --retry-all-errors "https://github.com/envoyproxy/envoy/releases/download/v${VERSION}/envoy-${VERSION}-linux-aarch_64" \
               -o /tmp/envoy-aarch_64
             SHA256_ARM=$(sha256sum /tmp/envoy-aarch_64 | awk '{print $1}')
 

@@ -33,7 +33,7 @@ pipeline:
   # Download and verify Redis source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-delay 10 "https://github.com/redis/redis/archive/refs/tags/${{package.version}}.tar.gz" \
+      curl -fsSL --retry 5 --retry-all-errors "https://github.com/redis/redis/archive/refs/tags/${{package.version}}.tar.gz" \
         -o /home/build/redis.tar.gz
       
       # Verify checksum

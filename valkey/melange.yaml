@@ -34,7 +34,7 @@ pipeline:
   # Download and verify Valkey source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-delay 10 "https://github.com/valkey-io/valkey/archive/refs/tags/${{package.version}}.tar.gz" \
+      curl -fsSL --retry 5 --retry-all-errors "https://github.com/valkey-io/valkey/archive/refs/tags/${{package.version}}.tar.gz" \
         -o /home/build/valkey.tar.gz
 
       # Verify checksum

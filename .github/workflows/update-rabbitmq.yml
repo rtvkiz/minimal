@@ -34,7 +34,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Get latest stable 4.x release from GitHub (releases/latest always points to newest)
-          LATEST_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+          LATEST_TAG=$(curl -sS --retry 3 --retry-all-errors \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/rabbitmq/rabbitmq-server/releases/latest" | \
             jq -r '.tag_name')
@@ -77,7 +77,7 @@ jobs:
 
           # Download generic-unix tarball and compute SHA256
           echo "Downloading RabbitMQ $VERSION generic-unix tarball..."
-          curl -fsSL --retry 3 --retry-delay 5 \
+          curl -fsSL --retry 3 --retry-all-errors \
             "https://github.com/rabbitmq/rabbitmq-server/releases/download/v${VERSION}/rabbitmq-server-generic-unix-${VERSION}.tar.xz" \
             -o /tmp/rabbitmq.tar.xz
 

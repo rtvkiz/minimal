@@ -36,7 +36,7 @@ jobs:
           CURRENT=$(grep '^  version:' otelcol/melange.yaml | awk '{print $2}')
 
           # Get latest release — filter to stable releases (no alpha/beta/rc)
-          LATEST_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+          LATEST_TAG=$(curl -sS --retry 3 --retry-all-errors \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/open-telemetry/opentelemetry-collector/releases?per_page=20" | \
             jq -r '[.[] | select(.prerelease == false and .draft == false) | .tag_name] | first')
@@ -69,7 +69,7 @@ jobs:
         if: steps.check.outputs.update_available == 'true'
         run: |
           VERSION="${{ steps.check.outputs.new_version }}"
-          curl -fsSL --retry 3 --retry-delay 5 \
+          curl -fsSL --retry 3 --retry-all-errors \
             "https://github.com/open-telemetry/opentelemetry-collector/archive/refs/tags/v${VERSION}.tar.gz" \
             -o /tmp/otelcol.tar.gz
           SHA256=$(sha256sum /tmp/otelcol.tar.gz | awk '{print $1}')

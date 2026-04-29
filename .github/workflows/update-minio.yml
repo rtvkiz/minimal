@@ -35,7 +35,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Get latest release tag from GitHub API
-          LATEST_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+          LATEST_TAG=$(curl -sS --retry 3 --retry-all-errors \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/minio/minio/releases/latest" | \
             jq -r '.tag_name')
@@ -83,7 +83,7 @@ jobs:
 
           # Download tarball and compute SHA256 checksum
           echo "Downloading MinIO $NEW_TAG tarball..."
-          curl -fsSL --retry 3 --retry-delay 5 \
+          curl -fsSL --retry 3 --retry-all-errors \
             "https://github.com/minio/minio/archive/refs/tags/${NEW_TAG}.tar.gz" \
             -o /tmp/minio.tar.gz
           SHA256=$(sha256sum /tmp/minio.tar.gz | awk '{print $1}')

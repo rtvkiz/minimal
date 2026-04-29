@@ -35,7 +35,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Get latest MySQL 8.4.x tag from GitHub (tags use mysql-cluster- prefix)
-          LATEST=$(curl -sS --retry 3 --retry-delay 5 \
+          LATEST=$(curl -sS --retry 3 --retry-all-errors \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/mysql/mysql-server/tags?per_page=100" | \
             jq -r '[.[] | select(.name | startswith("mysql-cluster-8.4.")) | .name] | first' | \
@@ -73,7 +73,7 @@ jobs:
           CURRENT_MAJOR=$(echo "$CURRENT" | cut -d. -f1)
           NEXT_MAJOR=$((CURRENT_MAJOR + 1))
           echo "tracked_version=$CURRENT" >> $GITHUB_OUTPUT
-          NEXT_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+          NEXT_TAG=$(curl -sS --retry 3 --retry-all-errors \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/mysql/mysql-server/tags?per_page=100" | \
             jq -r --arg next "mysql-cluster-${NEXT_MAJOR}." \
@@ -92,7 +92,7 @@ jobs:
 
           # Download tarball and compute SHA256 checksum
           echo "Downloading MySQL $VERSION tarball..."
-          curl -fsSL --retry 3 --retry-delay 5 "https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-${VERSION}.tar.gz" \
+          curl -fsSL --retry 3 --retry-all-errors "https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-${VERSION}.tar.gz" \
             -o /tmp/mysql.tar.gz
           SHA256=$(sha256sum /tmp/mysql.tar.gz | awk '{print $1}')
           rm /tmp/mysql.tar.gz

@@ -43,7 +43,7 @@ pipeline:
   # Download and verify MariaDB source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-delay 10 "https://archive.mariadb.org/mariadb-${{package.version}}/source/mariadb-${{package.version}}.tar.gz" \
+      curl -fsSL --retry 5 --retry-all-errors "https://archive.mariadb.org/mariadb-${{package.version}}/source/mariadb-${{package.version}}.tar.gz" \
         -o /home/build/mariadb.tar.gz
 
       # Verify checksum

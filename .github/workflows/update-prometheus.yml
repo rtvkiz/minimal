@@ -34,7 +34,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Get latest stable 3.x release from GitHub
-          LATEST_TAG=$(curl -sS --retry 3 --retry-delay 5 \
+          LATEST_TAG=$(curl -sS --retry 3 --retry-all-errors \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/prometheus/prometheus/releases/latest" | \
             jq -r '.tag_name')
@@ -77,7 +77,7 @@ jobs:
 
           # Download tarball and compute SHA256 checksum
           echo "Downloading Prometheus $VERSION tarball..."
-          curl -fsSL --retry 3 --retry-delay 5 \
+          curl -fsSL --retry 3 --retry-all-errors \
             "https://github.com/prometheus/prometheus/archive/refs/tags/v${VERSION}.tar.gz" \
             -o /tmp/prometheus.tar.gz
           SHA256=$(sha256sum /tmp/prometheus.tar.gz | awk '{print $1}')
