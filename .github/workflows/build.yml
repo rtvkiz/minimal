@@ -167,10 +167,19 @@ jobs:
     timeout-minutes: 5
     permissions: {}
     steps:
+      - name: Cache melange binary
+        id: melange-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/go/bin/melange
+          key: melange-0.41.1-${{ runner.arch }}
+
       - name: Install melange
-        run: |
-          go install chainguard.dev/melange@v0.41.1
-          echo "$HOME/go/bin" >> $GITHUB_PATH
+        if: steps.melange-cache.outputs.cache-hit != 'true'
+        run: go install chainguard.dev/melange@v0.41.1
+
+      - name: Add Go bin to PATH
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Generate ephemeral signing key
         run: |
@@ -207,10 +216,19 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Cache melange binary
+        id: melange-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/go/bin/melange
+          key: melange-0.41.1-${{ runner.arch }}
+
       - name: Install melange
-        run: |
-          go install chainguard.dev/melange@v0.41.1
-          echo "$HOME/go/bin" >> $GITHUB_PATH
+        if: steps.melange-cache.outputs.cache-hit != 'true'
+        run: go install chainguard.dev/melange@v0.41.1
+
+      - name: Add Go bin to PATH
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
 
       # For PRs: download ephemeral key from keygen job
       - name: Download ephemeral signing key (PR)
@@ -293,10 +311,19 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Cache apko binary
+        id: apko-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/go/bin/apko
+          key: apko-1.1.6-${{ runner.arch }}
+
       - name: Install apko
-        run: |
-          go install chainguard.dev/apko@v1.1.6
-          echo "$HOME/go/bin" >> $GITHUB_PATH
+        if: steps.apko-cache.outputs.cache-hit != 'true'
+        run: go install chainguard.dev/apko@v1.1.6
+
+      - name: Add Go bin to PATH
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
         if: github.event_name != 'pull_request'
@@ -413,14 +440,14 @@ jobs:
           retention-days: 90
 
       - name: Generate SARIF report
-        if: always()
+        if: always() && hashFiles(format('grype-{0}.json', matrix.name)) != ''
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
           grype "$IMAGE" -o sarif > grype-${{ matrix.name }}.sarif || true
 
       - name: Upload SARIF to Security tab
         uses: github/codeql-action/upload-sarif@66b39da20ccc656acc90dd27ea30f5d458ec33ce # v3.28.19
-        if: always()
+        if: always() && hashFiles(format('grype-{0}.sarif', matrix.name)) != ''
         continue-on-error: true
         with:
           sarif_file: 'grype-${{ matrix.name }}.sarif'
@@ -493,10 +520,19 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Cache apko binary
+        id: apko-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/go/bin/apko
+          key: apko-1.1.6-${{ runner.arch }}
+
       - name: Install apko
-        run: |
-          go install chainguard.dev/apko@v1.1.6
-          echo "$HOME/go/bin" >> $GITHUB_PATH
+        if: steps.apko-cache.outputs.cache-hit != 'true'
+        run: go install chainguard.dev/apko@v1.1.6
+
+      - name: Add Go bin to PATH
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
         if: github.event_name != 'pull_request'
@@ -647,14 +683,14 @@ jobs:
           retention-days: 90
 
       - name: Generate SARIF report
-        if: always()
+        if: always() && hashFiles(format('grype-{0}.json', matrix.name)) != ''
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
           grype "$IMAGE" -o sarif > grype-${{ matrix.name }}.sarif || true
 
       - name: Upload SARIF to Security tab
         uses: github/codeql-action/upload-sarif@66b39da20ccc656acc90dd27ea30f5d458ec33ce # v3.28.19
-        if: always()
+        if: always() && hashFiles(format('grype-{0}.sarif', matrix.name)) != ''
         continue-on-error: true
         with:
           sarif_file: 'grype-${{ matrix.name }}.sarif'
