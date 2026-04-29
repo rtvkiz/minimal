@@ -44,7 +44,7 @@ jobs:
       has-build-melange: ${{ steps.filter.outputs.has-build-melange }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -61,8 +61,7 @@ jobs:
             {"name":"traefik"},{"name":"rabbitmq"},{"name":"minio"},
             {"name":"prometheus"},{"name":"mariadb"},{"name":"etcd"},
             {"name":"victoria-metrics"},{"name":"jaeger"},{"name":"otelcol"},
-            {"name":"qdrant"},{"name":"envoy"},{"name":"gitea"},
-            {"name":"cuda-python","arches":"x86_64"}
+            {"name":"qdrant"},{"name":"envoy"},{"name":"gitea"}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]"},
@@ -179,7 +178,7 @@ jobs:
           melange keygen
 
       - name: Upload signing key
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: melange-ephemeral-key
           path: |
@@ -204,7 +203,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
 
@@ -216,7 +215,7 @@ jobs:
       # For PRs: download ephemeral key from keygen job
       - name: Download ephemeral signing key (PR)
         if: github.event_name == 'pull_request'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: melange-ephemeral-key
           path: .
@@ -262,7 +261,7 @@ jobs:
             --runner docker
 
       - name: Upload packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: packages-${{ matrix.name }}-${{ matrix.arch }}
           path: |
@@ -290,7 +289,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
 
@@ -300,13 +299,13 @@ jobs:
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
         with:
-          cosign-release: 'v2.5.2'
+          cosign-release: 'v3.0.6'
 
       - name: Log in to Container Registry
         if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
         with:
           timeout_minutes: 2
           max_attempts: 3
@@ -330,7 +329,7 @@ jobs:
 
       - name: Cache Grype binary
         id: grype-cache
-        uses: actions/cache@v4
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: /usr/local/bin/grype
           key: grype-${{ env.GRYPE_VERSION }}-linux-amd64
@@ -408,7 +407,7 @@ jobs:
 
       - name: Upload vulnerability report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: vulnerability-report-${{ matrix.name }}
           path: grype-${{ matrix.name }}.json
@@ -421,7 +420,7 @@ jobs:
           grype "$IMAGE" -o sarif > grype-${{ matrix.name }}.sarif || true
 
       - name: Upload SARIF to Security tab
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@66b39da20ccc656acc90dd27ea30f5d458ec33ce # v3.28.19
         if: always()
         continue-on-error: true
         with:
@@ -461,7 +460,7 @@ jobs:
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
         with:
           timeout_minutes: 5
           max_attempts: 3
@@ -491,7 +490,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
 
@@ -501,27 +500,27 @@ jobs:
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Setup cosign
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
         with:
-          cosign-release: 'v2.5.2'
+          cosign-release: 'v3.0.6'
 
       - name: Log in to Container Registry
         if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
         with:
           timeout_minutes: 2
           max_attempts: 3
           command: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
       - name: Download x86_64 packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: packages-${{ matrix.name }}-x86_64
           path: ./packages-x86_64
 
       - name: Download aarch64 packages
         if: contains(matrix.arches, 'aarch64')
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: packages-${{ matrix.name }}-aarch64
           path: ./packages-aarch64
@@ -565,7 +564,7 @@ jobs:
 
       - name: Cache Grype binary
         id: grype-cache
-        uses: actions/cache@v4
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: /usr/local/bin/grype
           key: grype-${{ env.GRYPE_VERSION }}-linux-amd64
@@ -643,7 +642,7 @@ jobs:
 
       - name: Upload vulnerability report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: vulnerability-report-${{ matrix.name }}
           path: grype-${{ matrix.name }}.json
@@ -656,7 +655,7 @@ jobs:
           grype "$IMAGE" -o sarif > grype-${{ matrix.name }}.sarif || true
 
       - name: Upload SARIF to Security tab
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@66b39da20ccc656acc90dd27ea30f5d458ec33ce # v3.28.19
         if: always()
         continue-on-error: true
         with:
@@ -692,7 +691,7 @@ jobs:
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
         with:
           timeout_minutes: 5
           max_attempts: 3
@@ -750,7 +749,7 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - name: Download all vulnerability reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: vulnerability-report-*
           merge-multiple: true
@@ -847,13 +846,13 @@ jobs:
           HTML
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: site/
 
       - name: Deploy to GitHub Pages
         id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
 
   #----------------------------------------------------------------------------
   # CLEANUP OLD VERSIONS

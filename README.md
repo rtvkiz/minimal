@@ -12,7 +12,7 @@
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build Hardened Images"></a>
   <a href="https://rtvkiz.github.io/minimal/"><img src="https://img.shields.io/badge/Vulnerability_Report-View-0d9488" alt="Vulnerability Report"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Images-37-0d9488" alt="Images: 37">
+  <img src="https://img.shields.io/badge/Images-36-0d9488" alt="Images: 36">
   <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
 </p>
 
@@ -85,7 +85,7 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | **Traefik** | `docker pull ghcr.io/rtvkiz/minimal-traefik:latest` | No | Cloud-native reverse proxy and load balancer, built from source |
 | **Envoy** | `docker pull ghcr.io/rtvkiz/minimal-envoy:latest` | No | Cloud-native service proxy and load balancer, upstream binary |
 | | | **AI/ML** | |
-| **CUDA Python** | `docker pull ghcr.io/rtvkiz/minimal-cuda-python:latest` | No | Python + CUDA 12.9 + cuDNN 9.10 for ML inference (x86_64 only) |
+| **CUDA Python** | *disabled* | No | Python + CUDA 12.9 + cuDNN 9.10 for ML inference (x86_64 only) — build disabled, code retained |
 | | | **Git Hosting** | |
 | **Gitea** | `docker pull ghcr.io/rtvkiz/minimal-gitea:latest` | Yes | Self-hosted Git service (built from source) |
 | | | **CI/CD** | |

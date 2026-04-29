@@ -52,6 +52,54 @@ pipeline:
       tar xzf kafka.tgz
       rm kafka.tgz
 
+  # Patch vulnerable JARs with fixed versions from Maven Central
+  # patch-kafka-jars: auto-generated — do not edit manually
+  - runs: |
+      LIBS="/home/build/kafka_${{vars.scala_version}}-${{package.version}}/libs"
+
+      # Remove vulnerable JARs
+      rm "$LIBS/plexus-utils-3.5.1.jar"
+      rm "$LIBS/jetty-server-12.0.22.jar"
+      rm "$LIBS/jetty-http-12.0.22.jar"
+      rm "$LIBS/log4j-core-2.25.3.jar"
+      rm "$LIBS/log4j-1.2-api-2.25.3.jar"
+      rm "$LIBS/jackson-core-2.19.2.jar"
+
+      # Download patched versions and verify checksums
+      cd "$LIBS"
+      curl -fsSL --retry 5 --retry-delay 10 \
+        "https://repo1.maven.org/maven2/org/codehaus/plexus/plexus-utils/3.6.1/plexus-utils-3.6.1.jar" \
+        -o plexus-utils-3.6.1.jar
+      echo "05a63effd67e2d6b9d610cc82e2bd7473289d34802e57a529b28110f28af5679  plexus-utils-3.6.1.jar" | sha256sum -c -
+
+      curl -fsSL --retry 5 --retry-delay 10 \
+        "https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-server/12.0.32/jetty-server-12.0.32.jar" \
+        -o jetty-server-12.0.32.jar
+      echo "04b0d9f39543620bb1b1032bf8ff0f8095119d4e46213a1a3d6344fa0a07b728  jetty-server-12.0.32.jar" | sha256sum -c -
+
+      curl -fsSL --retry 5 --retry-delay 10 \
+        "https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-http/12.0.33/jetty-http-12.0.33.jar" \
+        -o jetty-http-12.0.33.jar
+      echo "325a8b5d5761d790d3c1db61c130e55f57d338ef644c89270d6b835ca52140a3  jetty-http-12.0.33.jar" | sha256sum -c -
+
+      curl -fsSL --retry 5 --retry-delay 10 \
+        "https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-core/2.25.4/log4j-core-2.25.4.jar" \
+        -o log4j-core-2.25.4.jar
+      echo "10fee2c0485d54fa44ee75d314f6295508f7b932281873db61a91b88073200e6  log4j-core-2.25.4.jar" | sha256sum -c -
+
+      curl -fsSL --retry 5 --retry-delay 10 \
+        "https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-1.2-api/2.25.4/log4j-1.2-api-2.25.4.jar" \
+        -o log4j-1.2-api-2.25.4.jar
+      echo "7b1a61507950ea67b3d6b11437ee37fad9db06f855c92c25c08aee074c757395  log4j-1.2-api-2.25.4.jar" | sha256sum -c -
+
+      curl -fsSL --retry 5 --retry-delay 10 \
+        "https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.21.1/jackson-core-2.21.1.jar" \
+        -o jackson-core-2.21.1.jar
+      echo "1edd5f2e49dca5f8e4519957c24b7b3050bd1c7ee883920da33cff031ff1f7c0  jackson-core-2.21.1.jar" | sha256sum -c -
+
+      echo "All vulnerable JARs patched and verified"
+  # end-patch-kafka-jars
+
   # Create minimal JRE with jlink (only modules Kafka needs)
   - runs: |
       JAVA_HOME=/usr/lib/jvm/java-21-openjdk
