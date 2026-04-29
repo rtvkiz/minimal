@@ -26,10 +26,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
-        with:
 
-
-            - name: Check for new Kafka 4.x release
+      - name: Check for new Kafka 4.x release
         id: check
         run: |
           # Get latest 4.x release from the Apache dist server directory listing.

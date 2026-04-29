@@ -26,10 +26,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
-        with:
 
-
-            - name: Check for new HAProxy stable version
+      - name: Check for new HAProxy stable version
         id: check
         env:
           GH_TOKEN: ${{ github.token }}

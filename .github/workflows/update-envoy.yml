@@ -25,10 +25,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
-        with:
 
-
-            - name: Check for new Envoy stable version
+      - name: Check for new Envoy stable version
         id: check
         run: |
           # Get latest stable release from GitHub API

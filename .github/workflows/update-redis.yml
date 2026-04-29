@@ -25,10 +25,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
-        with:
 
-
-            - name: Check for new Redis stable version
+      - name: Check for new Redis stable version
         id: check
         run: |
           # Get latest stable release from the Redis download server directory listing.

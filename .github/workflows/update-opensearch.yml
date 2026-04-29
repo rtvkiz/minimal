@@ -26,10 +26,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
-        with:
 
-
-            - name: Check for new OpenSearch versions
+      - name: Check for new OpenSearch versions
         id: check
         env:
           GH_TOKEN: ${{ github.token }}

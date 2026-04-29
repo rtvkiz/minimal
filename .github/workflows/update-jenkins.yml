@@ -25,10 +25,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
-        with:
 
-
-            - name: Check for new Jenkins LTS version
+      - name: Check for new Jenkins LTS version
         id: check
         shell: bash
         run: |
