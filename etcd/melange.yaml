@@ -35,6 +35,7 @@ pipeline:
 
 
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       cd /home/build/etcd-${{package.version}}
