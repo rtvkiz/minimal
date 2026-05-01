@@ -125,7 +125,7 @@ jobs:
           git push -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(haproxy): bump to ${{ steps.check.outputs.new_version }}" \
-            --label dependencies --label haproxy --label  \
+            --label dependencies --label haproxy \
             --body "$(cat <<'PRBODY'
           ## Summary
           

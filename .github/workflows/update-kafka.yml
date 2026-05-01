@@ -131,7 +131,7 @@ jobs:
           git push -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(kafka): bump to ${{ steps.check.outputs.new_version }}" \
-            --label dependencies --label kafka --label  \
+            --label dependencies --label kafka \
             --body "$(cat <<'PRBODY'
           ## Summary
           

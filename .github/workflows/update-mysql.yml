@@ -126,7 +126,7 @@ jobs:
           git push -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(mysql): bump to ${{ steps.check.outputs.new_version }}" \
-            --label dependencies --label mysql --label  \
+            --label dependencies --label mysql \
             --body "$(cat <<'PRBODY'
           ## Summary
           

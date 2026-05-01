@@ -124,7 +124,7 @@ jobs:
           git push -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(traefik): bump to ${{ steps.check.outputs.new_version }}" \
-            --label dependencies --label traefik --label  \
+            --label dependencies --label traefik \
             --body "$(cat <<'PRBODY'
           ## Summary
           

@@ -123,7 +123,7 @@ jobs:
           git push -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(gitea): bump to ${{ steps.check.outputs.new_version }}" \
-            --label dependencies --label gitea --label  \
+            --label dependencies --label gitea \
             --body "$(cat <<'PRBODY'
           ## Summary
           
