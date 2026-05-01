@@ -124,7 +124,7 @@ jobs:
           git commit -m "chore(caddy): bump to ${{ steps.check.outputs.new_version }}
 
           Updates Caddy from ${{ steps.check.outputs.current_version }} to ${{ steps.check.outputs.new_version }}."
-          git push -u origin "$BRANCH"
+          git push --force -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(caddy): bump to ${{ steps.check.outputs.new_version }}" \
             --label dependencies --label caddy \

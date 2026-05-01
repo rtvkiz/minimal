@@ -91,7 +91,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "chore(victoria-metrics): bump to ${{ steps.check.outputs.new_version }}"
-          git push -u origin "$BRANCH"
+          git push --force -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(victoria-metrics): bump to ${{ steps.check.outputs.new_version }}" \
             --label dependencies --label victoria-metrics \

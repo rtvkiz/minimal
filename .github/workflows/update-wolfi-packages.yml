@@ -190,7 +190,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "chore(python): upgrade to ${NEW}"
-          git push -u origin "$BRANCH"
+          git push --force -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(python): upgrade to ${NEW}" \
             --label dependencies --label python \
@@ -217,7 +217,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "chore(go): upgrade to ${NEW}"
-          git push -u origin "$BRANCH"
+          git push --force -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(go): upgrade to ${NEW}" \
             --label dependencies --label go \
@@ -244,7 +244,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "chore(node): upgrade to ${NEW}"
-          git push -u origin "$BRANCH"
+          git push --force -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(node): upgrade to ${NEW}" \
             --label dependencies --label nodejs \
@@ -271,7 +271,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "chore(dotnet): upgrade to ${NEW}"
-          git push -u origin "$BRANCH"
+          git push --force -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(dotnet): upgrade to ${NEW}" \
             --label dependencies --label dotnet \
@@ -302,7 +302,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "chore(java): upgrade to ${NEW}"
-          git push -u origin "$BRANCH"
+          git push --force -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(java): upgrade to ${NEW}" \
             --label dependencies --label java \
@@ -329,7 +329,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "chore(postgres): upgrade to ${NEW}"
-          git push -u origin "$BRANCH"
+          git push --force -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(postgres): upgrade to ${NEW}" \
             --label dependencies --label postgresql \

@@ -118,7 +118,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "chore(minio): bump to ${{ steps.check.outputs.new_tag }}"
-          git push -u origin "$BRANCH"
+          git push --force -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(minio): bump to ${{ steps.check.outputs.new_tag }}" \
             --label dependencies --label minio \

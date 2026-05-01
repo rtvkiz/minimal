@@ -104,7 +104,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "chore(redis): bump to ${{ steps.check.outputs.new_version }}"
-          git push -u origin "$BRANCH"
+          git push --force -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(redis): bump to ${{ steps.check.outputs.new_version }}" \
             --label dependencies --label redis \

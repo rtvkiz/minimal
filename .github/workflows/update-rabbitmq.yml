@@ -123,7 +123,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "chore(rabbitmq): bump to ${{ steps.check.outputs.new_version }}"
-          git push -u origin "$BRANCH"
+          git push --force -u origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore(rabbitmq): bump to ${{ steps.check.outputs.new_version }}" \
             --label dependencies --label rabbitmq \
