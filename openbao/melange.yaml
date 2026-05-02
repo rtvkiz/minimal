@@ -1,0 +1,81 @@
+# Melange build configuration for minimal OpenBao
+# Builds OpenBao from source (Go) — open-source Vault fork (MPL 2.0)
+# Server-only build without embedded web UI
+
+package:
+  name: openbao-minimal
+  version: 2.5.3
+  epoch: 0
+  description: "Minimal OpenBao secret management server built from source"
+  copyright:
+    - license: MPL-2.0
+
+vars:
+  sha256: 6c834b8bea45ec135520b515b40fcf4cc10bd7713b2aa7661dc9ecd769301704
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors "https://github.com/openbao/openbao/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/openbao.tar.gz
+      echo "${{vars.sha256}}  /home/build/openbao.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf openbao.tar.gz && rm openbao.tar.gz
+
+  # Build OpenBao (server-only, no UI)
+  - runs: |
+      cd /home/build/openbao-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X github.com/openbao/openbao/version.fullVersion=${{package.version}} \
+          -X github.com/openbao/openbao/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        -tags openbao \
+        -o bao \
+        .
+
+  # Install
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/openbao-${{package.version}}/bao "${{targets.destdir}}/usr/bin/"
+
+      mkdir -p "${{targets.destdir}}/etc/openbao"
+      cat > "${{targets.destdir}}/etc/openbao/openbao.hcl" << 'EOF'
+      ui = false
+
+      listener "tcp" {
+        address     = "0.0.0.0:8200"
+        tls_disable = 1
+      }
+
+      storage "file" {
+        path = "/openbao/data"
+      }
+
+      disable_mlock = true
+      EOF
+
+  - runs: |
+      echo "Verifying OpenBao build..."
+      "${{targets.destdir}}/usr/bin/bao" version
+      ls -lh "${{targets.destdir}}/usr/bin/bao"
+
+update:
+  enabled: true
+  github:
+    identifier: openbao/openbao
+    use-tag: true
+    tag-filter: "v2."

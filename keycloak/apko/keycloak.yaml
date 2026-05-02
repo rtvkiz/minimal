@@ -1,0 +1,51 @@
+# Minimal Keycloak image - identity and access management server
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - keycloak-minimal
+    - ca-certificates-bundle
+    - openjdk-21-default-jvm
+    - bash
+
+accounts:
+  groups:
+    - groupname: keycloak
+      gid: 65532
+  users:
+    - username: keycloak
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /opt/keycloak/bin/kc.sh
+
+cmd: start-dev
+
+environment:
+  PATH: /usr/bin:/bin:/opt/keycloak/bin
+  JAVA_HOME: /usr/lib/jvm/java-21-openjdk
+  KC_HEALTH_ENABLED: "true"
+
+paths:
+  - path: /opt/keycloak/data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+
+annotations:
+  org.opencontainers.image.title: "minimal-keycloak"
+  org.opencontainers.image.description: "Hardened Keycloak identity and access management server"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/keycloak"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

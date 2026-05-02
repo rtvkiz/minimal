@@ -1,0 +1,95 @@
+# Melange build configuration for minimal Loki
+# Builds Loki from source (Go) — log aggregation system by Grafana Labs
+# Binary-only build without web UI assets
+
+package:
+  name: loki-minimal
+  version: 3.6.10
+  epoch: 0
+  description: "Minimal Loki log aggregation server built from source"
+  copyright:
+    - license: AGPL-3.0
+
+vars:
+  sha256: 0c17587d164132b06156c28238fcd7ee6f745264e7c9d4635c8c3cff1e0e352d
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors "https://github.com/grafana/loki/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/loki.tar.gz
+      echo "${{vars.sha256}}  /home/build/loki.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf loki.tar.gz && rm loki.tar.gz
+
+  # Build Loki
+  - runs: |
+      cd /home/build/loki-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X github.com/grafana/loki/v3/pkg/util/build.Version=${{package.version}} \
+          -X github.com/grafana/loki/v3/pkg/util/build.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        -tags netgo \
+        -o loki \
+        ./cmd/loki
+
+  # Install
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/loki-${{package.version}}/loki "${{targets.destdir}}/usr/bin/"
+
+      mkdir -p "${{targets.destdir}}/etc/loki"
+      cat > "${{targets.destdir}}/etc/loki/loki.yaml" << 'EOF'
+      auth_enabled: false
+
+      server:
+        http_listen_port: 3100
+        grpc_listen_port: 9096
+
+      common:
+        path_prefix: /loki
+        storage:
+          filesystem:
+            chunks_directory: /loki/chunks
+            rules_directory: /loki/rules
+        replication_factor: 1
+        ring:
+          kvstore:
+            store: inmemory
+
+      schema_config:
+        configs:
+          - from: "2020-10-24"
+            store: tsdb
+            object_store: filesystem
+            schema: v13
+            index:
+              prefix: index_
+              period: 24h
+      EOF
+
+  - runs: |
+      echo "Verifying Loki build..."
+      "${{targets.destdir}}/usr/bin/loki" -version
+      ls -lh "${{targets.destdir}}/usr/bin/loki"
+
+update:
+  enabled: true
+  github:
+    identifier: grafana/loki
+    use-tag: true
+    tag-filter: "v3."

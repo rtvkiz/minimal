@@ -1,0 +1,94 @@
+# Melange build configuration for minimal Fluent Bit
+# Builds Fluent Bit from source (C/CMake) — lightweight log processor/forwarder
+
+package:
+  name: fluent-bit-minimal
+  version: 5.0.4
+  epoch: 0
+  description: "Minimal Fluent Bit log processor built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: 8ea5a49e960b8888280a84cc5d0e5f3b354ec8763c9759b4ebcd6ddba759a606
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - cmake
+      - flex
+      - bison
+      - openssl-dev
+      - curl-dev
+      - zlib-dev
+      - yaml-dev
+      - linux-headers
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors "https://github.com/fluent/fluent-bit/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/fluent-bit.tar.gz
+      echo "${{vars.sha256}}  /home/build/fluent-bit.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf fluent-bit.tar.gz && rm fluent-bit.tar.gz
+
+  # Build Fluent Bit (minimal plugins)
+  - runs: |
+      mkdir -p /home/build/fluent-bit-${{package.version}}/build
+      cd /home/build/fluent-bit-${{package.version}}/build
+      cmake .. \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DFLB_RELEASE=On \
+        -DFLB_JEMALLOC=Off \
+        -DFLB_TLS=On \
+        -DFLB_HTTP_SERVER=On \
+        -DFLB_EXAMPLES=Off \
+        -DFLB_SHARED_LIB=Off \
+        -DFLB_LUAJIT=Off
+      make -j$(nproc)
+
+  # Install
+  - runs: |
+      cd /home/build/fluent-bit-${{package.version}}/build
+      make DESTDIR="${{targets.destdir}}" install
+
+      mkdir -p "${{targets.destdir}}/etc/fluent-bit"
+      cat > "${{targets.destdir}}/etc/fluent-bit/fluent-bit.yaml" << 'EOF'
+      service:
+        http_server: on
+        http_listen: 0.0.0.0
+        http_port: 2020
+        log_level: info
+
+      pipeline:
+        inputs:
+          - name: dummy
+            tag: test
+            dummy: '{"message": "fluent-bit is running"}'
+            rate: 1
+
+        outputs:
+          - name: stdout
+            match: "*"
+      EOF
+
+  - runs: |
+      echo "Verifying Fluent Bit build..."
+      "${{targets.destdir}}/usr/bin/fluent-bit" --version
+      ls -lh "${{targets.destdir}}/usr/bin/fluent-bit"
+
+update:
+  enabled: true
+  github:
+    identifier: fluent/fluent-bit
+    use-tag: true
+    tag-filter: "v5."

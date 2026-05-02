@@ -1,0 +1,80 @@
+# Melange build configuration for minimal CoreDNS
+# Builds CoreDNS from source (Go) — Kubernetes-default DNS server
+
+package:
+  name: coredns-minimal
+  version: 1.14.3
+  epoch: 0
+  description: "Minimal CoreDNS DNS server built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: 137a5da5f49c8eb81e2cc3929d462606146faaa651bd609031d867eb6c73748f
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors "https://github.com/coredns/coredns/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/coredns.tar.gz
+      echo "${{vars.sha256}}  /home/build/coredns.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf coredns.tar.gz && rm coredns.tar.gz
+
+  # Generate plugin registration files from plugin.cfg
+  - runs: |
+      cd /home/build/coredns-${{package.version}}
+      go generate coredns.go
+      go get
+
+  # Build CoreDNS
+  - runs: |
+      cd /home/build/coredns-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X github.com/coredns/coredns/coremain.GitCommit=v${{package.version}}" \
+        -tags netgo,grpcnotrace \
+        -o coredns
+
+  # Install
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/coredns-${{package.version}}/coredns "${{targets.destdir}}/usr/bin/"
+
+      mkdir -p "${{targets.destdir}}/etc/coredns"
+      cat > "${{targets.destdir}}/etc/coredns/Corefile" << 'EOF'
+      .:53 {
+          forward . /etc/resolv.conf
+          log
+          errors
+          health :8080
+          ready :8181
+          cache 30
+      }
+      EOF
+
+  - runs: |
+      echo "Verifying CoreDNS build..."
+      "${{targets.destdir}}/usr/bin/coredns" -version || true
+      ls -lh "${{targets.destdir}}/usr/bin/coredns"
+
+update:
+  enabled: true
+  github:
+    identifier: coredns/coredns
+    use-tag: true
+    tag-filter: "v1."

@@ -1,0 +1,53 @@
+# Melange build configuration for minimal Keycloak
+# Downloads pre-built Keycloak distribution — Java-based IAM server
+# Uses Wolfi openjdk-21-jre at runtime
+
+package:
+  name: keycloak-minimal
+  version: 26.6.1
+  epoch: 0
+  description: "Minimal Keycloak identity and access management server"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: f3ce596dcf772ae145581ef338f9c3937ee37c74d7c1793e563c61519baaaafc
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors "https://github.com/keycloak/keycloak/releases/download/${{package.version}}/keycloak-${{package.version}}.tar.gz" \
+        -o /home/build/keycloak.tar.gz
+      echo "${{vars.sha256}}  /home/build/keycloak.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf keycloak.tar.gz && rm keycloak.tar.gz
+
+  # Install
+  - runs: |
+      mkdir -p "${{targets.destdir}}/opt/keycloak"
+      cp -r /home/build/keycloak-${{package.version}}/* "${{targets.destdir}}/opt/keycloak/"
+
+      # Ensure scripts are executable
+      chmod +x "${{targets.destdir}}/opt/keycloak/bin/kc.sh"
+
+  - runs: |
+      echo "Verifying Keycloak installation..."
+      ls -lh "${{targets.destdir}}/opt/keycloak/bin/kc.sh"
+      ls "${{targets.destdir}}/opt/keycloak/lib/" | head -5
+
+update:
+  enabled: true
+  github:
+    identifier: keycloak/keycloak
+    use-tag: true
+    tag-filter: "26."

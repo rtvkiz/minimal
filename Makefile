@@ -44,6 +44,15 @@ JAEGER_VERSION ?= $(call melange_version,jaeger/melange.yaml)
 OTELCOL_VERSION ?= $(call melange_version,otelcol/melange.yaml)
 VICTORIA_METRICS_VERSION ?= $(call melange_version,victoria-metrics/melange.yaml)
 
+# --- DNS/Secrets/IAM ---
+COREDNS_VERSION ?= $(call melange_version,coredns/melange.yaml)
+OPENBAO_VERSION ?= $(call melange_version,openbao/melange.yaml)
+KEYCLOAK_VERSION ?= $(call melange_version,keycloak/melange.yaml)
+
+# --- Logging ---
+LOKI_VERSION ?= $(call melange_version,loki/melange.yaml)
+FLUENT_BIT_VERSION ?= $(call melange_version,fluent-bit/melange.yaml)
+
 # --- Search/AI ---
 QDRANT_VERSION ?= $(call melange_version,qdrant/melange.yaml)
 OPENSEARCH_VERSION ?= 3.6.0
@@ -57,13 +66,15 @@ CUDA_VERSION ?= 12.9.0
 .PHONY: prometheus prometheus-melange mariadb mariadb-melange
 .PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno
 .PHONY: cuda-python cuda-python-melange
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python
-.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python
+.PHONY: coredns coredns-melange openbao openbao-melange loki loki-melange fluent-bit fluent-bit-melange keycloak keycloak-melange
+.PHONY: gitea gitea-melange
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus mariadb etcd victoria-metrics jaeger otelcol qdrant deno cuda-python
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus mariadb etcd victoria-metrics jaeger otelcol qdrant deno cuda-python coredns openbao loki fluent-bit keycloak
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -904,9 +915,139 @@ kafka: kafka-melange
 	@echo "✓ minimal-kafka built (official binary + jlink JRE)"
 
 #------------------------------------------------------------------------------
+# COREDNS IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+coredns-melange: keygen
+	@echo "Building CoreDNS $(COREDNS_VERSION) from source via melange..."
+	melange build coredns/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ CoreDNS package built from source"
+
+coredns: coredns-melange
+	@echo "Assembling minimal-coredns image with apko..."
+	apko build coredns/apko/coredns.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-coredns:$(VERSION) \
+		coredns.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < coredns.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-coredns:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-coredns:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-coredns:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-coredns:latest
+	@rm -f coredns.tar sbom-*.spdx.json
+	@echo "✓ minimal-coredns built (source build)"
+
+#------------------------------------------------------------------------------
+# OPENBAO IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+openbao-melange: keygen
+	@echo "Building OpenBao $(OPENBAO_VERSION) from source via melange..."
+	melange build openbao/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ OpenBao package built from source"
+
+openbao: openbao-melange
+	@echo "Assembling minimal-openbao image with apko..."
+	apko build openbao/apko/openbao.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-openbao:$(VERSION) \
+		openbao.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < openbao.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-openbao:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-openbao:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-openbao:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-openbao:latest
+	@rm -f openbao.tar sbom-*.spdx.json
+	@echo "✓ minimal-openbao built (source build)"
+
+#------------------------------------------------------------------------------
+# LOKI IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+loki-melange: keygen
+	@echo "Building Loki $(LOKI_VERSION) from source via melange..."
+	melange build loki/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Loki package built from source"
+
+loki: loki-melange
+	@echo "Assembling minimal-loki image with apko..."
+	apko build loki/apko/loki.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-loki:$(VERSION) \
+		loki.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < loki.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-loki:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-loki:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-loki:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-loki:latest
+	@rm -f loki.tar sbom-*.spdx.json
+	@echo "✓ minimal-loki built (source build)"
+
+#------------------------------------------------------------------------------
+# FLUENT BIT IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+fluent-bit-melange: keygen
+	@echo "Building Fluent Bit $(FLUENT_BIT_VERSION) from source via melange..."
+	melange build fluent-bit/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Fluent Bit package built from source"
+
+fluent-bit: fluent-bit-melange
+	@echo "Assembling minimal-fluent-bit image with apko..."
+	apko build fluent-bit/apko/fluent-bit.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-fluent-bit:$(VERSION) \
+		fluent-bit.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < fluent-bit.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-fluent-bit:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-fluent-bit:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-fluent-bit:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-fluent-bit:latest
+	@rm -f fluent-bit.tar sbom-*.spdx.json
+	@echo "✓ minimal-fluent-bit built (source build)"
+
+#------------------------------------------------------------------------------
+# KEYCLOAK IMAGE (melange pre-built distribution + apko)
+#------------------------------------------------------------------------------
+keycloak-melange: keygen
+	@echo "Building Keycloak $(KEYCLOAK_VERSION) package via melange..."
+	melange build keycloak/melange.yaml \
+		--arch x86_64,aarch64 \
+		--signing-key melange.rsa
+	@echo "✓ Keycloak package built"
+
+keycloak: keycloak-melange
+	@echo "Assembling minimal-keycloak image with apko..."
+	apko build keycloak/apko/keycloak.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-keycloak:$(VERSION) \
+		keycloak.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < keycloak.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-keycloak:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-keycloak:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-keycloak:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-keycloak:latest
+	@rm -f keycloak.tar sbom-*.spdx.json
+	@echo "✓ minimal-keycloak built (pre-built distribution)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-cuda-python
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -1118,6 +1259,36 @@ scan-cuda-python:
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-cuda-python:latest
 	@echo "✓ minimal-cuda-python: scan passed"
+
+scan-coredns:
+	@echo "Scanning minimal-coredns..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-coredns:latest
+	@echo "✓ minimal-coredns: scan passed"
+
+scan-openbao:
+	@echo "Scanning minimal-openbao..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-openbao:latest
+	@echo "✓ minimal-openbao: scan passed"
+
+scan-loki:
+	@echo "Scanning minimal-loki..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-loki:latest
+	@echo "✓ minimal-loki: scan passed"
+
+scan-fluent-bit:
+	@echo "Scanning minimal-fluent-bit..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-fluent-bit:latest
+	@echo "✓ minimal-fluent-bit: scan passed"
+
+scan-keycloak:
+	@echo "Scanning minimal-keycloak..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-keycloak:latest
+	@echo "✓ minimal-keycloak: scan passed"
 
 # Full scan with all severities
 scan-all:

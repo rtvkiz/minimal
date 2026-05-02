@@ -61,7 +61,9 @@ jobs:
             {"name":"traefik"},{"name":"rabbitmq"},{"name":"minio"},
             {"name":"prometheus"},{"name":"mariadb"},{"name":"etcd"},
             {"name":"victoria-metrics"},{"name":"jaeger"},{"name":"otelcol"},
-            {"name":"qdrant"},{"name":"envoy"},{"name":"gitea"}
+            {"name":"qdrant"},{"name":"envoy"},{"name":"gitea"},
+            {"name":"coredns"},{"name":"openbao"},{"name":"loki"},
+            {"name":"fluent-bit"},{"name":"keycloak"}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]"},

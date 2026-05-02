@@ -1,0 +1,198 @@
+name: Update CoreDNS Version
+
+on:
+  schedule:
+    # Check daily at 7:30am UTC
+    - cron: '30 7 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Check for new CoreDNS stable version
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get latest stable v1.x release from GitHub tags
+          LATEST=$(curl -sS --retry 3 --retry-all-errors \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/coredns/coredns/tags?per_page=100" | \
+            jq -r '[.[] | .name | select(test("^v1\\.[0-9]+\\.[0-9]+$"))] | first | ltrimstr("v")')
+
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "::error::Failed to fetch latest CoreDNS version"
+            exit 1
+          fi
+
+          # Validate version format strictly
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid CoreDNS version received: $LATEST"
+            exit 1
+          fi
+
+          # Get current version from melange.yaml
+          CURRENT=$(grep '^  version:' coredns/melange.yaml | awk '{print $2}')
+
+          echo "Current version: $CURRENT"
+          echo "Latest version: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+            echo "Update available: $CURRENT -> $LATEST"
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            echo "Already up to date"
+          fi
+
+          # Check for next major version
+          CURRENT_MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          NEXT_MAJOR=$((CURRENT_MAJOR + 1))
+          echo "tracked_version=$CURRENT" >> $GITHUB_OUTPUT
+          NEXT_TAG=$(curl -sS --retry 3 --retry-all-errors \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/coredns/coredns/tags?per_page=100" | \
+            jq -r --arg next "v${NEXT_MAJOR}." \
+              '[.[] | .name | select(startswith($next)) | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))] | first // empty')
+          if [ -n "$NEXT_TAG" ]; then
+            echo "next_major_version=$NEXT_MAJOR" >> $GITHUB_OUTPUT
+            echo "next_major_tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+            echo "::warning::New major version detected: CoreDNS v${NEXT_MAJOR}.x ($NEXT_TAG)"
+          fi
+
+      - name: Update version and checksum in all files
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          echo "Updating to CoreDNS $VERSION"
+
+          # Download tarball and compute SHA256 checksum
+          echo "Downloading CoreDNS $VERSION tarball..."
+          curl -fsSL --retry 3 --retry-all-errors "https://github.com/coredns/coredns/archive/refs/tags/v${VERSION}.tar.gz" \
+            -o /tmp/coredns.tar.gz
+          SHA256=$(sha256sum /tmp/coredns.tar.gz | awk '{print $1}')
+          rm /tmp/coredns.tar.gz
+          echo "SHA256: $SHA256"
+
+          # Update coredns/melange.yaml
+          sed -i "s/^  version: .*/  version: $VERSION/" coredns/melange.yaml
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" coredns/melange.yaml
+          sed -i "s/^  epoch: .*/  epoch: 0/" coredns/melange.yaml
+
+          # Verify changes
+          echo "=== coredns/melange.yaml ==="
+          grep -E '(version:|sha256:)' coredns/melange.yaml | head -2
+
+      - name: Create PR and enable auto-merge
+        if: steps.check.outputs.update_available == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-coredns-${{ steps.check.outputs.new_version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(coredns): bump to ${{ steps.check.outputs.new_version }}"
+          git push --force -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(coredns): bump to ${{ steps.check.outputs.new_version }}" \
+            --label dependencies --label coredns \
+            --body "$(cat <<'PRBODY'
+          ## Summary
+
+          Updates CoreDNS from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+          ## Changes
+
+          - `coredns/melange.yaml` - package version, SHA256 checksum, epoch reset
+
+          ## Image Tag
+
+          Once merged, this will publish: `ghcr.io/rtvkiz/minimal-coredns:${{ steps.check.outputs.new_version }}-r0`
+
+          ## Links
+
+          - [CoreDNS Releases](https://github.com/coredns/coredns/releases)
+          - [Release Notes for v${{ steps.check.outputs.new_version }}](https://github.com/coredns/coredns/releases/tag/v${{ steps.check.outputs.new_version }})
+
+          ---
+
+          This PR was automatically created by the [update-coredns](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-coredns.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
+
+      - name: Create new major version issue
+        if: steps.check.outputs.next_major_version != ''
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const nextMajor = '${{ steps.check.outputs.next_major_version }}';
+            const nextTag = '${{ steps.check.outputs.next_major_tag }}';
+            const currentVersion = '${{ steps.check.outputs.tracked_version }}';
+            const currentMajor = currentVersion.split('.')[0];
+            const title = `chore(coredns): new major version available — CoreDNS v${nextMajor}.x`;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'coredns,dependencies',
+            });
+            if (issues.some(i => i.title.includes(`v${nextMajor}.x`))) {
+              console.log(`Issue for CoreDNS v${nextMajor}.x already exists, skipping`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              labels: ['dependencies', 'coredns'],
+              body: [
+                `## New Major Version Detected`,
+                ``,
+                `CoreDNS **v${nextMajor}.x** has been detected (first tag: \`${nextTag}\`).`,
+                `We are currently tracking **v${currentMajor}.x** (${currentVersion}).`,
+                ``,
+                `### Upgrade Checklist`,
+                ``,
+                `- [ ] Review the [CoreDNS v${nextMajor} release notes](https://github.com/coredns/coredns/releases/tag/${nextTag})`,
+                `- [ ] Check for breaking changes in plugin.cfg or Corefile syntax`,
+                `- [ ] Update \`update-coredns.yml\`: change tag filter from \`^v${currentMajor}\\\\.\` to \`^v${nextMajor}\\\\.\``,
+                `- [ ] Update \`coredns/melange.yaml\`: version, sha256, \`tag-filter\``,
+                `- [ ] Test image build and run \`coredns/test.sh\``,
+                ``,
+                `### Links`,
+                ``,
+                `- [CoreDNS Releases](https://github.com/coredns/coredns/releases)`,
+                `- [First v${nextMajor}.x tag: \`${nextTag}\`](https://github.com/coredns/coredns/releases/tag/${nextTag})`,
+                ``,
+                `---`,
+                `*Detected by the [update-coredns](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/update-coredns.yml) workflow.*`,
+              ].join('\n'),
+            });

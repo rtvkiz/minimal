@@ -1,0 +1,47 @@
+# Minimal CoreDNS image - built from source via melange
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - coredns-minimal
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: coredns
+      gid: 65532
+  users:
+    - username: coredns
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/coredns
+
+cmd: -conf /etc/coredns/Corefile
+
+environment:
+  PATH: /usr/bin:/bin
+
+paths:
+  - path: /etc/coredns
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+
+annotations:
+  org.opencontainers.image.title: "minimal-coredns"
+  org.opencontainers.image.description: "Hardened CoreDNS DNS server built from source"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/coredns"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

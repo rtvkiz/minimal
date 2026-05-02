@@ -73,6 +73,9 @@ jobs:
             [victoria-metrics]="/home/build/VictoriaMetrics-${D}{{package.version}}"
             [otelcol]="/home/build/opentelemetry-collector-${D}{{package.version}}/cmd/otelcorecol"
             [gitea]="/home/build/gitea-${D}{{package.version}}"
+            [coredns]="/home/build/coredns-${D}{{package.version}}"
+            [openbao]="/home/build/openbao-${D}{{package.version}}"
+            [loki]="/home/build/loki-${D}{{package.version}}"
           )
 
           # Build step markers to insert before
@@ -87,6 +90,9 @@ jobs:
             [victoria-metrics]='CGO_ENABLED=0 go build'
             [otelcol]='CGO_ENABLED=0 go build'
             [gitea]='# Build frontend assets'
+            [coredns]='CGO_ENABLED=0 go build'
+            [openbao]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [loki]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
           HAS_PATCHES=false

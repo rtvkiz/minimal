@@ -12,7 +12,7 @@
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build Hardened Images"></a>
   <a href="https://rtvkiz.github.io/minimal/"><img src="https://img.shields.io/badge/Vulnerability_Report-View-0d9488" alt="Vulnerability Report"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Images-36-0d9488" alt="Images: 36">
+  <img src="https://img.shields.io/badge/Images-41-0d9488" alt="Images: 41">
   <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
 </p>
 
@@ -84,6 +84,14 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | **HAProxy** | `docker pull ghcr.io/rtvkiz/minimal-haproxy:latest` | No | High-performance TCP/HTTP load balancer |
 | **Traefik** | `docker pull ghcr.io/rtvkiz/minimal-traefik:latest` | No | Cloud-native reverse proxy and load balancer, built from source |
 | **Envoy** | `docker pull ghcr.io/rtvkiz/minimal-envoy:latest` | No | Cloud-native service proxy and load balancer, upstream binary |
+| | | **DNS** | |
+| **CoreDNS** | `docker pull ghcr.io/rtvkiz/minimal-coredns:latest` | No | DNS server (Kubernetes default), built from source |
+| | | **Secrets/IAM** | |
+| **OpenBao** | `docker pull ghcr.io/rtvkiz/minimal-openbao:latest` | No | Secret management server (open-source Vault fork, MPL-2.0) |
+| **Keycloak** | `docker pull ghcr.io/rtvkiz/minimal-keycloak:latest` | Yes | Identity and access management server (pre-built distribution) |
+| | | **Logging** | |
+| **Loki** | `docker pull ghcr.io/rtvkiz/minimal-loki:latest` | No | Log aggregation system by Grafana Labs, built from source |
+| **Fluent Bit** | `docker pull ghcr.io/rtvkiz/minimal-fluent-bit:latest` | No | Lightweight log processor and forwarder, built from source |
 | | | **AI/ML** | |
 | **CUDA Python** | *disabled* | No | Python + CUDA 12.9 + cuDNN 9.10 for ML inference (x86_64 only) — build disabled, code retained |
 | | | **Git Hosting** | |
@@ -91,7 +99,7 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | | | **CI/CD** | |
 | **Jenkins** | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
 
-*\*HTTPD, Jenkins, Kafka may include shell(sh,busybox) via transitive Wolfi dependencies or KRaft init entrypoint. MySQL includes busybox for its auto-init entrypoint script. OpenSearch includes bash/busybox as transitive dependencies of the opensearch-2 Wolfi package. Gitea includes busybox — required for git hooks which shell out to sh. CI treats shell presence as informational.*
+*\*HTTPD, Jenkins, Kafka may include shell(sh,busybox) via transitive Wolfi dependencies or KRaft init entrypoint. MySQL includes busybox for its auto-init entrypoint script. OpenSearch includes bash/busybox as transitive dependencies of the opensearch-2 Wolfi package. Gitea includes busybox — required for git hooks which shell out to sh. Keycloak includes bash — required for kc.sh entrypoint. CI treats shell presence as informational.*
 
 *The NATS image contains only [`nats-server`](https://github.com/nats-io/nats-server) (the broker). The NATS ecosystem also includes a separate CLI ([`natscli`](https://github.com/nats-io/natscli)) and client libraries — these are not included.*
 
@@ -272,6 +280,11 @@ Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails, Gite
 | `update-etcd.yml` | etcd v3.x GitHub releases | Updates version and SHA256; warns on major version change |
 | `update-opensearch.yml` | OpenSearch 2.x GitHub releases | Updates version in Makefile and README.md; opens issue for major 3.x |
 | `update-gitea.yml` | Gitea v1.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
+| `update-coredns.yml` | CoreDNS v1.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
+| `update-openbao.yml` | OpenBao v2.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
+| `update-loki.yml` | Loki v3.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
+| `update-fluent-bit.yml` | Fluent Bit v5.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
+| `update-keycloak.yml` | Keycloak 26.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
 | `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, Java, PostgreSQL, Deno package versions |
 
 Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g. PHP 8.5 → 8.6) create a GitHub Issue with a manual upgrade checklist, since configure flags or APIs may change.
@@ -310,6 +323,11 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | Qdrant | 1.17.x | nonroot (65532) | `/usr/bin/qdrant` | `/qdrant` |
 | Deno | 2.x | nonroot (65532) | `/usr/bin/deno` | `/app` |
 | Gitea | 1.26.x | gitea (65532) | `/usr/bin/gitea web --config /etc/gitea/app.ini` | `/var/lib/gitea` |
+| CoreDNS | 1.14.x | nonroot (65532) | `/usr/bin/coredns` | `/` |
+| OpenBao | 2.5.x | openbao (65532) | `/usr/bin/bao server` | `/openbao/data` |
+| Keycloak | 26.6.x | keycloak (65532) | `/opt/keycloak/bin/kc.sh start-dev` | `/opt/keycloak/data` |
+| Loki | 3.6.x | loki (65532) | `/usr/bin/loki` | `/loki` |
+| Fluent Bit | 5.0.x | nonroot (65532) | `/usr/bin/fluent-bit` | `/` |
 
 </details>
 
@@ -398,6 +416,21 @@ minimal/
 ├── gitea/
 │   ├── apko/gitea.yaml              # Gitea image
 │   └── melange.yaml                 # Gitea source build (Go + Node.js frontend)
+├── coredns/
+│   ├── apko/coredns.yaml            # CoreDNS image
+│   └── melange.yaml                 # CoreDNS source build (Go)
+├── openbao/
+│   ├── apko/openbao.yaml            # OpenBao image
+│   └── melange.yaml                 # OpenBao source build (Go)
+├── loki/
+│   ├── apko/loki.yaml               # Loki image
+│   └── melange.yaml                 # Loki source build (Go)
+├── fluent-bit/
+│   ├── apko/fluent-bit.yaml         # Fluent Bit image
+│   └── melange.yaml                 # Fluent Bit source build (C/CMake)
+├── keycloak/
+│   ├── apko/keycloak.yaml           # Keycloak image
+│   └── melange.yaml                 # Keycloak pre-built distribution
 ├── .github/workflows/
 │   ├── build.yml                 # Daily CI pipeline
 │   ├── update-jenkins.yml        # Jenkins version updates
@@ -408,6 +441,11 @@ minimal/
 │   ├── update-memcached.yml      # Memcached version updates
 │   ├── update-kafka.yml          # Kafka version updates
 │   ├── update-gitea.yml          # Gitea version updates
+│   ├── update-coredns.yml        # CoreDNS version updates
+│   ├── update-openbao.yml        # OpenBao version updates
+│   ├── update-loki.yml           # Loki version updates
+│   ├── update-fluent-bit.yml     # Fluent Bit version updates
+│   ├── update-keycloak.yml       # Keycloak version updates
 │   └── update-wolfi-packages.yml # Wolfi package updates
 ├── Makefile
 └── LICENSE

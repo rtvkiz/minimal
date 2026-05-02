@@ -1,0 +1,54 @@
+# Minimal OpenBao image - open-source secret management (Vault fork)
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - openbao-minimal
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: openbao
+      gid: 65532
+  users:
+    - username: openbao
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/bao server
+
+cmd: -config=/etc/openbao/openbao.hcl
+
+environment:
+  PATH: /usr/bin:/bin
+  BAO_ADDR: "http://127.0.0.1:8200"
+  SKIP_SETCAP: "true"
+
+paths:
+  - path: /etc/openbao
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /openbao/data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+
+annotations:
+  org.opencontainers.image.title: "minimal-openbao"
+  org.opencontainers.image.description: "Hardened OpenBao secret management server (Vault fork, MPL 2.0)"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/openbao"
+  org.opencontainers.image.licenses: "MPL-2.0"
+
+archs:
+  - x86_64
+  - aarch64

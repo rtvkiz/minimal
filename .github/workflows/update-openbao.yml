@@ -1,0 +1,192 @@
+name: Update OpenBao Version
+
+on:
+  schedule:
+    # Check daily at 7:35am UTC
+    - cron: '35 7 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Check for new OpenBao stable version
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get latest stable v2.x release from GitHub tags
+          LATEST=$(curl -sS --retry 3 --retry-all-errors \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/openbao/openbao/tags?per_page=100" | \
+            jq -r '[.[] | .name | select(test("^v2\\.[0-9]+\\.[0-9]+$"))] | first | ltrimstr("v")')
+
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "::error::Failed to fetch latest OpenBao version"
+            exit 1
+          fi
+
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid OpenBao version received: $LATEST"
+            exit 1
+          fi
+
+          CURRENT=$(grep '^  version:' openbao/melange.yaml | awk '{print $2}')
+
+          echo "Current version: $CURRENT"
+          echo "Latest version: $LATEST"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+            echo "Update available: $CURRENT -> $LATEST"
+          else
+            echo "update_available=false" >> $GITHUB_OUTPUT
+            echo "Already up to date"
+          fi
+
+          CURRENT_MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          NEXT_MAJOR=$((CURRENT_MAJOR + 1))
+          echo "tracked_version=$CURRENT" >> $GITHUB_OUTPUT
+          NEXT_TAG=$(curl -sS --retry 3 --retry-all-errors \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/openbao/openbao/tags?per_page=100" | \
+            jq -r --arg next "v${NEXT_MAJOR}." \
+              '[.[] | .name | select(startswith($next)) | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))] | first // empty')
+          if [ -n "$NEXT_TAG" ]; then
+            echo "next_major_version=$NEXT_MAJOR" >> $GITHUB_OUTPUT
+            echo "next_major_tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+            echo "::warning::New major version detected: OpenBao v${NEXT_MAJOR}.x ($NEXT_TAG)"
+          fi
+
+      - name: Update version and checksum in all files
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.new_version }}"
+          echo "Updating to OpenBao $VERSION"
+
+          echo "Downloading OpenBao $VERSION tarball..."
+          curl -fsSL --retry 3 --retry-all-errors "https://github.com/openbao/openbao/archive/refs/tags/v${VERSION}.tar.gz" \
+            -o /tmp/openbao.tar.gz
+          SHA256=$(sha256sum /tmp/openbao.tar.gz | awk '{print $1}')
+          rm /tmp/openbao.tar.gz
+          echo "SHA256: $SHA256"
+
+          sed -i "s/^  version: .*/  version: $VERSION/" openbao/melange.yaml
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" openbao/melange.yaml
+          sed -i "s/^  epoch: .*/  epoch: 0/" openbao/melange.yaml
+
+          echo "=== openbao/melange.yaml ==="
+          grep -E '(version:|sha256:)' openbao/melange.yaml | head -2
+
+      - name: Create PR and enable auto-merge
+        if: steps.check.outputs.update_available == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="update-openbao-${{ steps.check.outputs.new_version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(openbao): bump to ${{ steps.check.outputs.new_version }}"
+          git push --force -u origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore(openbao): bump to ${{ steps.check.outputs.new_version }}" \
+            --label dependencies --label openbao \
+            --body "$(cat <<'PRBODY'
+          ## Summary
+
+          Updates OpenBao from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
+
+          ## Changes
+
+          - `openbao/melange.yaml` - package version, SHA256 checksum, epoch reset
+
+          ## Image Tag
+
+          Once merged, this will publish: `ghcr.io/rtvkiz/minimal-openbao:${{ steps.check.outputs.new_version }}-r0`
+
+          ## Links
+
+          - [OpenBao Releases](https://github.com/openbao/openbao/releases)
+          - [Release Notes for v${{ steps.check.outputs.new_version }}](https://github.com/openbao/openbao/releases/tag/v${{ steps.check.outputs.new_version }})
+
+          ---
+
+          This PR was automatically created by the [update-openbao](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-openbao.yml) workflow.
+          PRBODY
+          )")
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
+
+      - name: Create new major version issue
+        if: steps.check.outputs.next_major_version != ''
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const nextMajor = '${{ steps.check.outputs.next_major_version }}';
+            const nextTag = '${{ steps.check.outputs.next_major_tag }}';
+            const currentVersion = '${{ steps.check.outputs.tracked_version }}';
+            const currentMajor = currentVersion.split('.')[0];
+            const title = `chore(openbao): new major version available — OpenBao v${nextMajor}.x`;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'openbao,dependencies',
+            });
+            if (issues.some(i => i.title.includes(`v${nextMajor}.x`))) {
+              console.log(`Issue for OpenBao v${nextMajor}.x already exists, skipping`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              labels: ['dependencies', 'openbao'],
+              body: [
+                `## New Major Version Detected`,
+                ``,
+                `OpenBao **v${nextMajor}.x** has been detected (first tag: \`${nextTag}\`).`,
+                `We are currently tracking **v${currentMajor}.x** (${currentVersion}).`,
+                ``,
+                `### Upgrade Checklist`,
+                ``,
+                `- [ ] Review the [OpenBao v${nextMajor} release notes](https://github.com/openbao/openbao/releases/tag/${nextTag})`,
+                `- [ ] Check for breaking API or config changes`,
+                `- [ ] Update \`update-openbao.yml\`: change tag filter from \`^v${currentMajor}\\\\.\` to \`^v${nextMajor}\\\\.\``,
+                `- [ ] Update \`openbao/melange.yaml\`: version, sha256, \`tag-filter\`, build tags`,
+                `- [ ] Test image build and run \`openbao/test.sh\``,
+                ``,
+                `### Links`,
+                ``,
+                `- [OpenBao Releases](https://github.com/openbao/openbao/releases)`,
+                `- [First v${nextMajor}.x tag: \`${nextTag}\`](https://github.com/openbao/openbao/releases/tag/${nextTag})`,
+                ``,
+                `---`,
+                `*Detected by the [update-openbao](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/update-openbao.yml) workflow.*`,
+              ].join('\n'),
+            });
