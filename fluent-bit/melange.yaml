@@ -53,13 +53,17 @@ pipeline:
         -DFLB_HTTP_SERVER=On \
         -DFLB_EXAMPLES=Off \
         -DFLB_SHARED_LIB=Off \
-        -DFLB_LUAJIT=Off
+        -DFLB_LUAJIT=Off \
+        -DFLB_SYSTEMD=Off
       make -j$(nproc)
 
-  # Install
+  # Install — only keep the binary
   - runs: |
       cd /home/build/fluent-bit-${{package.version}}/build
       make DESTDIR="${{targets.destdir}}" install
+      # Remove headers and default configs — not needed in container
+      rm -rf "${{targets.destdir}}/usr/include"
+      rm -rf "${{targets.destdir}}/usr/etc"
 
       mkdir -p "${{targets.destdir}}/etc/fluent-bit"
       cat > "${{targets.destdir}}/etc/fluent-bit/fluent-bit.yaml" << 'EOF'
