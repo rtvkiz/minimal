@@ -137,6 +137,10 @@ jobs:
             GO_GETS=""
             while IFS= read -r mod_ver; do
               [ -z "$mod_ver" ] && continue
+              if [ "$IMAGE" = "loki" ] && [[ "$mod_ver" == github.com/prometheus/prometheus@* ]]; then
+                echo "  Skipping incompatible Loki module bump: $mod_ver"
+                continue
+              fi
               GO_GETS="${GO_GETS}      go get ${mod_ver}\n"
             done <<< "$FIXES"
 

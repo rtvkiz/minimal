@@ -39,6 +39,8 @@ pipeline:
 
       # Ensure scripts are executable
       chmod +x "${{targets.destdir}}/opt/keycloak/bin/kc.sh"
+      # Keycloak start-dev writes generated artifacts under /opt/keycloak.
+      chown -R 65532:65532 "${{targets.destdir}}/opt/keycloak"
 
   - runs: |
       echo "Verifying Keycloak installation..."

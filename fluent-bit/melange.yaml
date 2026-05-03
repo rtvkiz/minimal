@@ -64,7 +64,7 @@ pipeline:
       # Remove headers and default configs — not needed in container
       rm -rf "${{targets.destdir}}/usr/include"
       rm -rf "${{targets.destdir}}/usr/etc"
-      rm -rf "${{targets.destdir}}/lib/systemd"
+      rm -rf "${{targets.destdir}}/lib"
 
       mkdir -p "${{targets.destdir}}/etc/fluent-bit"
       cat > "${{targets.destdir}}/etc/fluent-bit/fluent-bit.yaml" << 'EOF'
