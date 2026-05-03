@@ -48,6 +48,7 @@ pipeline:
       go get go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.43.0
       go get go.opentelemetry.io/otel/sdk@v1.43.0
       go mod tidy
+      if [ -d vendor ]; then go mod vendor; fi
   # end-patch-go-deps
 
   - runs: |
