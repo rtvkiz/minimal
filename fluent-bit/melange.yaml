@@ -64,6 +64,7 @@ pipeline:
       # Remove headers and default configs — not needed in container
       rm -rf "${{targets.destdir}}/usr/include"
       rm -rf "${{targets.destdir}}/usr/etc"
+      rm -rf "${{targets.destdir}}/lib"
 
       mkdir -p "${{targets.destdir}}/etc/fluent-bit"
       cat > "${{targets.destdir}}/etc/fluent-bit/fluent-bit.yaml" << 'EOF'
@@ -71,6 +72,7 @@ pipeline:
         http_server: on
         http_listen: 0.0.0.0
         http_port: 2020
+        health_check: on
         log_level: info
 
       pipeline:
