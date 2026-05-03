@@ -21,7 +21,7 @@ for i in $(seq 1 30); do
   fi
 
   IP=$(docker inspect -f '{{.NetworkSettings.IPAddress}}' keycloak-test)
-  READY_CODE=$(curl -sS -o "$READY_BODY" -w '%{http_code}' "http://${IP}:8080/health/ready" 2>"$READY_ERR" || true)
+  READY_CODE=$(curl -sS -o "$READY_BODY" -w '%{http_code}' "http://${IP}:9000/health/ready" 2>"$READY_ERR" || true)
 
   if [ "$READY_CODE" = "200" ]; then
     head -c 200 "$READY_BODY"
