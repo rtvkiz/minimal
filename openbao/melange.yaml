@@ -36,6 +36,14 @@ pipeline:
       cd /home/build && tar xzf openbao.tar.gz && rm openbao.tar.gz
 
   # Build OpenBao (server-only, no UI)
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      cd /home/build/openbao-${{package.version}}
+      go get github.com/Azure/go-ntlmssp@v0.1.1
+      go get github.com/jackc/pgx/v5@v5.9.2
+      go mod tidy
+  # end-patch-go-deps
+
   - runs: |
       cd /home/build/openbao-${{package.version}}
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
