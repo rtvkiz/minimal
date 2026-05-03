@@ -42,7 +42,6 @@ pipeline:
       go get github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8
       go get github.com/aws/aws-sdk-go-v2/service/s3@v1.97.3
       go get github.com/go-jose/go-jose/v4@v4.1.4
-      go get github.com/prometheus/prometheus@v0.311.2-0.20260410083055-07c6232d159b
       go get go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp@v0.19.0
       go get go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v1.43.0
       go get go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.43.0
