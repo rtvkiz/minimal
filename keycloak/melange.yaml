@@ -39,6 +39,7 @@ pipeline:
 
       # Ensure scripts are executable
       chmod +x "${{targets.destdir}}/opt/keycloak/bin/kc.sh"
+      rm -f "${{targets.destdir}}/opt/keycloak/lib/quarkus/transformed-bytecode.jar"
       # Keycloak start-dev writes generated artifacts under /opt/keycloak.
       chown -R 65532:65532 "${{targets.destdir}}/opt/keycloak"
 
