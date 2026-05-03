@@ -141,7 +141,7 @@ jobs:
             done <<< "$FIXES"
 
             # Create the patch block
-            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      cd ${MODROOT}\n${GO_GETS}      go mod tidy\n  # end-patch-go-deps\n"
+            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      cd ${MODROOT}\n${GO_GETS}      go mod tidy\n      if [ -d vendor ]; then go mod vendor; fi\n  # end-patch-go-deps\n"
 
             # Find the marker line and insert before it
             MARKER_LINE=$(grep -n "$MARKER" "$MELANGE_FILE" | head -1 | cut -d: -f1)

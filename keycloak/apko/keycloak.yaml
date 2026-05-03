@@ -10,6 +10,7 @@ contents:
     - keycloak-minimal
     - ca-certificates-bundle
     - openjdk-21-default-jvm
+    - busybox
     - bash
 
 accounts:
