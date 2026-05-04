@@ -36,16 +36,10 @@ pipeline:
       cd /home/build && tar xzf loki.tar.gz && rm loki.tar.gz
 
   # Build Loki
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       cd /home/build/loki-${{package.version}}
-      go get github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8
-      go get github.com/aws/aws-sdk-go-v2/service/s3@v1.97.3
-      go get github.com/go-jose/go-jose/v4@v4.1.4
-      go get go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp@v0.19.0
-      go get go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v1.43.0
-      go get go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.43.0
-      go get go.opentelemetry.io/otel/sdk@v1.43.0
       go mod tidy
       if [ -d vendor ]; then go mod vendor; fi
   # end-patch-go-deps
