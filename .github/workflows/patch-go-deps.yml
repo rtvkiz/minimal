@@ -56,6 +56,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Find existing patch-go-deps PR
+        id: existing-pr
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          PR_URL=$(gh pr list \
+            --head patch-go-deps \
+            --base main \
+            --state open \
+            --json url \
+            --jq '.[0].url // ""')
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+
       - name: Scan Go images and generate patches
         id: scan
         run: |
@@ -76,6 +89,12 @@ jobs:
             [coredns]="/home/build/coredns-${D}{{package.version}}"
             [openbao]="/home/build/openbao-${D}{{package.version}}"
             [loki]="/home/build/loki-${D}{{package.version}}"
+          )
+
+          # Images that need image-specific dependency bump handling.
+          # Blind go get upgrades have broken these builds in CI.
+          declare -A DISABLED_IMAGES=(
+            [minio]="auto-patching disabled until MinIO-specific module constraints are handled"
           )
 
           # Build step markers to insert before
@@ -102,6 +121,26 @@ jobs:
           for IMAGE in "${!MODROOTS[@]}"; do
             echo "=== Scanning $IMAGE ==="
             FULL_IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${IMAGE}:latest"
+            MELANGE_FILE="${IMAGE}/melange.yaml"
+            BEFORE_HASH=$(sha256sum "$MELANGE_FILE" | awk '{print $1}')
+
+            # Remove any existing auto-generated patch block first so we can
+            # either regenerate it or intentionally clean it up.
+            if grep -q "# patch-go-deps: auto-generated" "$MELANGE_FILE"; then
+              awk '/# patch-go-deps: auto-generated/{skip=1} /# end-patch-go-deps/{skip=0; next} !skip' \
+                "$MELANGE_FILE" > "${MELANGE_FILE}.tmp" && mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
+            fi
+
+            if [ -n "${DISABLED_IMAGES[$IMAGE]:-}" ]; then
+              echo "  Skipping $IMAGE: ${DISABLED_IMAGES[$IMAGE]}"
+              AFTER_HASH=$(sha256sum "$MELANGE_FILE" | awk '{print $1}')
+              if [ "$AFTER_HASH" != "$BEFORE_HASH" ]; then
+                HAS_PATCHES=true
+                PATCHED_LIST="${PATCHED_LIST} ${IMAGE}"
+                SUMMARY="${SUMMARY}- **${IMAGE}**: removed unsupported auto-generated patch block\n"
+              fi
+              continue
+            fi
 
             # Scan with grype, extract go-module CVEs with fix versions (skip stdlib)
             FIXES=$(grype "$FULL_IMAGE" -o json 2>/dev/null | \
@@ -118,23 +157,22 @@ jobs:
               ' 2>/dev/null | sed 's/@vv/@v/g' | sort -u || true)
 
             if [ -z "$FIXES" ]; then
+              AFTER_HASH=$(sha256sum "$MELANGE_FILE" | awk '{print $1}')
+              if [ "$AFTER_HASH" != "$BEFORE_HASH" ]; then
+                HAS_PATCHES=true
+                PATCHED_LIST="${PATCHED_LIST} ${IMAGE}"
+                SUMMARY="${SUMMARY}- **${IMAGE}**: removed stale auto-generated patch block\n"
+              fi
               echo "  No fixable Go dep CVEs"
               continue
             fi
 
-            MELANGE_FILE="${IMAGE}/melange.yaml"
             MODROOT="${MODROOTS[$IMAGE]}"
             MARKER="${BUILD_MARKERS[$IMAGE]}"
 
-            # Remove any existing auto-generated patch block
-            if grep -q "# patch-go-deps: auto-generated" "$MELANGE_FILE"; then
-              # Use awk to remove lines between markers (inclusive)
-              awk '/# patch-go-deps: auto-generated/{skip=1} /# end-patch-go-deps/{skip=0; next} !skip' \
-                "$MELANGE_FILE" > "${MELANGE_FILE}.tmp" && mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
-            fi
-
             # Build go get commands
             GO_GETS=""
+            APPLIED_COUNT=0
             while IFS= read -r mod_ver; do
               [ -z "$mod_ver" ] && continue
               if [ "$IMAGE" = "loki" ] && [[ "$mod_ver" == github.com/prometheus/prometheus@* ]]; then
@@ -142,7 +180,19 @@ jobs:
                 continue
               fi
               GO_GETS="${GO_GETS}      go get ${mod_ver}\n"
+              APPLIED_COUNT=$((APPLIED_COUNT + 1))
             done <<< "$FIXES"
+
+            if [ "$APPLIED_COUNT" -eq 0 ]; then
+              AFTER_HASH=$(sha256sum "$MELANGE_FILE" | awk '{print $1}')
+              if [ "$AFTER_HASH" != "$BEFORE_HASH" ]; then
+                HAS_PATCHES=true
+                PATCHED_LIST="${PATCHED_LIST} ${IMAGE}"
+                SUMMARY="${SUMMARY}- **${IMAGE}**: removed incompatible auto-generated patch block\n"
+              fi
+              echo "  No compatible auto-patches after image-specific filtering"
+              continue
+            fi
 
             # Create the patch block
             PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      cd ${MODROOT}\n${GO_GETS}      go mod tidy\n      if [ -d vendor ]; then go mod vendor; fi\n  # end-patch-go-deps\n"
@@ -172,12 +222,11 @@ jobs:
             tail -n +${MARKER_LINE} "$MELANGE_FILE" >> "${MELANGE_FILE}.tmp"
             mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
 
-            COUNT=$(echo "$FIXES" | wc -l)
             HAS_PATCHES=true
             PATCHED_LIST="${PATCHED_LIST} ${IMAGE}"
-            SUMMARY="${SUMMARY}- **${IMAGE}**: ${COUNT} dep(s) bumped\n"
+            SUMMARY="${SUMMARY}- **${IMAGE}**: ${APPLIED_COUNT} dep(s) bumped\n"
 
-            echo "  Patched $COUNT deps"
+            echo "  Patched $APPLIED_COUNT deps"
           done
 
           PATCHED_LIST=$(echo "$PATCHED_LIST" | xargs)
@@ -195,22 +244,35 @@ jobs:
             echo "No Go dep patches needed"
           fi
 
+      - name: Close stale patch-go-deps PR
+        if: steps.scan.outputs.has_patches != 'true' && steps.existing-pr.outputs.pr_url != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          PR_URL="${{ steps.existing-pr.outputs.pr_url }}"
+          gh pr close "$PR_URL" \
+            --comment "Closing automatically: the latest patch-go-deps scan produced no supported dependency patch changes."
+          git push origin --delete patch-go-deps || true
+
       - name: Create PR and enable auto-merge
         if: steps.scan.outputs.has_patches == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           BRANCH="patch-go-deps"
+          PR_TITLE="fix(go-deps): patch vulnerable transitive dependencies"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
+          git checkout -B "$BRANCH"
           git add -A
+          if git diff --cached --quiet; then
+            echo "Patch generation produced no file changes"
+            exit 0
+          fi
           git commit -m "fix(go-deps): patch vulnerable transitive dependencies"
           git push -u origin "$BRANCH" --force
-          PR_URL=$(gh pr create \
-            --title "fix(go-deps): patch vulnerable transitive dependencies" \
-            --label dependencies --label security \
-            --body "$(cat <<'PRBODY'
+
+          cat > /tmp/patch-go-deps-pr.md <<'PRBODY'
           ## Summary
 
           Scans published Go images with grype, identifies transitive dependencies
@@ -228,6 +290,21 @@ jobs:
           ---
           Auto-generated by [patch-go-deps](${{ github.server_url }}/${{ github.repository }}/actions/workflows/patch-go-deps.yml).
           PRBODY
-          )")
+
+          PR_URL="${{ steps.existing-pr.outputs.pr_url }}"
+          if [ -n "$PR_URL" ]; then
+            gh pr edit "$PR_URL" \
+              --title "$PR_TITLE" \
+              --add-label dependencies \
+              --add-label security \
+              --body-file /tmp/patch-go-deps-pr.md
+          else
+            PR_URL=$(gh pr create \
+              --title "$PR_TITLE" \
+              --label dependencies \
+              --label security \
+              --body-file /tmp/patch-go-deps-pr.md)
+          fi
+
           echo "Created PR: $PR_URL"
           gh pr merge "$PR_URL" --auto --squash --delete-branch
