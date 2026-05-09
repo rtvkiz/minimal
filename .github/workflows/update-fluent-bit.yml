@@ -86,8 +86,19 @@ jobs:
           echo "Updating to Fluent Bit $VERSION"
 
           echo "Downloading Fluent Bit $VERSION tarball..."
-          curl -fsSL --retry 3 --retry-all-errors "https://github.com/fluent/fluent-bit/archive/refs/tags/v${VERSION}.tar.gz" \
-            -o /tmp/fluent-bit.tar.gz
+          rm -f /tmp/fluent-bit.tar.gz
+          for URL in \
+            "https://codeload.github.com/fluent/fluent-bit/tar.gz/refs/tags/v${VERSION}" \
+            "https://github.com/fluent/fluent-bit/archive/refs/tags/v${VERSION}.tar.gz"
+          do
+            echo "Downloading Fluent Bit tarball from ${URL}"
+            if curl -fsSL --connect-timeout 20 --retry 8 --retry-all-errors "${URL}" \
+              -o /tmp/fluent-bit.tar.gz; then
+              break
+            fi
+            rm -f /tmp/fluent-bit.tar.gz
+          done
+          test -s /tmp/fluent-bit.tar.gz
           SHA256=$(sha256sum /tmp/fluent-bit.tar.gz | awk '{print $1}')
           rm /tmp/fluent-bit.tar.gz
           echo "SHA256: $SHA256"
