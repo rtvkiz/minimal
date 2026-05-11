@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  Production-ready container images with <strong>minimal CVEs</strong>, rebuilt daily using
+  Production-ready container images with <strong>minimal CVEs</strong>, rebuilt every 6 hours using
   <a href="https://github.com/chainguard-dev/apko">Chainguard's apko</a> and
   <a href="https://github.com/wolfi-dev">Wolfi</a> packages.
 </p>

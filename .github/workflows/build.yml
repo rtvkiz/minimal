@@ -11,8 +11,8 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Rebuild daily at 2am UTC to get latest CVE patches
-    - cron: '0 2 * * *'
+    # Rebuild every 6 hours to keep images and vulnerability counts fresh
+    - cron: '17 */6 * * *'
   workflow_dispatch:
 
 permissions: {}
