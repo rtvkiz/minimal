@@ -4,7 +4,7 @@
 
 package:
   name: traefik-minimal
-  version: 3.7.0
+  version: 3.7.1
   epoch: 0
   description: "Minimal Traefik cloud-native reverse proxy built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-traefik.yml workflow
-  sha256: 916017d4662462232c97eb7ea9093a0a51fd8a7b8f1f85f8b0fe04ce7b0c75ad
+  sha256: ce88132d8c668a3b1515b43d0019e18c87a3cb3dd5b4d6772992294649b295e8
 
 environment:
   contents:
