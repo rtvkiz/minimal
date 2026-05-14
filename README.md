@@ -46,7 +46,8 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | **Bun** | `docker pull ghcr.io/rtvkiz/minimal-bun:latest` | No | Fast JavaScript/TypeScript runtime |
 | **Go** | `docker pull ghcr.io/rtvkiz/minimal-go:latest` | No | Go development, CGO builds |
 | **.NET Runtime** | `docker pull ghcr.io/rtvkiz/minimal-dotnet:latest` | No | .NET 10 runtime for apps |
-| **Java** | `docker pull ghcr.io/rtvkiz/minimal-java:latest` | No | OpenJDK 21 JRE for Java apps |
+| **Java** | `docker pull ghcr.io/rtvkiz/minimal-java:latest` | No | OpenJDK 26 JRE for Java apps |
+| **Ruby** | `docker pull ghcr.io/rtvkiz/minimal-ruby:latest` | No | Ruby 4.0 runtime (built from source) |
 | **PHP** | `docker pull ghcr.io/rtvkiz/minimal-php:latest` | No | PHP 8.5 CLI (built from source) |
 | **Rails** | `docker pull ghcr.io/rtvkiz/minimal-rails:latest` | No | Ruby 4.0 + Rails 8.1 (built from source) |
 | | | **Web Servers** | |
@@ -67,14 +68,13 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | **NATS** | `docker pull ghcr.io/rtvkiz/minimal-nats:latest` | No | NATS Server (`nats-server`) only — core message broker with JetStream, built from source |
 | | | **Object Storage** | |
 | **MinIO** | `docker pull ghcr.io/rtvkiz/minimal-minio:latest` | No | S3-compatible object storage, built from source |
-| **OpenSearch** | `docker pull ghcr.io/rtvkiz/minimal-opensearch:latest` | No* | OpenSearch 2.x — Elasticsearch-compatible search and analytics |
 | | | **Observability** | |
 | **Prometheus** | `docker pull ghcr.io/rtvkiz/minimal-prometheus:latest` | No | Metrics collection and alerting, built from source |
-| **Grafana** | `docker pull ghcr.io/rtvkiz/minimal-grafana:latest` | No | Observability platform with dashboards, built from source |
 | **VictoriaMetrics** | `docker pull ghcr.io/rtvkiz/minimal-victoria-metrics:latest` | No | High-performance metrics storage and query engine, built from source |
 | **Jaeger** | `docker pull ghcr.io/rtvkiz/minimal-jaeger:latest` | No | Distributed tracing platform (v2), built from source |
 | **OTel Collector** | `docker pull ghcr.io/rtvkiz/minimal-otelcol:latest` | No | OpenTelemetry Collector core — traces, metrics, logs, built from source |
 | | | **Databases / Search** | |
+| **OpenSearch** | `docker pull ghcr.io/rtvkiz/minimal-opensearch:latest` | No* | OpenSearch 3.x — Elasticsearch-compatible search and analytics |
 | **etcd** | `docker pull ghcr.io/rtvkiz/minimal-etcd:latest` | No | Distributed key-value store for Kubernetes and service discovery, built from source |
 | **Qdrant** | `docker pull ghcr.io/rtvkiz/minimal-qdrant:latest` | No | Vector database for AI/ML semantic search, built from source (Rust) |
 | | | **Runtimes** | |
@@ -99,7 +99,7 @@ Container vulnerabilities are a top attack vector. Most base images ship with do
 | | | **CI/CD** | |
 | **Jenkins** | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
 
-*\*HTTPD, Jenkins, Kafka may include shell(sh,busybox) via transitive Wolfi dependencies or KRaft init entrypoint. MySQL includes busybox for its auto-init entrypoint script. OpenSearch includes bash/busybox as transitive dependencies of the opensearch-2 Wolfi package. Gitea includes busybox — required for git hooks which shell out to sh. Keycloak includes bash — required for kc.sh entrypoint. CI treats shell presence as informational.*
+*\*HTTPD, Jenkins, Kafka may include shell(sh,busybox) via transitive Wolfi dependencies or KRaft init entrypoint. MySQL includes busybox for its auto-init entrypoint script. OpenSearch includes bash/busybox as transitive dependencies of the opensearch-3 Wolfi package. Gitea includes busybox — required for git hooks which shell out to sh. Keycloak includes bash — required for kc.sh entrypoint. CI treats shell presence as informational.*
 
 *The NATS image contains only [`nats-server`](https://github.com/nats-io/nats-server) (the broker). The NATS ecosystem also includes a separate CLI ([`natscli`](https://github.com/nats-io/natscli)) and client libraries — these are not included.*
 
@@ -278,7 +278,7 @@ Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails, Gite
 | `update-otelcol.yml` | OTel Collector stable releases | Updates version and SHA256; skips prereleases |
 | `update-qdrant.yml` | Qdrant v1.x GitHub releases | Updates version and SHA256; warns on major version change |
 | `update-etcd.yml` | etcd v3.x GitHub releases | Updates version and SHA256; warns on major version change |
-| `update-opensearch.yml` | OpenSearch 2.x GitHub releases | Updates version in Makefile and README.md; opens issue for major 3.x |
+| `update-opensearch.yml` | OpenSearch 3.x GitHub releases | Updates version in Makefile and README.md; opens issue for the next major line |
 | `update-gitea.yml` | Gitea v1.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
 | `update-coredns.yml` | CoreDNS v1.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
 | `update-openbao.yml` | OpenBao v2.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
@@ -299,27 +299,28 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | Python | 3.14.x | nonroot (65532) | `/usr/bin/python3` | `/app` |
 | Node.js-slim | 25.x | nonroot (65532) | `/usr/bin/dumb-init -- /usr/bin/node` | `/app` |
 | Bun | latest | nonroot (65532) | `/usr/bin/bun` | `/app` |
-| Go | 1.25.x | nonroot (65532) | `/usr/bin/go` | `/app` |
+| Go | 1.26.x | nonroot (65532) | `/usr/bin/go` | `/app` |
 | Nginx | mainline | nginx (65532) | `/usr/sbin/nginx -g "daemon off;"` | `/` |
 | HTTPD | 2.4.x | www-data (65532) | `/usr/sbin/httpd -DFOREGROUND` | `/var/www/localhost/htdocs` |
-| Jenkins | 2.541.x LTS | jenkins (1000) | `tini -- java -jar jenkins.war` | `/var/jenkins_home` |
+| Jenkins | 2.555.1 LTS | jenkins (1000) | `tini -- java -jar jenkins.war` | `/var/jenkins_home` |
 | Redis | 8.6.x | redis (65532) | `/usr/bin/redis-server` | `/` |
 | MySQL | 8.4.x | mysql (65532) | `/usr/bin/docker-entrypoint.sh` | `/` |
 | Memcached | 1.6.x | memcached (65532) | `/usr/bin/memcached` | `/` |
 | PostgreSQL | 18.x | postgres (70) | `/usr/bin/postgres` | `/` |
 | SQLite | 3.51.x | nonroot (65532) | `/usr/bin/sqlite3` | `/data` |
 | .NET Runtime | 10.x | nonroot (65532) | `/usr/bin/dotnet` | `/app` |
-| Java | 21.x | nonroot (65532) | `/usr/bin/java` | `/app` |
+| Java | 26.x | nonroot (65532) | `/usr/bin/java` | `/app` |
+| Ruby | 4.0.x | nonroot (65532) | `/usr/bin/ruby` | `/work` |
 | PHP | 8.5.x | nonroot (65532) | `/usr/bin/php` | `/app` |
 | Rails | Ruby 4.0.x + Rails 8.1.x | nonroot (65532) | `/usr/bin/ruby` | `/app` |
 | Kafka | 4.2.x | kafka (65532) | `/usr/bin/kafka-entrypoint.sh` | `/` |
-| RabbitMQ | 4.2.x | rabbitmq (65532) | `/opt/rabbitmq/sbin/rabbitmq-server` | `/` |
+| RabbitMQ | 4.3.x | rabbitmq (65532) | `/opt/rabbitmq/sbin/rabbitmq-server` | `/` |
 | MinIO | RELEASE.2025-10-15T17-29-55Z | minio (65532) | `/usr/bin/minio server --console-address :9001 /data` | `/data` |
 | OpenSearch | 3.6.0 | opensearch (65532) | `/usr/share/opensearch/opensearch-docker-entrypoint.sh` | `/usr/share/opensearch/data` |
 | etcd | 3.6.x | nonroot (65532) | `/usr/bin/etcd` | `/var/lib/etcd` |
-| VictoriaMetrics | 1.138.x | nonroot (65532) | `/usr/bin/victoria-metrics` | `/` |
+| VictoriaMetrics | 1.142.x | nonroot (65532) | `/usr/bin/victoria-metrics` | `/` |
 | Jaeger | 2.17.x | nonroot (65532) | `/usr/bin/jaeger` | `/` |
-| OTel Collector | 0.149.x | nonroot (65532) | `/usr/bin/otelcol` | `/` |
+| OTel Collector | 0.151.x | nonroot (65532) | `/usr/bin/otelcol` | `/` |
 | Qdrant | 1.17.x | nonroot (65532) | `/usr/bin/qdrant` | `/qdrant` |
 | Deno | 2.x | nonroot (65532) | `/usr/bin/deno` | `/app` |
 | Gitea | 1.26.x | gitea (65532) | `/usr/bin/gitea web --config /etc/gitea/app.ini` | `/var/lib/gitea` |
@@ -339,7 +340,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 ```bash
 # Prerequisites
 go install chainguard.dev/apko@latest
-go install chainguard.dev/melange@latest  # needed for Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails, RabbitMQ, Gitea
+go install chainguard.dev/melange@latest  # needed for melange-backed images (source builds and repackaged upstream distributions)
 brew install anchore/grype/grype  # or: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh
 
 # Build all images
@@ -403,7 +404,10 @@ minimal/
 ├── postgres-slim/apko/postgres.yaml  # PostgreSQL image (Wolfi pkg)
 ├── sqlite/apko/sqlite.yaml          # SQLite image (Wolfi pkg)
 ├── dotnet/apko/dotnet.yaml          # .NET Runtime image (Wolfi pkg)
-├── java/apko/java.yaml              # OpenJDK 21 JRE image (Wolfi pkg)
+├── java/apko/java.yaml              # OpenJDK 26 JRE image (Wolfi pkg)
+├── ruby/
+│   ├── apko/ruby.yaml                # Ruby image
+│   └── melange.yaml                  # Ruby from source (ruby-lang.org)
 ├── php/
 │   ├── apko/php.yaml                # PHP image
 │   └── melange.yaml                 # PHP from source (php.net)
@@ -435,7 +439,8 @@ minimal/
 │   ├── build.yml                 # Daily CI pipeline
 │   ├── update-jenkins.yml        # Jenkins version updates
 │   ├── update-php.yml            # PHP version updates (from php.net)
-│   ├── update-rails.yml          # Rails/Ruby version updates
+│   ├── update-ruby.yml           # Ruby version updates (from ruby-lang.org)
+│   ├── update-rails.yml          # Rails version updates
 │   ├── update-redis.yml          # Redis version updates
 │   ├── update-mysql.yml          # MySQL LTS version updates
 │   ├── update-memcached.yml      # Memcached version updates

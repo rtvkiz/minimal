@@ -1,0 +1,92 @@
+# Melange build configuration for minimal Ruby
+# Builds Ruby from source (ruby-lang.org)
+# You control version and security patches; no dependency on Wolfi's ruby package
+
+package:
+  name: ruby-minimal
+  version: 4.0.4
+  epoch: 0
+  description: "Minimal Ruby runtime built from source"
+  copyright:
+    - license: Ruby AND MIT
+  options:
+    no-depends: true
+
+vars:
+  ruby_version: 4.0.4
+  # SHA256 from https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.4.tar.gz
+  sha256: f35f6edfa3dabb3f723f9d0cf1906c6512ae77f4e412ab1e68cc6e91d230fa80
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - linux-headers
+      - openssl-dev
+      - zlib-dev
+      - yaml-dev
+      - libffi-dev
+      - readline-dev
+      - gdbm-dev
+
+pipeline:
+  # Download and verify Ruby source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors "https://cache.ruby-lang.org/pub/ruby/4.0/ruby-${{vars.ruby_version}}.tar.gz" \
+        -o /home/build/ruby.tar.gz
+      echo "${{vars.sha256}}  /home/build/ruby.tar.gz" | sha256sum -c -
+      cd /home/build
+      tar xzf ruby.tar.gz
+      rm ruby.tar.gz
+
+  # Configure and build Ruby
+  - runs: |
+      cd /home/build/ruby-${{vars.ruby_version}}
+      ./configure \
+        --prefix=/usr \
+        --disable-install-doc \
+        --disable-install-rdoc \
+        --with-openssl-dir=/usr \
+        --with-readline-dir=/usr \
+        --enable-shared \
+        --disable-jit-support
+      make -j$(nproc)
+
+  # Install Ruby to system for validation
+  - runs: |
+      cd /home/build/ruby-${{vars.ruby_version}}
+      make install
+
+      ruby -v
+      gem --version
+      ruby -e "require 'bundler'; puts Bundler::VERSION"
+      echo "✓ Ruby installed to system"
+
+  # Install to destdir
+  - runs: |
+      cd /home/build/ruby-${{vars.ruby_version}}
+      make install DESTDIR="${{targets.destdir}}"
+
+      find "${{targets.destdir}}/usr" -type f -name "*.so" -exec strip --strip-unneeded {} \; 2>/dev/null || true
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/ruby" 2>/dev/null || true
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/gem" 2>/dev/null || true
+      [ -f "${{targets.destdir}}/usr/bin/bundle" ] && strip --strip-unneeded "${{targets.destdir}}/usr/bin/bundle" 2>/dev/null || true
+
+      echo "Verifying Ruby build..."
+      ls -lh "${{targets.destdir}}/usr/bin/ruby"
+      ls -lh "${{targets.destdir}}/usr/bin/gem"
+
+update:
+  enabled: true
+  github:
+    identifier: ruby/ruby
+    use-tag: true
+    tag-filter: "v4_0_"

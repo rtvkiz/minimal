@@ -56,7 +56,7 @@ jobs:
             {"name":"jenkins"},
             {"name":"redis-slim","apko":"redis-slim/apko/redis.yaml"},
             {"name":"mysql"},{"name":"memcached"},{"name":"caddy"},
-            {"name":"haproxy"},{"name":"php"},{"name":"rails"},
+            {"name":"haproxy"},{"name":"ruby"},{"name":"php"},{"name":"rails"},
             {"name":"kafka"},{"name":"valkey"},{"name":"nats"},
             {"name":"traefik"},{"name":"rabbitmq"},{"name":"minio"},
             {"name":"prometheus"},{"name":"mariadb"},{"name":"etcd"},

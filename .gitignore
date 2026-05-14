@@ -19,3 +19,6 @@ melange.rsa.pub
 .idea/
 .vscode/
 *.swp
+
+# Local Claude session guidance (not for public repo)
+CLAUDE.md

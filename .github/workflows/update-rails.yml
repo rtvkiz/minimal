@@ -29,13 +29,11 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
 
-      
       - name: Check for new Rails gem version
         id: check-rails
         run: |
           set -euo pipefail
 
-          # Get current Rails version from melange.yaml
           CURRENT=$(grep 'rails_version:' rails/melange.yaml | awk '{print $2}')
 
           if [ -z "$CURRENT" ]; then
@@ -46,7 +44,6 @@ jobs:
           SERIES=$(echo "$CURRENT" | cut -d. -f1,2)
           echo "Current Rails version: $CURRENT (series: $SERIES)"
 
-          # Query RubyGems API for latest Rails version
           LATEST=$(curl -fsSL --retry 3 --retry-all-errors "https://rubygems.org/api/v1/versions/rails/latest.json" | jq -r '.version')
 
           if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
@@ -54,7 +51,6 @@ jobs:
             exit 1
           fi
 
-          # Validate version format (Rails uses optional 4th segment for security releases, e.g. 8.0.2.1)
           if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
             echo "::error::Invalid Rails version received: $LATEST"
             exit 1
@@ -64,12 +60,10 @@ jobs:
           echo "Latest Rails version: $LATEST (series: $LATEST_SERIES)"
 
           if [ "$LATEST_SERIES" != "$SERIES" ]; then
-            # Major or minor version change — needs manual review
             echo "new_series=$LATEST_SERIES" >> "$GITHUB_OUTPUT"
             echo "current_series=$SERIES" >> "$GITHUB_OUTPUT"
             echo "New Rails series available: $SERIES -> $LATEST_SERIES"
           elif [ "$LATEST" != "$CURRENT" ]; then
-            # Patch update within same series — auto-PR
             {
               echo "update_available=true"
               echo "new_version=$LATEST"
@@ -87,10 +81,8 @@ jobs:
           VERSION="${{ steps.check-rails.outputs.new_version }}"
           echo "Updating Rails to $VERSION"
 
-          # Update rails_version in melange.yaml
           sed -i "s/^  rails_version: .*/  rails_version: $VERSION/" rails/melange.yaml
 
-          # Verify changes
           echo "=== rails/melange.yaml ==="
           grep 'rails_version:' rails/melange.yaml
 
@@ -140,7 +132,6 @@ jobs:
             const currentSeries = '${{ steps.check-rails.outputs.current_series }}';
             const title = `chore(rails): new series available — Rails ${newSeries}`;
 
-            // Check if issue already exists
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -179,253 +170,6 @@ jobs:
                 `Major/minor Rails upgrades can introduce breaking API changes, deprecation removals,`,
                 `and new Ruby version requirements. Patch updates (${currentSeries}.x) are auto-PR'd;`,
                 `series upgrades require review.`,
-                ``,
-                `---`,
-                ``,
-                `Automatically created by the [update-rails](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/workflows/update-rails.yml) workflow.`,
-              ].join('\n'),
-              labels: ['dependencies', 'rails'],
-            });
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-  check-ruby-update:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-
-    steps:
-      - name: Generate app token
-        id: app-token
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-
-      
-      - name: Check for new Ruby version
-        id: check-ruby
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-
-          # Get current Ruby version from melange.yaml
-          CURRENT=$(grep 'ruby_version:' rails/melange.yaml | awk '{print $2}')
-
-          if [ -z "$CURRENT" ]; then
-            echo "::error::Failed to read current Ruby version from melange.yaml"
-            exit 1
-          fi
-
-          SERIES=$(echo "$CURRENT" | cut -d. -f1,2)
-          CURRENT_MAJOR=$(echo "$SERIES" | cut -d. -f1)
-          CURRENT_MINOR=$(echo "$SERIES" | cut -d. -f2)
-          echo "Current Ruby version: $CURRENT (series: $SERIES)"
-
-          # --- Patch update check within current series ---
-          # Ruby 4.0+ uses dot-separated tags (v4.0.1), older uses underscores (v3_4_8)
-          USCORE_PREFIX="v${SERIES//./_}_"
-          LATEST=$(curl -fsSL --retry 3 --retry-all-errors \
-            --header "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/ruby/ruby/tags?per_page=100" | \
-            jq -r --arg dot_prefix "v${SERIES}." --arg uscore_prefix "$USCORE_PREFIX" \
-            '[.[] | select((.name | startswith($dot_prefix)) or (.name | startswith($uscore_prefix))) | .name | select(test("preview|rc") | not)] | sort | last // empty' | \
-            sed 's/^v//; s/_/./g')
-
-          if [ -z "$LATEST" ]; then
-            echo "::error::Failed to determine latest Ruby $SERIES.x version"
-            exit 1
-          fi
-
-          # Validate version format
-          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Invalid Ruby version: $LATEST"
-            exit 1
-          fi
-
-          echo "Latest Ruby in $SERIES series: $LATEST"
-
-          if [ "$LATEST" != "$CURRENT" ]; then
-            # Download tarball and compute SHA256
-            echo "Downloading Ruby $LATEST tarball..."
-            curl -fsSL --retry 3 --retry-all-errors "https://cache.ruby-lang.org/pub/ruby/$SERIES/ruby-$LATEST.tar.gz" \
-              -o /tmp/ruby.tar.gz
-            SHA256=$(sha256sum /tmp/ruby.tar.gz | awk '{print $1}')
-            rm /tmp/ruby.tar.gz
-            echo "SHA256: $SHA256"
-
-            {
-              echo "update_available=true"
-              echo "new_version=$LATEST"
-              echo "current_version=$CURRENT"
-              echo "sha256=$SHA256"
-              echo "series=$SERIES"
-            } >> "$GITHUB_OUTPUT"
-            echo "Ruby patch update available: $CURRENT -> $LATEST"
-          else
-            echo "update_available=false" >> "$GITHUB_OUTPUT"
-            echo "Ruby $SERIES series is up to date"
-          fi
-
-          # --- New series check (minor/major) ---
-          NEXT_MINOR="$CURRENT_MAJOR.$((CURRENT_MINOR + 1))"
-          NEXT_MAJOR="$((CURRENT_MAJOR + 1)).0"
-
-          echo ""
-          echo "Checking for new Ruby series..."
-
-          NEW_SERIES=""
-
-          # Check next minor (e.g. 4.1)
-          MINOR_USCORE="v${NEXT_MINOR//./_}_"
-          MINOR_TAG=$(curl -fsSL --retry 3 --retry-all-errors \
-            --header "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/ruby/ruby/tags?per_page=100" | \
-            jq -r --arg dot_prefix "v${NEXT_MINOR}." --arg uscore_prefix "$MINOR_USCORE" \
-            '[.[] | select((.name | startswith($dot_prefix)) or (.name | startswith($uscore_prefix))) | .name] | sort | last // empty')
-          if [ -n "$MINOR_TAG" ]; then
-            MINOR_VERSION=$(echo "$MINOR_TAG" | sed 's/^v//; s/_/./g')
-            echo "New minor series available: Ruby $NEXT_MINOR (latest: $MINOR_VERSION)"
-            NEW_SERIES="$NEXT_MINOR"
-          fi
-
-          # Check next major (e.g. 5.0)
-          MAJOR_USCORE="v${NEXT_MAJOR//./_}_"
-          MAJOR_TAG=$(curl -fsSL --retry 3 --retry-all-errors \
-            --header "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/ruby/ruby/tags?per_page=100" | \
-            jq -r --arg dot_prefix "v${NEXT_MAJOR}." --arg uscore_prefix "$MAJOR_USCORE" \
-            '[.[] | select((.name | startswith($dot_prefix)) or (.name | startswith($uscore_prefix))) | .name] | sort | last // empty')
-          if [ -n "$MAJOR_TAG" ]; then
-            MAJOR_VERSION=$(echo "$MAJOR_TAG" | sed 's/^v//; s/_/./g')
-            echo "New major series available: Ruby $NEXT_MAJOR (latest: $MAJOR_VERSION)"
-            NEW_SERIES="$NEXT_MAJOR"
-          fi
-
-          if [ -n "$NEW_SERIES" ]; then
-            echo "new_series=$NEW_SERIES" >> "$GITHUB_OUTPUT"
-            echo "current_series=$SERIES" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Update Ruby version and checksum
-        if: steps.check-ruby.outputs.update_available == 'true'
-        run: |
-          VERSION="${{ steps.check-ruby.outputs.new_version }}"
-          SHA256="${{ steps.check-ruby.outputs.sha256 }}"
-          echo "Updating Ruby to $VERSION"
-
-          # Update ruby_version in melange.yaml
-          sed -i "s/^  ruby_version: .*/  ruby_version: $VERSION/" rails/melange.yaml
-
-          # Update package version in melange.yaml
-          sed -i "s/^  version: .*/  version: $VERSION/" rails/melange.yaml
-
-          # Update sha256 in melange.yaml
-          sed -i "s/^  sha256: .*/  sha256: $SHA256/" rails/melange.yaml
-
-          # Reset epoch to 0 for new upstream version
-          sed -i "s/^  epoch: .*/  epoch: 0/" rails/melange.yaml
-
-
-          # Verify changes
-          echo "=== rails/melange.yaml ==="
-          grep -E '(version:|ruby_version:|sha256:|epoch:)' rails/melange.yaml | head -4
-
-      - name: Create Ruby PR and enable auto-merge
-        if: steps.check-ruby.outputs.update_available == 'true'
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          BRANCH="update-rails-ruby-${{ steps.check-ruby.outputs.new_version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git add -A
-          git commit -m "chore(rails): bump Ruby to ${{ steps.check-ruby.outputs.new_version }}"
-          git push --force -u origin "$BRANCH"
-          PR_URL=$(gh pr create \
-            --title "chore(rails): bump Ruby to ${{ steps.check-ruby.outputs.new_version }}" \
-            --label dependencies --label rails \
-            --body "$(cat <<'PRBODY'
-          ## Summary
-
-          Updates Ruby from `${{ steps.check-ruby.outputs.current_version }}` to `${{ steps.check-ruby.outputs.new_version }}`.
-
-          ## Changes
-
-          - `rails/melange.yaml` - package version, ruby_version, SHA256 checksum, epoch reset
-
-          ## Links
-
-          - [Ruby Releases](https://www.ruby-lang.org/en/downloads/)
-          - [Ruby News](https://www.ruby-lang.org/en/news/)
-
-          ---
-
-          This PR was automatically created by the [update-rails](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-rails.yml) workflow.
-          PRBODY
-          )")
-          echo "Created PR: $PR_URL"
-          gh pr merge "$PR_URL" --auto --squash --delete-branch
-
-      - name: Create new Ruby series issue
-        if: steps.check-ruby.outputs.new_series != ''
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        with:
-          script: |
-            const newSeries = '${{ steps.check-ruby.outputs.new_series }}';
-            const currentSeries = '${{ steps.check-ruby.outputs.current_series }}';
-            const title = `chore(rails): new series available — Ruby ${newSeries}`;
-
-            // Check if issue already exists
-            const { data: issues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'rails,dependencies',
-            });
-
-            const exists = issues.some(i => i.title.includes(`Ruby ${newSeries}`));
-            if (exists) {
-              console.log(`Issue for Ruby ${newSeries} already exists, skipping`);
-              return;
-            }
-
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: title,
-              body: [
-                `## New Ruby Series Available`,
-                ``,
-                `Ruby **${newSeries}** is now available. We are currently on **${currentSeries}**.`,
-                ``,
-                `### Upgrade Checklist`,
-                ``,
-                `- [ ] Review [Ruby ${newSeries} release notes](https://www.ruby-lang.org/en/news/)`,
-                `- [ ] Check Rails compatibility with Ruby ${newSeries}`,
-                `- [ ] Update \`rails/melange.yaml\`:`,
-                `  - \`ruby_version\` to latest ${newSeries}.x`,
-                `  - \`version\` (package version) to match`,
-                `  - \`sha256\` (from ruby-lang.org)`,
-                `  - \`tag-filter\` from \`"v${currentSeries.replace(/\./g, '_')}_"\` to \`"v${newSeries.replace(/\./g, '_')}_"\``,
-                `- [ ] Update \`rails/apko/rails.yaml\`:`,
-                `  - Gem paths if Ruby major version changed (e.g. \`gems/4.0.0\` → \`gems/${newSeries.split('.')[0]}.0.0\`)`,
-                `- [ ] Build and test locally (\`make rails\`)`,
-                `- [ ] Verify CI passes`,
-                ``,
-                `### Why Manual?`,
-                ``,
-                `Minor/major Ruby upgrades can change gem paths, remove deprecated APIs, and affect`,
-                `C extension compatibility. Patch updates (${currentSeries}.x) are auto-PR'd; series`,
-                `upgrades require review.`,
                 ``,
                 `---`,
                 ``,
