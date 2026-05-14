@@ -4,14 +4,14 @@
 
 package:
   name: jaeger-minimal
-  version: 2.17.0
+  version: 2.18.0
   epoch: 0
   description: "Minimal Jaeger distributed tracing backend built from source"
   copyright:
     - license: Apache-2.0
 
 vars:
-  sha256: 58e5edfb1a60f2899e19f3bd2ffb46b07605aa3ffc0897f18f7d717eda3dba45
+  sha256: 5d39c27c0ce5a88720039a3852fcdce5450ce7dd6e6e1b683658959309401fa7
 
 environment:
   contents:
