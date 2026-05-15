@@ -23,7 +23,7 @@ MINIO_VERSION ?= $(call melange_version,minio/melange.yaml)
 ETCD_VERSION ?= $(call melange_version,etcd/melange.yaml)
 
 # --- Languages/Frameworks ---
-RUBY_VERSION ?= $(call melange_version,rails/melange.yaml)
+RUBY_VERSION ?= $(call melange_version,ruby/melange.yaml)
 RAILS_VERSION ?= $(shell grep '^  rails_version:' rails/melange.yaml 2>/dev/null | awk '{print $$2}')
 
 # --- Messaging/Coordination ---
@@ -61,20 +61,20 @@ OPENSEARCH_VERSION ?= 3.6.0
 CUDA_VERSION ?= 12.9.0
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java php php-melange rails rails-melange kafka kafka-melange keygen opensearch
+.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java ruby ruby-melange php php-melange rails rails-melange kafka kafka-melange keygen opensearch
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange mariadb mariadb-melange
 .PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno
 .PHONY: cuda-python cuda-python-melange
 .PHONY: coredns coredns-melange openbao openbao-melange loki loki-melange fluent-bit fluent-bit-melange keycloak keycloak-melange
 .PHONY: gitea gitea-melange
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
-.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-ruby test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus mariadb etcd victoria-metrics jaeger otelcol qdrant deno cuda-python coredns openbao loki fluent-bit keycloak
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java ruby php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus mariadb etcd victoria-metrics jaeger otelcol qdrant deno cuda-python coredns openbao loki fluent-bit keycloak
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -861,6 +861,32 @@ php: php-melange
 	@echo "✓ minimal-php built (source build)"
 
 #------------------------------------------------------------------------------
+# RUBY IMAGE (melange source build + apko)
+#------------------------------------------------------------------------------
+ruby-melange: keygen
+	@echo "Building Ruby $(RUBY_VERSION) from source via melange..."
+	melange build ruby/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Ruby package built from source"
+
+ruby: ruby-melange
+	@echo "Assembling minimal-ruby image with apko..."
+	apko build ruby/apko/ruby.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION) \
+		ruby.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < ruby.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-ruby:latest
+	@rm -f ruby.tar sbom-*.spdx.json
+	@echo "✓ minimal-ruby built (source build)"
+
+#------------------------------------------------------------------------------
 # RAILS IMAGE (melange source build + apko)
 #------------------------------------------------------------------------------
 rails-melange: keygen
@@ -1047,7 +1073,7 @@ keycloak: keycloak-melange
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -1144,6 +1170,12 @@ scan-java:
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-java:latest
 	@echo "✓ minimal-java: scan passed"
+
+scan-ruby:
+	@echo "Scanning minimal-ruby..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-ruby:latest
+	@echo "✓ minimal-ruby: scan passed"
 
 scan-php:
 	@echo "Scanning minimal-php..."
@@ -1334,12 +1366,12 @@ scan-all:
 size:
 	@echo "Image sizes:"
 	@docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | \
-		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-mysql|minimal-memcached|minimal-caddy|minimal-haproxy|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-java|minimal-rails|minimal-kafka)" || true
+		grep -E "(minimal-python|minimal-jenkins|minimal-go|minimal-node-slim|minimal-nginx|minimal-httpd|minimal-redis-slim|minimal-mysql|minimal-memcached|minimal-caddy|minimal-haproxy|minimal-postgres-slim|minimal-bun|minimal-sqlite|minimal-dotnet|minimal-java|minimal-ruby|minimal-rails|minimal-kafka)" || true
 
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-cuda-python
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-ruby test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-cuda-python
 
 test-python:
 	@echo "Testing Python image..."
@@ -1549,6 +1581,25 @@ test-java:
 		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
 	@echo "✓ OpenJDK Runtime tests passed"
 
+test-ruby:
+	@echo "Testing Ruby image..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-ruby:latest -v
+	@echo "Testing RubyGems..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-ruby:latest \
+		-e "require 'rubygems'; puts Gem::VERSION"
+	@echo "Testing Bundler..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-ruby:latest \
+		-e "require 'bundler'; puts Bundler::VERSION"
+	@echo "Testing core libraries..."
+	docker run --rm $(REGISTRY)/$(OWNER)/minimal-ruby:latest \
+		-e "require 'openssl'; require 'yaml'; require 'json'; puts 'Core libs OK'"
+	@echo "Checking default workdir..."
+	@docker run --rm $(REGISTRY)/$(OWNER)/minimal-ruby:latest -e "puts Dir.pwd" | grep -qx /work
+	@echo "Verifying no shell..."
+	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-ruby:latest \
+		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@echo "✓ Ruby tests passed"
+
 test-rails:
 	@echo "Testing Rails image..."
 	docker run --rm $(REGISTRY)/$(OWNER)/minimal-rails:latest -v
@@ -1705,6 +1756,8 @@ push:
 	docker push $(REGISTRY)/$(OWNER)/minimal-dotnet:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-java:latest
+	docker push $(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION)
+	docker push $(REGISTRY)/$(OWNER)/minimal-ruby:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)
 	docker push $(REGISTRY)/$(OWNER)/minimal-rails:latest
 	docker push $(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION)
@@ -1779,6 +1832,9 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-java:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-ruby:latest 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-rails:latest 2>/dev/null || true
@@ -1840,6 +1896,7 @@ help:
 	@echo "  make sqlite          Build SQLite (Wolfi package)"
 	@echo "  make dotnet          Build .NET Runtime (Wolfi package)"
 	@echo "  make java            Build OpenJDK 21 JRE (Wolfi package)"
+	@echo "  make ruby            Build Ruby $(RUBY_VERSION) (source build, shell-less)"
 	@echo "  make php             Build PHP (melange source build)"
 	@echo "  make rails           Build Rails (Ruby $(RUBY_VERSION) + Rails $(RAILS_VERSION), source build)"
 	@echo "  make kafka           Build Kafka $(KAFKA_VERSION) (official binary + jlink JRE, KRaft)"
