@@ -4,14 +4,14 @@
 
 package:
   name: loki-minimal
-  version: 3.7.1
+  version: 3.7.2
   epoch: 0
   description: "Minimal Loki log aggregation server built from source"
   copyright:
     - license: AGPL-3.0
 
 vars:
-  sha256: 05c5d23eff751b9c4f4e49918359e35b7ba840a5b504e3eac0befe4ad94ad464
+  sha256: f91b7737cc0ca352dfb99e9307bc2f6a67135d6827922374ab4a31676d280790
 
 environment:
   contents:
@@ -42,6 +42,21 @@ pipeline:
 
 
 
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      cd /home/build/loki-${{package.version}}
+      go get github.com/apache/thrift@v0.23.0
+      go get github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8
+      go get github.com/aws/aws-sdk-go-v2/service/s3@v1.97.3
+      go get github.com/go-jose/go-jose/v4@v4.1.4
+      go get go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp@v0.19.0
+      go get go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v1.43.0
+      go get go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.43.0
+      go get go.opentelemetry.io/otel/sdk@v1.43.0
+      go mod tidy
+      if [ -d vendor ]; then go mod vendor; fi
+  # end-patch-go-deps
 
   - runs: |
       cd /home/build/loki-${{package.version}}
