@@ -238,7 +238,7 @@ Old version tags are preserved — upgrading to a new version does not remove pr
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │                        Verification & Publish                        │   │
 │  │  ┌─────────────┐     ┌─────────────┐     ┌─────────────────────────┐ │   │
-│  │  │   Trivy     │────►│    Test     │────►│  cosign sign + SBOM     │ │   │
+│  │  │   Grype     │────►│    Test     │────►│  cosign sign + SBOM     │ │   │
 │  │  │  CVE scan   │     │   image     │     │  (keyless signing)      │ │   │
 │  │  └─────────────┘     └─────────────┘     └─────────────────────────┘ │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │

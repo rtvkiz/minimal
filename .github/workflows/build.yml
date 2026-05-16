@@ -302,6 +302,7 @@ jobs:
       packages: write
       security-events: write
       id-token: write
+      attestations: write
 
     strategy:
       fail-fast: false
@@ -377,7 +378,9 @@ jobs:
       - name: Scan image for vulnerabilities
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
-          grype "$IMAGE" -o json > grype-${{ matrix.name }}.json
+          grype "$IMAGE" \
+            -o json=grype-${{ matrix.name }}.json \
+            -o sarif=grype-${{ matrix.name }}.sarif
 
       - name: Generate vulnerability report
         if: always()
@@ -441,12 +444,6 @@ jobs:
           path: grype-${{ matrix.name }}.json
           retention-days: 90
 
-      - name: Generate SARIF report
-        if: always() && hashFiles(format('grype-{0}.json', matrix.name)) != ''
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
-          grype "$IMAGE" -o sarif > grype-${{ matrix.name }}.sarif || true
-
       - name: Upload SARIF to Security tab
         uses: github/codeql-action/upload-sarif@66b39da20ccc656acc90dd27ea30f5d458ec33ce # v3.28.19
         if: always() && hashFiles(format('grype-{0}.sarif', matrix.name)) != ''
@@ -480,11 +477,22 @@ jobs:
 
       - name: Publish image
         if: github.event_name != 'pull_request'
+        id: publish
         run: |
           apko publish ${{ matrix.apko_config }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
-            --arch x86_64,aarch64
+            --arch x86_64,aarch64 \
+            | tee apko-publish.out
+          # apko prints "ref@digest" on the last line
+          DIGEST=$(grep -oE 'sha256:[a-f0-9]{64}' apko-publish.out | tail -1)
+          if [ -z "$DIGEST" ]; then
+            echo "::error::Failed to parse image digest from apko publish output"
+            cat apko-publish.out
+            exit 1
+          fi
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+          echo "image=${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}@${DIGEST}" >> $GITHUB_OUTPUT
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
@@ -493,8 +501,30 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}
+            cosign sign --yes "${{ steps.publish.outputs.image }}"
+
+      - name: Attach SBOM attestation
+        if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            # apko writes per-arch SBOMs to the working directory during publish
+            for SBOM in sbom-x86_64.spdx.json sbom-aarch64.spdx.json sbom-index.spdx.json; do
+              [ -f "$SBOM" ] || continue
+              cosign attest --yes --type spdxjson \
+                --predicate "$SBOM" \
+                "${{ steps.publish.outputs.image }}"
+            done
+
+      - name: Generate SLSA build provenance
+        if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
 
   #----------------------------------------------------------------------------
   # BUILD MELANGE-BASED IMAGES (needs packages from melange-build)
@@ -511,6 +541,7 @@ jobs:
       packages: write
       security-events: write
       id-token: write
+      attestations: write
 
     strategy:
       fail-fast: false
@@ -620,7 +651,9 @@ jobs:
       - name: Scan image for vulnerabilities
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
-          grype "$IMAGE" -o json > grype-${{ matrix.name }}.json
+          grype "$IMAGE" \
+            -o json=grype-${{ matrix.name }}.json \
+            -o sarif=grype-${{ matrix.name }}.sarif
 
       - name: Generate vulnerability report
         if: always()
@@ -684,12 +717,6 @@ jobs:
           path: grype-${{ matrix.name }}.json
           retention-days: 90
 
-      - name: Generate SARIF report
-        if: always() && hashFiles(format('grype-{0}.json', matrix.name)) != ''
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
-          grype "$IMAGE" -o sarif > grype-${{ matrix.name }}.sarif || true
-
       - name: Upload SARIF to Security tab
         uses: github/codeql-action/upload-sarif@66b39da20ccc656acc90dd27ea30f5d458ec33ce # v3.28.19
         if: always() && hashFiles(format('grype-{0}.sarif', matrix.name)) != ''
@@ -717,13 +744,23 @@ jobs:
 
       - name: Publish image
         if: github.event_name != 'pull_request'
+        id: publish
         run: |
           apko publish ${{ matrix.apko_config }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }} \
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
             --arch ${{ matrix.arches }} \
             --repository-append ./packages \
-            --keyring-append ./melange.rsa.pub
+            --keyring-append ./melange.rsa.pub \
+            | tee apko-publish.out
+          DIGEST=$(grep -oE 'sha256:[a-f0-9]{64}' apko-publish.out | tail -1)
+          if [ -z "$DIGEST" ]; then
+            echo "::error::Failed to parse image digest from apko publish output"
+            cat apko-publish.out
+            exit 1
+          fi
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+          echo "image=${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}@${DIGEST}" >> $GITHUB_OUTPUT
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
@@ -732,8 +769,29 @@ jobs:
           timeout_minutes: 5
           max_attempts: 3
           command: |
-            cosign sign --yes \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}
+            cosign sign --yes "${{ steps.publish.outputs.image }}"
+
+      - name: Attach SBOM attestation
+        if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            for SBOM in sbom-x86_64.spdx.json sbom-aarch64.spdx.json sbom-index.spdx.json; do
+              [ -f "$SBOM" ] || continue
+              cosign attest --yes --type spdxjson \
+                --predicate "$SBOM" \
+                "${{ steps.publish.outputs.image }}"
+            done
+
+      - name: Generate SLSA build provenance
+        if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
 
   #----------------------------------------------------------------------------
   # SUMMARY
