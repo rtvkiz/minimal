@@ -25,6 +25,12 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   GRYPE_VERSION: v0.109.1
+  # Force cosign 2.6+ to write .sig/.att tags instead of OCI 1.1 referrers.
+  # ghcr.io accepts referrers but cosign stores them with empty artifactType
+  # and no annotations, so `cosign verify` and `cosign verify-attestation`
+  # silently find nothing. Legacy tag mode is interoperable across all
+  # registries and verifier versions.
+  COSIGN_REGISTRY_REFERRERS_MODE: legacy
 
 jobs:
   #----------------------------------------------------------------------------
@@ -534,6 +540,29 @@ jobs:
           subject-digest: ${{ steps.publish.outputs.digest }}
           push-to-registry: true
 
+      - name: Verify attestations are discoverable
+        if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
+        run: |
+          set -e
+          IMAGE="${{ steps.publish.outputs.image }}"
+          # Wait briefly for registry propagation.
+          sleep 5
+          echo "Verifying cosign signature..."
+          cosign verify \
+            --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+            --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+            "$IMAGE" > /dev/null
+          echo "Verifying SBOM attestation..."
+          cosign verify-attestation --type spdxjson \
+            --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+            --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+            "$IMAGE" > /dev/null
+          echo "Verifying SLSA provenance..."
+          gh attestation verify "oci://$IMAGE" --owner ${{ github.repository_owner }} > /dev/null
+          echo "All attestations verified."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   #----------------------------------------------------------------------------
   # BUILD MELANGE-BASED IMAGES (needs packages from melange-build)
   #----------------------------------------------------------------------------
@@ -801,6 +830,29 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
           subject-digest: ${{ steps.publish.outputs.digest }}
           push-to-registry: true
+
+      - name: Verify attestations are discoverable
+        if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
+        run: |
+          set -e
+          IMAGE="${{ steps.publish.outputs.image }}"
+          # Wait briefly for registry propagation.
+          sleep 5
+          echo "Verifying cosign signature..."
+          cosign verify \
+            --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+            --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+            "$IMAGE" > /dev/null
+          echo "Verifying SBOM attestation..."
+          cosign verify-attestation --type spdxjson \
+            --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+            --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+            "$IMAGE" > /dev/null
+          echo "Verifying SLSA provenance..."
+          gh attestation verify "oci://$IMAGE" --owner ${{ github.repository_owner }} > /dev/null
+          echo "All attestations verified."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   #----------------------------------------------------------------------------
   # SUMMARY
