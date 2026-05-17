@@ -1,201 +1,281 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="Minimal — Hardened Container Images" width="600">
+  <img src="assets/logo.svg" alt="minimal — hardened container images" width="600">
 </p>
 
 <p align="center">
-  Production-ready container images with <strong>minimal CVEs</strong>, rebuilt every 6 hours using
-  <a href="https://github.com/chainguard-dev/apko">Chainguard's apko</a> and
-  <a href="https://github.com/wolfi-dev">Wolfi</a> packages.
+  Small, hardened container images, free and MIT-licensed.<br>
+  Built from source with Chainguard's <a href="https://github.com/chainguard-dev/apko">apko</a> and <a href="https://github.com/wolfi-dev">Wolfi</a> packages, rebuilt every six hours.<br>
+  Every image is cosign-signed, ships an SPDX SBOM attestation, and carries SLSA Level 3 build provenance. You can verify all of it without an account.
 </p>
 
 <p align="center">
-  <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build Hardened Images"></a>
-  <a href="https://rtvkiz.github.io/minimal/"><img src="https://img.shields.io/badge/Vulnerability_Report-View-0d9488" alt="Vulnerability Report"></a>
+  <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build status"></a>
+  <a href="https://rtvkiz.github.io/minimal/"><img src="https://img.shields.io/badge/CVE_Dashboard-Live-0d9488" alt="CVE Dashboard"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://slsa.dev/spec/v1.0/levels#build-l3"><img src="https://img.shields.io/badge/SLSA-Level_3-0d9488" alt="SLSA Level 3"></a>
   <img src="https://img.shields.io/badge/Images-41-0d9488" alt="Images: 41">
-  <img src="https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-0d9488" alt="Architectures: amd64 | arm64">
+  <img src="https://img.shields.io/badge/Arch-amd64_%7C_arm64-0d9488" alt="Architectures">
 </p>
 
 <p align="center">
-  <strong><a href="https://rtvkiz.github.io/minimal/">rtvkiz.github.io/minimal</a> — live vulnerability report, updated on every build</strong>
+  <a href="https://rtvkiz.github.io/minimal/">Live CVE dashboard</a> ·
+  <a href="#pull-and-verify-in-30-seconds">Verify an image</a> ·
+  <a href="#available-images--41-total">All 41 images</a> ·
+  <a href="https://news.ycombinator.com/item?id=46840178">HN discussion</a>
 </p>
 
 ---
 
-## Why This Matters
+## Pull and verify in 30 seconds
 
-Container vulnerabilities are a top attack vector. Most base images ship with dozens of known CVEs that take weeks or months to patch:
+The point of these images is that you don't have to trust me. Pull one, then check the provenance yourself:
 
-> **Traditional images** — `debian:latest` — **127 CVEs**, patched in ~30 days
->
-> **Minimal images** — `minimal-python` — **0-5 CVEs**, patched in <48 hours
+```bash
+# Pull. It's public — no login, no rate limit.
+docker pull ghcr.io/rtvkiz/minimal-python:latest
 
-**Impact:**
-- **Compliance ready** — Pass SOC2, FedRAMP, and PCI-DSS security audits
-- **Reduced attack surface** — Minimal, distroless images with only essential packages
-- **Rapid CVE patching** — Fixes within 24-48 hours of disclosure (vs weeks for Debian/Ubuntu)
-- **Supply chain security** — Cryptographically signed images with full SBOM
+# Verify the build provenance. This proves the image was produced by the
+# workflow file in this repo, at a specific commit, on a GitHub-hosted runner.
+gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz
 
-## Available Images
+# Pull the SPDX SBOM so you can see exactly what's inside.
+cosign verify-attestation --type spdxjson \
+  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+  ghcr.io/rtvkiz/minimal-python:latest \
+  | jq -r '.payload | @base64d | fromjson | .predicate' > python-sbom.spdx.json
+```
+
+More verification recipes (cosign signature, SBOM, SLSA provenance) live in [`.github/SECURITY.md`](.github/SECURITY.md).
+
+## How `minimal` is different
+
+|  | minimal | Chainguard | Docker Hardened | Minimus / RapidFort |
+|---|:---:|:---:|:---:|:---:|
+| **License** | MIT | Proprietary | Apache-2.0 | Proprietary |
+| **Cost** | $0 | ~$30k/image/yr | Free + paid support | Sales call |
+| **Auth to pull** | No | Yes | Yes | Yes |
+| **Rate limits** | None | Yes | Yes | Yes |
+| **Build recipes public** | Yes, every `melange.yaml` | No | Yes, Dockerfiles | No |
+| **Cosign sig + SBOM + SLSA L3** | Yes | Yes | Yes | Yes |
+| **Vendor SLA, FedRAMP/STIG** | No | Yes (paid) | Yes (paid) | Yes (paid) |
+
+Reach for `minimal` if you want hardened images without paying or signing up, if you want to read every build recipe end-to-end, or if you want a working template to fork into your own internal catalog.
+
+It's probably not the right fit if you need a vendor contract, FedRAMP or STIG accreditation paperwork, or a thousand-plus images on day one — those are real things this project doesn't try to solve.
+
+## What every image ships with
+
+- A cosign keyless signature, verifiable against the public Rekor transparency log.
+- An SPDX SBOM attached as an in-toto attestation — every package, version, and license.
+- SLSA v1.0 build provenance — cryptographic proof of which workflow, which commit, and which runner produced the image.
+- A daily Grype scan, with results in the [public dashboard](https://rtvkiz.github.io/minimal/) and the GitHub Security tab.
+- Native `linux/amd64` and `linux/arm64` builds.
+- A non-root user by default (UID 65532), unless the upstream insists otherwise.
+- No shell where possible — most images don't ship `/bin/sh`.
+- A six-hour rebuild cadence, so Wolfi CVE patches land in hours, not days.
+
+## Available Images — 41 total
+
+| Category | Count | Highlights |
+|---|---|---|
+| **Languages & runtimes** | 9 | python, node-slim, bun, go, java, ruby, php, dotnet, deno |
+| **Databases** | 5 | mysql, mariadb, postgres-slim, sqlite, opensearch |
+| **Caches, queues, messaging** | 6 | redis-slim, valkey, memcached, kafka, rabbitmq, nats |
+| **Web servers & proxies** | 6 | nginx, httpd, caddy, haproxy, traefik, envoy |
+| **Observability** | 6 | prometheus, victoria-metrics, jaeger, loki, otelcol, fluent-bit |
+| **Infrastructure** | 5 | coredns, etcd, openbao, keycloak, qdrant |
+| **Apps** | 4 | jenkins, gitea, minio, rails |
+
+<details>
+<summary><strong>Full image catalog with pull commands</strong></summary>
+
+<br>
 
 | Image | Pull Command | Shell | Use Case |
 |-------|--------------|-------|----------|
 | | | **Languages** | |
-| **Python** | `docker pull ghcr.io/rtvkiz/minimal-python:latest` | No | Python apps, microservices |
-| **Node.js-slim** | `docker pull ghcr.io/rtvkiz/minimal-node-slim:latest` | No | Node.js apps, JavaScript |
-| **Bun** | `docker pull ghcr.io/rtvkiz/minimal-bun:latest` | No | Fast JavaScript/TypeScript runtime |
-| **Go** | `docker pull ghcr.io/rtvkiz/minimal-go:latest` | No | Go development, CGO builds |
-| **.NET Runtime** | `docker pull ghcr.io/rtvkiz/minimal-dotnet:latest` | No | .NET 10 runtime for apps |
-| **Java** | `docker pull ghcr.io/rtvkiz/minimal-java:latest` | No | OpenJDK 26 JRE for Java apps |
-| **Ruby** | `docker pull ghcr.io/rtvkiz/minimal-ruby:latest` | No | Ruby 4.0 runtime (built from source) |
-| **PHP** | `docker pull ghcr.io/rtvkiz/minimal-php:latest` | No | PHP 8.5 CLI (built from source) |
-| **Rails** | `docker pull ghcr.io/rtvkiz/minimal-rails:latest` | No | Ruby 4.0 + Rails 8.1 (built from source) |
-| | | **Web Servers** | |
-| **Nginx** | `docker pull ghcr.io/rtvkiz/minimal-nginx:latest` | No | Reverse proxy, static files |
-| **HTTPD** | `docker pull ghcr.io/rtvkiz/minimal-httpd:latest` | Maybe* | Apache web server |
+| Python | `docker pull ghcr.io/rtvkiz/minimal-python:latest` | No | Python apps, microservices |
+| Node.js-slim | `docker pull ghcr.io/rtvkiz/minimal-node-slim:latest` | No | Node.js apps, JavaScript |
+| Bun | `docker pull ghcr.io/rtvkiz/minimal-bun:latest` | No | Fast JavaScript/TypeScript runtime |
+| Go | `docker pull ghcr.io/rtvkiz/minimal-go:latest` | No | Go development, CGO builds |
+| .NET Runtime | `docker pull ghcr.io/rtvkiz/minimal-dotnet:latest` | No | .NET 10 runtime for apps |
+| Java | `docker pull ghcr.io/rtvkiz/minimal-java:latest` | No | OpenJDK 26 JRE for Java apps |
+| Ruby | `docker pull ghcr.io/rtvkiz/minimal-ruby:latest` | No | Ruby 4.0 runtime (built from source) |
+| PHP | `docker pull ghcr.io/rtvkiz/minimal-php:latest` | No | PHP 8.5 CLI (built from source) |
+| Rails | `docker pull ghcr.io/rtvkiz/minimal-rails:latest` | No | Ruby 4.0 + Rails 8.1 (built from source) |
+| Deno | `docker pull ghcr.io/rtvkiz/minimal-deno:latest` | No | Secure TypeScript/JavaScript runtime |
 | | | **Databases** | |
-| **MySQL** | `docker pull ghcr.io/rtvkiz/minimal-mysql:latest` | Yes | Relational database, LTS track (8.4.x), built from source |
-| **MariaDB** | `docker pull ghcr.io/rtvkiz/minimal-mariadb:latest` | Yes | MariaDB LTS (11.4.x) built from source, MySQL-compatible |
-| **PostgreSQL-slim** | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
-| **SQLite** | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
-| | | **Caching** | |
-| **Redis-slim** | `docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest` | No | In-memory data store |
-| **Memcached** | `docker pull ghcr.io/rtvkiz/minimal-memcached:latest` | No | In-memory caching (built from source) |
-| **Valkey** | `docker pull ghcr.io/rtvkiz/minimal-valkey:latest` | No | BSD-licensed Redis fork (Linux Foundation), built from source |
-| | | **Messaging** | |
-| **Kafka** | `docker pull ghcr.io/rtvkiz/minimal-kafka:latest` | Yes | Apache Kafka 4.x, KRaft mode, custom jlink JRE |
-| **RabbitMQ** | `docker pull ghcr.io/rtvkiz/minimal-rabbitmq:latest` | Yes | RabbitMQ 4.x AMQP broker, Wolfi Erlang OTP runtime |
-| **NATS** | `docker pull ghcr.io/rtvkiz/minimal-nats:latest` | No | NATS Server (`nats-server`) only — core message broker with JetStream, built from source |
-| | | **Object Storage** | |
-| **MinIO** | `docker pull ghcr.io/rtvkiz/minimal-minio:latest` | No | S3-compatible object storage, built from source |
+| MySQL | `docker pull ghcr.io/rtvkiz/minimal-mysql:latest` | Yes | MySQL LTS 8.4.x, built from source |
+| MariaDB | `docker pull ghcr.io/rtvkiz/minimal-mariadb:latest` | Yes | MariaDB LTS 11.4.x, built from source |
+| PostgreSQL-slim | `docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest` | No | Relational database |
+| SQLite | `docker pull ghcr.io/rtvkiz/minimal-sqlite:latest` | No | Embedded SQL database CLI |
+| OpenSearch | `docker pull ghcr.io/rtvkiz/minimal-opensearch:latest` | No* | OpenSearch 3.x — search & analytics |
+| | | **Caches, Queues, Messaging** | |
+| Redis-slim | `docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest` | No | In-memory data store |
+| Memcached | `docker pull ghcr.io/rtvkiz/minimal-memcached:latest` | No | In-memory caching (built from source) |
+| Valkey | `docker pull ghcr.io/rtvkiz/minimal-valkey:latest` | No | BSD-licensed Redis fork (LF) |
+| Kafka | `docker pull ghcr.io/rtvkiz/minimal-kafka:latest` | Yes | Apache Kafka 4.x, KRaft mode |
+| RabbitMQ | `docker pull ghcr.io/rtvkiz/minimal-rabbitmq:latest` | Yes | RabbitMQ 4.x AMQP broker |
+| NATS | `docker pull ghcr.io/rtvkiz/minimal-nats:latest` | No | NATS Server with JetStream |
+| | | **Web Servers & Proxies** | |
+| Nginx | `docker pull ghcr.io/rtvkiz/minimal-nginx:latest` | No | Reverse proxy, static files |
+| HTTPD | `docker pull ghcr.io/rtvkiz/minimal-httpd:latest` | Maybe* | Apache web server |
+| Caddy | `docker pull ghcr.io/rtvkiz/minimal-caddy:latest` | No | Automatic HTTPS web server |
+| HAProxy | `docker pull ghcr.io/rtvkiz/minimal-haproxy:latest` | No | TCP/HTTP load balancer |
+| Traefik | `docker pull ghcr.io/rtvkiz/minimal-traefik:latest` | No | Cloud-native reverse proxy |
+| Envoy | `docker pull ghcr.io/rtvkiz/minimal-envoy:latest` | No | Service proxy & load balancer |
 | | | **Observability** | |
-| **Prometheus** | `docker pull ghcr.io/rtvkiz/minimal-prometheus:latest` | No | Metrics collection and alerting, built from source |
-| **VictoriaMetrics** | `docker pull ghcr.io/rtvkiz/minimal-victoria-metrics:latest` | No | High-performance metrics storage and query engine, built from source |
-| **Jaeger** | `docker pull ghcr.io/rtvkiz/minimal-jaeger:latest` | No | Distributed tracing platform (v2), built from source |
-| **OTel Collector** | `docker pull ghcr.io/rtvkiz/minimal-otelcol:latest` | No | OpenTelemetry Collector core — traces, metrics, logs, built from source |
-| | | **Databases / Search** | |
-| **OpenSearch** | `docker pull ghcr.io/rtvkiz/minimal-opensearch:latest` | No* | OpenSearch 3.x — Elasticsearch-compatible search and analytics |
-| **etcd** | `docker pull ghcr.io/rtvkiz/minimal-etcd:latest` | No | Distributed key-value store for Kubernetes and service discovery, built from source |
-| **Qdrant** | `docker pull ghcr.io/rtvkiz/minimal-qdrant:latest` | No | Vector database for AI/ML semantic search, built from source (Rust) |
-| | | **Runtimes** | |
-| **Deno** | `docker pull ghcr.io/rtvkiz/minimal-deno:latest` | No | Secure TypeScript/JavaScript runtime (Wolfi package) |
-| | | **Proxies** | |
-| **Caddy** | `docker pull ghcr.io/rtvkiz/minimal-caddy:latest` | No | Automatic HTTPS web server |
-| **HAProxy** | `docker pull ghcr.io/rtvkiz/minimal-haproxy:latest` | No | High-performance TCP/HTTP load balancer |
-| **Traefik** | `docker pull ghcr.io/rtvkiz/minimal-traefik:latest` | No | Cloud-native reverse proxy and load balancer, built from source |
-| **Envoy** | `docker pull ghcr.io/rtvkiz/minimal-envoy:latest` | No | Cloud-native service proxy and load balancer, upstream binary |
-| | | **DNS** | |
-| **CoreDNS** | `docker pull ghcr.io/rtvkiz/minimal-coredns:latest` | No | DNS server (Kubernetes default), built from source |
-| | | **Secrets/IAM** | |
-| **OpenBao** | `docker pull ghcr.io/rtvkiz/minimal-openbao:latest` | No | Secret management server (open-source Vault fork, MPL-2.0) |
-| **Keycloak** | `docker pull ghcr.io/rtvkiz/minimal-keycloak:latest` | Yes | Identity and access management server (pre-built distribution) |
-| | | **Logging** | |
-| **Loki** | `docker pull ghcr.io/rtvkiz/minimal-loki:latest` | No | Log aggregation system by Grafana Labs, built from source |
-| **Fluent Bit** | `docker pull ghcr.io/rtvkiz/minimal-fluent-bit:latest` | No | Lightweight log processor and forwarder, built from source |
-| | | **AI/ML** | |
-| **CUDA Python** | *disabled* | No | Python + CUDA 12.9 + cuDNN 9.10 for ML inference (x86_64 only) — build disabled, code retained |
-| | | **Git Hosting** | |
-| **Gitea** | `docker pull ghcr.io/rtvkiz/minimal-gitea:latest` | Yes | Self-hosted Git service (built from source) |
-| | | **CI/CD** | |
-| **Jenkins** | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
+| Prometheus | `docker pull ghcr.io/rtvkiz/minimal-prometheus:latest` | No | Metrics collection & alerting |
+| VictoriaMetrics | `docker pull ghcr.io/rtvkiz/minimal-victoria-metrics:latest` | No | High-perf metrics storage |
+| Jaeger | `docker pull ghcr.io/rtvkiz/minimal-jaeger:latest` | No | Distributed tracing (v2) |
+| Loki | `docker pull ghcr.io/rtvkiz/minimal-loki:latest` | No | Log aggregation (Grafana Labs) |
+| OTel Collector | `docker pull ghcr.io/rtvkiz/minimal-otelcol:latest` | No | OpenTelemetry Collector core |
+| Fluent Bit | `docker pull ghcr.io/rtvkiz/minimal-fluent-bit:latest` | No | Lightweight log processor |
+| | | **Infrastructure** | |
+| CoreDNS | `docker pull ghcr.io/rtvkiz/minimal-coredns:latest` | No | Kubernetes default DNS |
+| etcd | `docker pull ghcr.io/rtvkiz/minimal-etcd:latest` | No | Distributed key-value store |
+| OpenBao | `docker pull ghcr.io/rtvkiz/minimal-openbao:latest` | No | Secret management (Vault fork) |
+| Keycloak | `docker pull ghcr.io/rtvkiz/minimal-keycloak:latest` | Yes | Identity & access management |
+| Qdrant | `docker pull ghcr.io/rtvkiz/minimal-qdrant:latest` | No | Vector DB for AI/ML (Rust) |
+| | | **Apps** | |
+| Jenkins | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
+| Gitea | `docker pull ghcr.io/rtvkiz/minimal-gitea:latest` | Yes | Self-hosted Git service |
+| MinIO | `docker pull ghcr.io/rtvkiz/minimal-minio:latest` | No | S3-compatible object storage |
+| | | **AI / ML** | |
+| CUDA Python | *disabled* | No | Python + CUDA 12.9 + cuDNN 9.10 (build paused, code retained) |
 
-*\*HTTPD, Jenkins, Kafka may include shell(sh,busybox) via transitive Wolfi dependencies or KRaft init entrypoint. MySQL includes busybox for its auto-init entrypoint script. OpenSearch includes bash/busybox as transitive dependencies of the opensearch-3 Wolfi package. Gitea includes busybox — required for git hooks which shell out to sh. Keycloak includes bash — required for kc.sh entrypoint. CI treats shell presence as informational.*
+*\*HTTPD, Jenkins, Kafka, MySQL, OpenSearch, Gitea, Keycloak include shell (`sh`/`busybox`/`bash`) via transitive Wolfi dependencies or because the upstream entrypoint requires it. CI treats shell presence as informational.*
 
-*The NATS image contains only [`nats-server`](https://github.com/nats-io/nats-server) (the broker). The NATS ecosystem also includes a separate CLI ([`natscli`](https://github.com/nats-io/natscli)) and client libraries — these are not included.*
+</details>
 
 ## Quick Start
 
 ```bash
-# Python - run your app
+# Python app
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-python:latest /app/main.py
 
-# Node.js - run your app
-docker run --rm -v $(pwd):/app -w /app ghcr.io/rtvkiz/minimal-node-slim:latest index.js
-
-# Bun - fast JavaScript runtime
-docker run --rm ghcr.io/rtvkiz/minimal-bun:latest --version
-
-# Go - build your app
-docker run --rm -v $(pwd):/app -w /app ghcr.io/rtvkiz/minimal-go:latest build -o /tmp/app .
-
-# Nginx - reverse proxy
+# Nginx reverse proxy
 docker run -d -p 8080:80 ghcr.io/rtvkiz/minimal-nginx:latest
 
-# HTTPD - serve static content
-docker run -d -p 8080:80 ghcr.io/rtvkiz/minimal-httpd:latest
+# PostgreSQL
+docker run -d -p 5432:5432 -v pgdata:/var/lib/postgresql/data \
+  ghcr.io/rtvkiz/minimal-postgres-slim:latest
 
-# Jenkins - CI/CD controller
-docker run -d -p 8080:8080 -v jenkins_home:/var/jenkins_home ghcr.io/rtvkiz/minimal-jenkins:latest
-
-# Redis - in-memory data store
+# Redis
 docker run -d -p 6379:6379 ghcr.io/rtvkiz/minimal-redis-slim:latest
 
-# MySQL - relational database (LTS)
+# Kafka (KRaft mode — auto-initializes storage on first boot)
+docker run -d -p 9092:9092 -v kafkadata:/var/kafka/data \
+  ghcr.io/rtvkiz/minimal-kafka:latest
+```
+
+<details>
+<summary><strong>More <code>docker run</code> examples (Node, Go, MySQL, MariaDB, Java, .NET, PHP, Rails, RabbitMQ, Gitea, …)</strong></summary>
+
+<br>
+
+```bash
+# Node.js
+docker run --rm -v $(pwd):/app -w /app ghcr.io/rtvkiz/minimal-node-slim:latest index.js
+
+# Bun
+docker run --rm ghcr.io/rtvkiz/minimal-bun:latest --version
+
+# Go
+docker run --rm -v $(pwd):/app -w /app ghcr.io/rtvkiz/minimal-go:latest build -o /tmp/app .
+
+# HTTPD
+docker run -d -p 8080:80 ghcr.io/rtvkiz/minimal-httpd:latest
+
+# Jenkins
+docker run -d -p 8080:8080 -v jenkins_home:/var/jenkins_home ghcr.io/rtvkiz/minimal-jenkins:latest
+
+# MySQL
 docker run -d -p 3306:3306 -v mysqldata:/var/lib/mysql ghcr.io/rtvkiz/minimal-mysql:latest
 
-# Memcached - in-memory caching
+# Memcached
 docker run -d -p 11211:11211 ghcr.io/rtvkiz/minimal-memcached:latest
 
-# PostgreSQL - relational database
-docker run -d -p 5432:5432 -v pgdata:/var/lib/postgresql/data ghcr.io/rtvkiz/minimal-postgres-slim:latest
-
-# SQLite - embedded SQL database
+# SQLite
 docker run --rm -v $(pwd):/data ghcr.io/rtvkiz/minimal-sqlite:latest /data/mydb.sqlite "SELECT sqlite_version();"
 
-# .NET - run your app
+# .NET
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-dotnet:latest /app/myapp.dll
 
-# Java - run your app
+# Java
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-java:latest -jar /app/myapp.jar
 
-# PHP - run your app
+# PHP
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-php:latest /app/index.php
 
-# Rails - run your app
+# Rails
 docker run --rm -v $(pwd):/app ghcr.io/rtvkiz/minimal-rails:latest -e "require 'rails'; puts Rails.version"
 
-# Kafka - start a broker (KRaft mode, auto-initializes storage on first boot)
-docker run -d -p 9092:9092 -v kafkadata:/var/kafka/data ghcr.io/rtvkiz/minimal-kafka:latest
-
-# RabbitMQ - AMQP message broker
+# RabbitMQ
 docker run -d -p 5672:5672 -v rabbitmqdata:/var/lib/rabbitmq ghcr.io/rtvkiz/minimal-rabbitmq:latest
 
-# Gitea - self-hosted Git service
+# Gitea
 docker run -d -p 3000:3000 -v giteadata:/data/gitea ghcr.io/rtvkiz/minimal-gitea:latest
 ```
 
-## Security Features
+</details>
 
-| | | |
-|:--|:--|:--|
-| **Vulnerability scanning** — Every build scanned with Grype; results in [vulnerability report](https://rtvkiz.github.io/minimal/), job summary, and Security tab | **Immutable tags** — Chainguard-style `VERSION-rN` tags for reproducible deployments | **Signed images** — All images signed with [cosign](https://github.com/sigstore/cosign) keyless signing |
-| **SBOM generation** — Full software bill of materials in SPDX format | **Non-root users** — All images run as non-root by default | **Minimal attack surface** — Only essential packages included |
-| **Shell-less images** — Most images have no shell | **Reproducible builds** — Declarative apko configurations | **Multi-architecture** — Native support for AMD64 and ARM64 |
+## Using in production
 
-## Image Tags
-
-Every image is published with two tags:
+**Pin to immutable version tags.** Every image is published with two tags:
 
 | Tag | Format | Example | Mutable |
-|-----|--------|---------|---------|
-| **Version** | `VERSION-rEPOCH` | `ghcr.io/rtvkiz/minimal-redis-slim:8.4.1-r0` | No (immutable) |
-| **Latest** | `latest` | `ghcr.io/rtvkiz/minimal-redis-slim:latest` | Yes (floating) |
+|---|---|---|---|
+| Version | `VERSION-rEPOCH` | `ghcr.io/rtvkiz/minimal-redis-slim:8.4.1-r0` | No |
+| Latest | `latest` | `ghcr.io/rtvkiz/minimal-redis-slim:latest` | Yes |
 
-**For production, pin to the immutable version tag:**
+```dockerfile
+# Production Dockerfile — pin by version tag, ideally by digest
+FROM ghcr.io/rtvkiz/minimal-go:1.26.0-r0 AS build
+WORKDIR /src
+COPY . .
+RUN go build -o /out/app
 
-```bash
-# Immutable — guaranteed to never change
-docker pull ghcr.io/rtvkiz/minimal-redis-slim:8.4.1-r0
-
-# Floating — always points to the most recent build
-docker pull ghcr.io/rtvkiz/minimal-redis-slim:latest
+FROM ghcr.io/rtvkiz/minimal-python:3.14.0-r0
+COPY --from=build /out/app /usr/bin/app
+ENTRYPOINT ["/usr/bin/app"]
 ```
 
-The `-r0` suffix is the revision number. It resets to `r0` on each new upstream version and increments (`r1`, `r2`, ...) for rebuilds of the same version (e.g., dependency patches, config changes). This follows the same convention as [Chainguard Images](https://www.chainguard.dev/chainguard-images).
+**Enforce signature + provenance in Kubernetes** with [sigstore-policy-controller](https://docs.sigstore.dev/policy-controller/overview/) or Kyverno:
 
-Old version tags are preserved — upgrading to a new version does not remove previous tags from the registry.
+```yaml
+# Kyverno ClusterPolicy — only allow signed minimal-* images
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-minimal-images
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: check-signature
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      verifyImages:
+        - imageReferences:
+            - "ghcr.io/rtvkiz/minimal-*"
+          attestors:
+            - entries:
+                - keyless:
+                    subject: "https://github.com/rtvkiz/minimal/*"
+                    issuer: "https://token.actions.githubusercontent.com"
+```
 
-## How Images Are Built
+The `-r0` suffix is the revision number — resets to `r0` on each upstream version bump, increments (`r1`, `r2`, …) for rebuilds of the same upstream version (e.g., dependency patches). Old version tags are preserved across rebuilds.
+
+## Build pipeline
+
+<details>
+<summary><strong>Pipeline diagram</strong></summary>
+
+<br>
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -209,26 +289,22 @@ Old version tags are preserved — upgrading to a new version does not remove pr
 │                              │                                              │
 │                              ▼                                              │
 │  ┌─────────────────────────────┐    ┌─────────────────────────────────────┐ │
-│  │     melange-build (9 jobs)  │    │      build-apko (10 jobs)           │ │
-│  │     Native ARM64 runners    │    │      Wolfi pre-built packages       │ │
-│  │  ┌────────┐  ┌────────────┐ │    │  Python, Node, Go, Nginx, HTTPD,    │ │
-│  │  │ x86_64 │  │  aarch64   │ │    │  PostgreSQL, Bun, SQLite, .NET,     │ │
-│  │  │ ubuntu │  │ ubuntu-arm │ │    │  Java                               │ │
-│  │  └────┬───┘  └─────┬──────┘ │    │  ┌─────────┐     ┌───────────────┐  │ │
-│  │       │            │        │    │  │  Wolfi  │────►│ apko publish  │  │ │
-│  │       └─────┬──────┘        │    │  │ packages│     │ (multi-arch)  │  │ │
-│  │             ▼               │    │  └─────────┘     └───────┬───────┘  │ │
-│  │     ┌──────────────┐        │    │                          │          │ │
-│  │     │   artifacts  │        │    └──────────────────────────│──────────┘ │
+│  │  melange-build              │    │      build-apko                     │ │
+│  │  Native ARM64 runners       │    │      Wolfi pre-built packages       │ │
+│  │  ┌────────┐  ┌────────────┐ │    │  ┌─────────┐     ┌───────────────┐  │ │
+│  │  │ x86_64 │  │  aarch64   │ │    │  │  Wolfi  │────►│ apko publish  │  │ │
+│  │  │ ubuntu │  │ ubuntu-arm │ │    │  │ packages│     │ (multi-arch)  │  │ │
+│  │  └────┬───┘  └─────┬──────┘ │    │  └─────────┘     └───────┬───────┘  │ │
+│  │       └─────┬──────┘        │    │                          │          │ │
+│  │             ▼               │    └──────────────────────────│──────────┘ │
+│  │     ┌──────────────┐        │                               │            │
+│  │     │   artifacts  │        │                               │            │
 │  │     │ (x86+arm64)  │        │                               │            │
 │  │     └──────┬───────┘        │                               │            │
 │  └────────────│────────────────┘                               │            │
 │               ▼                                                │            │
 │  ┌─────────────────────────────┐                               │            │
-│  │  build-melange (10 jobs)    │                               │            │
-│  │  Jenkins, Redis, MySQL,     │                               │            │
-│  │  Memcached, Caddy, HAProxy, │                               │            │
-│  │  PHP, Rails, Kafka, RabbitMQ│                               │            │
+│  │  build-melange              │                               │            │
 │  │  ┌─────────┐ ┌────────────┐ │                               │            │
 │  │  │  merge  │►│   apko     │─┼───────────────────────────────┤            │
 │  │  │ packages│ │  publish   │ │                               │            │
@@ -236,61 +312,69 @@ Old version tags are preserved — upgrading to a new version does not remove pr
 │  └─────────────────────────────┘                               │            │
 │                                                                ▼            │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                        Verification & Publish                        │   │
-│  │  ┌─────────────┐     ┌─────────────┐     ┌─────────────────────────┐ │   │
-│  │  │   Grype     │────►│    Test     │────►│  cosign sign + SBOM     │ │   │
-│  │  │  CVE scan   │     │   image     │     │  (keyless signing)      │ │   │
-│  │  └─────────────┘     └─────────────┘     └─────────────────────────┘ │   │
+│  │                     Verification & Attestation                       │   │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────────────────┐   │   │
+│  │  │  Grype   │─►│   Test   │─►│  cosign  │─►│  SBOM + SLSA L3     │   │   │
+│  │  │ CVE scan │  │  image   │  │   sign   │  │    attestations     │   │   │
+│  │  └──────────┘  └──────────┘  └──────────┘  └─────────────────────┘   │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  Note: PRs build and test but do not publish. Only main branch publishes.   │
-│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Update Schedule
+</details>
+
+### Update schedule
 
 | Trigger | When | Purpose |
-|---------|------|---------|
-| **Scheduled** | Daily at 2:00 AM UTC | Pick up latest CVE patches from Wolfi |
-| **Push** | On merge to `main` | Deploy configuration changes |
-| **Manual** | Workflow dispatch | Emergency rebuilds |
+|---|---|---|
+| Scheduled | Every 6 hours | Pick up latest CVE patches from Wolfi |
+| Push | On merge to `main` | Deploy configuration changes |
+| Manual | Workflow dispatch | Emergency rebuilds |
 
-Every build is scanned for vulnerabilities; results appear in the job summary and Security tab. We rely on Wolfi's fast CVE patching—images may temporarily include known issues from upstream until fixes are available.
+Vulnerability scan results appear in the [live dashboard](https://rtvkiz.github.io/minimal/), the job summary, and the GitHub Security tab.
 
-### Automated Version Updates
+### Automated upstream tracking
 
-Source-built packages (Jenkins, Redis, MySQL, Memcached, Kafka, PHP, Rails, Gitea) and key services (OpenSearch) are tracked by dedicated workflows that check for new releases daily and open PRs automatically:
-
-| Workflow | Watches | What It Does |
-|----------|---------|--------------|
-| `update-jenkins.yml` | Jenkins LTS releases | Updates version in melange config, Makefile, build.yml |
-| `update-redis.yml` | Redis GitHub releases | Updates version and SHA256 in melange config |
-| `update-mysql.yml` | MySQL LTS (8.4.x) GitHub tags | Updates version and SHA256 in melange config |
-| `update-memcached.yml` | Memcached GitHub releases | Updates version and SHA256 in melange config |
-| `update-kafka.yml` | Apache Kafka 4.x GitHub tags | Updates version and SHA512 in melange config |
-| `update-php.yml` | php.net releases API | Updates version and SHA256; opens issue for new minor/major series |
-| `update-rails.yml` | RubyGems API + Ruby GitHub tags | Updates Rails gem and Ruby source versions independently |
-| `update-rabbitmq.yml` | RabbitMQ GitHub releases | Updates version and SHA256 of generic-unix tarball in melange config |
-| `update-minio.yml` | MinIO GitHub releases | Updates release tag, date-based version, and SHA256 in melange config |
-| `update-victoria-metrics.yml` | VictoriaMetrics GitHub releases | Updates version and SHA256 in melange config |
-| `update-jaeger.yml` | Jaeger v2.x GitHub releases | Updates version and SHA256; warns on major version change |
-| `update-otelcol.yml` | OTel Collector stable releases | Updates version and SHA256; skips prereleases |
-| `update-qdrant.yml` | Qdrant v1.x GitHub releases | Updates version and SHA256; warns on major version change |
-| `update-etcd.yml` | etcd v3.x GitHub releases | Updates version and SHA256; warns on major version change |
-| `update-opensearch.yml` | OpenSearch 3.x GitHub releases | Updates version in Makefile and README.md; opens issue for the next major line |
-| `update-gitea.yml` | Gitea v1.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
-| `update-coredns.yml` | CoreDNS v1.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
-| `update-openbao.yml` | OpenBao v2.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
-| `update-loki.yml` | Loki v3.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
-| `update-fluent-bit.yml` | Fluent Bit v5.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
-| `update-keycloak.yml` | Keycloak 26.x GitHub tags | Updates version and SHA256 in melange config; warns on major version change |
-| `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, Java, PostgreSQL, Deno package versions |
-
-Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g. PHP 8.5 → 8.6) create a GitHub Issue with a manual upgrade checklist, since configure flags or APIs may change.
+Source-built images are tracked by dedicated workflows that check upstream daily and open PRs:
 
 <details>
-<summary><strong>Image Specifications</strong></summary>
+<summary><strong>Per-image update workflows (21 total)</strong></summary>
+
+<br>
+
+| Workflow | Watches | What It Does |
+|---|---|---|
+| `update-jenkins.yml` | Jenkins LTS releases | Updates version in melange config, Makefile, build.yml |
+| `update-redis.yml` | Redis GitHub releases | Updates version and SHA256 |
+| `update-mysql.yml` | MySQL LTS (8.4.x) GitHub tags | Updates version and SHA256 |
+| `update-memcached.yml` | Memcached GitHub releases | Updates version and SHA256 |
+| `update-kafka.yml` | Apache Kafka 4.x GitHub tags | Updates version and SHA512 |
+| `update-php.yml` | php.net releases API | Updates version and SHA256; opens issue for new minor/major series |
+| `update-rails.yml` | RubyGems API + Ruby GitHub tags | Updates Rails gem and Ruby source versions independently |
+| `update-rabbitmq.yml` | RabbitMQ GitHub releases | Updates version and SHA256 |
+| `update-minio.yml` | MinIO GitHub releases | Updates release tag, date-based version, and SHA256 |
+| `update-victoria-metrics.yml` | VictoriaMetrics GitHub releases | Updates version and SHA256 |
+| `update-jaeger.yml` | Jaeger v2.x GitHub releases | Updates version and SHA256; warns on major version change |
+| `update-otelcol.yml` | OTel Collector stable releases | Updates version and SHA256; skips prereleases |
+| `update-qdrant.yml` | Qdrant v1.x GitHub releases | Updates version and SHA256 |
+| `update-etcd.yml` | etcd v3.x GitHub releases | Updates version and SHA256 |
+| `update-opensearch.yml` | OpenSearch 3.x GitHub releases | Updates version in Makefile and README |
+| `update-gitea.yml` | Gitea v1.x GitHub tags | Updates version and SHA256 |
+| `update-coredns.yml` | CoreDNS v1.x GitHub tags | Updates version and SHA256 |
+| `update-openbao.yml` | OpenBao v2.x GitHub tags | Updates version and SHA256 |
+| `update-loki.yml` | Loki v3.x GitHub tags | Updates version and SHA256 |
+| `update-fluent-bit.yml` | Fluent Bit v5.x GitHub tags | Updates version and SHA256 |
+| `update-keycloak.yml` | Keycloak 26.x GitHub tags | Updates version and SHA256 |
+| `update-wolfi-packages.yml` | Wolfi APKINDEX | Detects new Python, Node, Go, .NET, Java, PostgreSQL, Deno versions |
+
+Patch updates are auto-PR'd and validated by CI. Minor/major bumps create a GitHub Issue with a manual upgrade checklist.
+
+</details>
+
+<details>
+<summary><strong>Image specifications (versions, users, entrypoints)</strong></summary>
 
 <br>
 
@@ -302,9 +386,10 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | Go | 1.26.x | nonroot (65532) | `/usr/bin/go` | `/app` |
 | Nginx | mainline | nginx (65532) | `/usr/sbin/nginx -g "daemon off;"` | `/` |
 | HTTPD | 2.4.x | www-data (65532) | `/usr/sbin/httpd -DFOREGROUND` | `/var/www/localhost/htdocs` |
-| Jenkins | 2.555.1 LTS | jenkins (1000) | `tini -- java -jar jenkins.war` | `/var/jenkins_home` |
+| Jenkins | 2.555.x LTS | jenkins (1000) | `tini -- java -jar jenkins.war` | `/var/jenkins_home` |
 | Redis | 8.6.x | redis (65532) | `/usr/bin/redis-server` | `/` |
 | MySQL | 8.4.x | mysql (65532) | `/usr/bin/docker-entrypoint.sh` | `/` |
+| MariaDB | 11.4.x | mariadb (65532) | `/usr/bin/mariadbd` | `/var/lib/mysql` |
 | Memcached | 1.6.x | memcached (65532) | `/usr/bin/memcached` | `/` |
 | PostgreSQL | 18.x | postgres (70) | `/usr/bin/postgres` | `/` |
 | SQLite | 3.51.x | nonroot (65532) | `/usr/bin/sqlite3` | `/data` |
@@ -315,11 +400,13 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 | Rails | Ruby 4.0.x + Rails 8.1.x | nonroot (65532) | `/usr/bin/ruby` | `/app` |
 | Kafka | 4.2.x | kafka (65532) | `/usr/bin/kafka-entrypoint.sh` | `/` |
 | RabbitMQ | 4.3.x | rabbitmq (65532) | `/opt/rabbitmq/sbin/rabbitmq-server` | `/` |
-| MinIO | RELEASE.2025-10-15T17-29-55Z | minio (65532) | `/usr/bin/minio server --console-address :9001 /data` | `/data` |
+| NATS | latest | nonroot (65532) | `/usr/bin/nats-server` | `/` |
+| Valkey | latest | nonroot (65532) | `/usr/bin/valkey-server` | `/` |
+| MinIO | RELEASE.2025-10-15 | minio (65532) | `/usr/bin/minio server --console-address :9001 /data` | `/data` |
 | OpenSearch | 3.6.0 | opensearch (65532) | `/usr/share/opensearch/opensearch-docker-entrypoint.sh` | `/usr/share/opensearch/data` |
 | etcd | 3.6.x | nonroot (65532) | `/usr/bin/etcd` | `/var/lib/etcd` |
 | VictoriaMetrics | 1.142.x | nonroot (65532) | `/usr/bin/victoria-metrics` | `/` |
-| Jaeger | 2.17.x | nonroot (65532) | `/usr/bin/jaeger` | `/` |
+| Jaeger | 2.18.x | nonroot (65532) | `/usr/bin/jaeger` | `/` |
 | OTel Collector | 0.151.x | nonroot (65532) | `/usr/bin/otelcol` | `/` |
 | Qdrant | 1.17.x | nonroot (65532) | `/usr/bin/qdrant` | `/qdrant` |
 | Deno | 2.x | nonroot (65532) | `/usr/bin/deno` | `/app` |
@@ -332,165 +419,88 @@ Patch updates are auto-PR'd and validated by CI. Minor/major version bumps (e.g.
 
 </details>
 
-<details>
-<summary><strong>Build Locally</strong></summary>
-
-<br>
+## Build locally
 
 ```bash
 # Prerequisites
 go install chainguard.dev/apko@latest
-go install chainguard.dev/melange@latest  # needed for melange-backed images (source builds and repackaged upstream distributions)
-brew install anchore/grype/grype  # or: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh
+go install chainguard.dev/melange@latest
+brew install anchore/grype/grype
 
-# Build all images
-make build
-
-# Build specific image
+# Build & test a specific image
 make python
-make node-slim
-make bun
-make go
-make nginx
-make httpd
-make jenkins
-make redis-slim
-make mysql
-make memcached
-make postgres-slim
-make sqlite
-make dotnet
-make java
-make php
-make rails
-make kafka
-make rabbitmq
-make gitea
+make test-python
+
+# Build everything
+make build
 
 # Scan for CVEs
 make scan
-
-# Run tests
-make test
 ```
 
-</details>
+See the [Makefile](Makefile) for the full target list.
+
+## Project structure
 
 <details>
-<summary><strong>Project Structure</strong></summary>
+<summary><strong>Repository layout</strong></summary>
 
 <br>
 
 ```
 minimal/
-├── python/apko/python.yaml       # Python image (Wolfi pkg)
-├── node-slim/apko/node.yaml      # Node.js slim image (Wolfi pkg, shell-less)
-├── bun/apko/bun.yaml             # Bun image (Wolfi pkg)
-├── go/apko/go.yaml               # Go image (Wolfi pkg)
-├── nginx/apko/nginx.yaml         # Nginx image (Wolfi pkg)
-├── httpd/apko/httpd.yaml         # HTTPD image (Wolfi pkg)
-├── jenkins/
-│   ├── apko/jenkins.yaml         # Jenkins image
-│   └── melange.yaml              # jlink JRE build
-├── redis-slim/
-│   ├── apko/redis.yaml           # Redis image
-│   └── melange.yaml              # Redis source build
-├── mysql/
-│   ├── apko/mysql.yaml           # MySQL LTS image
-│   └── melange.yaml              # MySQL LTS source build
-├── memcached/
-│   ├── apko/memcached.yaml       # Memcached image
-│   └── melange.yaml              # Memcached source build
-├── postgres-slim/apko/postgres.yaml  # PostgreSQL image (Wolfi pkg)
-├── sqlite/apko/sqlite.yaml          # SQLite image (Wolfi pkg)
-├── dotnet/apko/dotnet.yaml          # .NET Runtime image (Wolfi pkg)
-├── java/apko/java.yaml              # OpenJDK 26 JRE image (Wolfi pkg)
-├── ruby/
-│   ├── apko/ruby.yaml                # Ruby image
-│   └── melange.yaml                  # Ruby from source (ruby-lang.org)
-├── php/
-│   ├── apko/php.yaml                # PHP image
-│   └── melange.yaml                 # PHP from source (php.net)
-├── rails/
-│   ├── apko/rails.yaml              # Rails image
-│   └── melange.yaml                 # Ruby from source + Rails gem
-├── kafka/
-│   ├── apko/kafka.yaml              # Kafka image
-│   └── melange.yaml                 # Apache binary + jlink JRE
-├── gitea/
-│   ├── apko/gitea.yaml              # Gitea image
-│   └── melange.yaml                 # Gitea source build (Go + Node.js frontend)
-├── coredns/
-│   ├── apko/coredns.yaml            # CoreDNS image
-│   └── melange.yaml                 # CoreDNS source build (Go)
-├── openbao/
-│   ├── apko/openbao.yaml            # OpenBao image
-│   └── melange.yaml                 # OpenBao source build (Go)
-├── loki/
-│   ├── apko/loki.yaml               # Loki image
-│   └── melange.yaml                 # Loki source build (Go)
-├── fluent-bit/
-│   ├── apko/fluent-bit.yaml         # Fluent Bit image
-│   └── melange.yaml                 # Fluent Bit source build (C/CMake)
-├── keycloak/
-│   ├── apko/keycloak.yaml           # Keycloak image
-│   └── melange.yaml                 # Keycloak pre-built distribution
-├── .github/workflows/
-│   ├── build.yml                 # Daily CI pipeline
-│   ├── update-jenkins.yml        # Jenkins version updates
-│   ├── update-php.yml            # PHP version updates (from php.net)
-│   ├── update-ruby.yml           # Ruby version updates (from ruby-lang.org)
-│   ├── update-rails.yml          # Rails version updates
-│   ├── update-redis.yml          # Redis version updates
-│   ├── update-mysql.yml          # MySQL LTS version updates
-│   ├── update-memcached.yml      # Memcached version updates
-│   ├── update-kafka.yml          # Kafka version updates
-│   ├── update-gitea.yml          # Gitea version updates
-│   ├── update-coredns.yml        # CoreDNS version updates
-│   ├── update-openbao.yml        # OpenBao version updates
-│   ├── update-loki.yml           # Loki version updates
-│   ├── update-fluent-bit.yml     # Fluent Bit version updates
-│   ├── update-keycloak.yml       # Keycloak version updates
-│   └── update-wolfi-packages.yml # Wolfi package updates
+├── <image>/
+│   ├── apko/<name>.yaml          # final image config
+│   ├── melange.yaml              # source build (optional)
+│   └── test.sh                   # smoke test
+├── .github/
+│   ├── SECURITY.md               # disclosure policy + verification recipes
+│   └── workflows/
+│       ├── build.yml             # main CI pipeline (6h rebuilds)
+│       ├── patch-go-deps.yml     # daily Go transitive CVE patching
+│       ├── update-<image>.yml    # per-image upstream version tracking
+│       └── update-wolfi-packages.yml
 ├── Makefile
+├── README.md
+├── CONTRIBUTING.md
 └── LICENSE
 ```
 
 </details>
 
-## Supported Architectures
+## Status and roadmap
 
-All images are published as multi-architecture manifests supporting:
+Recently landed:
 
-| Architecture | Platform | Status |
-|--------------|----------|--------|
-| `x86_64` | `linux/amd64` | Supported |
-| `aarch64` | `linux/arm64` | Supported |
+- Cosign keyless signatures on every image.
+- SPDX SBOMs attached as in-toto attestations, verifiable with `cosign verify-attestation`.
+- SLSA v1.0 build provenance, verifiable with `gh attestation verify`.
+- A public CVE dashboard with per-image breakdowns.
+- A six-hour rebuild cadence, plus daily patching of Go transitive CVEs.
 
-Docker and container runtimes automatically pull the correct architecture for your platform.
+Next up:
 
-## Verify Image Signatures
+- VEX statements for CVEs that aren't actually exploitable in our images, so the dashboard stops showing noise.
+- Consolidating the per-image update workflows into one matrix-driven job.
+- Niche AI/ML images (CUDA-aware Python variants) — there's a [HN thread](https://news.ycombinator.com/item?id=46842670) where this came up and it seems worth exploring.
 
-All images are signed with [cosign](https://github.com/sigstore/cosign) keyless signing via Sigstore. To verify:
+What this project is not:
 
-```bash
-cosign verify \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --certificate-identity-regexp https://github.com/rtvkiz/minimal/ \
-  ghcr.io/rtvkiz/minimal-python:latest
-```
+- Solo-maintained, so there's no vendor SLA and no on-call rotation.
+- Not FedRAMP / FIPS / STIG accredited. The verifiable provenance and SBOMs help with audits, but they don't replace the paperwork.
 
-Replace `minimal-python` with any image name. A successful output confirms the image was built by this repository's CI pipeline and hasn't been tampered with.
+## Contributing
+
+PRs are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) has the build setup, the image conventions, and the local validation checklist I run before pushing.
+
+If you find a security issue, please use [GitHub's private vulnerability reporting](https://github.com/rtvkiz/minimal/security/advisories/new) rather than opening a public issue. The disclosure policy and response timeline are in [`.github/SECURITY.md`](.github/SECURITY.md).
 
 ## License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
 
-### Third-Party Packages
-
-Container images include packages from [Wolfi](https://github.com/wolfi-dev) and other sources, each with their own licenses (Apache-2.0, MIT, GPL, LGPL, BSD, etc.). Full license information is included in each image's SBOM:
+Container images include packages from [Wolfi](https://github.com/wolfi-dev) and other sources, each with their own licenses (Apache-2.0, MIT, GPL, LGPL, BSD, etc.). Full license information is in each image's SBOM:
 
 ```bash
-# View package licenses in an image
 cosign download sbom ghcr.io/rtvkiz/minimal-python:latest | jq '.packages[].licenseConcluded'
 ```
