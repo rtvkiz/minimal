@@ -53,13 +53,6 @@ pipeline:
 
 
 
-  # patch-go-deps: auto-generated — do not edit manually
-  - runs: |
-      cd /home/build/caddy-${{package.version}}
-      go get github.com/go-jose/go-jose/v3@v3.0.5
-      go mod tidy
-      if [ -d vendor ]; then go mod vendor; fi
-  # end-patch-go-deps
 
   # Build Caddy from source (static binary)
   - runs: |
