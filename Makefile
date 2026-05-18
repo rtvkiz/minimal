@@ -1582,22 +1582,7 @@ test-java:
 	@echo "✓ OpenJDK Runtime tests passed"
 
 test-ruby:
-	@echo "Testing Ruby image..."
-	docker run --rm $(REGISTRY)/$(OWNER)/minimal-ruby:latest -v
-	@echo "Testing RubyGems..."
-	docker run --rm $(REGISTRY)/$(OWNER)/minimal-ruby:latest \
-		-e "require 'rubygems'; puts Gem::VERSION"
-	@echo "Testing Bundler..."
-	docker run --rm $(REGISTRY)/$(OWNER)/minimal-ruby:latest \
-		-e "require 'bundler'; puts Bundler::VERSION"
-	@echo "Testing core libraries..."
-	docker run --rm $(REGISTRY)/$(OWNER)/minimal-ruby:latest \
-		-e "require 'openssl'; require 'yaml'; require 'json'; puts 'Core libs OK'"
-	@echo "Checking default workdir..."
-	@docker run --rm $(REGISTRY)/$(OWNER)/minimal-ruby:latest -e "puts Dir.pwd" | grep -qx /work
-	@echo "Verifying no shell..."
-	@docker run --rm --entrypoint /bin/sh $(REGISTRY)/$(OWNER)/minimal-ruby:latest \
-		-c "echo fail" 2>/dev/null && echo "FAIL: shell found!" && exit 1 || echo "✓ No shell (as expected)"
+	@IMAGE=$(REGISTRY)/$(OWNER)/minimal-ruby:latest bash ruby/test.sh
 	@echo "✓ Ruby tests passed"
 
 test-rails:

@@ -78,7 +78,49 @@ pipeline:
       find "${{targets.destdir}}/usr" -type f -name "*.so" -exec strip --strip-unneeded {} \; 2>/dev/null || true
       strip --strip-unneeded "${{targets.destdir}}/usr/bin/ruby" 2>/dev/null || true
       strip --strip-unneeded "${{targets.destdir}}/usr/bin/gem" 2>/dev/null || true
-      [ -f "${{targets.destdir}}/usr/bin/bundle" ] && strip --strip-unneeded "${{targets.destdir}}/usr/bin/bundle" 2>/dev/null || true
+
+  # Match Chainguard's curated default-gem set to drive CVE count to zero:
+  #   - bump json from the version Ruby 4.0.4 vendors to a CVE-patched release
+  #   - remove net-imap (5 CVEs, rarely needed in app images)
+  #   - remove bundler (Chainguard removes it; users add via `gem install bundler`)
+  #   - remove rexml (historical XML CVE risk, niche use)
+  # Ruby keeps two copies of default gems — one in the gems registry and one
+  # in stdlib (/usr/lib/ruby/4.0.0/<gem>.rb). require uses stdlib first, so
+  # both copies must be removed for the bump or strip to take effect.
+  # Documented in ruby/README.md.
+  - runs: |
+      DEST="${{targets.destdir}}"
+      GEMDIR="${DEST}/usr/lib/ruby/gems/4.0.0"
+      STDLIB="${DEST}/usr/lib/ruby/4.0.0"
+
+      # Strip vulnerable / unused default + bundled gems from BOTH locations
+      for gem in json net-imap bundler rexml; do
+        rm -rf "${GEMDIR}/gems/${gem}-"*
+        rm -f  "${GEMDIR}/specifications/default/${gem}-"*.gemspec
+        rm -f  "${GEMDIR}/specifications/${gem}-"*.gemspec
+        rm -rf "${STDLIB}/${gem}" "${STDLIB}/${gem}.rb"
+      done
+      # net/imap lives under net/ namespace in stdlib
+      rm -rf "${STDLIB}/net/imap" "${STDLIB}/net/imap.rb"
+      # bundler binaries
+      rm -f "${DEST}/usr/bin/bundle" "${DEST}/usr/bin/bundler"
+
+      # Install patched json (matches Chainguard's 2.19.x line) into the gem
+      # registry. With the stdlib copy gone, `require 'json'` will activate it.
+      gem install --no-document --no-user-install \
+        --install-dir "${GEMDIR}" \
+        json --version 2.19.5
+
+      # Sanity: confirm the destdir files were actually placed/removed.
+      # We don't `require` here because the destdir ruby binary has compiled-in
+      # paths pointing at the system Ruby install (not the destdir), so a
+      # require would test the wrong filesystem. The apko smoke test in
+      # ruby/test.sh validates the published image end-to-end.
+      [ -d "${GEMDIR}/gems/json-2.19.5" ] || { echo "::error::json 2.19.5 not installed"; exit 1; }
+      [ ! -e "${STDLIB}/bundler.rb" ] || { echo "::error::bundler.rb still in stdlib"; exit 1; }
+      [ ! -e "${STDLIB}/net/imap.rb" ] || { echo "::error::net/imap.rb still in stdlib"; exit 1; }
+      [ ! -e "${STDLIB}/rexml" ] || { echo "::error::rexml/ still in stdlib"; exit 1; }
+      echo "Curated gem set: destdir layout verified"
 
       echo "Verifying Ruby build..."
       ls -lh "${{targets.destdir}}/usr/bin/ruby"

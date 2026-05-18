@@ -7,8 +7,15 @@ docker run --rm "$IMAGE" -v
 echo "Testing RubyGems..."
 docker run --rm "$IMAGE" -e "require 'rubygems'; puts Gem::VERSION"
 
-echo "Testing Bundler..."
-docker run --rm "$IMAGE" -e "require 'bundler'; puts Bundler::VERSION"
+echo "Verifying curated gem set (bundler, net-imap, rexml stripped; json bumped)..."
+docker run --rm "$IMAGE" -e '
+  raise "bundler should be stripped" if begin require "bundler"; true; rescue LoadError; false; end
+  raise "net/imap should be stripped" if begin require "net/imap"; true; rescue LoadError; false; end
+  raise "rexml should be stripped" if begin require "rexml/document"; true; rescue LoadError; false; end
+  require "json"
+  raise "json must be >=2.19, got #{JSON::VERSION}" unless JSON::VERSION.start_with?("2.19.")
+  puts "Curated gem set verified (json #{JSON::VERSION})"
+'
 
 echo "Testing core libraries (openssl, yaml, json)..."
 docker run --rm "$IMAGE" -e "require 'openssl'; require 'yaml'; require 'json'; puts 'Core libs OK'"
