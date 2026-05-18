@@ -47,6 +47,8 @@ This project implements the following security practices:
 
 Every published image is signed with [cosign](https://github.com/sigstore/cosign) keyless signatures (sigstore + GitHub OIDC). Every image also carries an SPDX SBOM attestation and a SLSA v1.0 build provenance attestation, all verifiable against the public Rekor transparency log.
 
+**Requires cosign v2.6 or later** (v3.x recommended). Earlier versions cannot read attestations stored via the OCI 1.1 referrers API and will report "no signatures found" against valid images. Upgrade with `brew upgrade cosign` or download from the [cosign releases page](https://github.com/sigstore/cosign/releases).
+
 ### 1. Verify the cosign signature
 
 ```bash
