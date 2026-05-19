@@ -4,7 +4,7 @@
 
 package:
   name: memcached-minimal
-  version: 1.6.41
+  version: 1.6.42
   epoch: 0
   description: "Minimal Memcached built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-memcached.yml workflow
-  sha256: e097073c156eeff9e12655b054f446d57374cfba5c132dcdbe7fac64e728286a
+  sha256: 50f08b879d4f9d36dea9d905e9eaade15c708e38db7e9a73fc21dc8b45395de7
 
 environment:
   contents:
