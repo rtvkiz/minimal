@@ -1,0 +1,144 @@
+# Template: language runtime dev variant
+#
+# Use this template when the prod image is a language interpreter or
+# compiler (python, node, ruby, go, java, etc.). The dev variant adds
+# a build environment so users can compile native extensions, install
+# packages from source, and run their language's package manager.
+#
+# How to use:
+#   1. Copy this file to <image>/apko/<image>-dev.yaml.
+#   2. Replace every <PLACEHOLDER> below.
+#   3. Delete the comment blocks marked "TEMPLATE NOTE" once you've
+#      addressed them.
+#   4. If the prod image strips a package manager (like ruby strips
+#      bundler) that the dev variant needs, add a subpackage to
+#      <image>/melange.yaml that ships it, and list the subpackage in
+#      the contents.packages section below.
+#
+# Reference: see ruby/apko/ruby-dev.yaml for a fully-worked example.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Primary runtime (same package the prod variant pulls)
+    - <RUNTIME_PACKAGE>
+    # TEMPLATE NOTE: e.g. `ruby-minimal`, `python-3.14`, `nodejs-22`.
+    # If your prod apko config uses a melange-built package, use the
+    # same name here so prod and dev share the .apk artifact.
+
+    # Core runtime libs (mirror these from your prod apko config)
+    - <RUNTIME_DEPS_FROM_PROD>
+    # TEMPLATE NOTE: e.g. glibc, glibc-locale-posix, ld-linux, libgcc,
+    # libstdc++, libssl3, libcrypto3, libcrypt1, zlib, yaml, libffi,
+    # readline, ca-certificates-bundle. Copy verbatim from prod.
+
+    # --- Required dev variant minimum (see CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- C/C++ toolchain for native extension compilation ---
+    - build-base
+    - gcc
+    - binutils
+    - make
+    - pkgconf
+    - posix-cc-wrappers
+    - linux-headers
+    - openssf-compiler-options
+
+    # --- Dev headers ---
+    - glibc-dev
+    - libstdc++-dev
+    - libxcrypt-dev
+
+    # --- VCS for `bundle install --git`, `pip install git+...`, `go get` ---
+    - git
+
+    # --- Auth + network libs commonly needed by native extensions ---
+    - krb5-libs
+    - libldap
+    - libcurl-openssl4
+    - libexpat1
+
+    # --- DB client libs for native extensions (sqlite3, pg, mysql2 builds) ---
+    - sqlite-libs
+
+    # --- Language-specific package manager(s) ---
+    # TEMPLATE NOTE: if Wolfi ships a separate apk that's compatible
+    # with your runtime, add it here (e.g. `pip` is in `python-3.14`
+    # already, but `bundler` is a separate Wolfi apk for the Wolfi
+    # ruby). If you built your runtime from source via melange and
+    # the package manager isn't in the resulting .apk, add a subpackage
+    # to your melange.yaml that ships it, then reference that
+    # subpackage here.
+    - <PACKAGE_MANAGER_PACKAGE>
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  # MUST match prod for drop-in compatibility with `docker run IMAGE <args>`.
+  # Users get a shell via `--entrypoint /bin/sh` per CONVENTIONS.md.
+  command: <PROD_ENTRYPOINT_COMMAND>
+  # TEMPLATE NOTE: e.g. /usr/bin/ruby, /usr/bin/python3.14, /usr/bin/node
+
+cmd: <PROD_CMD>
+# TEMPLATE NOTE: e.g. --version
+
+work-dir: <PROD_WORKDIR>
+# TEMPLATE NOTE: e.g. /work (must match prod)
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  LANG: C.UTF-8
+
+paths:
+  - path: <PROD_WORKDIR>
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+  # Writable per-user package install dir for the language's
+  # user-install convention (gem install --user-install, pip install --user, etc.)
+  - path: /home/nonroot/<PACKAGE_USER_DIR>
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+    recursive: true
+  # TEMPLATE NOTE: e.g. .gem (ruby), .local (python), .npm (node)
+
+annotations:
+  org.opencontainers.image.title: "minimal-<IMAGE_NAME>-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-<IMAGE_NAME>: same runtime + shell + build toolchain. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/<IMAGE_NAME>"
+  org.opencontainers.image.licenses: "Apache-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

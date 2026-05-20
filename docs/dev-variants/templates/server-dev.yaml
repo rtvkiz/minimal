@@ -1,0 +1,107 @@
+# Template: HTTP server / proxy / observability daemon dev variant
+#
+# Use this template when the prod image is an HTTP server, proxy, or
+# observability daemon (nginx, traefik, prometheus, otelcol, etc.).
+# The dev variant adds HTTP/TLS/network debugging tools so users can
+# probe the server from inside its own pod.
+#
+# Like daemon-dev.yaml, this template does NOT include a C/C++
+# toolchain. If your image's debug workflow involves running
+# server-side scripts (e.g. nginx with the lua module + custom scripts),
+# add the language toolchain explicitly.
+#
+# How to use:
+#   1. Copy this file to <image>/apko/<image>-dev.yaml.
+#   2. Replace every <PLACEHOLDER> below.
+#   3. Delete the comment blocks marked "TEMPLATE NOTE" once addressed.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Primary server binary (same package as prod)
+    - <SERVER_PACKAGE>
+
+    # Core runtime libs (copy verbatim from your prod apko config)
+    - <RUNTIME_DEPS_FROM_PROD>
+
+    # --- Required dev variant minimum (see CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - ca-certificates-bundle
+    - wget
+
+    # --- HTTP debugging ---
+    - curl
+
+    # --- TLS debugging (cert inspection, expiry checks, s_client probes) ---
+    - openssl
+
+    # --- DNS diagnosis ---
+    - bind-tools
+    # TEMPLATE NOTE: ships `dig`, `host`, `nslookup`. Drop if the server
+    # is a DNS server itself (coredns) — it'll already have these.
+
+    # --- Server-specific admin CLI ---
+    # TEMPLATE NOTE: examples:
+    #   - minio: `mc` (minio client)
+    #   - traefik: nothing extra (uses HTTP API)
+    #   - prometheus: `promtool` (often shipped in same apk)
+    #   - nginx: `nginx -t` is the binary itself
+    # Add the apk here if one exists. Leave commented if not.
+    # - <ADMIN_CLI_PACKAGE>
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  # MUST match prod for drop-in compatibility.
+  command: <PROD_ENTRYPOINT_COMMAND>
+  # TEMPLATE NOTE: e.g. /usr/sbin/nginx, /usr/bin/caddy
+
+cmd: <PROD_CMD>
+# TEMPLATE NOTE: copy from prod (often a config flag like
+# `-g daemon off;` for nginx or `run --config /etc/caddy/Caddyfile`)
+
+work-dir: <PROD_WORKDIR>
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  LANG: C.UTF-8
+
+paths:
+  # Mirror any prod runtime/config dirs + permissions exactly so a dev
+  # image can mount the same volumes as prod.
+  - path: <PROD_CONFIG_OR_DATA_DIR>
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  # TEMPLATE NOTE: e.g. /etc/nginx, /var/cache/nginx, /var/log/nginx.
+  # Repeat per prod path.
+
+annotations:
+  org.opencontainers.image.title: "minimal-<IMAGE_NAME>-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-<IMAGE_NAME>: same server + shell + HTTP/TLS debug tools. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/<IMAGE_NAME>"
+  org.opencontainers.image.licenses: "Apache-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64
