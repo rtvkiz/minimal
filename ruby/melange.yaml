@@ -126,6 +126,33 @@ pipeline:
       ls -lh "${{targets.destdir}}/usr/bin/ruby"
       ls -lh "${{targets.destdir}}/usr/bin/gem"
 
+subpackages:
+  # Bundler as a separate apk so prod ruby-minimal stays curated (bundler
+  # stripped) while ruby-minimal-dev pulls bundler back in. Built against
+  # the same source ruby so gem paths line up by construction.
+  - name: ruby-minimal-bundler
+    description: "Bundler dependency manager for ruby-minimal"
+    dependencies:
+      runtime:
+        - ruby-minimal
+    pipeline:
+      - runs: |
+          SUBPKG="${{targets.subpkgdir}}"
+          GEMDIR="${SUBPKG}/usr/lib/ruby/gems/4.0.0"
+          mkdir -p "${GEMDIR}" "${SUBPKG}/usr/bin"
+
+          # Loose pin — picks up whatever bundler is current at build time.
+          # 6h scheduled rebuild + smoke tests catch any regression.
+          gem install --no-document --no-user-install \
+            --install-dir "${GEMDIR}" \
+            --bindir "${SUBPKG}/usr/bin" \
+            bundler
+
+          [ -x "${SUBPKG}/usr/bin/bundle" ]   || { echo "::error::bundle binstub missing"; exit 1; }
+          [ -x "${SUBPKG}/usr/bin/bundler" ]  || { echo "::error::bundler binstub missing"; exit 1; }
+          ls -d "${GEMDIR}/gems/bundler-"* >/dev/null || { echo "::error::bundler gem dir missing"; exit 1; }
+          echo "✓ ruby-minimal-bundler built"
+
 update:
   enabled: true
   github:

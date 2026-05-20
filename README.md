@@ -230,6 +230,28 @@ docker run -d -p 3000:3000 -v giteadata:/data/gitea ghcr.io/rtvkiz/minimal-gitea
 | Version | `VERSION-rEPOCH` | `ghcr.io/rtvkiz/minimal-redis-slim:8.4.1-r0` | No |
 | Latest | `latest` | `ghcr.io/rtvkiz/minimal-redis-slim:latest` | Yes |
 
+### Dev variants (`:latest-dev`)
+
+Select images also publish a `-dev` companion built from the **same source as prod** — same runtime version, same curated package set — plus a shell, package manager, compiler toolchain, and language-specific build dependencies. Intended for CI build stages and in-pod debugging, **not for production deployment**.
+
+| Image | Prod | Dev |
+|---|---|---|
+| ruby | `ghcr.io/rtvkiz/minimal-ruby:latest` | `ghcr.io/rtvkiz/minimal-ruby:latest-dev` |
+
+Typical multi-stage usage:
+
+```dockerfile
+FROM ghcr.io/rtvkiz/minimal-ruby:latest-dev AS build
+WORKDIR /work
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+FROM ghcr.io/rtvkiz/minimal-ruby:latest
+COPY --from=build /work /work
+```
+
+Dev variants share the prod image's signing, SBOM, and SLSA provenance pipeline. They are **not tracked on the public CVE dashboard** — they intentionally ship a larger attack surface. See [`.github/SECURITY.md`](.github/SECURITY.md#dev-variants--dev-tags) for the policy.
+
 ```dockerfile
 # Production Dockerfile — pin by version tag, ideally by digest
 FROM ghcr.io/rtvkiz/minimal-go:1.26.0-r0 AS build

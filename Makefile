@@ -61,7 +61,7 @@ OPENSEARCH_VERSION ?= 3.6.0
 CUDA_VERSION ?= 12.9.0
 
 .PHONY: all build scan clean help
-.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java ruby ruby-melange php php-melange rails rails-melange kafka kafka-melange keygen opensearch
+.PHONY: python jenkins jenkins-melange go node-slim nginx httpd redis-slim redis-slim-melange mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim bun sqlite dotnet java ruby ruby-melange ruby-dev php php-melange rails rails-melange kafka kafka-melange keygen opensearch
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange mariadb mariadb-melange
 .PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno
@@ -69,7 +69,7 @@ CUDA_VERSION ?= 12.9.0
 .PHONY: coredns coredns-melange openbao openbao-melange loki loki-melange fluent-bit fluent-bit-melange keycloak keycloak-melange
 .PHONY: gitea gitea-melange
 .PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
-.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-ruby test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
+.PHONY: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-ruby test-ruby-dev test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
 
 all: build scan
 
@@ -886,6 +886,22 @@ ruby: ruby-melange
 	@rm -f ruby.tar sbom-*.spdx.json
 	@echo "✓ minimal-ruby built (source build)"
 
+ruby-dev: ruby-melange
+	@echo "Assembling minimal-ruby-dev image with apko..."
+	apko build ruby/apko/ruby-dev.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION)-dev \
+		ruby-dev.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < ruby-dev.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION)-dev-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION)-dev
+	docker tag $(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION)-dev-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-ruby:latest-dev
+	@rm -f ruby-dev.tar sbom-*.spdx.json
+	@echo "✓ minimal-ruby-dev built"
+
 #------------------------------------------------------------------------------
 # RAILS IMAGE (melange source build + apko)
 #------------------------------------------------------------------------------
@@ -1584,6 +1600,10 @@ test-java:
 test-ruby:
 	@IMAGE=$(REGISTRY)/$(OWNER)/minimal-ruby:latest bash ruby/test.sh
 	@echo "✓ Ruby tests passed"
+
+test-ruby-dev:
+	@IMAGE=$(REGISTRY)/$(OWNER)/minimal-ruby:latest-dev bash ruby/test-dev.sh
+	@echo "✓ Ruby dev tests passed"
 
 test-rails:
 	@echo "Testing Rails image..."

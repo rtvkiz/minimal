@@ -10,6 +10,19 @@ Only the latest version of each image is supported with security updates. Images
 | Versioned tags | ✅ (latest version only) |
 | Older versions | ❌ |
 
+### Dev variants (`-dev` tags)
+
+Some images publish a `:latest-dev` companion tag (e.g. `minimal-ruby:latest-dev`) that adds a shell, package manager, compiler toolchain, and language-specific build dependencies on top of the prod runtime. They are intended for CI build stages and in-pod debugging — **not for production deployment**.
+
+Dev variants:
+
+- Share the same source build as the prod image (same runtime, same curated gem/dep set)
+- Are rebuilt on the same daily cadence
+- Are signed and SBOM/SLSA attested using the same pipeline as prod
+- **Are not tracked on the public CVE dashboard** — they intentionally ship a larger attack surface, and our daily rebuild keeps their base packages current rather than us chasing CVE counts
+
+Use the prod tag (`:latest`) for runtime workloads. Use the dev tag (`:latest-dev`) as a multi-stage builder, then `COPY --from=build` into the prod image.
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in this project's **build infrastructure, workflows, or container configurations**, please report it responsibly:

@@ -62,7 +62,7 @@ jobs:
             {"name":"jenkins"},
             {"name":"redis-slim","apko":"redis-slim/apko/redis.yaml"},
             {"name":"mysql"},{"name":"memcached"},{"name":"caddy"},
-            {"name":"haproxy"},{"name":"ruby"},{"name":"php"},{"name":"rails"},
+            {"name":"haproxy"},{"name":"ruby","variants":["prod","dev"]},{"name":"php"},{"name":"rails"},
             {"name":"kafka"},{"name":"valkey"},{"name":"nats"},
             {"name":"traefik"},{"name":"rabbitmq"},{"name":"minio"},
             {"name":"prometheus"},{"name":"mariadb"},{"name":"etcd"},
@@ -129,14 +129,28 @@ jobs:
             }
           ]}')
 
-          # Generate build-melange matrix (one entry per image)
+          # Generate build-melange matrix (one entry per image x variant).
+          # Images without explicit `variants` build prod only; opt-in to a
+          # dev variant by adding `"variants":["prod","dev"]` and creating
+          # <name>/apko/<name>-dev.yaml + <name>/test-dev.sh.
           BUILD_MELANGE_MATRIX=$(echo "$MELANGE_IMAGES" | jq -c --argjson changed "$CHANGED" '{include: [
-            .[] | select(.name as $n | $changed | index($n)) |
+            .[] | select(.name as $n | $changed | index($n)) | . as $img |
+            (.variants // ["prod"])[] as $variant |
             {
-              name: .name,
-              apko_config: (.apko // (.name + "/apko/" + .name + ".yaml")),
-              melange_config: (.name + "/melange.yaml"),
-              arches: (.arches // "x86_64,aarch64")
+              name: $img.name,
+              variant: $variant,
+              apko_config: (
+                if $variant == "dev"
+                then ($img.name + "/apko/" + $img.name + "-dev.yaml")
+                else ($img.apko // ($img.name + "/apko/" + $img.name + ".yaml"))
+                end
+              ),
+              melange_config: ($img.name + "/melange.yaml"),
+              arches: ($img.arches // "x86_64,aarch64"),
+              tag_suffix: (if $variant == "dev" then "-dev" else "" end),
+              latest_tag: (if $variant == "dev" then "latest-dev" else "latest" end),
+              test_script: (if $variant == "dev" then ($img.name + "/test-dev.sh") else ($img.name + "/test.sh") end),
+              scan_for_cves: ($variant == "prod")
             }
           ]}')
 
@@ -651,22 +665,25 @@ jobs:
       - name: Build image with apko
         run: |
           apko build ${{ matrix.apko_config }} \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }} \
-            ${{ matrix.name }}.tar \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }} \
+            ${{ matrix.name }}${{ matrix.tag_suffix }}.tar \
             --arch x86_64 \
             --repository-append ./packages \
             --keyring-append ./melange.rsa.pub
-          docker load < ${{ matrix.name }}.tar
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "minimal-${{ matrix.name }}" | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}
+          docker load < ${{ matrix.name }}${{ matrix.tag_suffix }}.tar
+          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "minimal-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" | head -1)
+          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}
 
       - name: Report image size
         run: |
-          echo "## ${{ matrix.name }} Image Size" >> $GITHUB_STEP_SUMMARY
+          echo "## ${{ matrix.name }}${{ matrix.tag_suffix }} Image Size" >> $GITHUB_STEP_SUMMARY
           docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep "minimal-${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY || true
+            grep "minimal-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" >> $GITHUB_STEP_SUMMARY || true
 
+      # CVE scan: prod variants only. Dev variants intentionally ship a larger
+      # surface (shell, compilers, etc.) and are not tracked on the dashboard.
       - name: Cache Grype binary
+        if: matrix.scan_for_cves
         id: grype-cache
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
@@ -674,7 +691,7 @@ jobs:
           key: grype-${{ env.GRYPE_VERSION }}-linux-amd64
 
       - name: Install Grype
-        if: steps.grype-cache.outputs.cache-hit != 'true'
+        if: matrix.scan_for_cves && steps.grype-cache.outputs.cache-hit != 'true'
         run: |
           curl -fL --retry 5 --retry-all-errors -o /tmp/grype.tar.gz \
             "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
@@ -683,9 +700,11 @@ jobs:
           rm -f /tmp/grype.tar.gz
 
       - name: Verify Grype
+        if: matrix.scan_for_cves
         run: grype version
 
       - name: Scan image for vulnerabilities
+        if: matrix.scan_for_cves
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
           grype "$IMAGE" \
@@ -693,7 +712,7 @@ jobs:
             -o sarif=grype-${{ matrix.name }}.sarif
 
       - name: Generate vulnerability report
-        if: always()
+        if: always() && matrix.scan_for_cves
         run: |
           REPORT="grype-${{ matrix.name }}.json"
           if [ ! -f "$REPORT" ]; then
@@ -747,7 +766,7 @@ jobs:
           fi
 
       - name: Upload vulnerability report
-        if: always()
+        if: always() && matrix.scan_for_cves
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: vulnerability-report-${{ matrix.name }}
@@ -756,7 +775,7 @@ jobs:
 
       - name: Upload SARIF to Security tab
         uses: github/codeql-action/upload-sarif@66b39da20ccc656acc90dd27ea30f5d458ec33ce # v3.28.19
-        if: always() && hashFiles(format('grype-{0}.sarif', matrix.name)) != ''
+        if: always() && matrix.scan_for_cves && hashFiles(format('grype-{0}.sarif', matrix.name)) != ''
         continue-on-error: true
         with:
           sarif_file: 'grype-${{ matrix.name }}.sarif'
@@ -776,16 +795,16 @@ jobs:
 
       - name: Test image
         run: |
-          export IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
-          ./${{ matrix.name }}/test.sh
+          export IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}"
+          bash ./${{ matrix.test_script }}
 
       - name: Publish image
         if: github.event_name != 'pull_request'
         id: publish
         run: |
           apko publish ${{ matrix.apko_config }} \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }} \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:latest \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}${{ matrix.tag_suffix }} \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ matrix.latest_tag }} \
             --arch ${{ matrix.arches }} \
             --repository-append ./packages \
             --keyring-append ./melange.rsa.pub \
