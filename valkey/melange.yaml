@@ -5,7 +5,7 @@
 
 package:
   name: valkey-minimal
-  version: 9.0.4
+  version: 9.1.0
   epoch: 0
   description: "Minimal Valkey server and CLI built from source"
   copyright:
@@ -13,7 +13,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-valkey.yml workflow
-  sha256: 8d65e12cc9edb14d117b56fd33300e7b8cde2c087356de3f055d44689667670b
+  sha256: 7789fe1df257774457bafb4c1d56c9f7020c3879a7f5b4234af9030b2bd82dfd
 
 environment:
   contents:
