@@ -81,7 +81,7 @@ jobs:
             {"name":"bun","grep":"bun"},
             {"name":"sqlite","grep":"sqlite"},
             {"name":"dotnet","grep":"dotnet-[0-9].*-runtime"},
-            {"name":"java","grep":"openjdk-[0-9].*-jre"},
+            {"name":"java","grep":"openjdk-[0-9]+"},
             {"name":"opensearch","grep":"opensearch-3"},
             {"name":"deno","grep":"deno"}
           ]'
@@ -523,17 +523,33 @@ jobs:
         if: github.event_name != 'pull_request'
         id: publish
         run: |
-          apko publish ${{ matrix.apko_config }} \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}${{ matrix.tag_suffix }} \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ matrix.latest_tag }} \
-            --arch x86_64,aarch64 \
-            --sbom-path . \
-            | tee apko-publish.out
+          # Retry apko publish: ghcr.io intermittently returns BLOB_UNKNOWN
+          # when the index manifest references a blob the registry hasn't
+          # finished receiving yet. Three attempts with 15s backoff.
+          PUBLISH_OUT=apko-publish.out
+          for attempt in 1 2 3; do
+            if apko publish ${{ matrix.apko_config }} \
+                ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}${{ matrix.tag_suffix }} \
+                ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ matrix.latest_tag }} \
+                --arch x86_64,aarch64 \
+                --sbom-path . \
+                > "$PUBLISH_OUT" 2>&1; then
+              cat "$PUBLISH_OUT"
+              break
+            fi
+            echo "::warning::apko publish attempt $attempt/3 failed"
+            cat "$PUBLISH_OUT"
+            if [ $attempt -eq 3 ]; then
+              echo "::error::apko publish failed after 3 attempts"
+              exit 1
+            fi
+            sleep 15
+          done
           # apko prints "ref@digest" on the last line
-          DIGEST=$(grep -oE 'sha256:[a-f0-9]{64}' apko-publish.out | tail -1)
+          DIGEST=$(grep -oE 'sha256:[a-f0-9]{64}' "$PUBLISH_OUT" | tail -1)
           if [ -z "$DIGEST" ]; then
             echo "::error::Failed to parse image digest from apko publish output"
-            cat apko-publish.out
+            cat "$PUBLISH_OUT"
             exit 1
           fi
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
@@ -826,18 +842,34 @@ jobs:
         if: github.event_name != 'pull_request'
         id: publish
         run: |
-          apko publish ${{ matrix.apko_config }} \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}${{ matrix.tag_suffix }} \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ matrix.latest_tag }} \
-            --arch ${{ matrix.arches }} \
-            --repository-append ./packages \
-            --keyring-append ./melange.rsa.pub \
-            --sbom-path . \
-            | tee apko-publish.out
-          DIGEST=$(grep -oE 'sha256:[a-f0-9]{64}' apko-publish.out | tail -1)
+          # Retry apko publish: ghcr.io intermittently returns BLOB_UNKNOWN
+          # when the index manifest references a blob the registry hasn't
+          # finished receiving yet. Three attempts with 15s backoff.
+          PUBLISH_OUT=apko-publish.out
+          for attempt in 1 2 3; do
+            if apko publish ${{ matrix.apko_config }} \
+                ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}${{ matrix.tag_suffix }} \
+                ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ matrix.latest_tag }} \
+                --arch ${{ matrix.arches }} \
+                --repository-append ./packages \
+                --keyring-append ./melange.rsa.pub \
+                --sbom-path . \
+                > "$PUBLISH_OUT" 2>&1; then
+              cat "$PUBLISH_OUT"
+              break
+            fi
+            echo "::warning::apko publish attempt $attempt/3 failed"
+            cat "$PUBLISH_OUT"
+            if [ $attempt -eq 3 ]; then
+              echo "::error::apko publish failed after 3 attempts"
+              exit 1
+            fi
+            sleep 15
+          done
+          DIGEST=$(grep -oE 'sha256:[a-f0-9]{64}' "$PUBLISH_OUT" | tail -1)
           if [ -z "$DIGEST" ]; then
             echo "::error::Failed to parse image digest from apko publish output"
-            cat apko-publish.out
+            cat "$PUBLISH_OUT"
             exit 1
           fi
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
