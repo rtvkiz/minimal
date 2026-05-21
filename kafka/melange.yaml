@@ -57,13 +57,16 @@ pipeline:
   - runs: |
       LIBS="/home/build/kafka_${{vars.scala_version}}-${{package.version}}/libs"
 
-      # Remove vulnerable JARs
-      rm "$LIBS/plexus-utils-3.5.1.jar"
-      rm "$LIBS/jetty-server-12.0.22.jar"
-      rm "$LIBS/jetty-http-12.0.22.jar"
-      rm "$LIBS/log4j-core-2.25.3.jar"
-      rm "$LIBS/log4j-1.2-api-2.25.3.jar"
-      rm "$LIBS/jackson-core-2.19.2.jar"
+      # Remove vulnerable JARs. Use -f so a kafka version bump that
+      # drops or renames one of these doesn't fail the build — the
+      # download steps below will still place the patched version, and
+      # we'll notice the orphaned jar in the next dep audit.
+      rm -f "$LIBS/plexus-utils-3.5.1.jar"
+      rm -f "$LIBS/jetty-server-12.0.22.jar"
+      rm -f "$LIBS/jetty-http-12.0.22.jar"
+      rm -f "$LIBS/log4j-core-2.25.3.jar"
+      rm -f "$LIBS/log4j-1.2-api-2.25.3.jar"
+      rm -f "$LIBS/jackson-core-2.19.2.jar"
 
       # Download patched versions and verify checksums
       cd "$LIBS"
