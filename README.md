@@ -232,11 +232,7 @@ docker run -d -p 3000:3000 -v giteadata:/data/gitea ghcr.io/rtvkiz/minimal-gitea
 
 ### Dev variants (`:latest-dev`)
 
-Select images also publish a `-dev` companion built from the **same source as prod** — same runtime version, same curated package set — plus a shell, package manager, compiler toolchain, and language-specific build dependencies. Intended for CI build stages and in-pod debugging, **not for production deployment**.
-
-| Image | Prod | Dev |
-|---|---|---|
-| ruby | `ghcr.io/rtvkiz/minimal-ruby:latest` | `ghcr.io/rtvkiz/minimal-ruby:latest-dev` |
+Most images publish a `-dev` companion built from the **same source as prod** — same runtime version, same curated package set — plus a shell, package manager, compiler toolchain, and image-appropriate debug tooling. Intended for CI build stages and in-pod debugging, **not for production deployment**.
 
 Typical multi-stage usage:
 
@@ -250,7 +246,64 @@ FROM ghcr.io/rtvkiz/minimal-ruby:latest
 COPY --from=build /work /work
 ```
 
-Dev variants share the prod image's signing, SBOM, and SLSA provenance pipeline. They are **not tracked on the public CVE dashboard** — they intentionally ship a larger attack surface. See [`.github/SECURITY.md`](.github/SECURITY.md#dev-variants--dev-tags) for the policy.
+To get an interactive shell, override the entrypoint (dev images keep the prod entrypoint for drop-in compatibility):
+
+```bash
+docker run -it --entrypoint /bin/sh   ghcr.io/rtvkiz/minimal-<image>:latest-dev
+docker run -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-<image>:latest-dev
+```
+
+Dev variants share the prod image's signing, SBOM, and SLSA provenance pipeline. They are **not tracked on the public CVE dashboard** — they intentionally ship a larger attack surface. See [`.github/SECURITY.md`](.github/SECURITY.md#dev-variants--dev-tags) for the policy and [`docs/dev-variants/CONVENTIONS.md`](docs/dev-variants/CONVENTIONS.md) for the package composition rules.
+
+#### Status
+
+Legend: ✅ shipping `:latest-dev` · 🚧 in progress · 📝 planned · — n/a
+
+Categories follow the three templates in [`docs/dev-variants/templates/`](docs/dev-variants/templates/) (runtime / daemon / server). The "Reference" column shows where we mirror Chainguard's public `<image>-public/devConfigs` package set; **in-house** means Chainguard ships an Enterprise-only image and we designed the dev composition ourselves.
+
+| Image | Category | Reference | Status |
+|---|---|---|---|
+| ruby | runtime | Chainguard `ruby-public` | ✅ |
+| python | runtime | Chainguard `python-public` | 🚧 |
+| node-slim | runtime | Chainguard `node-public` | 📝 |
+| go | runtime | Chainguard `go-public` | 📝 |
+| java | runtime | Chainguard `jdk-public` | 📝 |
+| dotnet | runtime | Chainguard `dotnet-runtime-10-public` | 📝 |
+| php | runtime | Chainguard `php-fpm-public` | 📝 |
+| rails | runtime | in-house (derive from ruby) | 📝 |
+| bun | runtime | in-house | 📝 |
+| deno | runtime | in-house | 📝 |
+| postgres-slim | daemon | Chainguard `postgres-public` | 📝 |
+| mariadb | daemon | Chainguard `mariadb-public` | 📝 |
+| mysql | daemon | in-house | 📝 |
+| redis-slim | daemon | Chainguard `redis-public` | 📝 |
+| valkey | daemon | Chainguard `valkey-public` | 📝 |
+| memcached | daemon | in-house | 📝 |
+| sqlite | daemon | in-house | 📝 |
+| opensearch | daemon | in-house | 📝 |
+| kafka | daemon | in-house | 📝 |
+| rabbitmq | daemon | in-house | 📝 |
+| nats | daemon | in-house | 📝 |
+| etcd | daemon | in-house | 📝 |
+| qdrant | daemon | in-house | 📝 |
+| nginx | server | Chainguard `nginx-public` | 📝 |
+| haproxy | server | Chainguard `haproxy-public` | 📝 |
+| minio | server | Chainguard `minio-client-public` (server in-house) | 📝 |
+| httpd | server | in-house | 📝 |
+| caddy | server | in-house | 📝 |
+| traefik | server | in-house | 📝 |
+| envoy | server | in-house | 📝 |
+| prometheus | server | in-house | 📝 |
+| victoria-metrics | server | in-house | 📝 |
+| jaeger | server | in-house | 📝 |
+| otelcol | server | in-house | 📝 |
+| loki | server | in-house | 📝 |
+| fluent-bit | server | in-house | 📝 |
+| coredns | server | in-house | 📝 |
+| gitea | server | in-house | 📝 |
+| jenkins | server | in-house | 📝 |
+| keycloak | server | in-house | 📝 |
+| openbao | server | in-house | 📝 |
 
 ```dockerfile
 # Production Dockerfile — pin by version tag, ideally by digest
