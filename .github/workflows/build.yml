@@ -73,15 +73,15 @@ jobs:
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},
-            {"name":"node-slim","apko":"node-slim/apko/node.yaml","grep":"nodejs-[0-9]"},
-            {"name":"go","grep":"go-[0-9]"},
+            {"name":"node-slim","apko":"node-slim/apko/node.yaml","grep":"nodejs-[0-9]","variants":["prod","dev"]},
+            {"name":"go","grep":"go-[0-9]","variants":["prod","dev"]},
             {"name":"nginx","grep":"nginx-mainline"},
             {"name":"httpd","grep":"apache2"},
             {"name":"postgres-slim","apko":"postgres-slim/apko/postgres.yaml","grep":"postgresql-[0-9]"},
             {"name":"bun","grep":"bun"},
             {"name":"sqlite","grep":"sqlite"},
-            {"name":"dotnet","grep":"dotnet-[0-9].*-runtime"},
-            {"name":"java","grep":"openjdk-[0-9]+"},
+            {"name":"dotnet","grep":"dotnet-[0-9].*-runtime","variants":["prod","dev"]},
+            {"name":"java","grep":"openjdk-[0-9]+","variants":["prod","dev"]},
             {"name":"opensearch","grep":"opensearch-3"},
             {"name":"deno","grep":"deno"}
           ]'
@@ -154,23 +154,22 @@ jobs:
             }
           ]}')
 
-          # Generate build-apko matrix
+          # Generate build-apko matrix.
           # Per-image variant fan-out: same convention as BUILD_MELANGE_MATRIX.
           # Images opt-in to a dev variant by adding `"variants":["prod","dev"]`
-          # plus an apko-dev config (defaults to <name>/apko/<name>-dev.yaml,
-          # or <prod_apko_path_with_-dev_suffix> if the prod config uses a
-          # custom path). See docs/dev-variants/CONVENTIONS.md.
+          # plus a `<name>/apko/<name>-dev.yaml` file (universal convention,
+          # regardless of what the prod apko file is named).
+          # See docs/dev-variants/CONVENTIONS.md.
           APKO_MATRIX=$(echo "$APKO_IMAGES" | jq -c --argjson changed "$CHANGED" '{include: [
             .[] | select(.name as $n | $changed | index($n)) | . as $img |
             ($img.variants // ["prod"])[] as $variant |
-            ($img.apko // ($img.name + "/apko/" + $img.name + ".yaml")) as $prod_config |
             {
               name: $img.name,
               variant: $variant,
               apko_config: (
                 if $variant == "dev"
-                then ($prod_config | sub("\\.yaml$"; "-dev.yaml"))
-                else $prod_config
+                then ($img.name + "/apko/" + $img.name + "-dev.yaml")
+                else ($img.apko // ($img.name + "/apko/" + $img.name + ".yaml"))
                 end
               ),
               primary_grep: $img.grep,
