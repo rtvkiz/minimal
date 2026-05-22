@@ -61,7 +61,7 @@ jobs:
           MELANGE_IMAGES='[
             {"name":"jenkins"},
             {"name":"redis-slim","apko":"redis-slim/apko/redis.yaml","variants":["prod","dev"]},
-            {"name":"mysql"},{"name":"memcached"},{"name":"caddy"},
+            {"name":"mysql"},{"name":"memcached","variants":["prod","dev"]},{"name":"caddy"},
             {"name":"haproxy"},{"name":"ruby","variants":["prod","dev"]},{"name":"php","variants":["prod","dev"]},{"name":"rails","variants":["prod","dev"]},
             {"name":"kafka"},{"name":"valkey","variants":["prod","dev"]},{"name":"nats"},
             {"name":"traefik"},{"name":"rabbitmq"},{"name":"minio"},
@@ -79,10 +79,10 @@ jobs:
             {"name":"httpd","grep":"apache2"},
             {"name":"postgres-slim","apko":"postgres-slim/apko/postgres.yaml","grep":"postgresql-[0-9]","variants":["prod","dev"]},
             {"name":"bun","grep":"bun","variants":["prod","dev"]},
-            {"name":"sqlite","grep":"sqlite"},
+            {"name":"sqlite","grep":"sqlite","variants":["prod","dev"]},
             {"name":"dotnet","grep":"dotnet-[0-9].*-runtime","variants":["prod","dev"]},
             {"name":"java","grep":"openjdk-[0-9]+","variants":["prod","dev"]},
-            {"name":"opensearch","grep":"opensearch-3"},
+            {"name":"opensearch","grep":"opensearch-3","variants":["prod","dev"]},
             {"name":"deno","grep":"deno","variants":["prod","dev"]}
           ]'
 

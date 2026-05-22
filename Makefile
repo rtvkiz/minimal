@@ -98,7 +98,7 @@ test-$(1)-dev:
 endef
 
 .PHONY: all build scan clean help
-.PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange keygen opensearch mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
+.PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange memcached-dev caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite sqlite-dev dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange keygen opensearch opensearch-dev mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange mariadb mariadb-melange
 .PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno
@@ -106,7 +106,7 @@ endef
 .PHONY: coredns coredns-melange openbao openbao-melange loki loki-melange fluent-bit fluent-bit-melange keycloak keycloak-melange
 .PHONY: gitea gitea-melange
 .PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
-.PHONY: test-python test-python-dev test-jenkins test-go test-go-dev test-node-slim test-node-slim-dev test-nginx test-httpd test-redis-slim test-redis-slim-dev test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-postgres-slim-dev test-bun test-bun-dev test-sqlite test-dotnet test-dotnet-dev test-java test-java-dev test-ruby test-ruby-dev test-php test-php-dev test-rails test-rails-dev test-deno test-deno-dev test-mariadb test-mariadb-dev test-valkey test-valkey-dev test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
+.PHONY: test-python test-python-dev test-jenkins test-go test-go-dev test-node-slim test-node-slim-dev test-nginx test-httpd test-redis-slim test-redis-slim-dev test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-postgres-slim-dev test-bun test-bun-dev test-sqlite test-dotnet test-dotnet-dev test-java test-java-dev test-ruby test-ruby-dev test-php test-php-dev test-rails test-rails-dev test-deno test-deno-dev test-mariadb test-mariadb-dev test-valkey test-valkey-dev test-memcached-dev test-sqlite-dev test-opensearch-dev test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
 
 all: build scan
 
@@ -153,6 +153,9 @@ $(eval $(call DEV_IMAGE_RULE,postgres-slim))
 $(eval $(call DEV_IMAGE_RULE,mariadb,mariadb-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,redis-slim,redis-slim-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,valkey,valkey-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,memcached,memcached-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,sqlite))
+$(eval $(call DEV_IMAGE_RULE,opensearch))
 
 #------------------------------------------------------------------------------
 # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -1439,6 +1442,9 @@ $(eval $(call DEV_TEST_RULE,postgres-slim))
 $(eval $(call DEV_TEST_RULE,mariadb))
 $(eval $(call DEV_TEST_RULE,redis-slim))
 $(eval $(call DEV_TEST_RULE,valkey))
+$(eval $(call DEV_TEST_RULE,memcached))
+$(eval $(call DEV_TEST_RULE,sqlite))
+$(eval $(call DEV_TEST_RULE,opensearch))
 
 test-python:
 	@echo "Testing Python image..."
