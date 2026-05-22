@@ -1,0 +1,141 @@
+# Development variant of minimal-rails.
+# Same Rails 8 + Ruby 4.0 runtime as prod (bundler already included),
+# plus shell, apk-tools, gcc toolchain for native gems, git, and Node.js
+# for the Rails asset pipeline (jsbundling-rails, cssbundling-rails).
+#
+# In-house composition (Chainguard has no public rails-dev reference).
+# Derives the structure from ruby-dev plus a JS runtime for assets.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Rails + Ruby + bundler (built from source via melange — same as prod)
+    - rails-minimal
+
+    # Core runtime deps (same as prod)
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libstdc++
+
+    # Ruby runtime libs (same as prod)
+    - libssl3
+    - libcrypto3
+    - libcrypt1
+    - zlib
+    - yaml
+    - libffi
+    - readline
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- C/C++ toolchain (native gem compilation: nokogiri, pg, etc.) ---
+    - build-base
+    - gcc
+    - binutils
+    - make
+    - pkgconf
+    - posix-cc-wrappers
+    - linux-headers
+    - openssf-compiler-options
+
+    # --- Dev headers ---
+    - glibc-dev
+    - libstdc++-dev
+    - libxcrypt-dev
+
+    # --- Node.js for the Rails asset pipeline (jsbundling/cssbundling) ---
+    - nodejs-26
+    - npm
+    - yarn
+
+    # --- VCS for `bundle install --git` ---
+    - git
+
+    # --- Auth + network libs for popular native gems ---
+    - krb5-libs
+    - libldap
+    - libcurl-openssl4
+    - libexpat1
+
+    # --- DB client libs for ActiveRecord adapters ---
+    - sqlite-libs
+
+    # --- Ruby stdlib helpers ---
+    - gdbm
+    - ncurses
+    - ncurses-terminfo-base
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  # MUST match prod for drop-in compatibility.
+  command: /usr/bin/ruby
+
+work-dir: /app
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  LANG: C.UTF-8
+  RAILS_ENV: development
+
+paths:
+  - path: /app
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+  # Writable gem dir for `gem install --user-install`
+  - path: /home/nonroot/.gem
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+    recursive: true
+  # Writable npm cache (used by Rails asset pipeline via yarn/npm)
+  - path: /home/nonroot/.npm
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+    recursive: true
+
+annotations:
+  org.opencontainers.image.title: "minimal-rails-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-rails: same Rails + Ruby + bundler runtime + shell + build toolchain + Node.js for assets. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/rails"
+  org.opencontainers.image.licenses: "Apache-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64
