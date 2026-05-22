@@ -156,6 +156,10 @@ $(eval $(call DEV_IMAGE_RULE,valkey,valkey-melange,--repository-append ./package
 $(eval $(call DEV_IMAGE_RULE,memcached,memcached-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,sqlite))
 $(eval $(call DEV_IMAGE_RULE,opensearch))
+$(eval $(call DEV_IMAGE_RULE,kafka,kafka-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,rabbitmq,rabbitmq-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,nats,nats-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,etcd,etcd-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -1445,6 +1449,10 @@ $(eval $(call DEV_TEST_RULE,valkey))
 $(eval $(call DEV_TEST_RULE,memcached))
 $(eval $(call DEV_TEST_RULE,sqlite))
 $(eval $(call DEV_TEST_RULE,opensearch))
+$(eval $(call DEV_TEST_RULE,kafka))
+$(eval $(call DEV_TEST_RULE,rabbitmq))
+$(eval $(call DEV_TEST_RULE,nats))
+$(eval $(call DEV_TEST_RULE,etcd))
 
 test-python:
 	@echo "Testing Python image..."
