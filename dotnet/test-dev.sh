@@ -1,7 +1,7 @@
 #!/bin/bash
 # Smoke test for minimal-dotnet-dev.
 # Validates full SDK + shell + git on top of dotnet prod (runtime only).
-set -euo pipefail
+set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"
 

@@ -1,11 +1,11 @@
 #!/bin/bash
-# Smoke test for minimal-valkey-dev.
+# Smoke test for minimal-sqlite-dev.
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"
 
-echo "Testing valkey-server version (parity with prod)..."
-docker run --rm "$IMAGE" --version | grep -qE "^Valkey server"
+echo "Testing sqlite3 version (parity with prod)..."
+docker run --rm "$IMAGE" --version | grep -qE "^[0-9]+\.[0-9]+"
 
 echo "Testing /bin/sh (busybox)..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo sh-ok" | grep -q sh-ok
@@ -16,13 +16,14 @@ docker run --rm --entrypoint /bin/bash "$IMAGE" -c "echo bash-ok" | grep -q bash
 echo "Testing apk-tools present..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" -c "apk --version" | grep -q apk-tools
 
-echo "Testing valkey-cli present..."
-docker run --rm --entrypoint /bin/sh "$IMAGE" -c "valkey-cli --version" | grep -qE "^valkey-cli"
-
-echo "Testing curl/socat/jq present..."
-docker run --rm --entrypoint /bin/sh "$IMAGE" -c "curl --version >/dev/null && socat -V >/dev/null 2>&1 && jq --version >/dev/null"
+echo "Testing curl + jq present..."
+docker run --rm --entrypoint /bin/sh "$IMAGE" -c "curl --version >/dev/null && jq --version >/dev/null"
 
 echo "Testing git..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" -c "git --version" | grep -q "git version"
 
-echo "✓ All valkey-dev smoke tests passed"
+echo "Testing sqlite3 actually works (CREATE + INSERT + SELECT)..."
+docker run --rm --entrypoint /bin/sh "$IMAGE" -c \
+  "sqlite3 /tmp/test.db 'CREATE TABLE t(x INTEGER); INSERT INTO t VALUES (42); SELECT x FROM t;'" | grep -q "^42$"
+
+echo "✓ All sqlite-dev smoke tests passed"
