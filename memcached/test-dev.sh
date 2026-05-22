@@ -1,6 +1,6 @@
 #!/bin/bash
 # Smoke test for minimal-memcached-dev.
-set -euo pipefail
+set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"
 
@@ -22,7 +22,8 @@ docker run --rm --entrypoint /bin/sh "$IMAGE" -c "curl --version >/dev/null && s
 echo "Testing git..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" -c "git --version" | grep -q "git version"
 
-echo "Testing busybox nc (commonly used to send memcached stats commands)..."
-docker run --rm --entrypoint /bin/sh "$IMAGE" -c "which nc" | grep -qE "^/(usr/)?bin/nc"
+# Note: `nc`/`netcat` is NOT bundled with Wolfi's busybox build.
+# To send raw memcached protocol commands (`stats`, `version`, etc.),
+# use `socat - TCP:localhost:11211` instead, or `apk add netcat-openbsd`.
 
 echo "✓ All memcached-dev smoke tests passed"
