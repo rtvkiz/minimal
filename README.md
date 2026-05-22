@@ -255,20 +255,25 @@ docker run -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-<image>:latest-dev
 
 Dev variants share the prod image's signing, SBOM, and SLSA provenance pipeline. They are **not tracked on the public CVE dashboard** — they intentionally ship a larger attack surface. See [`.github/SECURITY.md`](.github/SECURITY.md#dev-variants--dev-tags) for the policy and [`docs/dev-variants/CONVENTIONS.md`](docs/dev-variants/CONVENTIONS.md) for the package composition rules.
 
-#### Status
+**Shipping today:** 6 of 41 dev variants — `ruby`, `python`, `node-slim`, `go`, `java`, `dotnet`. The other 35 are rolling out batch by batch; see status table below.
 
-Legend: ✅ shipping `:latest-dev` · 🚧 in progress · 📝 planned · — n/a
+<details>
+<summary><strong>Per-image dev variant status</strong></summary>
+
+<br>
+
+Legend: ✅ shipping `:latest-dev` · 🚧 in progress · 📝 planned
 
 Categories follow the three templates in [`docs/dev-variants/templates/`](docs/dev-variants/templates/) (runtime / daemon / server). The "Reference" column shows where we mirror Chainguard's public `<image>-public/devConfigs` package set; **in-house** means Chainguard ships an Enterprise-only image and we designed the dev composition ourselves.
 
 | Image | Category | Reference | Status |
 |---|---|---|---|
 | ruby | runtime | Chainguard `ruby-public` | ✅ |
-| python | runtime | Chainguard `python-public` | 🚧 |
-| node-slim | runtime | Chainguard `node-public` | 📝 |
-| go | runtime | Chainguard `go-public` | 📝 |
-| java | runtime | Chainguard `jdk-public` | 📝 |
-| dotnet | runtime | Chainguard `dotnet-runtime-10-public` | 📝 |
+| python | runtime | Chainguard `python-public` | ✅ |
+| node-slim | runtime | Chainguard `node-public` | ✅ |
+| go | runtime | Chainguard `go-public` | ✅ |
+| java | runtime | Chainguard `jdk-public` | ✅ |
+| dotnet | runtime | Chainguard `dotnet-runtime-10-public` | ✅ |
 | php | runtime | Chainguard `php-fpm-public` | 📝 |
 | rails | runtime | in-house (derive from ruby) | 📝 |
 | bun | runtime | in-house | 📝 |
@@ -304,6 +309,8 @@ Categories follow the three templates in [`docs/dev-variants/templates/`](docs/d
 | jenkins | server | in-house | 📝 |
 | keycloak | server | in-house | 📝 |
 | openbao | server | in-house | 📝 |
+
+</details>
 
 ```dockerfile
 # Production Dockerfile — pin by version tag, ideally by digest
