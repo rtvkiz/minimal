@@ -170,6 +170,19 @@ jobs:
             MODROOT="${MODROOTS[$IMAGE]}"
             MARKER="${BUILD_MARKERS[$IMAGE]}"
 
+            # Modules that use Go's "+incompatible" versioning: their import
+            # path lacks a /vN suffix despite shipping major versions ≥ 2.
+            # `go get pkg@vX.Y.Z` fails for these with "invalid version: unknown
+            # revision"; the correct form is `go get pkg@vX.Y.Z+incompatible`.
+            # Add to this list when a new offender shows up in CI failures.
+            INCOMPAT_MODULES=(
+              "github.com/docker/docker"
+              "github.com/docker/cli"
+              "github.com/docker/distribution"
+              "github.com/Microsoft/hcsshim"
+              "k8s.io/kubernetes"
+            )
+
             # Build go get commands
             GO_GETS=""
             APPLIED_COUNT=0
@@ -179,6 +192,15 @@ jobs:
                 echo "  Skipping incompatible Loki module bump: $mod_ver"
                 continue
               fi
+              # Apply +incompatible suffix for known modules that need it.
+              mod_path="${mod_ver%@*}"
+              for incompat in "${INCOMPAT_MODULES[@]}"; do
+                if [ "$mod_path" = "$incompat" ] && [[ "$mod_ver" != *"+incompatible" ]]; then
+                  mod_ver="${mod_ver}+incompatible"
+                  echo "  Applied +incompatible suffix: $mod_ver"
+                  break
+                fi
+              done
               GO_GETS="${GO_GETS}      go get ${mod_ver}\n"
               APPLIED_COUNT=$((APPLIED_COUNT + 1))
             done <<< "$FIXES"
