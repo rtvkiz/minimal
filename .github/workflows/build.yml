@@ -60,12 +60,12 @@ jobs:
           # Image configuration
           MELANGE_IMAGES='[
             {"name":"jenkins"},
-            {"name":"redis-slim","apko":"redis-slim/apko/redis.yaml"},
+            {"name":"redis-slim","apko":"redis-slim/apko/redis.yaml","variants":["prod","dev"]},
             {"name":"mysql"},{"name":"memcached"},{"name":"caddy"},
-            {"name":"haproxy"},{"name":"ruby","variants":["prod","dev"]},{"name":"php"},{"name":"rails"},
-            {"name":"kafka"},{"name":"valkey"},{"name":"nats"},
+            {"name":"haproxy"},{"name":"ruby","variants":["prod","dev"]},{"name":"php","variants":["prod","dev"]},{"name":"rails","variants":["prod","dev"]},
+            {"name":"kafka"},{"name":"valkey","variants":["prod","dev"]},{"name":"nats"},
             {"name":"traefik"},{"name":"rabbitmq"},{"name":"minio"},
-            {"name":"prometheus"},{"name":"mariadb"},{"name":"etcd"},
+            {"name":"prometheus"},{"name":"mariadb","variants":["prod","dev"]},{"name":"etcd"},
             {"name":"victoria-metrics"},{"name":"jaeger"},{"name":"otelcol"},
             {"name":"qdrant"},{"name":"envoy"},{"name":"gitea"},
             {"name":"coredns"},{"name":"openbao"},{"name":"loki"},
@@ -77,13 +77,13 @@ jobs:
             {"name":"go","grep":"go-[0-9]","variants":["prod","dev"]},
             {"name":"nginx","grep":"nginx-mainline"},
             {"name":"httpd","grep":"apache2"},
-            {"name":"postgres-slim","apko":"postgres-slim/apko/postgres.yaml","grep":"postgresql-[0-9]"},
-            {"name":"bun","grep":"bun"},
+            {"name":"postgres-slim","apko":"postgres-slim/apko/postgres.yaml","grep":"postgresql-[0-9]","variants":["prod","dev"]},
+            {"name":"bun","grep":"bun","variants":["prod","dev"]},
             {"name":"sqlite","grep":"sqlite"},
             {"name":"dotnet","grep":"dotnet-[0-9].*-runtime","variants":["prod","dev"]},
             {"name":"java","grep":"openjdk-[0-9]+","variants":["prod","dev"]},
             {"name":"opensearch","grep":"opensearch-3"},
-            {"name":"deno","grep":"deno"}
+            {"name":"deno","grep":"deno","variants":["prod","dev"]}
           ]'
 
           # Determine if full rebuild is needed
@@ -499,7 +499,9 @@ jobs:
           # Read primary package name from apko config (source of truth).
           # Dev variants resolve their own SBOM but the primary package
           # version matches prod (same upstream binary).
-          PRIMARY_PKG=$(grep -oE '${{ matrix.primary_grep }}[a-z0-9.\-]*' ${{ matrix.apko_config }} | head -1)
+          # Restrict to actual package list entries (apko yaml indented `- pkg`)
+          # so header comments mentioning a related package name don't false-match.
+          PRIMARY_PKG=$(grep -oE '^[[:space:]]+-[[:space:]]+${{ matrix.primary_grep }}[a-z0-9.\-]*' ${{ matrix.apko_config }} | grep -oE '${{ matrix.primary_grep }}[a-z0-9.\-]*' | head -1)
           if [ -z "$PRIMARY_PKG" ]; then
             echo "::error::Failed to extract primary package from ${{ matrix.apko_config }} using pattern '${{ matrix.primary_grep }}'"
             exit 1

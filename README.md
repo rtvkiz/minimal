@@ -255,7 +255,7 @@ docker run -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-<image>:latest-dev
 
 Dev variants share the prod image's signing, SBOM, and SLSA provenance pipeline. They are **not tracked on the public CVE dashboard** — they intentionally ship a larger attack surface. See [`.github/SECURITY.md`](.github/SECURITY.md#dev-variants--dev-tags) for the policy and [`docs/dev-variants/CONVENTIONS.md`](docs/dev-variants/CONVENTIONS.md) for the package composition rules.
 
-**Shipping today:** 6 of 41 dev variants — `ruby`, `python`, `node-slim`, `go`, `java`, `dotnet`. The other 35 are rolling out batch by batch; see status table below.
+**Shipping today:** 14 of 41 dev variants — all language runtimes (`ruby`, `python`, `node-slim`, `go`, `java`, `dotnet`, `bun`, `deno`, `rails`, `php`) plus 4 databases (`postgres-slim`, `mariadb`, `redis-slim`, `valkey`). The other 27 are rolling out batch by batch; see status table below.
 
 <details>
 <summary><strong>Per-image dev variant status</strong></summary>
@@ -274,15 +274,15 @@ Categories follow the three templates in [`docs/dev-variants/templates/`](docs/d
 | go | runtime | Chainguard `go-public` | ✅ |
 | java | runtime | Chainguard `jdk-public` | ✅ |
 | dotnet | runtime | Chainguard `dotnet-runtime-10-public` | ✅ |
-| php | runtime | Chainguard `php-fpm-public` | 📝 |
-| rails | runtime | in-house (derive from ruby) | 📝 |
-| bun | runtime | in-house | 📝 |
-| deno | runtime | in-house | 📝 |
-| postgres-slim | daemon | Chainguard `postgres-public` | 📝 |
-| mariadb | daemon | Chainguard `mariadb-public` | 📝 |
+| php | runtime | in-house (composer deferred — see PR) | ✅ |
+| rails | runtime | in-house (derive from ruby) | ✅ |
+| bun | runtime | in-house | ✅ |
+| deno | runtime | in-house | ✅ |
+| postgres-slim | daemon | Chainguard `postgres-public` | ✅ |
+| mariadb | daemon | Chainguard `mariadb-public` | ✅ |
 | mysql | daemon | in-house | 📝 |
-| redis-slim | daemon | Chainguard `redis-public` | 📝 |
-| valkey | daemon | Chainguard `valkey-public` | 📝 |
+| redis-slim | daemon | Chainguard `redis-public` | ✅ |
+| valkey | daemon | Chainguard `valkey-public` | ✅ |
 | memcached | daemon | in-house | 📝 |
 | sqlite | daemon | in-house | 📝 |
 | opensearch | daemon | in-house | 📝 |
