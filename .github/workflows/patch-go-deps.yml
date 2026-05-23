@@ -201,6 +201,22 @@ jobs:
                   break
                 fi
               done
+              # Verify the version actually exists in the Go module proxy
+              # before generating the patch. Grype's CVE database sometimes
+              # reports fix versions that don't correspond to real upstream
+              # tags (docker/docker v29.3.1 was a recent example — grype said
+              # fix=29.3.1 but the highest docker tag was v28.5.2).
+              # Without this check, the resulting `go get` fails with
+              # "invalid version: unknown revision X.Y.Z" and the whole
+              # melange build is dead. A skip here just means the CVE stays
+              # in the dashboard until grype's data catches up or someone
+              # patches it manually.
+              mod="${mod_ver%@*}"
+              ver="${mod_ver#*@}"
+              if ! curl -fs --max-time 10 "https://proxy.golang.org/${mod}/@v/${ver}.info" >/dev/null 2>&1; then
+                echo "  Skipping ${mod_ver}: version not in Go module proxy"
+                continue
+              fi
               GO_GETS="${GO_GETS}      go get ${mod_ver}\n"
               APPLIED_COUNT=$((APPLIED_COUNT + 1))
             done <<< "$FIXES"
