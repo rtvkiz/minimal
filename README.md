@@ -255,7 +255,7 @@ docker run -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-<image>:latest-dev
 
 Dev variants share the prod image's signing, SBOM, and SLSA provenance pipeline. They are **not tracked on the public CVE dashboard** — they intentionally ship a larger attack surface. See [`.github/SECURITY.md`](.github/SECURITY.md#dev-variants--dev-tags) for the policy and [`docs/dev-variants/CONVENTIONS.md`](docs/dev-variants/CONVENTIONS.md) for the package composition rules.
 
-**Shipping today:** 24 of 41 dev variants — all 10 language runtimes, 7 of 8 databases, 4 messaging/coord daemons (kafka, rabbitmq, nats, etcd), and 3 servers with Chainguard reference (nginx, haproxy, minio). The other 17 are rolling out batch by batch; mysql and qdrant queued for follow-up (heavy source builds).
+**Shipping today:** 28 of 41 dev variants — all 10 language runtimes, 7 of 8 databases, 4 messaging/coord daemons, and 7 servers (nginx, haproxy, minio, httpd, caddy, traefik, envoy). The other 13 are rolling out batch by batch; mysql and qdrant queued for follow-up (heavy source builds).
 
 <details>
 <summary><strong>Per-image dev variant status</strong></summary>
@@ -294,10 +294,10 @@ Categories follow the three templates in [`docs/dev-variants/templates/`](docs/d
 | nginx | server | Chainguard `nginx-public` | ✅ |
 | haproxy | server | Chainguard `haproxy-public` | ✅ |
 | minio | server | Chainguard `minio-client-public` (server in-house) | ✅ |
-| httpd | server | in-house | 📝 |
-| caddy | server | in-house | 📝 |
-| traefik | server | in-house | 📝 |
-| envoy | server | in-house | 📝 |
+| httpd | server | in-house | ✅ |
+| caddy | server | in-house | ✅ |
+| traefik | server | in-house | ✅ |
+| envoy | server | in-house | ✅ |
 | prometheus | server | in-house | 📝 |
 | victoria-metrics | server | in-house | 📝 |
 | jaeger | server | in-house | 📝 |

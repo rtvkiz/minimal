@@ -163,6 +163,10 @@ $(eval $(call DEV_IMAGE_RULE,etcd,etcd-melange,--repository-append ./packages --
 $(eval $(call DEV_IMAGE_RULE,nginx))
 $(eval $(call DEV_IMAGE_RULE,haproxy,haproxy-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,minio,minio-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,httpd))
+$(eval $(call DEV_IMAGE_RULE,caddy,caddy-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,traefik,traefik-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,envoy,envoy-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -1459,6 +1463,10 @@ $(eval $(call DEV_TEST_RULE,etcd))
 $(eval $(call DEV_TEST_RULE,nginx))
 $(eval $(call DEV_TEST_RULE,haproxy))
 $(eval $(call DEV_TEST_RULE,minio))
+$(eval $(call DEV_TEST_RULE,httpd))
+$(eval $(call DEV_TEST_RULE,caddy))
+$(eval $(call DEV_TEST_RULE,traefik))
+$(eval $(call DEV_TEST_RULE,envoy))
 
 test-python:
 	@echo "Testing Python image..."
