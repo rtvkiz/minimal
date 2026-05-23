@@ -269,6 +269,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.detect-changes.outputs.melange-matrix) }}
+      max-parallel: 20
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -367,6 +368,7 @@ jobs:
 
     strategy:
       fail-fast: false
+      max-parallel: 20
       matrix: ${{ fromJSON(needs.detect-changes.outputs.apko-matrix) }}
 
     steps:
@@ -661,6 +663,7 @@ jobs:
       attestations: write
 
     strategy:
+      max-parallel: 20
       fail-fast: false
       matrix: ${{ fromJSON(needs.detect-changes.outputs.build-melange-matrix) }}
 
