@@ -89,6 +89,7 @@ jobs:
           # Determine if full rebuild is needed
           EVENT="${{ github.event_name }}"
           FULL_REBUILD=false
+          BUILD_YML_IMAGES=""   # image names extracted from build.yml diff
 
           if [[ "$EVENT" == "schedule" ]] || [[ "$EVENT" == "workflow_dispatch" ]]; then
             FULL_REBUILD=true
@@ -103,7 +104,28 @@ jobs:
             else
               CHANGED_FILES=$(git diff --name-only "$DIFF_BASE" "${{ github.sha }}" 2>/dev/null || echo ".github/workflows/build.yml")
               if echo "$CHANGED_FILES" | grep -q "^\.github/workflows/build\.yml$"; then
-                FULL_REBUILD=true
+                # Smarter detection: if the ONLY build.yml changes are inside
+                # the MELANGE_IMAGES / APKO_IMAGES JSON arrays (adding/editing
+                # `{"name":"foo", ...}` entries), rebuild just those images.
+                # If anything else changed (jq matrix logic, job defs, env vars,
+                # permissions), fall back to a full rebuild.
+                # Why: a 128-job full rebuild for a one-line variants:["prod","dev"]
+                # addition triggers GitHub Actions token throttling on the
+                # concurrent ARM runner checkouts ("could not read Username").
+                BUILD_DIFF=$(git diff "$DIFF_BASE" "${{ github.sha }}" -- .github/workflows/build.yml 2>/dev/null || echo "")
+                # Strip diff headers; keep only added/removed content lines.
+                BUILD_DIFF_BODY=$(echo "$BUILD_DIFF" | grep -E '^[+-]' | grep -vE '^[+-]{3}')
+                # Lines that look like an image entry (one we can route surgically).
+                IMAGE_ENTRY_LINES=$(echo "$BUILD_DIFF_BODY" | grep -cE '^[+-][[:space:]]*\{"name":"[a-z][a-z0-9-]*"' || true)
+                NON_BLANK_LINES=$(echo "$BUILD_DIFF_BODY" | grep -cE '^[+-][[:space:]]*[^[:space:]]' || true)
+                if [ "$NON_BLANK_LINES" -gt 0 ] && [ "$IMAGE_ENTRY_LINES" -eq "$NON_BLANK_LINES" ]; then
+                  # All changed lines are image-entry edits — extract names.
+                  BUILD_YML_IMAGES=$(echo "$BUILD_DIFF_BODY" | grep -oE '"name":"[a-z][a-z0-9-]*"' | sed 's/"name":"//; s/"$//' | sort -u)
+                  echo "build.yml change is image-entry-only; routing to: $BUILD_YML_IMAGES"
+                else
+                  FULL_REBUILD=true
+                  echo "build.yml change affects matrix/job logic; falling back to FULL_REBUILD"
+                fi
               fi
             fi
           fi
@@ -113,7 +135,10 @@ jobs:
           if [ "$FULL_REBUILD" = true ]; then
             CHANGED=$(echo "$MELANGE_IMAGES $APKO_IMAGES" | jq -s 'add | [.[].name]')
           else
-            CHANGED=$(echo "$CHANGED_FILES" | grep -E '^[^./][^/]*/' | sed 's|/.*||' | sort -u | jq -R . | jq -s .)
+            # Combine file-diff image dirs with image names extracted from build.yml diff.
+            CHANGED=$( ( echo "$CHANGED_FILES" | grep -E '^[^./][^/]*/' | sed 's|/.*||'
+                        echo "$BUILD_YML_IMAGES"
+                      ) | grep -v '^$' | sort -u | jq -R . | jq -s .)
             echo "Changed dirs: $CHANGED"
           fi
 
