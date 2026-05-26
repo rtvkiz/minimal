@@ -65,11 +65,11 @@ jobs:
             {"name":"haproxy","variants":["prod","dev"]},{"name":"ruby","variants":["prod","dev"]},{"name":"php","variants":["prod","dev"]},{"name":"rails","variants":["prod","dev"]},{"name":"caddy","variants":["prod","dev"]},
             {"name":"kafka","variants":["prod","dev"]},{"name":"valkey","variants":["prod","dev"]},{"name":"nats","variants":["prod","dev"]},
             {"name":"traefik","variants":["prod","dev"]},{"name":"rabbitmq","variants":["prod","dev"]},{"name":"minio","variants":["prod","dev"]},
-            {"name":"prometheus"},{"name":"mariadb","variants":["prod","dev"]},{"name":"etcd","variants":["prod","dev"]},
-            {"name":"victoria-metrics"},{"name":"jaeger"},{"name":"otelcol"},
+            {"name":"prometheus","variants":["prod","dev"]},{"name":"mariadb","variants":["prod","dev"]},{"name":"etcd","variants":["prod","dev"]},
+            {"name":"victoria-metrics","variants":["prod","dev"]},{"name":"jaeger","variants":["prod","dev"]},{"name":"otelcol","variants":["prod","dev"]},
             {"name":"qdrant"},{"name":"envoy","variants":["prod","dev"]},{"name":"gitea"},
-            {"name":"coredns"},{"name":"openbao"},{"name":"loki"},
-            {"name":"fluent-bit"},{"name":"keycloak"}
+            {"name":"coredns"},{"name":"openbao"},{"name":"loki","variants":["prod","dev"]},
+            {"name":"fluent-bit","variants":["prod","dev"]},{"name":"keycloak"}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},

@@ -167,6 +167,12 @@ $(eval $(call DEV_IMAGE_RULE,httpd))
 $(eval $(call DEV_IMAGE_RULE,caddy,caddy-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,traefik,traefik-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,envoy,envoy-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,prometheus,prometheus-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,victoria-metrics,victoria-metrics-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,jaeger,jaeger-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,otelcol,otelcol-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,loki,loki-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,fluent-bit,fluent-bit-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -1467,6 +1473,12 @@ $(eval $(call DEV_TEST_RULE,httpd))
 $(eval $(call DEV_TEST_RULE,caddy))
 $(eval $(call DEV_TEST_RULE,traefik))
 $(eval $(call DEV_TEST_RULE,envoy))
+$(eval $(call DEV_TEST_RULE,prometheus))
+$(eval $(call DEV_TEST_RULE,victoria-metrics))
+$(eval $(call DEV_TEST_RULE,jaeger))
+$(eval $(call DEV_TEST_RULE,otelcol))
+$(eval $(call DEV_TEST_RULE,loki))
+$(eval $(call DEV_TEST_RULE,fluent-bit))
 
 test-python:
 	@echo "Testing Python image..."
