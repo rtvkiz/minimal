@@ -173,6 +173,10 @@ $(eval $(call DEV_IMAGE_RULE,jaeger,jaeger-melange,--repository-append ./package
 $(eval $(call DEV_IMAGE_RULE,otelcol,otelcol-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,loki,loki-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,fluent-bit,fluent-bit-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,coredns,coredns-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,gitea,gitea-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,jenkins,jenkins-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,openbao,openbao-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -1479,6 +1483,10 @@ $(eval $(call DEV_TEST_RULE,jaeger))
 $(eval $(call DEV_TEST_RULE,otelcol))
 $(eval $(call DEV_TEST_RULE,loki))
 $(eval $(call DEV_TEST_RULE,fluent-bit))
+$(eval $(call DEV_TEST_RULE,coredns))
+$(eval $(call DEV_TEST_RULE,gitea))
+$(eval $(call DEV_TEST_RULE,jenkins))
+$(eval $(call DEV_TEST_RULE,openbao))
 
 test-python:
 	@echo "Testing Python image..."
