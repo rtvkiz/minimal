@@ -177,6 +177,9 @@ $(eval $(call DEV_IMAGE_RULE,coredns,coredns-melange,--repository-append ./packa
 $(eval $(call DEV_IMAGE_RULE,gitea,gitea-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,jenkins,jenkins-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,openbao,openbao-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,mysql,mysql-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,qdrant,qdrant-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,keycloak,keycloak-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -1487,6 +1490,9 @@ $(eval $(call DEV_TEST_RULE,coredns))
 $(eval $(call DEV_TEST_RULE,gitea))
 $(eval $(call DEV_TEST_RULE,jenkins))
 $(eval $(call DEV_TEST_RULE,openbao))
+$(eval $(call DEV_TEST_RULE,mysql))
+$(eval $(call DEV_TEST_RULE,qdrant))
+$(eval $(call DEV_TEST_RULE,keycloak))
 
 test-python:
 	@echo "Testing Python image..."
