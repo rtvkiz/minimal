@@ -255,7 +255,7 @@ docker run -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-<image>:latest-dev
 
 Dev variants share the prod image's signing, SBOM, and SLSA provenance pipeline. They are **not tracked on the public CVE dashboard** — they intentionally ship a larger attack surface. See [`.github/SECURITY.md`](.github/SECURITY.md#dev-variants--dev-tags) for the policy and [`docs/dev-variants/CONVENTIONS.md`](docs/dev-variants/CONVENTIONS.md) for the package composition rules.
 
-**Shipping today:** 38 of 41 dev variants — all 10 language runtimes, 7 of 8 databases, 4 messaging/coord daemons, and 17 of 18 servers/apps/infra. Only `mysql`, `qdrant`, `keycloak` remain (heavy source builds; ship via follow-up PRs).
+**Shipping today:** 41 of 41 dev variants — every image in the catalog now ships a `:latest-dev` companion built from the same source as prod.
 
 <details>
 <summary><strong>Per-image dev variant status</strong></summary>
@@ -280,7 +280,7 @@ Categories follow the three templates in [`docs/dev-variants/templates/`](docs/d
 | deno | runtime | in-house | ✅ |
 | postgres-slim | daemon | Chainguard `postgres-public` | ✅ |
 | mariadb | daemon | Chainguard `mariadb-public` | ✅ |
-| mysql | daemon | in-house | 📝 |
+| mysql | daemon | in-house | ✅ |
 | redis-slim | daemon | Chainguard `redis-public` | ✅ |
 | valkey | daemon | Chainguard `valkey-public` | ✅ |
 | memcached | daemon | in-house | ✅ |
@@ -290,7 +290,7 @@ Categories follow the three templates in [`docs/dev-variants/templates/`](docs/d
 | rabbitmq | daemon | in-house | ✅ |
 | nats | daemon | in-house | ✅ |
 | etcd | daemon | in-house | ✅ |
-| qdrant | daemon | in-house | 📝 |
+| qdrant | daemon | in-house | ✅ |
 | nginx | server | Chainguard `nginx-public` | ✅ |
 | haproxy | server | Chainguard `haproxy-public` | ✅ |
 | minio | server | Chainguard `minio-client-public` (server in-house) | ✅ |
@@ -307,7 +307,7 @@ Categories follow the three templates in [`docs/dev-variants/templates/`](docs/d
 | coredns | server | in-house | ✅ |
 | gitea | server | in-house | ✅ |
 | jenkins | server | in-house | ✅ |
-| keycloak | server | in-house | 📝 |
+| keycloak | server | in-house | ✅ |
 | openbao | server | in-house | ✅ |
 
 </details>
