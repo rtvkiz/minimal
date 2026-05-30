@@ -50,6 +50,14 @@ pipeline:
 
 
 
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      cd /home/build/loki-${{package.version}}
+      go get github.com/apache/thrift@v0.23.0
+      go mod tidy
+      if [ -d vendor ]; then go mod vendor; fi
+  # end-patch-go-deps
+
   - runs: |
       cd /home/build/loki-${{package.version}}
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
