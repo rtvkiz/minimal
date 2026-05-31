@@ -57,6 +57,11 @@ FLUENT_BIT_VERSION ?= $(call melange_version,fluent-bit/melange.yaml)
 QDRANT_VERSION ?= $(call melange_version,qdrant/melange.yaml)
 OPENSEARCH_VERSION ?= 3.6.0
 
+# --- Registries ---
+# NB: REGISTRY (above) is the OCI registry hostname; DISTRIBUTION_VERSION is the
+# upstream version of distribution/distribution we ship as `minimal-registry`.
+DISTRIBUTION_VERSION ?= $(call melange_version,registry/melange.yaml)
+
 # --- AI/ML ---
 CUDA_VERSION ?= 12.9.0
 
@@ -105,6 +110,7 @@ endef
 .PHONY: cuda-python cuda-python-melange
 .PHONY: coredns coredns-melange openbao openbao-melange loki loki-melange fluent-bit fluent-bit-melange keycloak keycloak-melange
 .PHONY: gitea gitea-melange
+.PHONY: registry registry-melange registry-dev test-registry test-registry-dev
 .PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
 .PHONY: test-python test-python-dev test-jenkins test-go test-go-dev test-node-slim test-node-slim-dev test-nginx test-httpd test-redis-slim test-redis-slim-dev test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-postgres-slim-dev test-bun test-bun-dev test-sqlite test-dotnet test-dotnet-dev test-java test-java-dev test-ruby test-ruby-dev test-php test-php-dev test-rails test-rails-dev test-deno test-deno-dev test-mariadb test-mariadb-dev test-valkey test-valkey-dev test-memcached-dev test-sqlite-dev test-opensearch-dev test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
 
@@ -180,6 +186,7 @@ $(eval $(call DEV_IMAGE_RULE,openbao,openbao-melange,--repository-append ./packa
 $(eval $(call DEV_IMAGE_RULE,mysql,mysql-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,qdrant,qdrant-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,keycloak,keycloak-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,registry,registry-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -1151,6 +1158,32 @@ keycloak: keycloak-melange
 	@echo "✓ minimal-keycloak built (pre-built distribution)"
 
 #------------------------------------------------------------------------------
+# REGISTRY IMAGE (melange source build + apko — distribution/distribution)
+#------------------------------------------------------------------------------
+registry-melange: keygen
+	@echo "Building distribution $(DISTRIBUTION_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build registry/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ registry (distribution) package built from source"
+
+registry: registry-melange
+	@echo "Assembling minimal-registry image with apko..."
+	apko build registry/apko/registry.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-registry:$(VERSION) \
+		registry.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < registry.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-registry:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-registry:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-registry:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-registry:latest
+	@rm -f registry.tar sbom-*.spdx.json
+	@echo "✓ minimal-registry built (source build)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
 scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
@@ -1493,6 +1526,7 @@ $(eval $(call DEV_TEST_RULE,openbao))
 $(eval $(call DEV_TEST_RULE,mysql))
 $(eval $(call DEV_TEST_RULE,qdrant))
 $(eval $(call DEV_TEST_RULE,keycloak))
+$(eval $(call DEV_TEST_RULE,registry))
 
 test-python:
 	@echo "Testing Python image..."
@@ -1766,6 +1800,12 @@ test-minio:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-minio:latest" && \
 		minio/test.sh
 	@echo "✓ MinIO tests passed"
+
+test-registry:
+	@echo "Testing registry image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-registry:latest" && \
+		registry/test.sh
+	@echo "✓ registry tests passed"
 
 test-opensearch:
 	@echo "Testing OpenSearch image..."

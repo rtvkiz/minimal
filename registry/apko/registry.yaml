@@ -1,0 +1,53 @@
+# Minimal Docker Registry (distribution) image - built from source via melange
+# Shell-less, distroless. CVE patching via daily rebuilds from upstream source.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - registry-minimal
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: registry
+      gid: 65532
+  users:
+    - username: registry
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/registry serve /etc/distribution/config.yml
+
+environment:
+  PATH: /usr/bin:/bin
+
+paths:
+  - path: /var/lib/registry
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-registry"
+  org.opencontainers.image.description: "Hardened shell-less OCI distribution registry (Docker Registry v2) built from source via melange with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/registry"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64
