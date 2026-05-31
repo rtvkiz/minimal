@@ -1,0 +1,82 @@
+# Melange build configuration for minimal Mailpit
+# Builds mailpit from source: npm-built Vue frontend bundled via esbuild
+# is go:embed'd into the final static binary (CGO_ENABLED=0).
+
+package:
+  name: mailpit-minimal
+  version: 1.30.1
+  epoch: 0
+  description: "Minimal Mailpit — email & SMTP testing tool built from source"
+  copyright:
+    - license: MIT
+
+vars:
+  # SHA256 of mailpit source tarball - updated by update-mailpit.yml workflow
+  sha256: bda226e88f828215fc3646258494e71ebfaf82074970ea28a319c91a64c068d2
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+      - nodejs
+      - npm
+
+pipeline:
+  # Download and verify mailpit source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/axllent/mailpit/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/mailpit.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/mailpit.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf mailpit.tar.gz
+      rm mailpit.tar.gz
+
+  # Build Vue/JS frontend assets via npm + esbuild
+  # Outputs go into server/ui/dist which is go:embed'd at compile time.
+  - runs: |
+      cd /home/build/mailpit-${{package.version}}
+      npm ci --no-audit --no-fund
+      npm run package
+
+  # Build mailpit (static Go binary embedding the frontend bundle)
+  - runs: |
+      cd /home/build/mailpit-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X github.com/axllent/mailpit/config.Version=v${{package.version}}" \
+        -o /home/build/mailpit-bin \
+        .
+
+  # Install
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/mailpit-bin "${{targets.destdir}}/usr/bin/mailpit"
+      chmod 0755 "${{targets.destdir}}/usr/bin/mailpit"
+
+  # Verify
+  - runs: |
+      echo "Verifying mailpit build..."
+      "${{targets.destdir}}/usr/bin/mailpit" version
+      echo "Binary size:"
+      ls -lh "${{targets.destdir}}/usr/bin/mailpit"
+
+update:
+  enabled: true
+  github:
+    identifier: axllent/mailpit
+    use-tag: true
+    strip-prefix: "v"

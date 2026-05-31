@@ -70,7 +70,7 @@ jobs:
             {"name":"qdrant","variants":["prod","dev"]},{"name":"envoy","variants":["prod","dev"]},{"name":"gitea","variants":["prod","dev"]},
             {"name":"coredns","variants":["prod","dev"]},{"name":"openbao","variants":["prod","dev"]},{"name":"loki","variants":["prod","dev"]},
             {"name":"fluent-bit","variants":["prod","dev"]},{"name":"keycloak","variants":["prod","dev"]},
-            {"name":"registry","variants":["prod","dev"]}
+            {"name":"registry","variants":["prod","dev"]},{"name":"mailpit","variants":["prod","dev"]}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},

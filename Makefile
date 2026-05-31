@@ -62,6 +62,9 @@ OPENSEARCH_VERSION ?= 3.6.0
 # upstream version of distribution/distribution we ship as `minimal-registry`.
 DISTRIBUTION_VERSION ?= $(call melange_version,registry/melange.yaml)
 
+# --- Dev tools ---
+MAILPIT_VERSION ?= $(call melange_version,mailpit/melange.yaml)
+
 # --- AI/ML ---
 CUDA_VERSION ?= 12.9.0
 
@@ -111,6 +114,7 @@ endef
 .PHONY: coredns coredns-melange openbao openbao-melange loki loki-melange fluent-bit fluent-bit-melange keycloak keycloak-melange
 .PHONY: gitea gitea-melange
 .PHONY: registry registry-melange registry-dev test-registry test-registry-dev
+.PHONY: mailpit mailpit-melange mailpit-dev test-mailpit test-mailpit-dev
 .PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
 .PHONY: test-python test-python-dev test-jenkins test-go test-go-dev test-node-slim test-node-slim-dev test-nginx test-httpd test-redis-slim test-redis-slim-dev test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-postgres-slim-dev test-bun test-bun-dev test-sqlite test-dotnet test-dotnet-dev test-java test-java-dev test-ruby test-ruby-dev test-php test-php-dev test-rails test-rails-dev test-deno test-deno-dev test-mariadb test-mariadb-dev test-valkey test-valkey-dev test-memcached-dev test-sqlite-dev test-opensearch-dev test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
 
@@ -187,6 +191,7 @@ $(eval $(call DEV_IMAGE_RULE,mysql,mysql-melange,--repository-append ./packages 
 $(eval $(call DEV_IMAGE_RULE,qdrant,qdrant-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,keycloak,keycloak-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,registry,registry-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,mailpit,mailpit-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -1184,6 +1189,32 @@ registry: registry-melange
 	@echo "✓ minimal-registry built (source build)"
 
 #------------------------------------------------------------------------------
+# MAILPIT IMAGE (melange Go + npm frontend source build + apko)
+#------------------------------------------------------------------------------
+mailpit-melange: keygen
+	@echo "Building mailpit $(MAILPIT_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build mailpit/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ mailpit package built from source"
+
+mailpit: mailpit-melange
+	@echo "Assembling minimal-mailpit image with apko..."
+	apko build mailpit/apko/mailpit.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-mailpit:$(VERSION) \
+		mailpit.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < mailpit.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-mailpit:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-mailpit:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-mailpit:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-mailpit:latest
+	@rm -f mailpit.tar sbom-*.spdx.json
+	@echo "✓ minimal-mailpit built (source build)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
 scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
@@ -1527,6 +1558,7 @@ $(eval $(call DEV_TEST_RULE,mysql))
 $(eval $(call DEV_TEST_RULE,qdrant))
 $(eval $(call DEV_TEST_RULE,keycloak))
 $(eval $(call DEV_TEST_RULE,registry))
+$(eval $(call DEV_TEST_RULE,mailpit))
 
 test-python:
 	@echo "Testing Python image..."
@@ -1806,6 +1838,12 @@ test-registry:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-registry:latest" && \
 		registry/test.sh
 	@echo "✓ registry tests passed"
+
+test-mailpit:
+	@echo "Testing mailpit image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-mailpit:latest" && \
+		mailpit/test.sh
+	@echo "✓ mailpit tests passed"
 
 test-opensearch:
 	@echo "Testing OpenSearch image..."
