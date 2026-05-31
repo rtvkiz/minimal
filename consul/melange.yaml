@@ -1,0 +1,80 @@
+# Melange build configuration for minimal HashiCorp Consul
+# Pure Go from source. Upstream tarball ships the pre-built UI under
+# agent/uiserver/dist/, which is go:embed'd at compile time — no yarn/ember
+# step required to get the web UI.
+#
+# License: BUSL-1.1 (Business Source License) since Consul v1.16+ (Aug 2023).
+# Allowed for production use except as a competing managed Consul service.
+
+package:
+  name: consul-minimal
+  version: 2.0.0
+  epoch: 0
+  description: "Minimal HashiCorp Consul (service discovery + KV) built from source"
+  copyright:
+    - license: BUSL-1.1
+
+vars:
+  # SHA256 of consul source tarball - updated by update-consul.yml workflow
+  sha256: cf0fb38b3150cc5be4e0e05d0ecfd9198e427725b8262a43396707b76193f3c7
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify consul source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/hashicorp/consul/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/consul.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/consul.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf consul.tar.gz
+      rm consul.tar.gz
+
+  # Build consul (static binary, embedded UI is already in source tree)
+  - runs: |
+      cd /home/build/consul-${{package.version}}
+      BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X github.com/hashicorp/consul/version.GitCommit=source-build \
+          -X github.com/hashicorp/consul/version.BuildDate=${BUILD_DATE}" \
+        -o /home/build/consul-bin \
+        .
+
+  # Install
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/consul-bin "${{targets.destdir}}/usr/bin/consul"
+      chmod 0755 "${{targets.destdir}}/usr/bin/consul"
+
+  # Verify
+  - runs: |
+      echo "Verifying consul build..."
+      "${{targets.destdir}}/usr/bin/consul" version
+      echo "Binary size:"
+      ls -lh "${{targets.destdir}}/usr/bin/consul"
+
+update:
+  enabled: true
+  github:
+    identifier: hashicorp/consul
+    use-tag: true
+    strip-prefix: "v"
+    tag-filter: "v2."

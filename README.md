@@ -13,14 +13,14 @@
   <a href="https://rtvkiz.github.io/minimal/"><img src="https://img.shields.io/badge/CVE_Dashboard-Live-0d9488" alt="CVE Dashboard"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://slsa.dev/spec/v1.0/levels#build-l3"><img src="https://img.shields.io/badge/SLSA-Level_3-0d9488" alt="SLSA Level 3"></a>
-  <img src="https://img.shields.io/badge/Images-43-0d9488" alt="Images: 43">
+  <img src="https://img.shields.io/badge/Images-44-0d9488" alt="Images: 44">
   <img src="https://img.shields.io/badge/Arch-amd64_%7C_arm64-0d9488" alt="Architectures">
 </p>
 
 <p align="center">
   <a href="https://rtvkiz.github.io/minimal/">Live CVE dashboard</a> ·
   <a href="#pull-and-verify-in-30-seconds">Verify an image</a> ·
-  <a href="#available-images--43-total">All 43 images</a> ·
+  <a href="#available-images--44-total">All 44 images</a> ·
   <a href="https://news.ycombinator.com/item?id=46840178">HN discussion</a>
 </p>
 
@@ -75,7 +75,7 @@ It's probably not the right fit if you need a vendor contract, FedRAMP or STIG a
 - No shell where possible — most images don't ship `/bin/sh`.
 - A six-hour rebuild cadence, so Wolfi CVE patches land in hours, not days.
 
-## Available Images — 43 total
+## Available Images — 44 total
 
 | Category | Count | Highlights |
 |---|---|---|
@@ -84,7 +84,7 @@ It's probably not the right fit if you need a vendor contract, FedRAMP or STIG a
 | **Caches, queues, messaging** | 6 | redis-slim, valkey, memcached, kafka, rabbitmq, nats |
 | **Web servers & proxies** | 6 | nginx, httpd, caddy, haproxy, traefik, envoy |
 | **Observability** | 6 | prometheus, victoria-metrics, jaeger, loki, otelcol, fluent-bit |
-| **Infrastructure** | 6 | coredns, etcd, openbao, keycloak, qdrant, registry |
+| **Infrastructure** | 7 | coredns, etcd, openbao, keycloak, qdrant, registry, consul |
 | **Apps** | 5 | jenkins, gitea, minio, rails, mailpit |
 
 <details>
@@ -139,6 +139,7 @@ It's probably not the right fit if you need a vendor contract, FedRAMP or STIG a
 | Keycloak | `docker pull ghcr.io/rtvkiz/minimal-keycloak:latest` | Yes | Identity & access management |
 | Qdrant | `docker pull ghcr.io/rtvkiz/minimal-qdrant:latest` | No | Vector DB for AI/ML (Rust) |
 | Registry | `docker pull ghcr.io/rtvkiz/minimal-registry:latest` | No | OCI distribution registry (Docker Registry v2), built from source |
+| Consul | `docker pull ghcr.io/rtvkiz/minimal-consul:latest` | No | HashiCorp Consul service discovery + KV (BUSL-1.1) |
 | | | **Apps** | |
 | Jenkins | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
 | Gitea | `docker pull ghcr.io/rtvkiz/minimal-gitea:latest` | Yes | Self-hosted Git service |
@@ -257,7 +258,7 @@ docker run -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-<image>:latest-dev
 
 Dev variants share the prod image's signing, SBOM, and SLSA provenance pipeline. They are **not tracked on the public CVE dashboard** — they intentionally ship a larger attack surface. See [`.github/SECURITY.md`](.github/SECURITY.md#dev-variants--dev-tags) for the policy and [`docs/dev-variants/CONVENTIONS.md`](docs/dev-variants/CONVENTIONS.md) for the package composition rules.
 
-**Shipping today:** 43 of 43 dev variants — every image in the catalog now ships a `:latest-dev` companion built from the same source as prod.
+**Shipping today:** 44 of 44 dev variants — every image in the catalog now ships a `:latest-dev` companion built from the same source as prod.
 
 <details>
 <summary><strong>Per-image dev variant status</strong></summary>
@@ -313,6 +314,7 @@ Categories follow the three templates in [`docs/dev-variants/templates/`](docs/d
 | openbao | server | in-house | ✅ |
 | registry | server | Chainguard `registry-public` | ✅ |
 | mailpit | server | in-house (Chainguard ships no public mailpit) | ✅ |
+| consul | server | in-house (Chainguard ships no public consul; BUSL-1.1) | ✅ |
 
 </details>
 
