@@ -138,6 +138,7 @@ It's probably not the right fit if you need a vendor contract, FedRAMP or STIG a
 | OpenBao | `docker pull ghcr.io/rtvkiz/minimal-openbao:latest` | No | Secret management (Vault fork) |
 | Keycloak | `docker pull ghcr.io/rtvkiz/minimal-keycloak:latest` | Yes | Identity & access management |
 | Qdrant | `docker pull ghcr.io/rtvkiz/minimal-qdrant:latest` | No | Vector DB for AI/ML (Rust) |
+| Registry | `docker pull ghcr.io/rtvkiz/minimal-registry:latest` | No | OCI distribution registry (Docker Registry v2), built from source |
 | | | **Apps** | |
 | Jenkins | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
 | Gitea | `docker pull ghcr.io/rtvkiz/minimal-gitea:latest` | Yes | Self-hosted Git service |
@@ -255,7 +256,7 @@ docker run -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-<image>:latest-dev
 
 Dev variants share the prod image's signing, SBOM, and SLSA provenance pipeline. They are **not tracked on the public CVE dashboard** — they intentionally ship a larger attack surface. See [`.github/SECURITY.md`](.github/SECURITY.md#dev-variants--dev-tags) for the policy and [`docs/dev-variants/CONVENTIONS.md`](docs/dev-variants/CONVENTIONS.md) for the package composition rules.
 
-**Shipping today:** 41 of 41 dev variants — every image in the catalog now ships a `:latest-dev` companion built from the same source as prod.
+**Shipping today:** 42 of 42 dev variants — every image in the catalog now ships a `:latest-dev` companion built from the same source as prod.
 
 <details>
 <summary><strong>Per-image dev variant status</strong></summary>
@@ -309,6 +310,7 @@ Categories follow the three templates in [`docs/dev-variants/templates/`](docs/d
 | jenkins | server | in-house | ✅ |
 | keycloak | server | in-house | ✅ |
 | openbao | server | in-house | ✅ |
+| registry | server | Chainguard `registry-public` | ✅ |
 
 </details>
 

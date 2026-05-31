@@ -1,0 +1,105 @@
+# Melange build configuration for minimal Docker Registry (distribution)
+# Builds the OCI distribution registry from source (Go) as a static binary
+# CGO_ENABLED=0 produces fully static binary - zero runtime deps
+
+package:
+  name: registry-minimal
+  version: 3.1.1
+  epoch: 0
+  description: "Minimal OCI distribution registry (Docker Registry v2) built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of the distribution source tarball - updated by update-registry.yml workflow
+  sha256: 419183e8c1426b5d625732cf6846a2d48ad8e898a1659d7bec7171b7d156673e
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify distribution source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/distribution/distribution/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/distribution.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/distribution.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf distribution.tar.gz
+      rm distribution.tar.gz
+
+  # Build the registry binary (static)
+  # NB: upstream source tree contains a ./registry/ subdir, so -o /home/build/registry-bin
+  # avoids collision with `go build -o registry` writing into that directory.
+  - runs: |
+      cd /home/build/distribution-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X github.com/distribution/distribution/v3/version.version=${{package.version}} \
+          -X github.com/distribution/distribution/v3/version.revision=source-build \
+          -X github.com/distribution/distribution/v3/version.mainpkg=github.com/distribution/distribution/v3" \
+        -o /home/build/registry-bin \
+        ./cmd/registry
+
+  # Install binary + default filesystem config
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/registry-bin "${{targets.destdir}}/usr/bin/registry"
+      chmod 0755 "${{targets.destdir}}/usr/bin/registry"
+
+      mkdir -p "${{targets.destdir}}/etc/distribution"
+      cat > "${{targets.destdir}}/etc/distribution/config.yml" << 'CFG'
+      version: 0.1
+      log:
+        level: info
+        fields:
+          service: registry
+      storage:
+        filesystem:
+          rootdirectory: /var/lib/registry
+        cache:
+          blobdescriptor: inmemory
+      http:
+        addr: :5000
+        headers:
+          X-Content-Type-Options: [nosniff]
+        debug:
+          addr: :5001
+          prometheus:
+            enabled: false
+      health:
+        storagedriver:
+          enabled: true
+          interval: 10s
+          threshold: 3
+      CFG
+
+  # Verify
+  - runs: |
+      echo "Verifying registry build..."
+      "${{targets.destdir}}/usr/bin/registry" --version
+      echo "Binary size:"
+      ls -lh "${{targets.destdir}}/usr/bin/registry"
+
+update:
+  enabled: true
+  github:
+    identifier: distribution/distribution
+    use-tag: true
+    tag-filter: "v3."
+    strip-prefix: "v"
