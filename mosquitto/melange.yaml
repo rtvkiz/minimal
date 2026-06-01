@@ -1,0 +1,110 @@
+# Melange build configuration for minimal Eclipse Mosquitto
+# Pure C from source, make-based build.
+# License: EPL-2.0 OR EDL-1.0 (dual-licensed by Eclipse Foundation).
+
+package:
+  name: mosquitto-minimal
+  version: 2.0.20
+  epoch: 0
+  description: "Minimal Eclipse Mosquitto MQTT broker built from source"
+  copyright:
+    - license: EPL-2.0
+
+vars:
+  # SHA256 of mosquitto source tarball - updated by update-mosquitto.yml workflow
+  sha256: ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - openssl-dev
+      - cjson-dev
+
+pipeline:
+  # Download and verify mosquitto source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://mosquitto.org/files/source/mosquitto-${{package.version}}.tar.gz" \
+        -o /home/build/mosquitto.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/mosquitto.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf mosquitto.tar.gz
+      rm mosquitto.tar.gz
+
+  # Build: TLS yes, docs no, no bundled deps, no websockets/SRV (avoids
+  # extra runtime deps we don't want), CJSON yes for mosquitto_ctrl.
+  - runs: |
+      cd /home/build/mosquitto-${{package.version}}
+      make -j"$(nproc)" \
+        WITH_TLS=yes \
+        WITH_TLS_PSK=yes \
+        WITH_THREADING=yes \
+        WITH_DOCS=no \
+        WITH_BUNDLED_DEPS=yes \
+        WITH_CJSON=yes \
+        WITH_SRV=no \
+        WITH_WEBSOCKETS=no \
+        WITH_SHARED_LIBRARIES=yes \
+        WITH_STATIC_LIBRARIES=no \
+        prefix=/usr
+
+  # Install into destdir
+  - runs: |
+      cd /home/build/mosquitto-${{package.version}}
+      make install \
+        WITH_TLS=yes \
+        WITH_DOCS=no \
+        WITH_BUNDLED_DEPS=yes \
+        WITH_CJSON=yes \
+        WITH_SRV=no \
+        WITH_WEBSOCKETS=no \
+        WITH_SHARED_LIBRARIES=yes \
+        WITH_STATIC_LIBRARIES=no \
+        prefix=/usr \
+        DESTDIR="${{targets.destdir}}"
+
+      # Wolfi enforces usrmerge — /usr/sbin doesn't exist on these images.
+      # Upstream installs the broker at sbin/mosquitto; relocate to /usr/bin.
+      if [ -f "${{targets.destdir}}/usr/sbin/mosquitto" ]; then
+        mv "${{targets.destdir}}/usr/sbin/mosquitto" "${{targets.destdir}}/usr/bin/mosquitto"
+        rmdir "${{targets.destdir}}/usr/sbin" 2>/dev/null || true
+      fi
+
+      # Replace upstream's commented-out default config with a minimal
+      # broker that listens on all interfaces and allows anonymous
+      # connections — sane default for the smoke test and for a fresh
+      # container. Users override by mounting their own /etc/mosquitto.conf.
+      mkdir -p "${{targets.destdir}}/etc/mosquitto"
+      cat > "${{targets.destdir}}/etc/mosquitto/mosquitto.conf" << 'CFG'
+      # Minimal mosquitto config — broker only, anonymous, no persistence.
+      listener 1883 0.0.0.0
+      allow_anonymous true
+      persistence false
+      log_dest stdout
+      log_type all
+      CFG
+
+  # Verify
+  - runs: |
+      echo "Verifying mosquitto build..."
+      "${{targets.destdir}}/usr/bin/mosquitto" --help | head -3
+      echo "Binary size:"
+      ls -lh "${{targets.destdir}}/usr/bin/mosquitto"
+      echo "Tools:"
+      ls "${{targets.destdir}}/usr/bin/mosquitto"* 2>/dev/null
+
+update:
+  enabled: true
+  release-monitor:
+    identifier: 7710
