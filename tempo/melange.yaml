@@ -1,0 +1,112 @@
+# Melange build configuration for minimal Grafana Tempo
+# Pure Go from source. Single-binary mode by default.
+# License: AGPL-3.0 (Grafana Labs).
+
+package:
+  name: tempo-minimal
+  version: 3.0.0
+  epoch: 0
+  description: "Minimal Grafana Tempo distributed tracing backend built from source"
+  copyright:
+    - license: AGPL-3.0-only
+
+vars:
+  # SHA256 of tempo source tarball - updated by update-tempo.yml workflow
+  sha256: 39c31d5d63e3d61b30d4bba4cd472b1cba0a710de9bfbafb4ec2472fbf5410f7
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify tempo source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/grafana/tempo/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/tempo.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/tempo.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf tempo.tar.gz
+      rm tempo.tar.gz
+
+  # Build tempo (static binary).
+  # Tempo defines its own main.{Version,Branch,Revision} and copies them
+  # into prometheus/common/version in init(). Setting prometheus/common/version
+  # directly is overwritten — so we target main.* on cmd/tempo instead.
+  - runs: |
+      cd /home/build/tempo-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X main.Version=${{package.version}} \
+          -X main.Revision=source-build \
+          -X main.Branch=tag-v${{package.version}}" \
+        -o /home/build/tempo-bin \
+        ./cmd/tempo
+
+  # Install binary + minimal single-binary all-in-one config
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/tempo-bin "${{targets.destdir}}/usr/bin/tempo"
+      chmod 0755 "${{targets.destdir}}/usr/bin/tempo"
+
+      mkdir -p "${{targets.destdir}}/etc/tempo"
+      cat > "${{targets.destdir}}/etc/tempo/tempo.yaml" << 'CFG'
+      # Minimal single-binary Tempo config. All components in one process,
+      # local filesystem storage. Override by mounting your own config and
+      # passing -config.file=/path/to/your/tempo.yaml.
+      # NB: Tempo v3 dropped the top-level `ingester:` and `compactor:`
+      # sections; their tunables now live elsewhere (defaults are sane).
+      stream_over_http_enabled: true
+      server:
+        http_listen_port: 3200
+        log_level: info
+
+      distributor:
+        receivers:
+          otlp:
+            protocols:
+              http:
+                endpoint: "0.0.0.0:4318"
+              grpc:
+                endpoint: "0.0.0.0:4317"
+
+      storage:
+        trace:
+          backend: local
+          wal:
+            path: /var/tempo/wal
+          local:
+            path: /var/tempo/blocks
+
+      usage_report:
+        reporting_enabled: false
+      CFG
+
+  # Verify
+  - runs: |
+      echo "Verifying tempo build..."
+      "${{targets.destdir}}/usr/bin/tempo" -version
+      echo "Binary size:"
+      ls -lh "${{targets.destdir}}/usr/bin/tempo"
+
+update:
+  enabled: true
+  github:
+    identifier: grafana/tempo
+    use-tag: true
+    strip-prefix: "v"
+    tag-filter: "v3."

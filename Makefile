@@ -68,6 +68,9 @@ MAILPIT_VERSION ?= $(call melange_version,mailpit/melange.yaml)
 # --- Service Discovery / Coordination (HashiCorp) ---
 CONSUL_VERSION ?= $(call melange_version,consul/melange.yaml)
 
+# --- Observability (extra) ---
+TEMPO_VERSION ?= $(call melange_version,tempo/melange.yaml)
+
 # --- AI/ML ---
 CUDA_VERSION ?= 12.9.0
 
@@ -119,6 +122,7 @@ endef
 .PHONY: registry registry-melange registry-dev test-registry test-registry-dev
 .PHONY: mailpit mailpit-melange mailpit-dev test-mailpit test-mailpit-dev
 .PHONY: consul consul-melange consul-dev test-consul test-consul-dev
+.PHONY: tempo tempo-melange tempo-dev test-tempo test-tempo-dev
 .PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
 .PHONY: test-python test-python-dev test-jenkins test-go test-go-dev test-node-slim test-node-slim-dev test-nginx test-httpd test-redis-slim test-redis-slim-dev test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-postgres-slim-dev test-bun test-bun-dev test-sqlite test-dotnet test-dotnet-dev test-java test-java-dev test-ruby test-ruby-dev test-php test-php-dev test-rails test-rails-dev test-deno test-deno-dev test-mariadb test-mariadb-dev test-valkey test-valkey-dev test-memcached-dev test-sqlite-dev test-opensearch-dev test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
 
@@ -197,6 +201,7 @@ $(eval $(call DEV_IMAGE_RULE,keycloak,keycloak-melange,--repository-append ./pac
 $(eval $(call DEV_IMAGE_RULE,registry,registry-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,mailpit,mailpit-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,consul,consul-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,tempo,tempo-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -1246,6 +1251,32 @@ consul: consul-melange
 	@echo "✓ minimal-consul built (source build)"
 
 #------------------------------------------------------------------------------
+# TEMPO IMAGE (melange Go source build + apko; Grafana distributed tracing)
+#------------------------------------------------------------------------------
+tempo-melange: keygen
+	@echo "Building Tempo $(TEMPO_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build tempo/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Tempo package built from source"
+
+tempo: tempo-melange
+	@echo "Assembling minimal-tempo image with apko..."
+	apko build tempo/apko/tempo.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-tempo:$(VERSION) \
+		tempo.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < tempo.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-tempo:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-tempo:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-tempo:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-tempo:latest
+	@rm -f tempo.tar sbom-*.spdx.json
+	@echo "✓ minimal-tempo built (source build)"
+
+#------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
 scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
@@ -1591,6 +1622,7 @@ $(eval $(call DEV_TEST_RULE,keycloak))
 $(eval $(call DEV_TEST_RULE,registry))
 $(eval $(call DEV_TEST_RULE,mailpit))
 $(eval $(call DEV_TEST_RULE,consul))
+$(eval $(call DEV_TEST_RULE,tempo))
 
 test-python:
 	@echo "Testing Python image..."
@@ -1882,6 +1914,12 @@ test-consul:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-consul:latest" && \
 		consul/test.sh
 	@echo "✓ consul tests passed"
+
+test-tempo:
+	@echo "Testing tempo image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-tempo:latest" && \
+		tempo/test.sh
+	@echo "✓ tempo tests passed"
 
 test-opensearch:
 	@echo "Testing OpenSearch image..."
