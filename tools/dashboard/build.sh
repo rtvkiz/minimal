@@ -26,6 +26,11 @@ SITE_DIR="${2:?output directory required}"
 BUILD_DATE="${BUILD_DATE:-$(date -u +"%Y-%m-%d %H:%M UTC")}"
 COMMIT_SHA="${COMMIT_SHA:-}"
 RUN_URL="${RUN_URL:-}"
+# Optional: when set, per-image detail pages render an "Author-asserted VEX
+# statements" section sourced from <VEX_DIR>/<image>.openvex.json. CI sets
+# VEX_DIR=src/vex; the meta sidecar still drives effective counts even when
+# this is unset (meta carries the suppressed CVE IDs).
+VEX_DIR="${VEX_DIR:-}"
 
 mkdir -p "$SITE_DIR/assets"
 
@@ -188,6 +193,31 @@ a:hover { text-decoration: underline; }
 .sevbar > .b-medium { background: var(--medium); }
 .sevbar > .b-low { background: var(--low); }
 
+/* VEX rendering */
+tr.suppressed td { opacity: 0.55; text-decoration: line-through; }
+tr.suppressed td.vex-cell { opacity: 1; text-decoration: none; }
+.vex-badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--zero);
+  color: #ffffff;
+  font-weight: 500;
+}
+.vex-section {
+  margin: 24px 0;
+  padding: 16px;
+  background: var(--row-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.vex-section h2 { font-size: 16px; margin: 0 0 12px; }
+.vex-stmt { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--border); }
+.vex-stmt:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.vex-stmt code { background: var(--bg); padding: 2px 4px; border-radius: 3px; font-size: 12px; }
+.vex-stmt .impact { color: var(--muted); margin-top: 4px; font-size: 13px; }
+
 /* Mobile */
 @media (max-width: 700px) {
   body { margin: 16px auto; }
@@ -250,9 +280,11 @@ JS
 
 #--- per-image detail pages + index row data ---------------------------------
 
-# Aggregate totals
+# Aggregate totals (raw + VEX-effective)
 TOTAL_CRIT=0; TOTAL_HIGH=0; TOTAL_MED=0; TOTAL_LOW=0
-TOTAL_FIXABLE=0; TOTAL_IMAGES=0; CLEAN_IMAGES=0
+TOTAL_EFF_CRIT=0; TOTAL_EFF_HIGH=0; TOTAL_EFF_MED=0; TOTAL_EFF_LOW=0
+TOTAL_VEX_STMTS=0
+TOTAL_FIXABLE=0; TOTAL_IMAGES=0; CLEAN_IMAGES=0; CLEAN_EFF_IMAGES=0
 
 # Build rows in a temp file (so the for-loop subshells don't lose state)
 ROWS_FILE=$(mktemp)
@@ -280,17 +312,37 @@ for f in "$REPORTS_DIR"/grype-*.json; do
   TOTAL_FIXABLE=$((TOTAL_FIXABLE + FIXABLE))
   [ "$T" -eq 0 ] && CLEAN_IMAGES=$((CLEAN_IMAGES + 1))
 
-  # Optional meta
+  # Optional meta — also carries VEX effective counts + suppressed CVE IDs
   META="$REPORTS_DIR/meta-$NAME.json"
+  SUPPRESSED_JSON='[]'
+  VEX_STMT_COUNT=0
   if [ -f "$META" ]; then
     SIZE_BYTES=$(jq -r '.size_bytes // 0' "$META")
     BUILT_AT=$(jq -r '.built_at // ""' "$META")
     DIGEST=$(jq -r '.digest // ""' "$META")
+    EC=$(jq -r '.effective.critical // 0' "$META")
+    EH=$(jq -r '.effective.high     // 0' "$META")
+    EM=$(jq -r '.effective.medium   // 0' "$META")
+    EL=$(jq -r '.effective.low      // 0' "$META")
+    SUPPRESSED_JSON=$(jq -c '.vex.suppressed // []' "$META")
+    VEX_STMT_COUNT=$(jq -r '.vex.statements // 0' "$META")
   else
     SIZE_BYTES=0
     BUILT_AT=""
     DIGEST=""
+    # No meta → effective == raw
+    EC="$C"; EH="$H"; EM="$M"; EL="$L"
   fi
+  ET=$((EC + EH + EM + EL))
+  SUPPRESSED_TOTAL=$((T - ET))
+  [ "$SUPPRESSED_TOTAL" -lt 0 ] && SUPPRESSED_TOTAL=0
+
+  TOTAL_EFF_CRIT=$((TOTAL_EFF_CRIT + EC))
+  TOTAL_EFF_HIGH=$((TOTAL_EFF_HIGH + EH))
+  TOTAL_EFF_MED=$((TOTAL_EFF_MED + EM))
+  TOTAL_EFF_LOW=$((TOTAL_EFF_LOW + EL))
+  TOTAL_VEX_STMTS=$((TOTAL_VEX_STMTS + VEX_STMT_COUNT))
+  [ "$ET" -eq 0 ] && CLEAN_EFF_IMAGES=$((CLEAN_EFF_IMAGES + 1))
   SIZE_DISPLAY=$([ "$SIZE_BYTES" -gt 0 ] && fmt_bytes "$SIZE_BYTES" || echo "—")
   AGE_DAYS=$(days_since "$BUILT_AT")
   AGE_DISPLAY=$([ -n "$BUILT_AT" ] && echo "${AGE_DAYS}d" || echo "—")
@@ -311,27 +363,53 @@ for f in "$REPORTS_DIR"/grype-*.json; do
   MCLASS=$(sev_class "$M" medium)
   LCLASS=$(sev_class "$L" low)
 
+  ETCLASS=$([ "$ET" -gt 0 ] && echo "" || echo "zero")
+
   # Index row
-  printf '<tr data-name="%s" data-crit="%d" data-high="%d" data-med="%d" data-low="%d" data-total="%d" data-fixable="%d" data-size="%d" data-age="%d"><td><a href="%s.html">%s</a></td><td class="num %s">%d</td><td class="num %s">%d</td><td class="num %s">%d</td><td class="num %s">%d</td><td class="num">%d</td><td>%s</td><td class="num">%d</td><td class="num">%s</td><td>%s</td></tr>\n' \
-    "$NAME" "$C" "$H" "$M" "$L" "$T" "$FIXABLE" "$SIZE_BYTES" "$AGE_DAYS" \
+  printf '<tr data-name="%s" data-crit="%d" data-high="%d" data-med="%d" data-low="%d" data-total="%d" data-eff="%d" data-vex="%d" data-fixable="%d" data-size="%d" data-age="%d"><td><a href="%s.html">%s</a></td><td class="num %s">%d</td><td class="num %s">%d</td><td class="num %s">%d</td><td class="num %s">%d</td><td class="num">%d</td><td class="num %s">%d</td><td class="num">%d</td><td>%s</td><td class="num">%d</td><td class="num">%s</td><td>%s</td></tr>\n' \
+    "$NAME" "$C" "$H" "$M" "$L" "$T" "$ET" "$VEX_STMT_COUNT" "$FIXABLE" "$SIZE_BYTES" "$AGE_DAYS" \
     "$NAME" "$NAME" \
     "$CCLASS" "$C" "$HCLASS" "$H" "$MCLASS" "$M" "$LCLASS" "$L" "$T" \
-    "$BAR" "$FIXABLE" "$SIZE_DISPLAY" "$AGE_DISPLAY" >> "$ROWS_FILE"
+    "$ETCLASS" "$ET" "$VEX_STMT_COUNT" "$BAR" "$FIXABLE" "$SIZE_DISPLAY" "$AGE_DISPLAY" >> "$ROWS_FILE"
 
-  # Per-image detail page
-  CVE_ROWS=$(jq -r '
+  # Per-image detail page — suppressed CVEs get a strike-through row and an
+  # explanatory VEX badge in a trailing cell. Others render a plain "—".
+  CVE_ROWS=$(jq -r --argjson sup "$SUPPRESSED_JSON" '
     .matches
     | sort_by(if (.vulnerability.severity | ascii_upcase) == "CRITICAL" then 0
               elif (.vulnerability.severity | ascii_upcase) == "HIGH"    then 1
               elif (.vulnerability.severity | ascii_upcase) == "MEDIUM"  then 2
               else 3 end)
     | .[]
-    | "<tr><td>\(.artifact.name)</td><td>\(.artifact.version)</td><td class=\"\(.vulnerability.severity | ascii_downcase)\">\(.vulnerability.severity | ascii_upcase)</td><td><a href=\"\(.vulnerability.dataSource // "")\" target=\"_blank\" rel=\"noopener\">\(.vulnerability.id)</a></td><td>\((.vulnerability.fix.versions // [])[0] // "—")</td><td>\(.vulnerability.description // "" | .[0:160] | @html)</td></tr>"
+    | (.vulnerability.id | IN($sup[])) as $supd
+    | (if $supd then " class=\"suppressed\"" else "" end) as $rowcls
+    | (if $supd then "<span class=\"vex-badge\">VEX</span>" else "—" end) as $vexcell
+    | "<tr\($rowcls)><td>\(.artifact.name)</td><td>\(.artifact.version)</td><td class=\"\(.vulnerability.severity | ascii_downcase)\">\(.vulnerability.severity | ascii_upcase)</td><td><a href=\"\(.vulnerability.dataSource // "")\" target=\"_blank\" rel=\"noopener\">\(.vulnerability.id)</a></td><td>\((.vulnerability.fix.versions // [])[0] // "—")</td><td>\(.vulnerability.description // "" | .[0:160] | @html)</td><td class=\"vex-cell\">\($vexcell)</td></tr>"
   ' "$f" 2>/dev/null || true)
 
   DIGEST_LINE=""
   if [ -n "$DIGEST" ]; then
     DIGEST_LINE="<p class=\"meta\">Image digest: <code>${DIGEST}</code></p>"
+  fi
+
+  # Render VEX statements section from the actual openvex doc when VEX_DIR set.
+  VEX_BLOCK=""
+  VEX_SRC=""
+  [ -n "$VEX_DIR" ] && [ -f "$VEX_DIR/$NAME.openvex.json" ] && VEX_SRC="$VEX_DIR/$NAME.openvex.json"
+  if [ -n "$VEX_SRC" ] && [ "$VEX_STMT_COUNT" -gt 0 ]; then
+    VEX_STMT_HTML=$(jq -r '
+      .statements[]
+      | "<div class=\"vex-stmt\"><strong>\(.vulnerability.name)</strong> · <code>\(.status)</code>"
+        + (if .justification then " · <code>\(.justification)</code>" else "" end)
+        + (if .impact_statement then "<div class=\"impact\">\(.impact_statement | @html)</div>" else "" end)
+        + "</div>"
+    ' "$VEX_SRC")
+    VEX_BLOCK="<section class=\"vex-section\"><h2>Author-asserted VEX statements (${VEX_STMT_COUNT})</h2>${VEX_STMT_HTML}</section>"
+  fi
+
+  EFFECTIVE_LINE=""
+  if [ "$SUPPRESSED_TOTAL" -gt 0 ]; then
+    EFFECTIVE_LINE=" · ${ET} after VEX (${SUPPRESSED_TOTAL} suppressed)"
   fi
 
   cat > "$SITE_DIR/$NAME.html" <<DETAIL
@@ -346,13 +424,14 @@ for f in "$REPORTS_DIR"/grype-*.json; do
 <body>
 <p class="back"><a href="index.html">← All images</a></p>
 <h1>${NAME}</h1>
-<p class="subtitle">${T} open finding$([ "$T" -eq 1 ] || echo s) · ${FIXABLE} with upstream fix available</p>
+<p class="subtitle">${T} open finding$([ "$T" -eq 1 ] || echo s) · ${FIXABLE} with upstream fix available${EFFECTIVE_LINE}</p>
 <p class="meta">Image: <code>ghcr.io/rtvkiz/minimal-${NAME}:latest</code> &nbsp;·&nbsp; Size: ${SIZE_DISPLAY} &nbsp;·&nbsp; Last rebuilt: ${AGE_DISPLAY} ago &nbsp;·&nbsp; Updated: ${BUILD_DATE}</p>
 ${DIGEST_LINE}
+${VEX_BLOCK}
 <table>
-<thead><tr><th>Package</th><th>Version</th><th>Severity</th><th>CVE</th><th>Fix</th><th>Description</th></tr></thead>
+<thead><tr><th>Package</th><th>Version</th><th>Severity</th><th>CVE</th><th>Fix</th><th>Description</th><th>VEX</th></tr></thead>
 <tbody>
-${CVE_ROWS:-<tr><td colspan="6">No vulnerabilities found.</td></tr>}
+${CVE_ROWS:-<tr><td colspan="7">No vulnerabilities found.</td></tr>}
 </tbody>
 </table>
 </body>
@@ -362,10 +441,11 @@ done
 shopt -u nullglob
 
 TOTAL_ALL=$((TOTAL_CRIT + TOTAL_HIGH + TOTAL_MED + TOTAL_LOW))
+TOTAL_EFF_ALL=$((TOTAL_EFF_CRIT + TOTAL_EFF_HIGH + TOTAL_EFF_MED + TOTAL_EFF_LOW))
 
 # Totals row appended last
-printf '<tr class="totals"><td>Total (%d images)</td><td class="num critical">%d</td><td class="num high">%d</td><td class="num medium">%d</td><td class="num low">%d</td><td class="num">%d</td><td></td><td class="num">%d</td><td></td><td></td></tr>\n' \
-  "$TOTAL_IMAGES" "$TOTAL_CRIT" "$TOTAL_HIGH" "$TOTAL_MED" "$TOTAL_LOW" "$TOTAL_ALL" "$TOTAL_FIXABLE" >> "$ROWS_FILE"
+printf '<tr class="totals"><td>Total (%d images)</td><td class="num critical">%d</td><td class="num high">%d</td><td class="num medium">%d</td><td class="num low">%d</td><td class="num">%d</td><td class="num">%d</td><td class="num">%d</td><td></td><td class="num">%d</td><td></td><td></td></tr>\n' \
+  "$TOTAL_IMAGES" "$TOTAL_CRIT" "$TOTAL_HIGH" "$TOTAL_MED" "$TOTAL_LOW" "$TOTAL_ALL" "$TOTAL_EFF_ALL" "$TOTAL_VEX_STMTS" "$TOTAL_FIXABLE" >> "$ROWS_FILE"
 
 #--- index page ---------------------------------------------------------------
 
@@ -389,7 +469,7 @@ cat > "$SITE_DIR/index.html" <<HTML
 </head>
 <body>
 <h1>Vulnerability Report</h1>
-<p class="subtitle">Daily Grype scan across all production images. Click an image for the full CVE list.</p>
+<p class="subtitle">Daily Grype scan across all production images. <strong>Eff</strong> applies author-asserted <a href="https://openvex.dev/">OpenVEX</a> statements (CVEs we've affirmed don't affect us). Click an image for the full CVE list and VEX rationale.</p>
 <p class="meta">Updated: ${BUILD_DATE}${COMMIT_LINK}</p>
 
 <div class="summary">
@@ -407,6 +487,8 @@ cat > "$SITE_DIR/index.html" <<HTML
   </div>
   <div class="chip"><span class="label">Fixable</span><span class="value">${TOTAL_FIXABLE}</span></div>
   <div class="chip zero"><span class="label">Clean images</span><span class="value">${CLEAN_IMAGES} / ${TOTAL_IMAGES}</span></div>
+  <div class="chip zero"><span class="label">Clean after VEX</span><span class="value">${CLEAN_EFF_IMAGES} / ${TOTAL_IMAGES}</span></div>
+  <div class="chip"><span class="label">VEX statements</span><span class="value">${TOTAL_VEX_STMTS}</span></div>
 </div>
 
 <div class="controls">
@@ -423,6 +505,8 @@ cat > "$SITE_DIR/index.html" <<HTML
   <th data-sort="med" class="num">Med</th>
   <th data-sort="low" class="num">Low</th>
   <th data-sort="total" class="num">Total</th>
+  <th data-sort="eff" class="num" title="Total CVEs after VEX suppression">Eff</th>
+  <th data-sort="vex" class="num" title="Number of OpenVEX statements">VEX</th>
   <th>Severity mix</th>
   <th data-sort="fixable" class="num">Fixable</th>
   <th data-sort="size" class="num">Size</th>
