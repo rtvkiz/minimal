@@ -225,6 +225,25 @@ jobs:
           echo "- Image assemblies: $(echo "$BUILD_MELANGE_MATRIX" | jq '.include | length')" >> $GITHUB_STEP_SUMMARY
 
   #----------------------------------------------------------------------------
+  # VALIDATE OPENVEX DOCUMENTS
+  #
+  # Runs on every event so a malformed vex/<image>.openvex.json blocks merge
+  # before image builds start. Standalone — no needs:/depends — so it's the
+  # fastest signal a contributor gets.
+  #----------------------------------------------------------------------------
+  validate-vex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate OpenVEX docs
+        run: bash tools/vex/validate.sh
+
+  #----------------------------------------------------------------------------
   # GENERATE EPHEMERAL SIGNING KEY (PRs only - secrets not available for forks)
   #----------------------------------------------------------------------------
   keygen:
@@ -457,18 +476,74 @@ jobs:
         if: matrix.scan_for_cves
         run: |
           # Sidecar JSON consumed by tools/dashboard/build.sh — drives the
-          # Size, Built-ago, and digest columns on the CVE dashboard.
+          # Size, Built-ago, raw vs VEX-effective CVE columns, and digest
+          # on the published CVE dashboard.
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
           SIZE_BYTES=$(docker image inspect "$IMAGE" --format '{{.Size}}' 2>/dev/null || echo 0)
           DIGEST=$(docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}' 2>/dev/null | sed 's|.*@||')
           BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          GRYPE_REPORT="grype-${{ matrix.name }}.json"
+          VEX_FILE="vex/${{ matrix.name }}.openvex.json"
+          [ -f "$VEX_FILE" ] || VEX_FILE=""
+
+          # Suppressed CVE IDs: statements where status is not_affected | fixed.
+          SUPPRESSED_JSON='[]'
+          STMT_COUNT=0
+          if [ -n "$VEX_FILE" ]; then
+            STMT_COUNT=$(jq '.statements | length' "$VEX_FILE")
+            SUPPRESSED_JSON=$(jq '[.statements[]
+              | select(.status == "not_affected" or .status == "fixed")
+              | .vulnerability.name] | unique' "$VEX_FILE")
+          fi
+
+          # Severity counts — raw straight from grype, effective drops any
+          # match whose .vulnerability.id is in the suppressed set.
+          counts() {
+            local report="$1" suppressed="$2"
+            jq --argjson sup "$suppressed" '
+              def sev_count(level):
+                [ .matches[]
+                  | select((.vulnerability.id | IN($sup[])) | not)
+                  | select(.vulnerability.severity | ascii_upcase == level)
+                ] | length;
+              {
+                critical: sev_count("CRITICAL"),
+                high:     sev_count("HIGH"),
+                medium:   sev_count("MEDIUM"),
+                low:      sev_count("LOW")
+              } | . + {total: (.critical + .high + .medium + .low)}
+            ' "$report"
+          }
+
+          if [ -f "$GRYPE_REPORT" ]; then
+            RAW_COUNTS=$(counts "$GRYPE_REPORT" '[]')
+            EFF_COUNTS=$(counts "$GRYPE_REPORT" "$SUPPRESSED_JSON")
+          else
+            RAW_COUNTS='{"critical":0,"high":0,"medium":0,"low":0,"total":0}'
+            EFF_COUNTS="$RAW_COUNTS"
+          fi
+
           jq -n \
             --arg name "${{ matrix.name }}" \
             --argjson size "${SIZE_BYTES:-0}" \
             --arg built_at "$BUILT_AT" \
             --arg digest "$DIGEST" \
             --arg image_ref "$IMAGE" \
-            '{name: $name, size_bytes: $size, built_at: $built_at, digest: $digest, image_ref: $image_ref}' \
+            --argjson raw "$RAW_COUNTS" \
+            --argjson effective "$EFF_COUNTS" \
+            --argjson suppressed "$SUPPRESSED_JSON" \
+            --argjson statements "$STMT_COUNT" \
+            '{
+              name: $name,
+              size_bytes: $size,
+              built_at: $built_at,
+              digest: $digest,
+              image_ref: $image_ref,
+              raw: $raw,
+              effective: $effective,
+              vex: { statements: $statements, suppressed: $suppressed }
+            }' \
             > meta-${{ matrix.name }}.json
           cat meta-${{ matrix.name }}.json
 
@@ -809,18 +884,74 @@ jobs:
         if: matrix.scan_for_cves
         run: |
           # Sidecar JSON consumed by tools/dashboard/build.sh — drives the
-          # Size, Built-ago, and digest columns on the CVE dashboard.
+          # Size, Built-ago, raw vs VEX-effective CVE columns, and digest
+          # on the published CVE dashboard.
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
           SIZE_BYTES=$(docker image inspect "$IMAGE" --format '{{.Size}}' 2>/dev/null || echo 0)
           DIGEST=$(docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}' 2>/dev/null | sed 's|.*@||')
           BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          GRYPE_REPORT="grype-${{ matrix.name }}.json"
+          VEX_FILE="vex/${{ matrix.name }}.openvex.json"
+          [ -f "$VEX_FILE" ] || VEX_FILE=""
+
+          # Suppressed CVE IDs: statements where status is not_affected | fixed.
+          SUPPRESSED_JSON='[]'
+          STMT_COUNT=0
+          if [ -n "$VEX_FILE" ]; then
+            STMT_COUNT=$(jq '.statements | length' "$VEX_FILE")
+            SUPPRESSED_JSON=$(jq '[.statements[]
+              | select(.status == "not_affected" or .status == "fixed")
+              | .vulnerability.name] | unique' "$VEX_FILE")
+          fi
+
+          # Severity counts — raw straight from grype, effective drops any
+          # match whose .vulnerability.id is in the suppressed set.
+          counts() {
+            local report="$1" suppressed="$2"
+            jq --argjson sup "$suppressed" '
+              def sev_count(level):
+                [ .matches[]
+                  | select((.vulnerability.id | IN($sup[])) | not)
+                  | select(.vulnerability.severity | ascii_upcase == level)
+                ] | length;
+              {
+                critical: sev_count("CRITICAL"),
+                high:     sev_count("HIGH"),
+                medium:   sev_count("MEDIUM"),
+                low:      sev_count("LOW")
+              } | . + {total: (.critical + .high + .medium + .low)}
+            ' "$report"
+          }
+
+          if [ -f "$GRYPE_REPORT" ]; then
+            RAW_COUNTS=$(counts "$GRYPE_REPORT" '[]')
+            EFF_COUNTS=$(counts "$GRYPE_REPORT" "$SUPPRESSED_JSON")
+          else
+            RAW_COUNTS='{"critical":0,"high":0,"medium":0,"low":0,"total":0}'
+            EFF_COUNTS="$RAW_COUNTS"
+          fi
+
           jq -n \
             --arg name "${{ matrix.name }}" \
             --argjson size "${SIZE_BYTES:-0}" \
             --arg built_at "$BUILT_AT" \
             --arg digest "$DIGEST" \
             --arg image_ref "$IMAGE" \
-            '{name: $name, size_bytes: $size, built_at: $built_at, digest: $digest, image_ref: $image_ref}' \
+            --argjson raw "$RAW_COUNTS" \
+            --argjson effective "$EFF_COUNTS" \
+            --argjson suppressed "$SUPPRESSED_JSON" \
+            --argjson statements "$STMT_COUNT" \
+            '{
+              name: $name,
+              size_bytes: $size,
+              built_at: $built_at,
+              digest: $digest,
+              image_ref: $image_ref,
+              raw: $raw,
+              effective: $effective,
+              vex: { statements: $statements, suppressed: $suppressed }
+            }' \
             > meta-${{ matrix.name }}.json
           cat meta-${{ matrix.name }}.json
 
@@ -1061,10 +1192,12 @@ jobs:
           merge-multiple: true
           path: reports/
 
-      - name: Checkout dashboard script
+      - name: Checkout dashboard script and VEX docs
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          sparse-checkout: tools/dashboard
+          sparse-checkout: |
+            tools/dashboard
+            vex
           sparse-checkout-cone-mode: false
           path: src
 
@@ -1074,6 +1207,7 @@ jobs:
           export BUILD_DATE="$(date -u +"%Y-%m-%d %H:%M UTC")"
           export COMMIT_SHA="${SHA:0:7}"
           export RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          export VEX_DIR="src/vex"
           bash src/tools/dashboard/build.sh reports site
 
       - name: Upload Pages artifact

@@ -1,0 +1,9 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/rtvkiz/minimal/vex/dotnet",
+  "author": "rtvkiz",
+  "timestamp": "2026-06-02T00:00:00Z",
+  "version": 1,
+  "tooling": "tools/vex/validate.sh",
+  "statements": []
+}
