@@ -13,14 +13,14 @@
   <a href="https://rtvkiz.github.io/minimal/"><img src="https://img.shields.io/badge/CVE_Dashboard-Live-0d9488" alt="CVE Dashboard"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://slsa.dev/spec/v1.0/levels#build-l3"><img src="https://img.shields.io/badge/SLSA-Level_3-0d9488" alt="SLSA Level 3"></a>
-  <img src="https://img.shields.io/badge/Images-45-0d9488" alt="Images: 45">
+  <img src="https://img.shields.io/badge/Images-46-0d9488" alt="Images: 46">
   <img src="https://img.shields.io/badge/Arch-amd64_%7C_arm64-0d9488" alt="Architectures">
 </p>
 
 <p align="center">
   <a href="https://rtvkiz.github.io/minimal/">Live CVE dashboard</a> ·
   <a href="#pull-and-verify-in-30-seconds">Verify an image</a> ·
-  <a href="#available-images--45-total">All 45 images</a> ·
+  <a href="#available-images--46-total">All 46 images</a> ·
   <a href="https://news.ycombinator.com/item?id=46840178">HN discussion</a>
 </p>
 
@@ -75,13 +75,13 @@ It's probably not the right fit if you need a vendor contract, FedRAMP or STIG a
 - No shell where possible — most images don't ship `/bin/sh`.
 - A six-hour rebuild cadence, so Wolfi CVE patches land in hours, not days.
 
-## Available Images — 45 total
+## Available Images — 46 total
 
 | Category | Count | Highlights |
 |---|---|---|
 | **Languages & runtimes** | 9 | python, node-slim, bun, go, java, ruby, php, dotnet, deno |
 | **Databases** | 5 | mysql, mariadb, postgres-slim, sqlite, opensearch |
-| **Caches, queues, messaging** | 6 | redis-slim, valkey, memcached, kafka, rabbitmq, nats |
+| **Caches, queues, messaging** | 7 | redis-slim, valkey, memcached, kafka, rabbitmq, nats, mosquitto |
 | **Web servers & proxies** | 6 | nginx, httpd, caddy, haproxy, traefik, envoy |
 | **Observability** | 7 | prometheus, victoria-metrics, jaeger, loki, otelcol, fluent-bit, tempo |
 | **Infrastructure** | 7 | coredns, etcd, openbao, keycloak, qdrant, registry, consul |
@@ -118,6 +118,7 @@ It's probably not the right fit if you need a vendor contract, FedRAMP or STIG a
 | Kafka | `docker pull ghcr.io/rtvkiz/minimal-kafka:latest` | Yes | Apache Kafka 4.x, KRaft mode |
 | RabbitMQ | `docker pull ghcr.io/rtvkiz/minimal-rabbitmq:latest` | Yes | RabbitMQ 4.x AMQP broker |
 | NATS | `docker pull ghcr.io/rtvkiz/minimal-nats:latest` | No | NATS Server with JetStream |
+| Mosquitto | `docker pull ghcr.io/rtvkiz/minimal-mosquitto:latest` | No | Eclipse Mosquitto MQTT broker (EPL-2.0/EDL-1.0) |
 | | | **Web Servers & Proxies** | |
 | Nginx | `docker pull ghcr.io/rtvkiz/minimal-nginx:latest` | No | Reverse proxy, static files |
 | HTTPD | `docker pull ghcr.io/rtvkiz/minimal-httpd:latest` | Maybe* | Apache web server |
@@ -259,7 +260,7 @@ docker run -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-<image>:latest-dev
 
 Dev variants share the prod image's signing, SBOM, and SLSA provenance pipeline. They are **not tracked on the public CVE dashboard** — they intentionally ship a larger attack surface. See [`.github/SECURITY.md`](.github/SECURITY.md#dev-variants--dev-tags) for the policy and [`docs/dev-variants/CONVENTIONS.md`](docs/dev-variants/CONVENTIONS.md) for the package composition rules.
 
-**Shipping today:** 45 of 45 dev variants — every image in the catalog now ships a `:latest-dev` companion built from the same source as prod.
+**Shipping today:** 46 of 46 dev variants — every image in the catalog now ships a `:latest-dev` companion built from the same source as prod.
 
 <details>
 <summary><strong>Per-image dev variant status</strong></summary>
@@ -317,6 +318,7 @@ Categories follow the three templates in [`docs/dev-variants/templates/`](docs/d
 | mailpit | server | in-house (Chainguard ships no public mailpit) | ✅ |
 | consul | server | in-house (Chainguard ships no public consul; BUSL-1.1) | ✅ |
 | tempo | server | in-house (Chainguard ships no public tempo; AGPL-3.0) | ✅ |
+| mosquitto | daemon | in-house (Chainguard ships no public mosquitto; EPL-2.0/EDL-1.0) | ✅ |
 
 </details>
 
