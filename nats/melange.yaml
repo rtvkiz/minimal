@@ -4,7 +4,7 @@
 
 package:
   name: nats-minimal
-  version: 2.14.1
+  version: 2.14.2
   epoch: 0
   description: "Minimal NATS Server built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-nats.yml workflow
-  sha256: 5543bd3757c596994d116986a99965b3b2d61a416f24dd98cefde91c094c102e
+  sha256: 54cfe4361aa09a55a92524b737993941cd37fd444ccedd9ba60fc0d4a0c0cd72
 
 environment:
   contents:
