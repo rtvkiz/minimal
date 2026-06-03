@@ -1,0 +1,80 @@
+# Melange build configuration for minimal Helm CLI.
+# Pure Go from source. Stripped, statically linked. No daemon — this image
+# packages the `helm` binary for use in CI pipelines and one-shot installs.
+# License: Apache-2.0.
+
+package:
+  name: helm-minimal
+  version: 3.21.0
+  epoch: 0
+  description: "Minimal Helm CLI for Kubernetes built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of helm source tarball - updated by update-helm.yml workflow
+  sha256: 5abd5619885f27fe50e8e5b06b2fec575e44a878319f302f09598390c6099705
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify helm source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/helm/helm/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/helm.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/helm.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf helm.tar.gz
+      rm helm.tar.gz
+
+  # Build helm — single static binary, version stamps via helm.sh/helm/v3/internal/version.
+  - runs: |
+      cd /home/build/helm-${{package.version}}
+      BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X helm.sh/helm/v3/internal/version.version=v${{package.version}} \
+          -X helm.sh/helm/v3/internal/version.metadata=source-build \
+          -X helm.sh/helm/v3/internal/version.gitCommit=source-build \
+          -X helm.sh/helm/v3/internal/version.gitTreeState=clean \
+          -X helm.sh/helm/v3/internal/version.buildDate=${BUILD_DATE}" \
+        -o /home/build/helm-bin \
+        ./cmd/helm
+
+  # Install
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/helm-bin "${{targets.destdir}}/usr/bin/helm"
+      chmod 0755 "${{targets.destdir}}/usr/bin/helm"
+
+  # Verify
+  - runs: |
+      echo "Verifying helm build..."
+      "${{targets.destdir}}/usr/bin/helm" version
+      echo "Binary size:"
+      ls -lh "${{targets.destdir}}/usr/bin/helm"
+
+update:
+  enabled: true
+  github:
+    identifier: helm/helm
+    use-tag: true
+    strip-prefix: "v"
+    tag-filter: "v3."
