@@ -72,7 +72,8 @@ jobs:
             {"name":"fluent-bit","variants":["prod","dev"]},{"name":"keycloak","variants":["prod","dev"]},
             {"name":"registry","variants":["prod","dev"]},{"name":"mailpit","variants":["prod","dev"]},
             {"name":"consul","variants":["prod","dev"]},{"name":"tempo","variants":["prod","dev"]},
-            {"name":"mosquitto","variants":["prod","dev"]}
+            {"name":"mosquitto","variants":["prod","dev"]},
+            {"name":"helm","variants":["prod","dev"]}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},

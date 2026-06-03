@@ -75,7 +75,7 @@ It's probably not the right fit if you need a vendor contract, FedRAMP or STIG a
 - No shell where possible — most images don't ship `/bin/sh`.
 - A six-hour rebuild cadence, so Wolfi CVE patches land in hours, not days.
 
-## Available Images — 46 total
+## Available Images — 47 total
 
 | Category | Count | Highlights |
 |---|---|---|
@@ -85,6 +85,7 @@ It's probably not the right fit if you need a vendor contract, FedRAMP or STIG a
 | **Web servers & proxies** | 6 | nginx, httpd, caddy, haproxy, traefik, envoy |
 | **Observability** | 7 | prometheus, victoria-metrics, jaeger, loki, otelcol, fluent-bit, tempo |
 | **Infrastructure** | 7 | coredns, etcd, openbao, keycloak, qdrant, registry, consul |
+| **Kubernetes & CI** | 1 | helm |
 | **Apps** | 5 | jenkins, gitea, minio, rails, mailpit |
 
 <details>
@@ -142,6 +143,8 @@ It's probably not the right fit if you need a vendor contract, FedRAMP or STIG a
 | Qdrant | `docker pull ghcr.io/rtvkiz/minimal-qdrant:latest` | No | Vector DB for AI/ML (Rust) |
 | Registry | `docker pull ghcr.io/rtvkiz/minimal-registry:latest` | No | OCI distribution registry (Docker Registry v2), built from source |
 | Consul | `docker pull ghcr.io/rtvkiz/minimal-consul:latest` | No | HashiCorp Consul service discovery + KV (BUSL-1.1) |
+| | | **Kubernetes & CI** | |
+| Helm | `docker pull ghcr.io/rtvkiz/minimal-helm:latest` | No | Helm 3 CLI for Kubernetes chart deployment |
 | | | **Apps** | |
 | Jenkins | `docker pull ghcr.io/rtvkiz/minimal-jenkins:latest` | Yes | CI/CD automation |
 | Gitea | `docker pull ghcr.io/rtvkiz/minimal-gitea:latest` | Yes | Self-hosted Git service |

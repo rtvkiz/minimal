@@ -73,6 +73,7 @@ TEMPO_VERSION ?= $(call melange_version,tempo/melange.yaml)
 
 # --- Messaging (MQTT) ---
 MOSQUITTO_VERSION ?= $(call melange_version,mosquitto/melange.yaml)
+HELM_VERSION ?= $(call melange_version,helm/melange.yaml)
 
 # --- AI/ML ---
 CUDA_VERSION ?= 12.9.0
@@ -1307,6 +1308,29 @@ mosquitto: mosquitto-melange
 	@rm -f mosquitto.tar sbom-*.spdx.json
 	@echo "✓ minimal-mosquitto built (source build)"
 
+helm-melange: keygen
+	@echo "Building Helm $(HELM_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build helm/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Helm package built from source"
+
+helm: helm-melange
+	@echo "Assembling minimal-helm image with apko..."
+	apko build helm/apko/helm.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-helm:$(VERSION) \
+		helm.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < helm.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-helm:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-helm:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-helm:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-helm:latest
+	@rm -f helm.tar sbom-*.spdx.json
+	@echo "✓ minimal-helm built (source build)"
+
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
@@ -1958,6 +1982,12 @@ test-mosquitto:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-mosquitto:latest" && \
 		mosquitto/test.sh
 	@echo "✓ mosquitto tests passed"
+
+test-helm:
+	@echo "Testing helm image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-helm:latest" && \
+		helm/test.sh
+	@echo "✓ helm tests passed"
 
 test-opensearch:
 	@echo "Testing OpenSearch image..."
