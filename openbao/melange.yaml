@@ -49,10 +49,14 @@ pipeline:
 
 
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       cd /home/build/openbao-${{package.version}}
-      go get github.com/jackc/pgx/v5@v5.9.2
+      go get github.com/openbao/openbao@v0.0.0-20250806194004-a14053c9679d
+      go get golang.org/x/crypto@v0.52.0
+      go get golang.org/x/net@v0.55.0
+      go get golang.org/x/sys@v0.44.0
       go mod tidy
       if [ -d vendor ]; then go mod vendor; fi
   # end-patch-go-deps
