@@ -2,8 +2,9 @@ name: Patch Go Transitive Dependencies
 
 on:
   schedule:
-    # Run at 1am UTC daily, 1 hour before the 2am daily rebuild
-    - cron: '0 1 * * *'
+    # Every 6h, aligned ahead of the build.yml rebuild cadence so freshly-published
+    # Go advisories get patched before the next image rebuild picks them up.
+    - cron: '0 1,7,13,19 * * *'
   workflow_dispatch:
 
 permissions: {}
@@ -89,6 +90,28 @@ jobs:
             [coredns]="/home/build/coredns-${D}{{package.version}}"
             [openbao]="/home/build/openbao-${D}{{package.version}}"
             [loki]="/home/build/loki-${D}{{package.version}}"
+          )
+
+          # Main module path per image. Grype's buildinfo scan reports the
+          # image's own module as a go-module match, so when upstream publishes
+          # a CVE against that module path the script would emit
+          # `go get <self>@<ver>`, which Go rejects with
+          # "package X is in the main module, so can't request version Y".
+          # Listing the main module here lets the FIXES filter drop self-bumps.
+          declare -A MAIN_MODULES=(
+            [caddy]="github.com/caddyserver/caddy/v2"
+            [traefik]="github.com/traefik/traefik/v3"
+            [nats]="github.com/nats-io/nats-server/v2"
+            [minio]="github.com/minio/minio"
+            [prometheus]="github.com/prometheus/prometheus"
+            [etcd]="go.etcd.io/etcd/server/v3"
+            [jaeger]="github.com/jaegertracing/jaeger"
+            [victoria-metrics]="github.com/VictoriaMetrics/VictoriaMetrics"
+            [otelcol]="go.opentelemetry.io/collector"
+            [gitea]="code.gitea.io/gitea"
+            [coredns]="github.com/coredns/coredns"
+            [openbao]="github.com/openbao/openbao"
+            [loki]="github.com/grafana/loki/v3"
           )
 
           # Images that need image-specific dependency bump handling.
@@ -186,8 +209,15 @@ jobs:
             # Build go get commands
             GO_GETS=""
             APPLIED_COUNT=0
+            MAIN_MOD="${MAIN_MODULES[$IMAGE]:-}"
             while IFS= read -r mod_ver; do
               [ -z "$mod_ver" ] && continue
+              # Drop self-references — Go refuses `go get <main-module>@<ver>`
+              # inside its own source tree.
+              if [ -n "$MAIN_MOD" ] && [[ "$mod_ver" == "${MAIN_MOD}@"* ]]; then
+                echo "  Skipping main-module self-bump: $mod_ver"
+                continue
+              fi
               if [ "$IMAGE" = "loki" ] && [[ "$mod_ver" == github.com/prometheus/prometheus@* ]]; then
                 echo "  Skipping incompatible Loki module bump: $mod_ver"
                 continue
