@@ -1,0 +1,91 @@
+# Melange build configuration for minimal kubectl CLI.
+# Pure Go from source (Kubernetes monorepo, ./cmd/kubectl).
+# Statically linked, version stamps injected via -ldflags. No daemon — this
+# image packages the `kubectl` binary for use in CI pipelines and one-shot
+# cluster ops.
+# License: Apache-2.0.
+
+package:
+  name: kubectl-minimal
+  version: 1.36.1
+  epoch: 0
+  description: "Minimal kubectl CLI for Kubernetes built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of kubernetes source tarball - updated by update-kubectl.yml workflow
+  sha256: 1ebfa65cc95fbeb2ef4aad6832a3fae4edb88516e43b6437b69a40895803e0e8
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify kubernetes source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/kubernetes/kubernetes/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/k8s.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/k8s.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf k8s.tar.gz
+      rm k8s.tar.gz
+
+  # Build kubectl — single static binary. Kubernetes' Makefile invokes a custom
+  # hack/ pipeline (git-derived version stamps, codegen) that doesn't work in
+  # the bwrap sandbox without git history. We set ldflags directly to the
+  # k8s.io/{client-go,component-base}/version.* fields the binary surfaces via
+  # `kubectl version --client`.
+  - runs: |
+      cd /home/build/kubernetes-${{package.version}}
+      BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+      LDFLAGS="-s -w"
+      for pkg in k8s.io/client-go/pkg/version k8s.io/component-base/version; do
+        LDFLAGS="$LDFLAGS \
+          -X $pkg.gitVersion=v${{package.version}} \
+          -X $pkg.gitCommit=source-build \
+          -X $pkg.gitTreeState=clean \
+          -X $pkg.buildDate=$BUILD_DATE \
+          -X $pkg.gitMajor=1 \
+          -X $pkg.gitMinor=36"
+      done
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="$LDFLAGS" \
+        -o /home/build/kubectl-bin \
+        ./cmd/kubectl
+
+  # Install
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/kubectl-bin "${{targets.destdir}}/usr/bin/kubectl"
+      chmod 0755 "${{targets.destdir}}/usr/bin/kubectl"
+
+  # Verify
+  - runs: |
+      echo "Verifying kubectl build..."
+      "${{targets.destdir}}/usr/bin/kubectl" version --client
+      echo "Binary size:"
+      ls -lh "${{targets.destdir}}/usr/bin/kubectl"
+
+update:
+  enabled: true
+  github:
+    identifier: kubernetes/kubernetes
+    use-tag: true
+    strip-prefix: "v"
+    tag-filter: "v1."

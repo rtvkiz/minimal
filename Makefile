@@ -74,6 +74,7 @@ TEMPO_VERSION ?= $(call melange_version,tempo/melange.yaml)
 # --- Messaging (MQTT) ---
 MOSQUITTO_VERSION ?= $(call melange_version,mosquitto/melange.yaml)
 HELM_VERSION ?= $(call melange_version,helm/melange.yaml)
+KUBECTL_VERSION ?= $(call melange_version,kubectl/melange.yaml)
 
 # --- AI/ML ---
 CUDA_VERSION ?= 12.9.0
@@ -1331,6 +1332,29 @@ helm: helm-melange
 	@rm -f helm.tar sbom-*.spdx.json
 	@echo "✓ minimal-helm built (source build)"
 
+kubectl-melange: keygen
+	@echo "Building kubectl $(KUBECTL_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build kubectl/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ kubectl package built from source"
+
+kubectl: kubectl-melange
+	@echo "Assembling minimal-kubectl image with apko..."
+	apko build kubectl/apko/kubectl.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-kubectl:$(VERSION) \
+		kubectl.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < kubectl.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kubectl:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kubectl:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kubectl:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kubectl:latest
+	@rm -f kubectl.tar sbom-*.spdx.json
+	@echo "✓ minimal-kubectl built (source build)"
+
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
@@ -1988,6 +2012,12 @@ test-helm:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-helm:latest" && \
 		helm/test.sh
 	@echo "✓ helm tests passed"
+
+test-kubectl:
+	@echo "Testing kubectl image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kubectl:latest" && \
+		kubectl/test.sh
+	@echo "✓ kubectl tests passed"
 
 test-opensearch:
 	@echo "Testing OpenSearch image..."

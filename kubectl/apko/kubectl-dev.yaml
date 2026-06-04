@@ -1,0 +1,70 @@
+# Development variant of minimal-kubectl.
+# Same kubectl binary, plus shell + curl + git + jq for cluster-debug workflows.
+# Not intended for production CI use — prefer minimal-kubectl for that.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - kubectl-minimal
+    - ca-certificates-bundle
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+    - curl
+    - bind-tools
+    - jq
+    - git
+
+accounts:
+  groups:
+    - groupname: kubectl
+      gid: 65532
+  users:
+    - username: kubectl
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/kubectl
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  HOME: /home/kubectl
+  KUBECONFIG: /home/kubectl/.kube/config
+
+paths:
+  - path: /home/kubectl
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /home/kubectl/.kube
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o700
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-kubectl-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-kubectl: same kubectl CLI + shell + curl/git/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/kubectl"
+  org.opencontainers.image.licenses: "Apache-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64
