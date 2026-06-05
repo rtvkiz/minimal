@@ -76,13 +76,17 @@ jobs:
           # Map of image name -> modroot (melange template vars)
           # Split $ from {{ so GHA doesn't parse them as expressions
           D='$'
+          # Build dirs per image. Values are space-separated when an image is
+          # a multi-module monorepo (e.g. etcd's server/etcdctl/etcdutl each
+          # have their own go.mod; patching only the root has no effect on
+          # the built binaries). For single-module images, one path suffices.
           declare -A MODROOTS=(
             [caddy]="/home/build/caddy-${D}{{package.version}}"
             [traefik]="/home/build/traefik-${D}{{package.version}}"
             [nats]="/home/build/nats-server-${D}{{package.version}}"
             [minio]="/home/build/minio-${D}{{vars.minio_release}}"
             [prometheus]="/home/build/prometheus-${D}{{package.version}}"
-            [etcd]="/home/build/etcd-${D}{{package.version}}"
+            [etcd]="/home/build/etcd-${D}{{package.version}}/server /home/build/etcd-${D}{{package.version}}/etcdctl /home/build/etcd-${D}{{package.version}}/etcdutl"
             [jaeger]="/home/build/jaeger-${D}{{package.version}}"
             [victoria-metrics]="/home/build/VictoriaMetrics-${D}{{package.version}}"
             [otelcol]="/home/build/opentelemetry-collector-${D}{{package.version}}/cmd/otelcorecol"
@@ -266,7 +270,12 @@ jobs:
                 echo "  Skipping ${mod_ver}: version not in Go module proxy"
                 continue
               fi
-              GO_GETS="${GO_GETS}      go get ${mod_ver}\n"
+              # Use `go mod edit -replace=PKG=PKG@VER` instead of `go get PKG@VER`.
+              # `go get` adds a direct require that `go mod tidy` then strips if
+              # the bumped package is only used indirectly — MVS resolves back to
+              # the original lower version and the bump silently reverts.
+              # `replace` directives survive tidy and force MVS to use our pin.
+              GO_GETS="${GO_GETS} -replace=${mod}=${mod}@${ver}"
               APPLIED_COUNT=$((APPLIED_COUNT + 1))
             done <<< "$FIXES"
 
@@ -281,15 +290,14 @@ jobs:
               continue
             fi
 
-            # Create the patch block.
-            # Use `go mod tidy -e` to continue past transitive inconsistencies —
-            # without -e, a single conflict (e.g. minio's split modules) aborts
-            # the whole tidy and the build dies. Matches Chainguard's approach
-            # for minio (chainguard-forks/minio/pull/25).
-            # `go mod vendor` fails in workspace mode (kubernetes/kubernetes
-            # uses go.work). Force GOWORK=off so single-module commands behave
-            # consistently across both workspace and non-workspace repos.
-            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      cd ${MODROOT}\n      export GOWORK=off\n${GO_GETS}      go mod tidy -e\n      if [ -d vendor ]; then go mod vendor; fi\n  # end-patch-go-deps\n"
+            # Create the patch block. Iterate over each modroot so multi-module
+            # monorepos (etcd: server/etcdctl/etcdutl) get every binary patched.
+            # `go mod tidy -e` continues past transitive inconsistencies (single
+            # conflict otherwise aborts the whole tidy — matches Chainguard's
+            # minio approach in chainguard-forks/minio/pull/25).
+            # GOWORK=off keeps single-module commands consistent for repos that
+            # ship a go.work (kubernetes/kubernetes).
+            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      export GOWORK=off\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        ( cd \"\$root\" \\\\\n          && go mod edit${GO_GETS} \\\\\n          && go mod tidy -e \\\\\n          && { [ ! -d vendor ] || go mod vendor; } )\n      done\n  # end-patch-go-deps\n"
 
             # Find the marker line and insert before it
             MARKER_LINE=$(grep -n "$MARKER" "$MELANGE_FILE" | head -1 | cut -d: -f1)
