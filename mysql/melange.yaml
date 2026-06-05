@@ -76,7 +76,7 @@ pipeline:
         -DWITHOUT_NDBCLUSTER_STORAGE_ENGINE=1 \
         -DWITHOUT_PERFSCHEMA_STORAGE_ENGINE=0 \
         -DWITH_NDB=OFF \
-        -DWITH_PROTOBUF=system \
+        -DWITH_PROTOBUF=bundled \
         -DWITH_ICU=bundled
       make -j$(nproc) mysqld mysql component_reference_cache
 
