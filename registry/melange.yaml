@@ -46,6 +46,7 @@ pipeline:
   # NB: upstream source tree contains a ./registry/ subdir, so -o /home/build/registry-bin
   # avoids collision with `go build -o registry` writing into that directory.
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       cd /home/build/distribution-${{package.version}}
