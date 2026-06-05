@@ -270,12 +270,17 @@ jobs:
                 echo "  Skipping ${mod_ver}: version not in Go module proxy"
                 continue
               fi
-              # Use `go mod edit -replace=PKG=PKG@VER` instead of `go get PKG@VER`.
-              # `go get` adds a direct require that `go mod tidy` then strips if
-              # the bumped package is only used indirectly — MVS resolves back to
-              # the original lower version and the bump silently reverts.
-              # `replace` directives survive tidy and force MVS to use our pin.
-              GO_GETS="${GO_GETS} -replace=${mod}=${mod}@${ver}"
+              # Note on tidy reverts: `go get PKG@VER` adds a direct require
+              # that `go mod tidy` then strips if the package is used only
+              # indirectly, silently reverting the bump. `go mod edit -replace`
+              # survives tidy but pins a single module path, which breaks
+              # multi-module families (e.g. go.opentelemetry.io/otel + .../sdk +
+              # .../semconv) when grype reports per-submodule fixes at different
+              # versions. Until the script learns to detect families and harmonize
+              # versions, fall back to `go get` and accept partial coverage on
+              # indirect deps; the multi-modroot fix below is still a real win
+              # for split-module images like etcd.
+              GO_GETS="${GO_GETS} ${mod}@${ver}"
               APPLIED_COUNT=$((APPLIED_COUNT + 1))
             done <<< "$FIXES"
 
@@ -297,7 +302,7 @@ jobs:
             # minio approach in chainguard-forks/minio/pull/25).
             # GOWORK=off keeps single-module commands consistent for repos that
             # ship a go.work (kubernetes/kubernetes).
-            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      export GOWORK=off\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        ( cd \"\$root\" \\\\\n          && go mod edit${GO_GETS} \\\\\n          && go mod tidy -e \\\\\n          && { [ ! -d vendor ] || go mod vendor; } )\n      done\n  # end-patch-go-deps\n"
+            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      export GOWORK=off\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        ( cd \"\$root\" \\\\\n          && go get${GO_GETS} \\\\\n          && go mod tidy -e \\\\\n          && { [ ! -d vendor ] || go mod vendor; } )\n      done\n  # end-patch-go-deps\n"
 
             # Find the marker line and insert before it
             MARKER_LINE=$(grep -n "$MARKER" "$MELANGE_FILE" | head -1 | cut -d: -f1)
