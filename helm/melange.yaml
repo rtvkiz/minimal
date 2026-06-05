@@ -44,6 +44,18 @@ pipeline:
       rm helm.tar.gz
 
   # Build helm — single static binary, version stamps via helm.sh/helm/v3/internal/version.
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      cd /home/build/helm-${{package.version}}
+      export GOWORK=off
+      go get github.com/containerd/containerd@v1.7.32
+      go get golang.org/x/crypto@v0.52.0
+      go get golang.org/x/net@v0.55.0
+      go get golang.org/x/sys@v0.44.0
+      go mod tidy -e
+      if [ -d vendor ]; then go mod vendor; fi
+  # end-patch-go-deps
+
   - runs: |
       cd /home/build/helm-${{package.version}}
       BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
