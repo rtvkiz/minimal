@@ -245,15 +245,19 @@ jobs:
             # x/text + x/term in one bump block).
             X_FAMILY_SEEN=$(echo "$FIXES" | grep -oE "^golang\.org/x/[a-z]+" | sort -u || true)
             if [ -n "$X_FAMILY_SEEN" ]; then
-              echo "  Detected golang.org/x/* bump — adding family companions"
+              echo "  Detected golang.org/x/* bump — pinning whole family to @latest"
+              # Strip any grype-suggested x/* entries — they may be older
+              # fix versions that conflict with other x/* siblings (e.g.
+              # grype said x/sys@v0.44.0 but x/crypto@v0.52.0 needs v0.45.0).
+              # Re-add every sibling at proxy.golang.org @latest so the
+              # graph is internally consistent.
+              FIXES=$(echo "$FIXES" | grep -vE "^golang\.org/x/(crypto|net|sys|text|term|time|sync|tools)@" || true)
               for sibling in crypto net sys text term time sync tools; do
                 pkg="golang.org/x/$sibling"
-                # Skip if already in FIXES (already covered by grype)
-                if echo "$FIXES" | grep -q "^${pkg}@"; then continue; fi
                 latest=$(curl -fs --max-time 10 "https://proxy.golang.org/${pkg}/@latest" 2>/dev/null | jq -r '.Version // ""')
                 [ -z "$latest" ] && continue
                 FIXES=$(printf '%s\n%s' "$FIXES" "${pkg}@${latest}")
-                echo "    + companion: ${pkg}@${latest}"
+                echo "    + ${pkg}@${latest}"
               done
             fi
 
