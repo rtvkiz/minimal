@@ -50,6 +50,15 @@ pipeline:
   # the bwrap sandbox without git history. We set ldflags directly to the
   # k8s.io/{client-go,component-base}/version.* fields the binary surfaces via
   # `kubectl version --client`.
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      cd /home/build/kubernetes-${{package.version}}
+      go get golang.org/x/net@v0.55.0
+      go get golang.org/x/sys@v0.44.0
+      go mod tidy -e
+      if [ -d vendor ]; then go mod vendor; fi
+  # end-patch-go-deps
+
   - runs: |
       cd /home/build/kubernetes-${{package.version}}
       BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)

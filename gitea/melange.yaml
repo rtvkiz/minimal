@@ -61,11 +61,12 @@ pipeline:
 
 
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       cd /home/build/gitea-${{package.version}}
       go get golang.org/x/image@v0.41.0
-      go mod tidy
+      go mod tidy -e
       if [ -d vendor ]; then go mod vendor; fi
   # end-patch-go-deps
 

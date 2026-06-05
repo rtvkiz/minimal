@@ -42,12 +42,13 @@ pipeline:
 
   # Build CoreDNS
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       cd /home/build/coredns-${{package.version}}
       go get golang.org/x/crypto@v0.52.0
       go get golang.org/x/net@v0.55.0
-      go mod tidy
+      go mod tidy -e
       if [ -d vendor ]; then go mod vendor; fi
   # end-patch-go-deps
 

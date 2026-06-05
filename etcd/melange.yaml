@@ -70,6 +70,7 @@ pipeline:
 
 
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       cd /home/build/etcd-${{package.version}}
@@ -78,7 +79,7 @@ pipeline:
       go get golang.org/x/crypto@v0.52.0
       go get golang.org/x/net@v0.55.0
       go get golang.org/x/sys@v0.44.0
-      go mod tidy
+      go mod tidy -e
       if [ -d vendor ]; then go mod vendor; fi
   # end-patch-go-deps
 
