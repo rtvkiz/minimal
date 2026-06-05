@@ -55,12 +55,12 @@ pipeline:
 
 
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       cd /home/build/loki-${{package.version}}
       export GOWORK=off
-      go get golang.org/x/crypto@v0.52.0
-      go get golang.org/x/net@v0.55.0
+      go get github.com/apache/thrift@v0.23.0
       go mod tidy -e
       if [ -d vendor ]; then go mod vendor; fi
   # end-patch-go-deps
