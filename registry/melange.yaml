@@ -47,15 +47,6 @@ pipeline:
   # avoids collision with `go build -o registry` writing into that directory.
 
 
-  # patch-go-deps: auto-generated — do not edit manually
-  - runs: |
-      cd /home/build/distribution-${{package.version}}
-      export GOWORK=off
-      go get golang.org/x/crypto@v0.52.0
-      go get golang.org/x/net@v0.55.0
-      go mod tidy -e
-      if [ -d vendor ]; then go mod vendor; fi
-  # end-patch-go-deps
 
   - runs: |
       cd /home/build/distribution-${{package.version}}

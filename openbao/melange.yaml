@@ -53,6 +53,18 @@ pipeline:
 
 
 
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      for root in /home/build/openbao-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod edit -replace=github.com/jackc/pgx/v5=github.com/jackc/pgx/v5@v5.9.2 -replace=golang.org/x/crypto=golang.org/x/crypto@v0.52.0 -replace=golang.org/x/net=golang.org/x/net@v0.55.0 -replace=golang.org/x/sys=golang.org/x/sys@v0.44.0 \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+
   - runs: |
       cd /home/build/openbao-${{package.version}}
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
