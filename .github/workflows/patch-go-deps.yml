@@ -204,6 +204,25 @@ jobs:
                 | "\(.pkg)@v\(.fix)"
               ' 2>/dev/null | sed 's/@vv/@v/g' | sort -u || true)
 
+            # Preserve existing pins. Grype scans the already-patched image,
+            # so it usually only reports newly-published CVEs, not the deps
+            # the existing patch block is keeping clean. If we don't merge,
+            # the new (smaller) block replaces the old (larger) block and the
+            # previously-fixed CVEs return (loki/coredns regression 2026-06-05).
+            if grep -q "# patch-go-deps: auto-generated" "$MELANGE_FILE"; then
+              EXISTING=$(awk '/# patch-go-deps: auto-generated/,/# end-patch-go-deps/' "$MELANGE_FILE" \
+                | grep -oE '[a-zA-Z0-9._/-]+@v?[0-9][0-9a-zA-Z.+-]*' \
+                | sort -u || true)
+              while IFS= read -r ep; do
+                [ -z "$ep" ] && continue
+                pkg="${ep%@*}"
+                # Skip if grype already reported this pkg (grype's fix version wins)
+                if echo "$FIXES" | grep -q "^${pkg}@"; then continue; fi
+                FIXES=$(printf '%s\n%s' "$FIXES" "$ep")
+                echo "  preserving existing pin: $ep"
+              done <<< "$EXISTING"
+            fi
+
             if [ -z "$FIXES" ]; then
               # No fixable CVEs reported. This usually means the existing
               # patch block IS working — the scanned image already has the
