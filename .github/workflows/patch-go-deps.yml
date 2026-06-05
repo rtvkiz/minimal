@@ -243,6 +243,27 @@ jobs:
             # to FIXES so they bump together. Matches Chainguard's pattern
             # (wolfi-dev/os/loki-3.7.yaml lists x/crypto + x/net + x/sys +
             # x/text + x/term in one bump block).
+            # OTel family harmonization: grype reports per-submodule fix
+            # versions (e.g. otel@v1.41.0 + otel/sdk@v1.43.0). otel/sdk@v1.43.0
+            # actually requires otel@v1.43.0 — pinning the parent at v1.41.0
+            # breaks the build (etcd PR #220 failure). Find the highest version
+            # among all suggested otel-family bumps and rewrite every entry to
+            # that version, so the family stays internally consistent.
+            OTEL_LINES=$(echo "$FIXES" | grep -E "^go\.opentelemetry\.io/" || true)
+            if [ -n "$OTEL_LINES" ]; then
+              # Pick the highest version across all otel entries.
+              OTEL_TOP=$(echo "$OTEL_LINES" | sed 's/.*@//' | sort -V | tail -1)
+              echo "  Detected go.opentelemetry.io/* bumps — harmonizing to ${OTEL_TOP}"
+              # Strip and re-add at OTEL_TOP.
+              NEW_OTEL=""
+              while IFS= read -r line; do
+                pkg="${line%@*}"
+                NEW_OTEL=$(printf '%s\n%s@%s' "$NEW_OTEL" "$pkg" "$OTEL_TOP")
+              done <<< "$OTEL_LINES"
+              FIXES=$(echo "$FIXES" | grep -vE "^go\.opentelemetry\.io/" || true)
+              FIXES=$(printf '%s%s' "$FIXES" "$NEW_OTEL")
+            fi
+
             X_FAMILY_SEEN=$(echo "$FIXES" | grep -oE "^golang\.org/x/[a-z]+" | sort -u || true)
             if [ -n "$X_FAMILY_SEEN" ]; then
               echo "  Detected golang.org/x/* bump — pinning whole family to @latest"
