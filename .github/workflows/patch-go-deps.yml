@@ -130,13 +130,6 @@ jobs:
             [tempo]="github.com/grafana/tempo"
           )
 
-          # Images that need image-specific dependency bump handling.
-          # Blind go get upgrades have broken these builds in CI.
-          # (minio re-enabled now that we run `go mod tidy -e`, matching
-          # Chainguard's approach in chainguard-forks/minio.)
-          declare -A DISABLED_IMAGES=(
-          )
-
           # Build step markers to insert before
           declare -A BUILD_MARKERS=(
             [caddy]='# Build Caddy from source'
@@ -177,18 +170,6 @@ jobs:
             # Caused helm/registry/kubectl regressions (PR #221).
             # Removal now happens later, only when we're about to write a new
             # block, so a truly-empty FIXES set leaves the old block in place.
-
-            if [ -n "${DISABLED_IMAGES[$IMAGE]:-}" ]; then
-              echo "  Skipping $IMAGE: ${DISABLED_IMAGES[$IMAGE]}"
-              if grep -q "# patch-go-deps: auto-generated" "$MELANGE_FILE"; then
-                awk '/# patch-go-deps: auto-generated/{skip=1} /# end-patch-go-deps/{skip=0; next} !skip' \
-                  "$MELANGE_FILE" > "${MELANGE_FILE}.tmp" && mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
-                HAS_PATCHES=true
-                PATCHED_LIST="${PATCHED_LIST} ${IMAGE}"
-                SUMMARY="${SUMMARY}- **${IMAGE}**: removed unsupported auto-generated patch block\n"
-              fi
-              continue
-            fi
 
             # Scan with grype, extract go-module CVEs with fix versions (skip stdlib)
             FIXES=$(grype "$FULL_IMAGE" -o json 2>/dev/null | \
