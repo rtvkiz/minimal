@@ -251,10 +251,15 @@ jobs:
             # that version, so the family stays internally consistent.
             OTEL_LINES=$(echo "$FIXES" | grep -E "^go\.opentelemetry\.io/" || true)
             if [ -n "$OTEL_LINES" ]; then
-              # Pick the highest version across all otel entries.
-              OTEL_TOP=$(echo "$OTEL_LINES" | sed 's/.*@//' | sort -V | tail -1)
-              echo "  Detected go.opentelemetry.io/* bumps — harmonizing to ${OTEL_TOP}"
-              # Strip and re-add at OTEL_TOP.
+              # Pick the maximum of (a) highest grype-suggested otel version
+              # and (b) the proxy @latest of go.opentelemetry.io/otel. Some
+              # transitive deps (e.g. prometheus/prometheus) require a newer
+              # otel/sdk than grype's "fix version" reports — using @latest
+              # ensures compatibility with the rest of the dep graph.
+              OTEL_GRYPE_TOP=$(echo "$OTEL_LINES" | sed 's/.*@//' | sort -V | tail -1)
+              OTEL_PROXY_TOP=$(curl -fs --max-time 10 "https://proxy.golang.org/go.opentelemetry.io/otel/@latest" 2>/dev/null | jq -r '.Version // ""')
+              OTEL_TOP=$(printf '%s\n%s\n' "$OTEL_GRYPE_TOP" "$OTEL_PROXY_TOP" | grep -v '^$' | sort -V | tail -1)
+              echo "  Detected go.opentelemetry.io/* bumps — harmonizing to ${OTEL_TOP} (grype top=$OTEL_GRYPE_TOP, proxy latest=$OTEL_PROXY_TOP)"
               NEW_OTEL=""
               while IFS= read -r line; do
                 pkg="${line%@*}"
