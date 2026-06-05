@@ -302,7 +302,15 @@ jobs:
             # minio approach in chainguard-forks/minio/pull/25).
             # GOWORK=off keeps single-module commands consistent for repos that
             # ship a go.work (kubernetes/kubernetes).
-            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      export GOWORK=off\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        ( cd \"\$root\" \\\\\n          && go get${GO_GETS} \\\\\n          && go mod tidy -e \\\\\n          && { [ ! -d vendor ] || go mod vendor; } )\n      done\n  # end-patch-go-deps\n"
+            # Skip `go mod tidy` deliberately — it strips direct requires for
+            # packages used only indirectly, silently reverting our bump and
+            # MVS falls back to the transitive minimum. Chainguard's `bump`
+            # melange action does the same via tidy: false (e.g. prometheus
+            # internal/tools, wolfi-dev/os/prometheus-3.12.yaml). Without tidy,
+            # the explicit `require` line we just added stays in go.mod and the
+            # build picks our version. `go get` already updates go.sum, so
+            # `go mod vendor` works without tidy.
+            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      export GOWORK=off\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        ( cd \"\$root\" \\\\\n          && go get${GO_GETS} \\\\\n          && { [ ! -d vendor ] || go mod vendor; } )\n      done\n  # end-patch-go-deps\n"
 
             # Find the marker line and insert before it
             MARKER_LINE=$(grep -n "$MARKER" "$MELANGE_FILE" | head -1 | cut -d: -f1)
