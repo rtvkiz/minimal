@@ -1,9 +1,9 @@
 name: Patch Rust Transitive Dependencies
 
 on:
-  # workflow_dispatch only until validated; once stable, add:
-  #   schedule:
-  #     - cron: '15 1,7,13,19 * * *'  # 15 min after patch-go-deps to avoid contention
+  schedule:
+    # 15 min after patch-go-deps fires, so the two don't race for PR creation.
+    - cron: '15 1,7,13,19 * * *'
   workflow_dispatch:
 
 permissions: {}

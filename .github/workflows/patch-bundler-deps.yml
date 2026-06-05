@@ -1,9 +1,9 @@
 name: Patch Ruby Bundler Dependencies
 
 on:
-  # workflow_dispatch only until validated; once stable, add:
-  #   schedule:
-  #     - cron: '30 1,7,13,19 * * *'  # 30 min after patch-go-deps
+  schedule:
+    # 30 min after patch-go-deps.
+    - cron: '30 1,7,13,19 * * *'
   workflow_dispatch:
 
 permissions: {}
@@ -66,14 +66,16 @@ jobs:
         id: scan
         run: |
           D='$'
-          # Image -> Bundler app source dir (where Gemfile + Gemfile.lock live).
+          # Image -> source dir. For rails (no Gemfile — global gem install),
+          # any path works since we run `gem install -v` which is path-agnostic.
           declare -A SRCROOTS=(
-            [rails]="/home/build/rails-${D}{{package.version}}"
+            [rails]="/home/build"
           )
 
-          # Build marker. We insert the bundle-update pipeline step before this line.
+          # Build marker. We insert the gem-pin pipeline step before this line.
+          # The marker must exist literally in the image's melange.yaml.
           declare -A BUILD_MARKERS=(
-            [rails]='bundle install'
+            [rails]='gem install --no-document rails'
           )
 
           HAS_PATCHES=false
@@ -122,8 +124,11 @@ jobs:
                 echo "  Skipping ${gem_ver}: version not on rubygems.org"
                 continue
               fi
-              # `bundle update <gem> --conservative` lifts only this gem (and its deps if needed).
-              BUNDLE_UPDATES="${BUNDLE_UPDATES}      bundle update ${gem} --conservative\n"
+              # `gem install -v` overrides any previously-installed version,
+              # which is the right primitive for global-gem-install images
+              # (rails). For Gemfile-driven images, switch to
+              # `bundle update <gem> --conservative` and update SRCROOTS.
+              BUNDLE_UPDATES="${BUNDLE_UPDATES}      gem install ${gem} -v ${ver} --no-document\n"
               APPLIED_COUNT=$((APPLIED_COUNT + 1))
             done <<< "$FIXES"
 

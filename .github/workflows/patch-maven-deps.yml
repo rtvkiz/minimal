@@ -1,8 +1,11 @@
 name: Patch Maven Java Dependencies
 
 # CAUTION: Maven property/dep bumps can conflict with Enforcer rules or parent POM
-# pins. Initial run requires manual review. workflow_dispatch only until validated.
+# pins. PRs are opened but NOT auto-merged — a human reviews and merges manually.
 on:
+  schedule:
+    # Daily (not 6-hourly) since manual review gates these PRs.
+    - cron: '45 1 * * *'
   workflow_dispatch:
 
 permissions: {}
@@ -87,8 +90,10 @@ jobs:
             [logback-core]="ch.qos.logback:logback-core"
             [logback-classic]="ch.qos.logback:logback-classic"
             [netty-handler]="io.netty:netty-handler"
+            [netty-handler-proxy]="io.netty:netty-handler-proxy"
             [netty-common]="io.netty:netty-common"
             [netty-codec]="io.netty:netty-codec"
+            [netty-codec-dns]="io.netty:netty-codec-dns"
             [netty-codec-http]="io.netty:netty-codec-http"
             [netty-codec-http2]="io.netty:netty-codec-http2"
             [commons-io]="commons-io:commons-io"
