@@ -90,6 +90,12 @@ jobs:
             [coredns]="/home/build/coredns-${D}{{package.version}}"
             [openbao]="/home/build/openbao-${D}{{package.version}}"
             [loki]="/home/build/loki-${D}{{package.version}}"
+            [helm]="/home/build/helm-${D}{{package.version}}"
+            [kubectl]="/home/build/kubernetes-${D}{{package.version}}"
+            [consul]="/home/build/consul-${D}{{package.version}}"
+            [mailpit]="/home/build/mailpit-${D}{{package.version}}"
+            [registry]="/home/build/distribution-${D}{{package.version}}"
+            [tempo]="/home/build/tempo-${D}{{package.version}}"
           )
 
           # Main module path per image. Grype's buildinfo scan reports the
@@ -112,12 +118,19 @@ jobs:
             [coredns]="github.com/coredns/coredns"
             [openbao]="github.com/openbao/openbao"
             [loki]="github.com/grafana/loki/v3"
+            [helm]="helm.sh/helm/v3"
+            [kubectl]="k8s.io/kubernetes"
+            [consul]="github.com/hashicorp/consul"
+            [mailpit]="github.com/axllent/mailpit"
+            [registry]="github.com/distribution/distribution/v3"
+            [tempo]="github.com/grafana/tempo"
           )
 
           # Images that need image-specific dependency bump handling.
           # Blind go get upgrades have broken these builds in CI.
+          # (minio re-enabled now that we run `go mod tidy -e`, matching
+          # Chainguard's approach in chainguard-forks/minio.)
           declare -A DISABLED_IMAGES=(
-            [minio]="auto-patching disabled until MinIO-specific module constraints are handled"
           )
 
           # Build step markers to insert before
@@ -135,6 +148,12 @@ jobs:
             [coredns]='CGO_ENABLED=0 go build'
             [openbao]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [loki]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [helm]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kubectl]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [consul]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [mailpit]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [registry]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [tempo]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
           HAS_PATCHES=false
@@ -262,8 +281,12 @@ jobs:
               continue
             fi
 
-            # Create the patch block
-            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      cd ${MODROOT}\n${GO_GETS}      go mod tidy\n      if [ -d vendor ]; then go mod vendor; fi\n  # end-patch-go-deps\n"
+            # Create the patch block.
+            # Use `go mod tidy -e` to continue past transitive inconsistencies —
+            # without -e, a single conflict (e.g. minio's split modules) aborts
+            # the whole tidy and the build dies. Matches Chainguard's approach
+            # for minio (chainguard-forks/minio/pull/25).
+            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      cd ${MODROOT}\n${GO_GETS}      go mod tidy -e\n      if [ -d vendor ]; then go mod vendor; fi\n  # end-patch-go-deps\n"
 
             # Find the marker line and insert before it
             MARKER_LINE=$(grep -n "$MARKER" "$MELANGE_FILE" | head -1 | cut -d: -f1)

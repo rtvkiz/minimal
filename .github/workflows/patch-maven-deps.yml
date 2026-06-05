@@ -1,0 +1,252 @@
+name: Patch Maven Java Dependencies
+
+# CAUTION: Maven property/dep bumps can conflict with Enforcer rules or parent POM
+# pins. Initial run requires manual review. workflow_dispatch only until validated.
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  REGISTRY: ghcr.io
+  GRYPE_VERSION: v0.109.1
+
+jobs:
+  patch-maven-deps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: read
+    steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Cache Grype binary
+        id: grype-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: /usr/local/bin/grype
+          key: grype-${{ env.GRYPE_VERSION }}-linux-amd64
+
+      - name: Install Grype
+        if: steps.grype-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fL --retry 5 --retry-all-errors -o /tmp/grype.tar.gz \
+            "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
+          tar -xzf /tmp/grype.tar.gz -C /usr/local/bin grype
+          rm -f /tmp/grype.tar.gz
+
+      - name: Log in to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find existing patch-maven-deps PR
+        id: existing-pr
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          PR_URL=$(gh pr list --head patch-maven-deps --base main --state open --json url --jq '.[0].url // ""')
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Scan Maven images and generate patches
+        id: scan
+        run: |
+          D='$'
+          # Image -> Maven project root (where root pom.xml lives).
+          # Keycloak's parent POM has Enforcer rules — bumps may need manual
+          # follow-up if the convergence check fails.
+          declare -A SRCROOTS=(
+            [keycloak]="/home/build/keycloak-${D}{{package.version}}"
+          )
+
+          declare -A BUILD_MARKERS=(
+            [keycloak]='mvn -B -DskipTests'
+          )
+
+          # Group:Artifact pairs whose CVE IDs grype reports against bare
+          # artifact names. Map artifact-name -> Maven coordinates so we can emit
+          # `mvn versions:use-dep-version -Dincludes=GROUP:ARTIFACT -DdepVersion=...`.
+          # This map grows organically; entries can also be added by hand to override
+          # what grype reports.
+          declare -A COORDS=(
+            [jackson-databind]="com.fasterxml.jackson.core:jackson-databind"
+            [snakeyaml]="org.yaml:snakeyaml"
+            [logback-core]="ch.qos.logback:logback-core"
+            [logback-classic]="ch.qos.logback:logback-classic"
+            [netty-handler]="io.netty:netty-handler"
+            [netty-common]="io.netty:netty-common"
+            [netty-codec]="io.netty:netty-codec"
+            [netty-codec-http]="io.netty:netty-codec-http"
+            [netty-codec-http2]="io.netty:netty-codec-http2"
+            [commons-io]="commons-io:commons-io"
+            [commons-compress]="org.apache.commons:commons-compress"
+            [bcprov-jdk18on]="org.bouncycastle:bcprov-jdk18on"
+            [bcpkix-jdk18on]="org.bouncycastle:bcpkix-jdk18on"
+            [jose4j]="org.bitbucket.b_c:jose4j"
+            [okio]="com.squareup.okio:okio"
+            [protobuf-java]="com.google.protobuf:protobuf-java"
+          )
+
+          HAS_PATCHES=false
+          PATCHED_LIST=""
+          SUMMARY=""
+
+          for IMAGE in "${!SRCROOTS[@]}"; do
+            echo "=== Scanning $IMAGE ==="
+            FULL_IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${IMAGE}:latest"
+            MELANGE_FILE="${IMAGE}/melange.yaml"
+
+            if grep -q "# patch-maven-deps: auto-generated" "$MELANGE_FILE"; then
+              awk '/# patch-maven-deps: auto-generated/{skip=1} /# end-patch-maven-deps/{skip=0; next} !skip' \
+                "$MELANGE_FILE" > "${MELANGE_FILE}.tmp" && mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
+            fi
+
+            FIXES=$(grype "$FULL_IMAGE" -o json 2>/dev/null | \
+              jq -r '
+                [.matches[]
+                  | select(.artifact.type == "java-archive")
+                  | select(.vulnerability.fix.versions | length > 0)
+                  | {pkg: .artifact.name, fix: .vulnerability.fix.versions[0]}
+                ]
+                | unique_by(.pkg)
+                | .[]
+                | "\(.pkg)@\(.fix)"
+              ' 2>/dev/null | sort -u || true)
+
+            if [ -z "$FIXES" ]; then
+              echo "  No fixable java-archive CVEs"
+              continue
+            fi
+
+            SRCROOT="${SRCROOTS[$IMAGE]}"
+            MARKER="${BUILD_MARKERS[$IMAGE]}"
+
+            MVN_UPDATES=""
+            APPLIED_COUNT=0
+            while IFS= read -r artifact_ver; do
+              [ -z "$artifact_ver" ] && continue
+              artifact="${artifact_ver%@*}"
+              ver="${artifact_ver#*@}"
+              coord="${COORDS[$artifact]:-}"
+              if [ -z "$coord" ]; then
+                echo "  Skipping ${artifact_ver}: no group:artifact mapping (add to COORDS)"
+                continue
+              fi
+              # Verify the coordinate@version exists on Maven Central.
+              gid="${coord%:*}"
+              aid="${coord#*:}"
+              gpath="${gid//.//}"
+              url="https://repo1.maven.org/maven2/${gpath}/${aid}/${ver}/${aid}-${ver}.pom"
+              if ! curl -fs --max-time 10 "$url" >/dev/null 2>&1; then
+                echo "  Skipping ${coord}:${ver}: not in Maven Central"
+                continue
+              fi
+              MVN_UPDATES="${MVN_UPDATES}      mvn -B versions:use-dep-version -Dincludes=${coord} -DdepVersion=${ver} -DforceVersion=true || true\n"
+              APPLIED_COUNT=$((APPLIED_COUNT + 1))
+            done <<< "$FIXES"
+
+            if [ "$APPLIED_COUNT" -eq 0 ]; then
+              echo "  No mappable Maven patches"
+              continue
+            fi
+
+            PATCH_BLOCK="  # patch-maven-deps: auto-generated — do not edit manually\n  - runs: |\n      cd ${SRCROOT}\n${MVN_UPDATES}  # end-patch-maven-deps\n"
+
+            MARKER_LINE=$(grep -n "$MARKER" "$MELANGE_FILE" | head -1 | cut -d: -f1)
+            [ -z "$MARKER_LINE" ] && { echo "  WARN: marker not found"; continue; }
+
+            MARKER_INDENT=$(sed -n "${MARKER_LINE}p" "$MELANGE_FILE" | sed 's/[^ ].*//' | wc -c)
+            if [ "$MARKER_INDENT" -gt 4 ]; then
+              RUNS_LINE=$(head -n "$MARKER_LINE" "$MELANGE_FILE" | grep -n "^  - runs:" | tail -1 | cut -d: -f1)
+              [ -n "$RUNS_LINE" ] && MARKER_LINE=$RUNS_LINE
+            fi
+
+            head -n $((MARKER_LINE - 1)) "$MELANGE_FILE" > "${MELANGE_FILE}.tmp"
+            echo -e "$PATCH_BLOCK" >> "${MELANGE_FILE}.tmp"
+            tail -n +${MARKER_LINE} "$MELANGE_FILE" >> "${MELANGE_FILE}.tmp"
+            mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
+
+            HAS_PATCHES=true
+            PATCHED_LIST="${PATCHED_LIST} ${IMAGE}"
+            SUMMARY="${SUMMARY}- **${IMAGE}**: ${APPLIED_COUNT} artifact(s) bumped\n"
+            echo "  Patched $APPLIED_COUNT artifacts"
+          done
+
+          PATCHED_LIST=$(echo "$PATCHED_LIST" | xargs)
+
+          if [ "$HAS_PATCHES" = true ]; then
+            echo "has_patches=true" >> "$GITHUB_OUTPUT"
+            echo "patched_images=$PATCHED_LIST" >> "$GITHUB_OUTPUT"
+            { echo "summary<<EOF"; echo -e "$SUMMARY"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+          else
+            echo "has_patches=false" >> "$GITHUB_OUTPUT"
+            echo "No Maven dep patches needed"
+          fi
+
+      - name: Close stale patch-maven-deps PR
+        if: steps.scan.outputs.has_patches != 'true' && steps.existing-pr.outputs.pr_url != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh pr close "${{ steps.existing-pr.outputs.pr_url }}" \
+            --comment "Closing: latest patch-maven-deps scan produced no patch changes."
+          git push origin --delete patch-maven-deps || true
+
+      - name: Create PR (no auto-merge — Maven bumps need manual review)
+        if: steps.scan.outputs.has_patches == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="patch-maven-deps"
+          PR_TITLE="fix(maven-deps): patch vulnerable Java archive dependencies"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add -A
+          git diff --cached --quiet && { echo "No file changes"; exit 0; }
+          git commit -m "fix(maven-deps): patch vulnerable Java archive dependencies"
+          git push -u origin "$BRANCH" --force
+
+          cat > /tmp/pr.md <<'PRBODY'
+          ## Summary
+
+          Scans published Maven-built images with grype, identifies java-archive CVEs
+          with known fix versions, and emits `mvn versions:use-dep-version` commands
+          in each image's melange.yaml. Each artifact-name must have a `group:artifact`
+          entry in the workflow's `COORDS` map — unmapped artifacts are skipped.
+
+          ## Patched images
+
+          ${{ steps.scan.outputs.summary }}
+
+          ## Manual review required
+
+          Maven Enforcer rules (dependency convergence, ban duplicate classes) can
+          reject these bumps even when individually valid. The patch step uses
+          `|| true` so the overall melange build doesn't die if one bump fails to
+          take, but you should verify the resulting POMs reflect the intended pin
+          before merging.
+
+          ---
+          Auto-generated by [patch-maven-deps](${{ github.server_url }}/${{ github.repository }}/actions/workflows/patch-maven-deps.yml).
+          PRBODY
+
+          PR_URL="${{ steps.existing-pr.outputs.pr_url }}"
+          if [ -n "$PR_URL" ]; then
+            gh pr edit "$PR_URL" --title "$PR_TITLE" --add-label dependencies --add-label security --body-file /tmp/pr.md
+          else
+            gh pr create --title "$PR_TITLE" --label dependencies --label security --body-file /tmp/pr.md
+          fi
