@@ -170,17 +170,19 @@ jobs:
             MELANGE_FILE="${IMAGE}/melange.yaml"
             BEFORE_HASH=$(sha256sum "$MELANGE_FILE" | awk '{print $1}')
 
-            # Remove any existing auto-generated patch block first so we can
-            # either regenerate it or intentionally clean it up.
-            if grep -q "# patch-go-deps: auto-generated" "$MELANGE_FILE"; then
-              awk '/# patch-go-deps: auto-generated/{skip=1} /# end-patch-go-deps/{skip=0; next} !skip' \
-                "$MELANGE_FILE" > "${MELANGE_FILE}.tmp" && mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
-            fi
+            # DO NOT remove the existing auto-generated patch block here.
+            # Earlier behavior: strip block → scan image (which is already
+            # patched and reports zero CVEs) → conclude "no fixes needed" →
+            # never re-add → next build is unpatched → CVEs return.
+            # Caused helm/registry/kubectl regressions (PR #221).
+            # Removal now happens later, only when we're about to write a new
+            # block, so a truly-empty FIXES set leaves the old block in place.
 
             if [ -n "${DISABLED_IMAGES[$IMAGE]:-}" ]; then
               echo "  Skipping $IMAGE: ${DISABLED_IMAGES[$IMAGE]}"
-              AFTER_HASH=$(sha256sum "$MELANGE_FILE" | awk '{print $1}')
-              if [ "$AFTER_HASH" != "$BEFORE_HASH" ]; then
+              if grep -q "# patch-go-deps: auto-generated" "$MELANGE_FILE"; then
+                awk '/# patch-go-deps: auto-generated/{skip=1} /# end-patch-go-deps/{skip=0; next} !skip' \
+                  "$MELANGE_FILE" > "${MELANGE_FILE}.tmp" && mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
                 HAS_PATCHES=true
                 PATCHED_LIST="${PATCHED_LIST} ${IMAGE}"
                 SUMMARY="${SUMMARY}- **${IMAGE}**: removed unsupported auto-generated patch block\n"
@@ -203,13 +205,11 @@ jobs:
               ' 2>/dev/null | sed 's/@vv/@v/g' | sort -u || true)
 
             if [ -z "$FIXES" ]; then
-              AFTER_HASH=$(sha256sum "$MELANGE_FILE" | awk '{print $1}')
-              if [ "$AFTER_HASH" != "$BEFORE_HASH" ]; then
-                HAS_PATCHES=true
-                PATCHED_LIST="${PATCHED_LIST} ${IMAGE}"
-                SUMMARY="${SUMMARY}- **${IMAGE}**: removed stale auto-generated patch block\n"
-              fi
-              echo "  No fixable Go dep CVEs"
+              # No fixable CVEs reported. This usually means the existing
+              # patch block IS working — the scanned image already has the
+              # bumped deps. DON'T touch the melange.yaml; leaving the block
+              # in place is what keeps future rebuilds patched.
+              echo "  No fixable Go dep CVEs (existing patch block, if any, preserved)"
               continue
             fi
 
@@ -334,14 +334,17 @@ jobs:
             done <<< "$FIXES"
 
             if [ "$APPLIED_COUNT" -eq 0 ]; then
-              AFTER_HASH=$(sha256sum "$MELANGE_FILE" | awk '{print $1}')
-              if [ "$AFTER_HASH" != "$BEFORE_HASH" ]; then
-                HAS_PATCHES=true
-                PATCHED_LIST="${PATCHED_LIST} ${IMAGE}"
-                SUMMARY="${SUMMARY}- **${IMAGE}**: removed incompatible auto-generated patch block\n"
-              fi
-              echo "  No compatible auto-patches after image-specific filtering"
+              # All grype-suggested bumps filtered out (proxy 404, +incompatible
+              # mismatch, etc.). Preserve any existing patch block — same logic
+              # as the empty-FIXES case above.
+              echo "  No compatible auto-patches after image-specific filtering (existing block preserved)"
               continue
+            fi
+
+            # About to write a new patch block. NOW strip any prior block.
+            if grep -q "# patch-go-deps: auto-generated" "$MELANGE_FILE"; then
+              awk '/# patch-go-deps: auto-generated/{skip=1} /# end-patch-go-deps/{skip=0; next} !skip' \
+                "$MELANGE_FILE" > "${MELANGE_FILE}.tmp" && mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
             fi
 
             # Create the patch block. Iterate over each modroot so multi-module
