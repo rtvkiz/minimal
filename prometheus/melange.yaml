@@ -56,13 +56,16 @@ pipeline:
 
 
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
-      cd /home/build/prometheus-${{package.version}}
       export GOWORK=off
-      go get golang.org/x/crypto@v0.52.0
-      go mod tidy -e
-      if [ -d vendor ]; then go mod vendor; fi
+      for root in /home/build/prometheus-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go get golang.org/x/crypto@v0.52.0 \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
   # end-patch-go-deps
 
   # Build Prometheus from source (static binary, no embedded web UI)

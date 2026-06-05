@@ -64,15 +64,16 @@ pipeline:
 
 
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
-      cd /home/build/gitea-${{package.version}}
       export GOWORK=off
-      go get github.com/go-git/go-git/v5@v5.19.1
-      go get golang.org/x/crypto@v0.52.0
-      go get golang.org/x/net@v0.55.0
-      go mod tidy -e
-      if [ -d vendor ]; then go mod vendor; fi
+      for root in /home/build/gitea-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go get golang.org/x/image@v0.39.0 \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
   # end-patch-go-deps
 
   # Build frontend assets and backend binary via Makefile
