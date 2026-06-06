@@ -94,17 +94,25 @@ pipeline:
       strip --strip-unneeded "${{targets.destdir}}/usr/bin/mysql"
 
       # Ship bundled protobuf shared libs alongside mysqld.
-      # mysql 8.4.9 vendors protobuf 24.4 (see extra/protobuf/protobuf-24.4)
-      # and with -DWITH_PROTOBUF=bundled the build produces shared objects in
-      # lib/private/ (libprotobuf-lite.so.24.4.0, libprotobuf.so.24.4.0).
-      # mysqld has an RPATH/RUNPATH pointing there. Without these files the
-      # apk solver fails to satisfy `so:libprotobuf-lite.so.24.4.0` because
+      # mysql 8.4.9 vendors protobuf 24.4 and with -DWITH_PROTOBUF=bundled
+      # builds it as shared libs into the CMake `library_output_directory/`
+      # (the linker log: `Linking CXX shared library
+      # ../../../library_output_directory/libprotobuf-lite.so`). mysqld is
+      # linked with `NEEDED libprotobuf-lite.so.24.4.0`; without this copy
+      # the apk solver fails on `so:libprotobuf-lite.so.24.4.0` because
       # Wolfi only ships protobuf 35.0 now (the legacy 32.1 was removed
-      # 2026-06-05). Includes anything else mysql tucked into lib/private/.
-      if [ -d lib/private ]; then
-        mkdir -p "${{targets.destdir}}/usr/lib/private"
-        cp -d lib/private/*.so* "${{targets.destdir}}/usr/lib/private/" 2>/dev/null || true
-      fi
+      # from the repo 2026-06-05).
+      #
+      # Put them in /usr/lib/ directly:
+      #  - apko's auto-provides scanner detects SO names there and
+      #    self-satisfies the package's SO deps
+      #  - ld-linux.so finds them via standard library search path,
+      #    so mysqld doesn't depend on RPATH/RUNPATH being correct
+      # SOVERSION suffix (.24.4.0) prevents collision with Wolfi's
+      # libprotobuf-lite35.0.0 if both ever land in the same image.
+      cp -d library_output_directory/libprotobuf*.so* \
+           "${{targets.destdir}}/usr/lib/"
+      strip --strip-unneeded "${{targets.destdir}}/usr/lib/"libprotobuf*.so.* 2>/dev/null || true
 
       # Install share directory (needed for --initialize and error messages)
       # MySQL looks for errmsg.sys at /usr/share/<language>/errmsg.sys by default
