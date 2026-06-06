@@ -53,12 +53,22 @@ pipeline:
       tar xzf mariadb.tar.gz
       rm mariadb.tar.gz
 
-  # Configure and build MariaDB
+  # Configure, build, and install MariaDB.
+  #
+  # Pattern follows wolfi-dev/os mariadb-12.3.yaml (and our own mysql/melange.yaml):
+  # full `make install DESTDIR=…` so the cmake install rules place every file
+  # — binaries, share/, plugin/, mariadb-install-db script — at its canonical
+  # path. Stops us from re-patching manual `cp` paths every time MariaDB's
+  # build tree layout shifts between minor versions.
   - runs: |
       cd /home/build/mariadb-${{package.version}}
       mkdir build && cd build
       cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
+        -DINSTALL_PLUGINDIR=lib/mysql/plugin \
+        -DINSTALL_SBINDIR=bin \
+        -DINSTALL_SCRIPTDIR=bin \
         -DMYSQL_DATADIR=/var/lib/mysql \
         -DSYSCONFDIR=/etc/mysql \
         -DWITH_SSL=system \
@@ -70,6 +80,7 @@ pipeline:
         -DWITH_JEMALLOC=OFF \
         -DWITH_SYSTEMD=no \
         -DWITH_LINUX_AIO=OFF \
+        -DSKIP_TESTS=ON \
         -DCMAKE_C_FLAGS="-g0" \
         -DCMAKE_CXX_FLAGS="-g0" \
         -DPLUGIN_TOKUDB=NO \
@@ -82,58 +93,60 @@ pipeline:
         -DWITH_WSREP=OFF \
         -DWITHOUT_EXAMPLE_STORAGE_ENGINE=1 \
         -DWITHOUT_FEDERATED_STORAGE_ENGINE=1
-      make -j$(nproc) mariadbd mariadb my_print_defaults
-      # Build scripts subdir: generates mariadb-install-db and maria_add_gis_sp_bootstrap.sql
-      make -C scripts
+      make -j$(nproc)
+      make install DESTDIR="${{targets.destdir}}"
 
-  # Install only essential files to destdir
+  # Trim the install to a minimal footprint and ship mysqld/mysql compat
+  # symlinks + entrypoint.
   - runs: |
-      cd /home/build/mariadb-${{package.version}}/build
+      D="${{targets.destdir}}"
 
-      # Install binaries
-      # cmake outputs server to sql/mariadbd and client to client/mariadb in the build tree
-      mkdir -p "${{targets.destdir}}/usr/bin"
-      cp sql/mariadbd "${{targets.destdir}}/usr/bin/"
-      cp client/mariadb "${{targets.destdir}}/usr/bin/"
-      cp extra/my_print_defaults "${{targets.destdir}}/usr/bin/"
+      # Drop dev / test / docs — keep server, client, plugins, share/.
+      rm -rf "$D/usr/mysql-test" \
+             "$D/usr/mariadb-test" \
+             "$D/usr/sql-bench" \
+             "$D/usr/include" \
+             "$D/usr/share/doc" \
+             "$D/usr/share/man" \
+             "$D/usr/share/info" \
+             "$D/usr/share/groonga" \
+             "$D/usr/share/groonga-normalizer-mysql" \
+             "$D/usr/lib/pkgconfig" \
+             "$D/usr/lib64/pkgconfig"
 
-      # mysqld/mysql symlinks for compatibility
-      ln -sf mariadbd "${{targets.destdir}}/usr/bin/mysqld"
-      ln -sf mariadb "${{targets.destdir}}/usr/bin/mysql"
+      # Drop the client SDK — this is a server image, not a libmariadb consumer.
+      # libmariadb is statically linked into the mariadb CLI by default, so
+      # removing the .so does not break the bundled binaries.
+      find "$D/usr/lib" "$D/usr/lib64" -maxdepth 1 \
+        \( -name 'libmariadb*' -o -name 'libmysqlclient*' -o -name '*.a' \) \
+        -delete 2>/dev/null || true
 
-      # Strip binaries
-      strip --strip-unneeded "${{targets.destdir}}/usr/bin/mariadbd"
-      strip --strip-unneeded "${{targets.destdir}}/usr/bin/mariadb"
-      strip --strip-unneeded "${{targets.destdir}}/usr/bin/my_print_defaults"
+      # Older /usr/share/mysql/ path (some tooling still looks here even with
+      # share/mariadb-…/ present). Mirror so init scripts that pass
+      # --basedir=/usr keep working.
+      if [ -d "$D/usr/share/mariadb" ]; then
+        mkdir -p "$D/usr/share/mysql"
+        cp -rn "$D/usr/share/mariadb/." "$D/usr/share/mysql/" 2>/dev/null || true
+      fi
 
-      # Install share files (error messages, SQL init files for mariadb-install-db)
-      # mariadb-install-db --basedir=/usr uses /usr/share/ as pkgdatadir,
-      # so mirror everything into both /usr/share/ and /usr/share/mysql/
-      mkdir -p "${{targets.destdir}}/usr/share/mysql"
-      # Build tree sql/share/ (english error messages, etc.)
-      cp -r sql/share/. "${{targets.destdir}}/usr/share/mysql/" 2>/dev/null || true
-      cp -r sql/share/. "${{targets.destdir}}/usr/share/" 2>/dev/null || true
-      # Source tree scripts/*.sql (fill_help_tables, mysql_system_tables, etc.)
-      cp ../scripts/*.sql "${{targets.destdir}}/usr/share/mysql/" 2>/dev/null || true
-      cp ../scripts/*.sql "${{targets.destdir}}/usr/share/" 2>/dev/null || true
-      # Build tree scripts/*.sql (generated: maria_add_gis_sp_bootstrap.sql, etc.)
-      cp scripts/*.sql "${{targets.destdir}}/usr/share/mysql/" 2>/dev/null || true
-      cp scripts/*.sql "${{targets.destdir}}/usr/share/" 2>/dev/null || true
+      # Compat symlinks: legacy tooling calls mysqld/mysql (and so does our
+      # docker-entrypoint).
+      ln -sf mariadbd "$D/usr/bin/mysqld"
+      ln -sf mariadb  "$D/usr/bin/mysql"
 
-      # Install mariadb-install-db script (generated by cmake into build/scripts/)
-      cp scripts/mariadb-install-db "${{targets.destdir}}/usr/bin/" 2>/dev/null || true
-      chmod +x "${{targets.destdir}}/usr/bin/mariadb-install-db" 2>/dev/null || true
+      # Strip ELF binaries and shared libraries in the destdir.
+      find "$D" -type f \( -perm -u+x -o -name '*.so*' \) -print0 |
+        while IFS= read -r -d '' f; do
+          case "$(file -L "$f" 2>/dev/null)" in
+            *ELF*) strip --strip-unneeded "$f" 2>/dev/null || true ;;
+          esac
+        done
 
-      # Install plugin directory
-      mkdir -p "${{targets.destdir}}/usr/lib/mysql/plugin"
-      cp lib/plugin/*.so "${{targets.destdir}}/usr/lib/mysql/plugin/" 2>/dev/null || true
-
-      # Install entrypoint script
-      cat > "${{targets.destdir}}/usr/bin/docker-entrypoint.sh" << 'ENTRY'
+      # Entrypoint script — auto-initialize on first run.
+      cat > "$D/usr/bin/docker-entrypoint.sh" << 'ENTRY'
       #!/bin/sh
       set -e
 
-      # Auto-initialize if data directory is empty
       if [ ! -f /var/lib/mysql/ibdata1 ]; then
         echo "Initializing MariaDB data directory..."
         mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql --force
@@ -141,13 +154,15 @@ pipeline:
 
       exec mariadbd --user=mysql "$@"
       ENTRY
-      chmod +x "${{targets.destdir}}/usr/bin/docker-entrypoint.sh"
+      chmod +x "$D/usr/bin/docker-entrypoint.sh"
 
   # Verify the build
   - runs: |
       echo "Verifying MariaDB build..."
       "${{targets.destdir}}/usr/bin/mariadbd" --version
       "${{targets.destdir}}/usr/bin/mariadb" --version
+      test -x "${{targets.destdir}}/usr/bin/mariadb-install-db" || \
+        echo "WARNING: mariadb-install-db missing — entrypoint will fail at runtime"
       echo "Checking binary sizes..."
       ls -lh "${{targets.destdir}}/usr/bin/mariadbd"
       ls -lh "${{targets.destdir}}/usr/bin/mariadb"
