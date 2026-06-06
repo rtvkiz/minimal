@@ -23,7 +23,6 @@ contents:
     - libcrypto3
     - ncurses
     - libevent
-    - libprotobuf-lite
     - ca-certificates-bundle
     - busybox
     - bash
