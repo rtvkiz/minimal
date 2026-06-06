@@ -93,6 +93,19 @@ pipeline:
       strip --strip-unneeded "${{targets.destdir}}/usr/bin/mysqld"
       strip --strip-unneeded "${{targets.destdir}}/usr/bin/mysql"
 
+      # Ship bundled protobuf shared libs alongside mysqld.
+      # mysql 8.4.9 vendors protobuf 24.4 (see extra/protobuf/protobuf-24.4)
+      # and with -DWITH_PROTOBUF=bundled the build produces shared objects in
+      # lib/private/ (libprotobuf-lite.so.24.4.0, libprotobuf.so.24.4.0).
+      # mysqld has an RPATH/RUNPATH pointing there. Without these files the
+      # apk solver fails to satisfy `so:libprotobuf-lite.so.24.4.0` because
+      # Wolfi only ships protobuf 35.0 now (the legacy 32.1 was removed
+      # 2026-06-05). Includes anything else mysql tucked into lib/private/.
+      if [ -d lib/private ]; then
+        mkdir -p "${{targets.destdir}}/usr/lib/private"
+        cp -d lib/private/*.so* "${{targets.destdir}}/usr/lib/private/" 2>/dev/null || true
+      fi
+
       # Install share directory (needed for --initialize and error messages)
       # MySQL looks for errmsg.sys at /usr/share/<language>/errmsg.sys by default
       mkdir -p "${{targets.destdir}}/usr/share/english"
