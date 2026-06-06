@@ -102,8 +102,18 @@ pipeline:
 
       # Install plugin directory (needed for InnoDB and auth)
       # Must be /usr/lib/plugin/ to match MySQL's compiled-in default (CMAKE_INSTALL_PREFIX=/usr + lib/plugin)
+      # Skip X Plugin (libmysqlx) — it dynamically links system libprotobuf-lite
+      # even with -DWITH_PROTOBUF=bundled, which would re-introduce the Wolfi
+      # protobuf+absl ABI drift this image is trying to avoid. X Protocol
+      # (port 33060) is rarely used in minimal images; the classic protocol on
+      # 3306 remains fully functional.
       mkdir -p "${{targets.destdir}}/usr/lib/plugin"
-      cp lib/plugin/*.so "${{targets.destdir}}/usr/lib/plugin/" 2>/dev/null || true
+      for so in lib/plugin/*.so; do
+        case "${so##*/}" in
+          libmysqlx.so) continue ;;
+        esac
+        cp "$so" "${{targets.destdir}}/usr/lib/plugin/"
+      done
 
       # Install entrypoint script
       cat > "${{targets.destdir}}/usr/bin/docker-entrypoint.sh" << 'ENTRY'
