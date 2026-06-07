@@ -122,15 +122,8 @@ pipeline:
       # auto-provides scanner self-satisfies the SO deps from the same
       # package, so no Wolfi libprotobuf-lite dependency is needed.
 
-      # Strip ELF binaries and shared libraries in the destdir.
-      find "$D" -type f \( -perm -u+x -o -name '*.so*' \) -print0 |
-        while IFS= read -r -d '' f; do
-          case "$(file -L "$f" 2>/dev/null)" in
-            *ELF*) strip --strip-unneeded "$f" 2>/dev/null || true ;;
-          esac
-        done
-
-      # Entrypoint script — auto-initialize on first run.
+      # Entrypoint script — auto-initialize on first run. Created before
+      # the allowlist trim so it survives that step's sanity check.
       cat > "$D/usr/bin/docker-entrypoint.sh" << 'ENTRY'
       #!/bin/sh
       set -e
@@ -143,6 +136,49 @@ pipeline:
       exec mysqld "$@"
       ENTRY
       chmod +x "$D/usr/bin/docker-entrypoint.sh"
+
+      # Allowlist trim: `make install` ships ~26 binaries (server, client,
+      # test harness, perl scripts, dev utilities). Restore the "minimal"
+      # promise by keeping only what's needed for the server to run + the
+      # tools downstream users typically reach for via `kubectl exec`:
+      #   mysqld                 server
+      #   mysql                  client (debugging, smoke tests)
+      #   mysqladmin             k8s liveness/readiness probes (ping)
+      #   mysqldump              backups via kubectl exec
+      #   mysql_tzinfo_to_sql    timezone setup
+      #   docker-entrypoint.sh   container entrypoint
+      # Removes: mysqltest, mysqlxtest, mysql_client_test, mysql_test_event_tracking,
+      # mysqldumpslow (perl), mysqld_safe (legacy), mysqld_multi, mysqlbinlog,
+      # mysqlcheck, mysqlshow, mysqlimport, mysqlslap, mysql_secure_installation,
+      # mysql_keyring_encryption_test, mysql_config_editor, mysql_migrate_keyring,
+      # mysql_config, comp_err, perror.
+      allowed_bins="mysqld mysql mysqladmin mysqldump mysql_tzinfo_to_sql docker-entrypoint.sh"
+      for f in "$D/usr/bin/"*; do
+        [ -e "$f" ] || continue
+        name="${f##*/}"
+        case " $allowed_bins " in
+          *" $name "*) ;;
+          *) rm -f "$f" ;;
+        esac
+      done
+
+      # Sanity: critical binaries must still exist after the trim. If the
+      # allowlist drifts (e.g. an upstream rename) this fails the build
+      # inside melange instead of producing a broken image.
+      for required in mysqld mysql docker-entrypoint.sh; do
+        test -x "$D/usr/bin/$required" || {
+          echo "FATAL: $required missing after allowlist trim"
+          exit 1
+        }
+      done
+
+      # Strip ELF binaries and shared libraries in the destdir.
+      find "$D" -type f \( -perm -u+x -o -name '*.so*' \) -print0 |
+        while IFS= read -r -d '' f; do
+          case "$(file -L "$f" 2>/dev/null)" in
+            *ELF*) strip --strip-unneeded "$f" 2>/dev/null || true ;;
+          esac
+        done
 
   # Verify the build
   - runs: |
