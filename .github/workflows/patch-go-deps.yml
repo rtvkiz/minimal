@@ -92,7 +92,12 @@ jobs:
             [otelcol]="/home/build/opentelemetry-collector-${D}{{package.version}}/cmd/otelcorecol"
             [gitea]="/home/build/gitea-${D}{{package.version}}"
             [coredns]="/home/build/coredns-${D}{{package.version}}"
-            [openbao]="/home/build/openbao-${D}{{package.version}}"
+            # openbao is a multi-module monorepo: api/, sdk/, and each of
+            # api/auth/{approle,jwt,kubernetes,ldap,userpass} have their own
+            # go.mod, and their packages get linked into the bao binary.
+            # Patching only the root left transitive CVEs in those modules
+            # unbumped (root cause of our openbao CVE delta vs wolfi-dev/os).
+            [openbao]="/home/build/openbao-${D}{{package.version}} /home/build/openbao-${D}{{package.version}}/api /home/build/openbao-${D}{{package.version}}/sdk /home/build/openbao-${D}{{package.version}}/api/auth/approle /home/build/openbao-${D}{{package.version}}/api/auth/jwt /home/build/openbao-${D}{{package.version}}/api/auth/kubernetes /home/build/openbao-${D}{{package.version}}/api/auth/ldap /home/build/openbao-${D}{{package.version}}/api/auth/userpass"
             [loki]="/home/build/loki-${D}{{package.version}}"
             [helm]="/home/build/helm-${D}{{package.version}}"
             [kubectl]="/home/build/kubernetes-${D}{{package.version}}"
