@@ -21,7 +21,7 @@ trap cleanup EXIT
 # mariadb-install-db on first boot can take ~10–20s.
 ready=0
 for i in $(seq 1 60); do
-  if docker exec mariadb-test mariadb -uroot -e "SELECT 1" >/dev/null 2>&1; then
+  if docker exec --user 0 mariadb-test mariadb -uroot -e "SELECT 1" >/dev/null 2>&1; then
     ready=1
     break
   fi
@@ -34,7 +34,7 @@ fi
 echo "✓ Server started and accepting connections"
 
 # CRUD round-trip — exercises plugin dir (InnoDB) + errmsg + client socket
-docker exec mariadb-test mariadb -uroot -e "
+docker exec --user 0 mariadb-test mariadb -uroot -e "
   CREATE DATABASE smoke;
   USE smoke;
   CREATE TABLE x (id INT PRIMARY KEY, label VARCHAR(16));
@@ -44,7 +44,7 @@ docker exec mariadb-test mariadb -uroot -e "
 echo "✓ CRUD round-trip succeeded"
 
 # Plugin directory wired correctly
-docker exec mariadb-test mariadb -uroot -e "SHOW PLUGINS" | grep -q InnoDB
+docker exec --user 0 mariadb-test mariadb -uroot -e "SHOW PLUGINS" | grep -q InnoDB
 echo "✓ InnoDB plugin loaded"
 
 # mysqld/mysql compat symlinks must work
@@ -56,7 +56,7 @@ echo "✓ mysqld/mysql compat symlinks work"
 docker restart mariadb-test >/dev/null
 ready=0
 for i in $(seq 1 60); do
-  if docker exec mariadb-test mariadb -uroot -e "SELECT 1" >/dev/null 2>&1; then
+  if docker exec --user 0 mariadb-test mariadb -uroot -e "SELECT 1" >/dev/null 2>&1; then
     ready=1
     break
   fi
@@ -66,7 +66,7 @@ if [ "$ready" != 1 ]; then
   echo "MariaDB did not come back up after restart"
   exit 1
 fi
-docker exec mariadb-test mariadb -uroot -e "SELECT label FROM smoke.x WHERE id=1" | grep -q one
+docker exec --user 0 mariadb-test mariadb -uroot -e "SELECT label FROM smoke.x WHERE id=1" | grep -q one
 echo "✓ Persistence across restart confirmed"
 
 # Allowlist sanity: confirm we didn't drag mariadb-test / mytop / perl
