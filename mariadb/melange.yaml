@@ -130,19 +130,13 @@ pipeline:
       fi
 
       # Compat symlinks: legacy tooling calls mysqld/mysql (and so does our
-      # docker-entrypoint).
+      # docker-entrypoint). Created before the allowlist trim so they're
+      # preserved by it.
       ln -sf mariadbd "$D/usr/bin/mysqld"
       ln -sf mariadb  "$D/usr/bin/mysql"
 
-      # Strip ELF binaries and shared libraries in the destdir.
-      find "$D" -type f \( -perm -u+x -o -name '*.so*' \) -print0 |
-        while IFS= read -r -d '' f; do
-          case "$(file -L "$f" 2>/dev/null)" in
-            *ELF*) strip --strip-unneeded "$f" 2>/dev/null || true ;;
-          esac
-        done
-
-      # Entrypoint script — auto-initialize on first run.
+      # Entrypoint script — auto-initialize on first run. Created before
+      # the allowlist trim so it survives that step's sanity check.
       cat > "$D/usr/bin/docker-entrypoint.sh" << 'ENTRY'
       #!/bin/sh
       set -e
@@ -155,6 +149,68 @@ pipeline:
       exec mariadbd --user=mysql "$@"
       ENTRY
       chmod +x "$D/usr/bin/docker-entrypoint.sh"
+
+      # Allowlist trim: `make install` ships ~50 binaries (server, client,
+      # test harness, perl scripts, aria/myisam tools, backup tools, legacy
+      # wrappers). Restore the "minimal" promise by keeping only what's
+      # needed for the server to run + the tools typically reached for via
+      # `kubectl exec`:
+      #   mariadbd                    server
+      #   mariadb                     client
+      #   mariadb-install-db          REQUIRED by entrypoint (datadir init)
+      #   my_print_defaults           REQUIRED by mariadb-install-db
+      #   mariadb-admin               k8s liveness/readiness probes (ping)
+      #   mariadb-dump                backups via kubectl exec
+      #   docker-entrypoint.sh        container entrypoint
+      #   mysqld, mysql               compat symlinks (created above)
+      # Removes: mariadb-test, mariadb-client-test (test binaries),
+      # mytop, mariadb-hotcopy, mariadb-secure-installation,
+      # mariadb-setpermission, msql2mysql (perl — drags cmd:perl),
+      # mariadbd-safe, mariadbd-multi, mariadbd-safe-helper (legacy
+      # wrappers), aria_chk, aria_dump_log, aria_ftdump, aria_pack,
+      # aria_read_log, myisamchk, myisam_ftdump, myisamlog, myisampack
+      # (table maintenance — rarely used in containers), mariabackup,
+      # mbstream (separate backup workflow), mariadb-binlog,
+      # mariadb-check, mariadb-conv, mariadb-convert-table-format,
+      # mariadb-find-rows, mariadb-fix-extensions, mariadb-import,
+      # mariadb-plugin, mariadb-show, mariadb-slap, mariadb-tzinfo-to-sql,
+      # mariadb-upgrade, mariadb-waitpid, mariadb-access, mariadb_config,
+      # mysql_config, innochecksum, perror, replace, resolve_stack_dump,
+      # resolveip.
+      allowed_bins="mariadbd mariadb mariadb-install-db my_print_defaults mariadb-admin mariadb-dump docker-entrypoint.sh mysqld mysql"
+      for f in "$D/usr/bin/"*; do
+        [ -e "$f" ] || [ -L "$f" ] || continue
+        name="${f##*/}"
+        case " $allowed_bins " in
+          *" $name "*) ;;
+          *) rm -f "$f" ;;
+        esac
+      done
+
+      # Sanity: critical binaries must still exist after the trim. If the
+      # allowlist drifts (e.g. an upstream rename) this fails the build
+      # inside melange instead of producing a broken image.
+      for required in mariadbd mariadb mariadb-install-db my_print_defaults docker-entrypoint.sh; do
+        test -x "$D/usr/bin/$required" || {
+          echo "FATAL: $required missing after allowlist trim"
+          exit 1
+        }
+      done
+      # Verify compat symlinks survived
+      for s in mysqld mysql; do
+        test -L "$D/usr/bin/$s" || {
+          echo "FATAL: compat symlink $s missing after allowlist trim"
+          exit 1
+        }
+      done
+
+      # Strip ELF binaries and shared libraries in the destdir.
+      find "$D" -type f \( -perm -u+x -o -name '*.so*' \) -print0 |
+        while IFS= read -r -d '' f; do
+          case "$(file -L "$f" 2>/dev/null)" in
+            *ELF*) strip --strip-unneeded "$f" 2>/dev/null || true ;;
+          esac
+        done
 
   # Verify the build
   - runs: |
