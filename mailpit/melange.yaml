@@ -70,7 +70,10 @@ pipeline:
   # Verify
   - runs: |
       echo "Verifying mailpit build..."
-      "${{targets.destdir}}/usr/bin/mailpit" version
+      # `mailpit version` calls GitHub's releases API and exits 1 on any
+      # network error (including GHA's intermittent 403 rate-limit). The
+      # --no-release-check flag (cmd/version.go) skips the live check.
+      "${{targets.destdir}}/usr/bin/mailpit" version --no-release-check
       echo "Binary size:"
       ls -lh "${{targets.destdir}}/usr/bin/mailpit"
 
