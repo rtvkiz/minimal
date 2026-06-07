@@ -35,9 +35,6 @@ contents:
     # Event library
     - libevent
 
-    # Protobuf (required by mysqld for X Protocol / Group Replication)
-    - libprotobuf-lite
-
     # Certificates
     - ca-certificates-bundle
 
