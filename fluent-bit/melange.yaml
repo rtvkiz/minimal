@@ -3,14 +3,14 @@
 
 package:
   name: fluent-bit-minimal
-  version: 5.0.6
+  version: 5.0.7
   epoch: 0
   description: "Minimal Fluent Bit log processor built from source"
   copyright:
     - license: Apache-2.0
 
 vars:
-  sha256: bffe424e9010e89f412fbc0bbd054040aa4f447b9f2f20ffd5b42110db9b2fa3
+  sha256: a760cdce272d6025100346d27315cc03a9b3466e5a8a24aaae6f2ad6a9cda29f
 
 environment:
   contents:
