@@ -149,6 +149,7 @@
     notes: "https://github.com/coredns/coredns/releases/tag/v{version}"
 
 - name: fluent-bit
+  cron-enabled: true   # wave 4
   files: [fluent-bit/melange.yaml]
   source: { type: github-tags, repo: fluent/fluent-bit, pattern: '^v5\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 5 }
   tarball: { url: "https://github.com/fluent/fluent-bit/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -158,6 +159,7 @@
     notes: "https://github.com/fluent/fluent-bit/releases/tag/v{version}"
 
 - name: gitea
+  cron-enabled: true   # wave 4
   files: [gitea/melange.yaml]
   source: { type: github-tags, repo: go-gitea/gitea, pattern: '^v1\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 1 }
   tarball: { url: "https://github.com/go-gitea/gitea/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -167,6 +169,7 @@
     notes: "https://github.com/go-gitea/gitea/releases/tag/v{version}"
 
 - name: haproxy
+  cron-enabled: true   # wave 4
   files: [haproxy/melange.yaml]
   source: { type: github-tags, repo: haproxy/haproxy, pattern: '^v3\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
   tarball: { url: "https://www.haproxy.org/download/{minor}/src/haproxy-{version}.tar.gz", field: sha256 }
@@ -176,6 +179,7 @@
     notes: "https://www.haproxy.org/news.html"
 
 - name: keycloak
+  cron-enabled: true   # wave 4
   files: [keycloak/melange.yaml]
   source: { type: github-tags, repo: keycloak/keycloak, pattern: '^26\.[0-9]+\.[0-9]+$', pin-major: 26 }
   tarball: { url: "https://github.com/keycloak/keycloak/releases/download/{version}/keycloak-{version}.tar.gz", field: sha256 }
@@ -185,6 +189,7 @@
     notes: "https://github.com/keycloak/keycloak/releases/tag/{version}"
 
 - name: loki
+  cron-enabled: true   # wave 4
   files: [loki/melange.yaml]
   source: { type: github-tags, repo: grafana/loki, pattern: '^v3\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
   tarball: { url: "https://github.com/grafana/loki/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -194,6 +199,7 @@
     notes: "https://github.com/grafana/loki/releases/tag/v{version}"
 
 - name: nats
+  cron-enabled: true   # wave 4
   files: [nats/melange.yaml]
   source: { type: github-tags, repo: nats-io/nats-server, pattern: '^v2\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
   tarball: { url: "https://github.com/nats-io/nats-server/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -203,6 +209,7 @@
     notes: "https://github.com/nats-io/nats-server/releases/tag/v{version}"
 
 - name: openbao
+  cron-enabled: true   # wave 4
   files: [openbao/melange.yaml]
   source: { type: github-tags, repo: openbao/openbao, pattern: '^v2\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
   tarball: { url: "https://github.com/openbao/openbao/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -212,6 +219,7 @@
     notes: "https://github.com/openbao/openbao/releases/tag/v{version}"
 
 - name: traefik
+  cron-enabled: true   # wave 4
   files: [traefik/melange.yaml]
   source: { type: github-tags, repo: traefik/traefik, pattern: '^v3\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
   tarball: { url: "https://github.com/traefik/traefik/archive/refs/tags/v{version}.tar.gz", field: sha256 }
