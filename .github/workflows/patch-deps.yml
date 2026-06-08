@@ -164,7 +164,21 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$BRANCH"
           git add -A
-          git diff --cached --quiet && { echo "No file changes"; exit 0; }
+          # Skip if there's no diff, OR if the only diff is whitespace.
+          # The scan-and-rewrite path always strips the old block and writes
+          # a fresh one; when grype reports the same already-patched gems,
+          # the result is byte-equivalent except blanks shuffle around the
+          # block boundary (e.g. PRs #238-#246, #251, #253 were all empty
+          # diffs). Skip those — burning a full Build Hardened Images run
+          # per cycle for blank-line shuffles is pointless churn.
+          if git diff --cached --quiet; then
+            echo "No file changes — skipping PR"; exit 0
+          fi
+          if git diff --cached --ignore-all-space --ignore-blank-lines --quiet; then
+            echo "Diff is whitespace-only — skipping PR"
+            git reset --hard HEAD
+            exit 0
+          fi
           git commit -m "$TITLE"
           git push -u origin "$BRANCH" --force
 
