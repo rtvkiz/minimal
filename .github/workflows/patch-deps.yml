@@ -1,0 +1,176 @@
+name: Patch transitive dependencies
+
+# Consolidated replacement for patch-bundler-deps.yml + patch-rust-deps.yml +
+# patch-maven-deps.yml. Driven by .github/patch-deps.yaml.
+#
+# patch-go-deps.yml stays separate — its 350 lines of bespoke logic (OTel
+# family harmonization, golang.org/x/* sibling pinning, +incompatible suffix
+# list, main-module self-bump filter, existing-pin preservation) carry too
+# much regression history to safely fold into a generic schema.
+#
+# Phase 1: workflow_dispatch only. Old patch-{bundler,rust,maven}-deps.yml
+# continue to run on cron. Once parity is proven for each row via a dispatch
+# run, delete the corresponding old workflow and enable schedule here.
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Comma-separated row names (bundler,rust,maven). Blank = all."
+        required: false
+        default: ""
+
+permissions: {}
+
+env:
+  REGISTRY: ghcr.io
+  GRYPE_VERSION: v0.109.1
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+      empty: ${{ steps.build.outputs.empty }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install yq
+        run: |
+          if ! command -v yq >/dev/null; then
+            sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+            sudo chmod +x /usr/local/bin/yq
+          fi
+      - id: build
+        env:
+          ONLY: ${{ inputs.only }}
+        run: |
+          rows=$(yq -o=json '.' .github/patch-deps.yaml)
+          if [ -n "$ONLY" ]; then
+            filter=$(printf '%s' "$ONLY" | tr ',' ' ')
+            rows=$(jq --argjson keep "$(printf '%s' "$filter" | jq -R 'split(" ")')" \
+              '[.[] | select(.name as $n | $keep | index($n))]' <<<"$rows")
+          fi
+          count=$(jq 'length' <<<"$rows")
+          if [ "$count" -eq 0 ]; then
+            echo "empty=true" >> "$GITHUB_OUTPUT"
+            echo "matrix={\"include\":[]}" >> "$GITHUB_OUTPUT"
+          else
+            echo "empty=false" >> "$GITHUB_OUTPUT"
+            echo "matrix=$(jq -c '{include: .}' <<<"$rows")" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Planned rows ($count):"
+          jq -r '.[].name' <<<"$rows"
+
+  patch:
+    needs: plan
+    if: needs.plan.outputs.empty == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: read
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Cache Grype binary
+        id: grype-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: /usr/local/bin/grype
+          key: grype-${{ env.GRYPE_VERSION }}-linux-amd64
+
+      - name: Install Grype
+        if: steps.grype-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fL --retry 5 --retry-all-errors -o /tmp/grype.tar.gz \
+            "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
+          tar -xzf /tmp/grype.tar.gz -C /usr/local/bin grype
+          rm -f /tmp/grype.tar.gz
+
+      - name: Log in to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find existing PR
+        id: existing-pr
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="patch-${{ matrix.name }}-deps"
+          PR_URL=$(gh pr list --head "$BRANCH" --base main --state open --json url --jq '.[0].url // ""')
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Scan and generate patches
+        id: scan
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          ROW: ${{ toJson(matrix) }}
+        run: ./.github/scripts/patch-deps.sh "$ROW"
+
+      - name: Close stale PR
+        if: steps.scan.outputs.has_patches != 'true' && steps.existing-pr.outputs.pr_url != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="patch-${{ matrix.name }}-deps"
+          gh pr close "${{ steps.existing-pr.outputs.pr_url }}" \
+            --comment "Closing: latest patch-${{ matrix.name }}-deps scan produced no patch changes."
+          git push origin --delete "$BRANCH" || true
+
+      - name: Create PR and enable auto-merge
+        if: steps.scan.outputs.has_patches == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="patch-${{ matrix.name }}-deps"
+          TITLE="${{ matrix.commit-title }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add -A
+          git diff --cached --quiet && { echo "No file changes"; exit 0; }
+          git commit -m "$TITLE"
+          git push -u origin "$BRANCH" --force
+
+          cat > /tmp/pr.md <<EOF
+          ## Summary
+
+          ${{ matrix.pr-summary }}
+
+          ## Patched images
+
+          ${{ steps.scan.outputs.summary }}
+
+          ## Verification
+
+          CI builds all images — if green, the bumps work.
+
+          ---
+          Auto-generated by [patch-deps](${{ github.server_url }}/${{ github.repository }}/actions/workflows/patch-deps.yml) for the \`${{ matrix.name }}\` row.
+          EOF
+
+          PR_URL="${{ steps.existing-pr.outputs.pr_url }}"
+          if [ -n "$PR_URL" ]; then
+            gh pr edit "$PR_URL" --title "$TITLE" --add-label dependencies --add-label security --body-file /tmp/pr.md
+          else
+            PR_URL=$(gh pr create --title "$TITLE" --label dependencies --label security --body-file /tmp/pr.md)
+          fi
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch

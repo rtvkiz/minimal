@@ -1,0 +1,87 @@
+# Registry for the consolidated patch-deps workflow.
+#
+# Consumed by .github/workflows/patch-deps.yml — matrix-expands one job per
+# row, calling .github/scripts/patch-deps.sh with the row JSON.
+#
+# This replaces patch-bundler-deps.yml, patch-rust-deps.yml, patch-maven-deps.yml.
+# patch-go-deps.yml stays separate — its 350 lines of regression-driven
+# special cases (OTel harmonization, golang.org/x/* family pinning,
+# +incompatible suffix list, main-module self-bump filter, existing-pin
+# preservation) make it a poor fit for a generic schema.
+#
+# Schema (per row)
+# ----------------
+#   name:             short identifier; matrix key + branch base + PR prefix
+#   artifact-type:    grype's `.artifact.type` for this language
+#   update-template:  shell command to bump one dep; supports {pkg}, {ver},
+#                     and (maven-only) {coord}, {group-path}, {artifact-id}
+#   verify-url:       URL to confirm {pkg}@{ver} exists upstream; supports
+#                     same placeholders as update-template
+#   commit-title:     conventional-commit title for the bump commit/PR
+#   pr-summary:       first paragraph of the PR body
+#   coord-map:        (maven only) artifact-name -> group:artifact translation
+#   images:           list of {name, src-root, build-marker}
+#                       - src-root may contain the sentinel <<PKG_VERSION>>
+#                         which the script substitutes for the literal melange
+#                         template `${{package.version}}` (avoids GH Actions
+#                         eating the expression on the way through toJson)
+#                       - build-marker is grepped in melange.yaml; the patch
+#                         block is inserted before the `- runs:` containing it
+
+- name: bundler
+  artifact-type: gem
+  update-template: "gem install {pkg} -v {ver} --no-document"
+  verify-url:      "https://rubygems.org/api/v2/rubygems/{pkg}/versions/{ver}.json"
+  commit-title:    "fix(bundler-deps): patch vulnerable Ruby gem dependencies"
+  pr-summary: |
+    Scans published Bundler-driven images with grype, identifies gem-level CVEs
+    with known fix versions, and emits `gem install <gem> -v <ver>` commands in
+    each image's melange.yaml.
+  images:
+    - { name: rails, src-root: "/home/build", build-marker: "gem install --no-document rails" }
+
+- name: rust
+  artifact-type: rust-crate
+  update-template: "cargo update -p {pkg} --precise {ver}"
+  verify-url:      "https://crates.io/api/v1/crates/{pkg}/{ver}"
+  commit-title:    "fix(rust-deps): patch vulnerable Rust crate dependencies"
+  pr-summary: |
+    Scans published Rust images with grype, identifies crate-level CVEs with
+    known fix versions, and emits targeted `cargo update -p <crate> --precise <ver>`
+    commands in each image's melange.yaml.
+  images:
+    - { name: qdrant, src-root: "/home/build/qdrant-<<PKG_VERSION>>", build-marker: "cargo build --release" }
+
+- name: maven
+  artifact-type: java-archive
+  # Maven path uses {coord} (group:artifact) resolved from coord-map[pkg].
+  update-template: "mvn -B versions:use-dep-version -Dincludes={coord} -DdepVersion={ver} -DforceVersion=true || true"
+  verify-url:      "https://repo1.maven.org/maven2/{group-path}/{artifact-id}/{ver}/{artifact-id}-{ver}.pom"
+  commit-title:    "fix(maven-deps): patch vulnerable Maven Java dependencies"
+  pr-summary: |
+    Scans published Maven-driven images with grype, identifies Java-archive CVEs
+    with known fix versions, and emits `mvn versions:use-dep-version` commands
+    in each image's melange.yaml.
+  # grype reports bare artifact names; mvn needs group:artifact. This map grows
+  # organically — add an entry when grype reports a previously-unseen artifact.
+  coord-map:
+    jackson-databind:    com.fasterxml.jackson.core:jackson-databind
+    snakeyaml:           org.yaml:snakeyaml
+    logback-core:        ch.qos.logback:logback-core
+    logback-classic:     ch.qos.logback:logback-classic
+    netty-handler:       io.netty:netty-handler
+    netty-handler-proxy: io.netty:netty-handler-proxy
+    netty-common:        io.netty:netty-common
+    netty-codec:         io.netty:netty-codec
+    netty-codec-dns:     io.netty:netty-codec-dns
+    netty-codec-http:    io.netty:netty-codec-http
+    netty-codec-http2:   io.netty:netty-codec-http2
+    commons-io:          commons-io:commons-io
+    commons-compress:    org.apache.commons:commons-compress
+    bcprov-jdk18on:      org.bouncycastle:bcprov-jdk18on
+    bcpkix-jdk18on:      org.bouncycastle:bcpkix-jdk18on
+    jose4j:              org.bitbucket.b_c:jose4j
+    okio:                com.squareup.okio:okio
+    protobuf-java:       com.google.protobuf:protobuf-java
+  images:
+    - { name: keycloak, src-root: "/home/build/keycloak-<<PKG_VERSION>>", build-marker: "mvn -B -DskipTests" }
