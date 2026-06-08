@@ -21,7 +21,9 @@ notes_tmpl=$(j '.links.notes // empty')
 notes_url="${notes_tmpl//\{version\}/$new}"
 image_name="minimal-$name"
 # Image-name overrides (e.g. distribution → registry, redis → redis-slim).
-override=$(j '.image-name // empty')
+# NB: hyphenated keys MUST be bracket-quoted in jq — `.image-name` is
+# parsed as subtraction (`.image - name`) and fails to compile.
+override=$(j '.["image-name"] // empty')
 [ -n "$override" ] && image_name="$override"
 
 branch="update-${name}-${new}"
