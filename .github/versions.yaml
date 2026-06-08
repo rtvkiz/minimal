@@ -82,6 +82,7 @@
     notes: "https://github.com/prometheus/prometheus/releases/tag/v{version}"
 
 - name: rabbitmq
+  cron-enabled: true   # wave 3
   files: [rabbitmq/melange.yaml]
   source: { type: github-releases-latest, repo: rabbitmq/rabbitmq-server, strip-v: true, pin-major: 4 }
   tarball:
@@ -93,6 +94,7 @@
     notes: "https://github.com/rabbitmq/rabbitmq-server/releases/tag/v{version}"
 
 - name: valkey
+  cron-enabled: true   # wave 3
   files: [valkey/melange.yaml]
   source: { type: github-releases-latest, repo: valkey-io/valkey, strip-v: true, pin-major: 9 }
   tarball: { url: "https://github.com/valkey-io/valkey/archive/refs/tags/{version}.tar.gz", field: sha256 }
@@ -127,6 +129,7 @@
 # ============================================================================
 
 - name: caddy
+  cron-enabled: true   # wave 3
   files: [caddy/melange.yaml]
   source: { type: github-tags, repo: caddyserver/caddy, pattern: '^v2\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
   tarball: { url: "https://github.com/caddyserver/caddy/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -136,6 +139,7 @@
     notes: "https://github.com/caddyserver/caddy/releases/tag/v{version}"
 
 - name: coredns
+  cron-enabled: true   # wave 3
   files: [coredns/melange.yaml]
   source: { type: github-tags, repo: coredns/coredns, pattern: '^v1\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 1 }
   tarball: { url: "https://github.com/coredns/coredns/archive/refs/tags/v{version}.tar.gz", field: sha256 }
