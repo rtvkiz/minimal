@@ -339,6 +339,7 @@
 # ============================================================================
 
 - name: rails
+  cron-enabled: true   # wave 7
   files:
     - { path: rails/melange.yaml, pattern: '^  rails_version: .*', template: '  rails_version: {version}' }
   source:
@@ -358,6 +359,7 @@
 # ============================================================================
 
 - name: envoy
+  cron-enabled: true   # wave 7
   files: [envoy/melange.yaml]
   source: { type: github-releases-latest, repo: envoyproxy/envoy, strip-v: true, pin-major: 1 }
   tarballs:
@@ -374,6 +376,7 @@
 # ============================================================================
 
 - name: mysql
+  cron-enabled: true   # wave 7
   files: [mysql/melange.yaml]
   # MySQL 8.4 LTS tags upstream are mysql-cluster-8.4.X. Strip prefix on read.
   source:
@@ -391,6 +394,7 @@
     notes: "https://dev.mysql.com/doc/relnotes/mysql/8.4/en/"
 
 - name: ruby
+  cron-enabled: true   # wave 7
   # Ruby bump touches BOTH ruby/melange.yaml AND rails/melange.yaml — rails is
   # built on top of the same Ruby interpreter and tracks ruby_version 1:1.
   files: [ruby/melange.yaml, rails/melange.yaml]
