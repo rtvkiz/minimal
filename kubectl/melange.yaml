@@ -51,20 +51,6 @@ pipeline:
   # k8s.io/{client-go,component-base}/version.* fields the binary surfaces via
   # `kubectl version --client`.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off

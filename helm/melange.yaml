@@ -45,21 +45,6 @@ pipeline:
 
   # Build helm — single static binary, version stamps via helm.sh/helm/v3/internal/version.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off

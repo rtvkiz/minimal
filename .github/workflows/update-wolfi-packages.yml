@@ -28,7 +28,6 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
 
-      
       - name: Download and parse Wolfi APKINDEX
         id: check
         run: |

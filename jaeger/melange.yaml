@@ -35,14 +35,6 @@ pipeline:
       echo "${{vars.sha256}}  /home/build/jaeger.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf jaeger.tar.gz && rm jaeger.tar.gz
 
-
-
-
-
-
-
-
-
   - runs: |
       cd /home/build/jaeger-${{package.version}}
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \

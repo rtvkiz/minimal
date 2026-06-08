@@ -44,31 +44,6 @@ pipeline:
       tar xzf prometheus.tar.gz
       rm prometheus.tar.gz
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off

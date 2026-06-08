@@ -45,7 +45,6 @@ pipeline:
         "https://archive.apache.org/dist/kafka/${{package.version}}/kafka_${{vars.scala_version}}-${{package.version}}.tgz" \
         -o /home/build/kafka.tgz
 
-
       echo "${{vars.sha512}}  /home/build/kafka.tgz" | sha512sum -c -
 
       cd /home/build

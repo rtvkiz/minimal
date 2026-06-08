@@ -42,23 +42,6 @@ pipeline:
 
   # Build CoreDNS
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off

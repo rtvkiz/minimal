@@ -37,34 +37,6 @@ pipeline:
 
   # Build OpenBao (server-only, no UI)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off

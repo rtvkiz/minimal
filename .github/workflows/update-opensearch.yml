@@ -74,7 +74,7 @@ jobs:
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/opensearch-project/OpenSearch/tags?per_page=100" | \
             jq -r --arg NEXT "$NEXT_MAJOR" '[.[] | .name | select(test("^" + $NEXT + "\\.[0-9]+\\.[0-9]+$"))] | first // empty')
-          
+
           if [ -n "$LATEST_NEXT_MAJOR" ]; then
             echo "next_major_version=$NEXT_MAJOR" >> "$GITHUB_OUTPUT"
             echo "next_major_tag=$LATEST_NEXT_MAJOR" >> "$GITHUB_OUTPUT"
@@ -90,7 +90,6 @@ jobs:
 
           # Update Makefile (opensearch has no melange.yaml — Makefile is source of truth)
           sed -i "s/OPENSEARCH_VERSION ?= $OLD/OPENSEARCH_VERSION ?= $NEW/" Makefile
-
 
           # Update README.md version table (line 295: | OpenSearch | X.Y.Z | ...)
           # We update 2.19.x or similar pattern
@@ -115,22 +114,22 @@ jobs:
             --label dependencies --label opensearch \
             --body "$(cat <<'PRBODY'
           ## Summary
-          
+
           Updates OpenSearch version tracking from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.new_version }}`.
-          
+
           This image uses the `opensearch-${{ steps.check.outputs.current_major }}` Wolfi package, which is rebuilt daily. This PR updates the version metadata in `Makefile` and `README.md` to reflect the latest release in the ${{ steps.check.outputs.current_major }}.x line.
-          
+
           ## Changes
-          
+
           - `Makefile` - `OPENSEARCH_VERSION` variable
           - `README.md` - Version Table
-          
+
           ## Links
-          
+
           - [OpenSearch Release Notes](https://opensearch.org/docs/latest/version-history/)
-          
+
           ---
-          
+
           This PR was automatically created by the [update-opensearch](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-opensearch.yml) workflow.
           PRBODY
           )")

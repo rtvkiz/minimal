@@ -42,25 +42,6 @@ pipeline:
       tar xzf caddy.tar.gz
       rm caddy.tar.gz
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   # Build Caddy from source (static binary)
   - runs: |
       cd /home/build/caddy-${{package.version}}

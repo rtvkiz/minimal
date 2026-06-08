@@ -32,16 +32,16 @@ pipeline:
         aarch64) ARCH_NAME="aarch_64" ;;
         *) echo "Unsupported arch: $BUILD_ARCH"; exit 1 ;;
       esac
-      
+
       curl -fsSL --retry 5 --retry-all-errors "https://github.com/envoyproxy/envoy/releases/download/v${{package.version}}/envoy-${{package.version}}-linux-${ARCH_NAME}" \
         -o /tmp/envoy
-      
+
       if [ "$BUILD_ARCH" = "x86_64" ]; then
         CHECKSUM="${{vars.sha256_x86}}"
       else
         CHECKSUM="${{vars.sha256_arm}}"
       fi
-      
+
       echo "${CHECKSUM}  /tmp/envoy" | sha256sum -c -
       chmod +x /tmp/envoy
 

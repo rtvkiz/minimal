@@ -35,10 +35,10 @@ pipeline:
       mkdir -p /home/build
       curl -fsSL --retry 5 --retry-all-errors "https://github.com/redis/redis/archive/refs/tags/${{package.version}}.tar.gz" \
         -o /home/build/redis.tar.gz
-      
+
       # Verify checksum
       echo "${{vars.sha256}}  /home/build/redis.tar.gz" | sha256sum -c -
-      
+
       cd /home/build
       tar xzf redis.tar.gz
       rm redis.tar.gz
