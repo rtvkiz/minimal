@@ -59,13 +59,14 @@ pipeline:
 
 
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off
       for root in /home/build/distribution-${{package.version}}; do
         [ -f "$root/go.mod" ] || continue
         ( cd "$root" \
-          && go get golang.org/x/crypto@v0.52.0 golang.org/x/net@v0.55.0 golang.org/x/sys@v0.45.0 golang.org/x/text@v0.37.0 golang.org/x/term@v0.43.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.20.0 golang.org/x/tools@v0.45.0 \
+          && go get golang.org/x/crypto@v0.53.0 golang.org/x/net@v0.55.0 golang.org/x/sys@v0.46.0 golang.org/x/text@v0.38.0 golang.org/x/term@v0.44.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.21.0 golang.org/x/tools@v0.45.0 \
           && go mod tidy -e \
           && { [ ! -d vendor ] || go mod vendor; } )
       done
