@@ -1,14 +1,20 @@
 name: Update upstream versions
 
-# Consolidated replacement for the 30 update-<image>.yml workflows.
+# Consolidated replacement for the per-image update-<name>.yml workflows.
 # Driven by .github/versions.yaml; logic lives in .github/scripts/.
 #
-# Phase 1 (this commit): workflow_dispatch only. Old per-image workflows still
-# run on their cron and remain authoritative. Use `gh workflow run
-# update-versions.yml -f only=qdrant` to validate parity per image, then
-# delete each old workflow in the PR that adds its row's schedule.
+# Incremental migration: schedule runs only rows with `cron-enabled: true`;
+# rows without that flag stay on their bespoke update-<name>.yml workflow.
+# Flip a row to cron-enabled: true in the SAME commit that deletes the
+# corresponding old workflow file, so there's never a window with both
+# trying to bump the same image.
+#
+# workflow_dispatch ignores cron-enabled and respects the `only:` input
+# (useful for one-off validation runs).
 
 on:
+  schedule:
+    - cron: '0 7 * * *'
   workflow_dispatch:
     inputs:
       only:
@@ -35,10 +41,14 @@ jobs:
       - id: build
         env:
           ONLY: ${{ inputs.only }}
+          EVENT: ${{ github.event_name }}
         run: |
-          # Convert versions.yaml -> JSON, optionally filter by name list.
           rows=$(yq -o=json '.' .github/versions.yaml)
-          if [ -n "$ONLY" ]; then
+          # Schedule: only run rows the operator has explicitly flipped on.
+          # Manual dispatch: ignore the gate, respect `only:` instead.
+          if [ "$EVENT" = "schedule" ]; then
+            rows=$(jq '[.[] | select(.["cron-enabled"] == true)]' <<<"$rows")
+          elif [ -n "$ONLY" ]; then
             filter=$(printf '%s' "$ONLY" | tr ',' ' ')
             rows=$(jq --argjson keep "$(printf '%s' "$filter" | jq -R 'split(" ")')" \
               '[.[] | select(.name as $n | $keep | index($n))]' <<<"$rows")
@@ -51,6 +61,8 @@ jobs:
             echo "empty=false" >> "$GITHUB_OUTPUT"
             echo "matrix=$(jq -c '{include: .}' <<<"$rows")" >> "$GITHUB_OUTPUT"
           fi
+          echo "Planned rows ($count):"
+          jq -r '.[].name' <<<"$rows"
 
   update:
     needs: plan

@@ -42,6 +42,7 @@
 # ============================================================================
 
 - name: qdrant
+  cron-enabled: true   # wave 1
   files: [qdrant/melange.yaml]
   source: { type: github-releases-latest, repo: qdrant/qdrant, strip-v: true, pin-major: 1 }
   tarball: { url: "https://github.com/qdrant/qdrant/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -98,6 +99,7 @@
     notes: "https://github.com/valkey-io/valkey/releases/tag/{version}"
 
 - name: victoria-metrics
+  cron-enabled: true   # wave 1
   files: [victoria-metrics/melange.yaml]
   source: { type: github-releases-latest, repo: VictoriaMetrics/VictoriaMetrics, strip-v: true, pin-major: 1 }
   tarball: { url: "https://github.com/VictoriaMetrics/VictoriaMetrics/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -107,6 +109,7 @@
     notes: "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v{version}"
 
 - name: otelcol
+  cron-enabled: true   # wave 1
   files: [otelcol/melange.yaml]
   source: { type: github-releases-latest, repo: open-telemetry/opentelemetry-collector, strip-v: true }
   tarball: { url: "https://github.com/open-telemetry/opentelemetry-collector/archive/refs/tags/v{version}.tar.gz", field: sha256 }
