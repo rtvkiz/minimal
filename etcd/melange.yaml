@@ -33,6 +33,7 @@ pipeline:
       echo "${{vars.sha256}}  /home/build/etcd.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf etcd.tar.gz && rm etcd.tar.gz
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off
@@ -44,7 +45,6 @@ pipeline:
           && { [ ! -d vendor ] || go mod vendor; } )
       done
   # end-patch-go-deps
-
   - runs: |
       # etcd 3.6 is a multi-module monorepo: server/, etcdctl/, etcdutl/ each
       # have their own go.mod and must be built from within their directory.

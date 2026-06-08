@@ -46,6 +46,7 @@ pipeline:
       tar xzf minio.tar.gz
       rm minio.tar.gz
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off
@@ -57,7 +58,6 @@ pipeline:
           && { [ ! -d vendor ] || go mod vendor; } )
       done
   # end-patch-go-deps
-
   # Build MinIO from source (static binary)
   - runs: |
       cd /home/build/minio-${{vars.minio_release}}

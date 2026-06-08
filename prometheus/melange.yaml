@@ -44,6 +44,7 @@ pipeline:
       tar xzf prometheus.tar.gz
       rm prometheus.tar.gz
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off
@@ -55,7 +56,6 @@ pipeline:
           && { [ ! -d vendor ] || go mod vendor; } )
       done
   # end-patch-go-deps
-
   # Build Prometheus from source (static binary, no embedded web UI)
   - runs: |
       cd /home/build/prometheus-${{package.version}}
