@@ -13,6 +13,10 @@ name: Patch transitive dependencies
 # run, delete the corresponding old workflow and enable schedule here.
 
 on:
+  schedule:
+    # Same cadence the three old patch-{bundler,rust,maven}-deps.yml shared:
+    # every 6 hours, offset 30 min after patch-go-deps to avoid PR-race.
+    - cron: '30 1,7,13,19 * * *'
   workflow_dispatch:
     inputs:
       only:
