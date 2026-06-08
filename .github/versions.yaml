@@ -233,6 +233,7 @@
 # ============================================================================
 
 - name: jenkins
+  cron-enabled: true   # wave 5
   files: [jenkins/melange.yaml]
   source: { type: plain-text, url: "https://updates.jenkins.io/stable/latestCore.txt" }
   tarball: { url: "https://get.jenkins.io/war-stable/{version}/jenkins.war", field: sha256 }
@@ -245,6 +246,7 @@
 # ============================================================================
 
 - name: kafka
+  cron-enabled: true   # wave 5
   files: [kafka/melange.yaml]
   source:
     type: scrape
@@ -265,6 +267,7 @@
     notes: "https://archive.apache.org/dist/kafka/{version}/RELEASE_NOTES.html"
 
 - name: redis
+  cron-enabled: true   # wave 5
   image-name: minimal-redis-slim
   files: [redis-slim/melange.yaml]
   source:
