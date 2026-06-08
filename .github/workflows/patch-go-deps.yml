@@ -393,9 +393,16 @@ jobs:
               fi
             fi
 
-            # Insert patch block before the marker line
+            # Insert patch block before the marker line.
+            # NB: use `printf %b` not `echo -e`. `echo` always appends an
+            # extra trailing newline even when the string already ends in \n,
+            # so each rewrite deposited one blank line between the patch
+            # block and the original marker line. Over ~6h cron cycles that
+            # accumulated visibly (etcd had 54 consecutive blank lines pre-
+            # cleanup in commit 6e82b04). `printf %b` honors the \n escapes
+            # in $PATCH_BLOCK without adding a phantom trailing newline.
             head -n $((MARKER_LINE - 1)) "$MELANGE_FILE" > "${MELANGE_FILE}.tmp"
-            echo -e "$PATCH_BLOCK" >> "${MELANGE_FILE}.tmp"
+            printf '%b' "$PATCH_BLOCK" >> "${MELANGE_FILE}.tmp"
             tail -n +${MARKER_LINE} "$MELANGE_FILE" >> "${MELANGE_FILE}.tmp"
             mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
 
