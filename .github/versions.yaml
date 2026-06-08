@@ -52,6 +52,7 @@
     notes: "https://github.com/qdrant/qdrant/releases/tag/v{version}"
 
 - name: etcd
+  cron-enabled: true   # wave 2
   files: [etcd/melange.yaml]
   source: { type: github-releases-latest, repo: etcd-io/etcd, strip-v: true, pin-major: 3 }
   tarball: { url: "https://github.com/etcd-io/etcd/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -61,6 +62,7 @@
     notes: "https://github.com/etcd-io/etcd/releases/tag/v{version}"
 
 - name: jaeger
+  cron-enabled: true   # wave 2
   files: [jaeger/melange.yaml]
   source: { type: github-releases-latest, repo: jaegertracing/jaeger, strip-v: true, pin-major: 2 }
   tarball: { url: "https://github.com/jaegertracing/jaeger/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -70,6 +72,7 @@
     notes: "https://github.com/jaegertracing/jaeger/releases/tag/v{version}"
 
 - name: prometheus
+  cron-enabled: true   # wave 2
   files: [prometheus/melange.yaml]
   source: { type: github-releases-latest, repo: prometheus/prometheus, strip-v: true, pin-major: 3 }
   tarball: { url: "https://github.com/prometheus/prometheus/archive/refs/tags/v{version}.tar.gz", field: sha256 }
