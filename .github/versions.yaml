@@ -284,6 +284,7 @@
     notes: "https://github.com/redis/redis/releases/tag/{version}"
 
 - name: memcached
+  cron-enabled: true   # wave 6
   files: [memcached/melange.yaml]
   source:
     type: scrape
@@ -302,6 +303,7 @@
 # ============================================================================
 
 - name: mariadb
+  cron-enabled: true   # wave 6
   files: [mariadb/melange.yaml]
   source:
     type: json
@@ -316,6 +318,7 @@
     notes: "https://mariadb.com/kb/en/release-notes-mariadb-11-4-series/"
 
 - name: php
+  cron-enabled: true   # wave 6
   files: [php/melange.yaml]
   source:
     type: json
