@@ -51,6 +51,7 @@ pipeline:
   # k8s.io/{client-go,component-base}/version.* fields the binary surfaces via
   # `kubectl version --client`.
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off
@@ -62,7 +63,6 @@ pipeline:
           && { [ ! -d vendor ] || go mod vendor; } )
       done
   # end-patch-go-deps
-
   - runs: |
       cd /home/build/kubernetes-${{package.version}}
       BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)

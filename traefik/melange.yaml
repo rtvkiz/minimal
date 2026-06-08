@@ -42,6 +42,7 @@ pipeline:
       tar xzf traefik.tar.gz
       rm traefik.tar.gz
 
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off
@@ -53,7 +54,6 @@ pipeline:
           && { [ ! -d vendor ] || go mod vendor; } )
       done
   # end-patch-go-deps
-
   # Build Traefik from source (static binary)
   - runs: |
       cd /home/build/traefik-${{package.version}}
