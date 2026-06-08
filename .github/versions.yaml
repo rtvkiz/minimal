@@ -209,3 +209,192 @@
   links:
     releases: "https://github.com/traefik/traefik/releases"
     notes: "https://github.com/traefik/traefik/releases/tag/v{version}"
+
+# ============================================================================
+# plain-text — fetch a single URL that returns the bare version as text
+# ============================================================================
+
+- name: jenkins
+  files: [jenkins/melange.yaml]
+  source: { type: plain-text, url: "https://updates.jenkins.io/stable/latestCore.txt" }
+  tarball: { url: "https://get.jenkins.io/war-stable/{version}/jenkins.war", field: sha256 }
+  links:
+    releases: "https://www.jenkins.io/changelog-stable/"
+    notes: "https://www.jenkins.io/changelog-stable/"
+
+# ============================================================================
+# scrape — fetch URL(s), apply pattern (extracts X.Y.Z), semver-sort, take last
+# ============================================================================
+
+- name: kafka
+  files: [kafka/melange.yaml]
+  source:
+    type: scrape
+    urls:
+      - "https://dlcdn.apache.org/kafka/"
+      - "https://downloads.apache.org/kafka/"
+    pattern: 'href="4\.[0-9]+\.[0-9]+/"'
+    pin-major: 4
+  tarball:
+    urls:
+      - "https://dlcdn.apache.org/kafka/{version}/kafka_2.13-{version}.tgz"
+      - "https://downloads.apache.org/kafka/{version}/kafka_2.13-{version}.tgz"
+      - "https://archive.apache.org/dist/kafka/{version}/kafka_2.13-{version}.tgz"
+    field: sha512
+  major-issue: true
+  links:
+    releases: "https://kafka.apache.org/downloads"
+    notes: "https://archive.apache.org/dist/kafka/{version}/RELEASE_NOTES.html"
+
+- name: redis
+  image-name: minimal-redis-slim
+  files: [redis-slim/melange.yaml]
+  source:
+    type: scrape
+    url: "https://download.redis.io/releases/"
+    pattern: 'redis-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz'
+    pin-major: 8
+  tarball:
+    url: "https://github.com/redis/redis/archive/refs/tags/{version}.tar.gz"
+    field: sha256
+  major-issue: true
+  links:
+    releases: "https://github.com/redis/redis/releases"
+    notes: "https://github.com/redis/redis/releases/tag/{version}"
+
+- name: memcached
+  files: [memcached/melange.yaml]
+  source:
+    type: scrape
+    url: "https://www.memcached.org/"
+    pattern: '<div id="ver">v[0-9]+\.[0-9]+\.[0-9]+</div>'
+    pin-major: 1
+  tarball:
+    url: "https://memcached.org/files/memcached-{version}.tar.gz"
+    field: sha256
+  links:
+    releases: "https://github.com/memcached/memcached/releases"
+    notes: "https://github.com/memcached/memcached/releases/tag/{version}"
+
+# ============================================================================
+# json — fetch URL returning JSON, run a jq expression to get the bare version
+# ============================================================================
+
+- name: mariadb
+  files: [mariadb/melange.yaml]
+  source:
+    type: json
+    url: "https://downloads.mariadb.org/rest-api/mariadb/11.4/"
+    jq: '[.releases | keys[] | select(test("^11\\.4\\."))] | sort_by(split(".") | map(tonumber)) | last'
+    pin-major: 11
+  tarball:
+    url: "https://archive.mariadb.org/mariadb-{version}/source/mariadb-{version}.tar.gz"
+    field: sha256
+  links:
+    releases: "https://mariadb.org/download/"
+    notes: "https://mariadb.com/kb/en/release-notes-mariadb-11-4-series/"
+
+- name: php
+  files: [php/melange.yaml]
+  source:
+    type: json
+    # {series} is templated from current MAJOR.MINOR (e.g. 8.5) at check time.
+    url: "https://www.php.net/releases/index.php?json&version={series}"
+    jq: '.version // empty'
+    pin-major: 8
+  tarball:
+    url: "https://www.php.net/distributions/php-{version}.tar.gz"
+    field: sha256
+  links:
+    releases: "https://www.php.net/downloads.php"
+    notes: "https://www.php.net/ChangeLog-{major}.php"
+
+# ============================================================================
+# rails — version-field-only edit (no tarball/checksum). Source is RubyGems
+# JSON. Uses the custom files[] entry to write only `rails_version:`.
+# ============================================================================
+
+- name: rails
+  files:
+    - { path: rails/melange.yaml, pattern: '^  rails_version: .*', template: '  rails_version: {version}' }
+  source:
+    type: json
+    url: "https://rubygems.org/api/v1/versions/rails/latest.json"
+    jq: '.version'
+    current-field: rails_version
+    pin-major: 8
+  links:
+    releases: "https://rubygems.org/gems/rails"
+    notes: "https://github.com/rails/rails/releases/tag/v{version}"
+
+# ============================================================================
+# envoy — ships prebuilt linux binaries (x86_64 + aarch_64); melange.yaml
+# carries two checksum fields (sha256_x86 / sha256_arm). Exercises the
+# `tarballs:` (plural) path in apply-update.sh.
+# ============================================================================
+
+- name: envoy
+  files: [envoy/melange.yaml]
+  source: { type: github-releases-latest, repo: envoyproxy/envoy, strip-v: true, pin-major: 1 }
+  tarballs:
+    - { url: "https://github.com/envoyproxy/envoy/releases/download/v{version}/envoy-{version}-linux-x86_64",  field: sha256_x86, algo: sha256 }
+    - { url: "https://github.com/envoyproxy/envoy/releases/download/v{version}/envoy-{version}-linux-aarch_64", field: sha256_arm, algo: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/envoyproxy/envoy/releases"
+    notes: "https://github.com/envoyproxy/envoy/releases/tag/v{version}"
+
+# ============================================================================
+# Bespoke github-tags variants (custom prefix / tag normalization / non-melange
+# target files). All share the github-tags fetcher.
+# ============================================================================
+
+- name: mysql
+  files: [mysql/melange.yaml]
+  # MySQL 8.4 LTS tags upstream are mysql-cluster-8.4.X. Strip prefix on read.
+  source:
+    type: github-tags
+    repo: mysql/mysql-server
+    pattern: '^mysql-cluster-8\.4\.[0-9]+$'
+    strip-prefix: 'mysql-cluster-'
+    pin-major: 8
+  tarball:
+    url: "https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-{version}.tar.gz"
+    field: sha256
+  major-issue: true
+  links:
+    releases: "https://dev.mysql.com/downloads/mysql/"
+    notes: "https://dev.mysql.com/doc/relnotes/mysql/8.4/en/"
+
+- name: ruby
+  # Ruby bump touches BOTH ruby/melange.yaml AND rails/melange.yaml — rails is
+  # built on top of the same Ruby interpreter and tracks ruby_version 1:1.
+  files: [ruby/melange.yaml, rails/melange.yaml]
+  extra-fields: [ruby_version]   # also rewrite `^  ruby_version:` in every file
+  source:
+    type: github-tags
+    repo: ruby/ruby
+    # Accept both modern `v3.4.7` and legacy `v3_4_7` tag forms; exclude rc/preview.
+    pattern: '^v[0-9]+([._][0-9]+){2}$'
+    strip-prefix: 'v'
+    tag-rewrite: { from: '_', to: '.' }
+    pin-major: 4
+  tarball:
+    # cache.ruby-lang.org expects the SERIES (4.0) directory; use {minor}.
+    url: "https://cache.ruby-lang.org/pub/ruby/{minor}/ruby-{version}.tar.gz"
+    field: sha256
+  major-issue: true
+  links:
+    releases: "https://www.ruby-lang.org/en/downloads/releases/"
+    notes: "https://www.ruby-lang.org/en/news/"
+
+# NOTE: opensearch and minio are deliberately kept on their bespoke
+# update-opensearch.yml / update-minio.yml workflows:
+#   - opensearch edits both the Makefile and several README columns whose
+#     regex patterns are tuned for this README's exact table layout. A
+#     generic pattern engine cannot safely express that.
+#   - minio's upstream tag is `RELEASE.YYYY-MM-DDTHH-MM-SSZ`; the melange
+#     `version:` derives a `YYYY.MM.DD` date string from it while a second
+#     field `minio_release:` keeps the full tag for the download URL. That
+#     tag-vs-version split is not worth lifting into the framework for one
+#     image. Both workflows stay authoritative.

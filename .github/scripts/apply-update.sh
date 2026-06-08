@@ -36,14 +36,12 @@ render() {
   printf '%s' "$tmpl"
 }
 
-# --- download a single tarball template, return digest of given algo ---
+# --- download from the first working URL, return digest of given algo ---
 fetch_digest() {
-  local url_tmpl="$1" algo="$2"
+  local algo="$1"; shift
   local out=/tmp/upstream.tar
-  # `urls` (list) → try in order; `url` (string) → single
-  local urls; urls=$(printf '%s\n' "$url_tmpl")
   local rendered=""
-  for u in $urls; do
+  for u in "$@"; do
     rendered=$(render "$u")
     if curl -fsSL --connect-timeout 20 --retry 5 --retry-all-errors "$rendered" -o "$out"; then
       break
@@ -61,12 +59,16 @@ fetch_digest() {
 
 # --- collect {field, digest} pairs from tarball / tarballs ---
 declare -A digests
-tarball_count=$(jq '(.tarballs // (if .tarball then [.tarball] else [] end)) | length' <<<"$row")
+# Normalize: .tarballs (list) wins; .tarball (single) becomes a 1-element list.
+tarballs_json=$(jq -c '.tarballs // (if .tarball then [.tarball] else [] end)' <<<"$row")
+tarball_count=$(jq 'length' <<<"$tarballs_json")
 for i in $(seq 0 $((tarball_count - 1))); do
-  field=$(j ".tarballs[$i].field // .tarball.field" 2>/dev/null || jq -r --arg i "$i" '(.tarballs // [.tarball])[$i|tonumber].field' <<<"$row")
-  url=$(jq -r --argjson i "$i" '(.tarballs // [.tarball])[$i].url' <<<"$row")
-  algo=$(jq -r --argjson i "$i" '(.tarballs // [.tarball])[$i].algo // (.tarballs // [.tarball])[$i].field' <<<"$row")
-  digest=$(fetch_digest "$url" "$algo")
+  t=$(jq -c ".[$i]" <<<"$tarballs_json")
+  field=$(jq -r '.field' <<<"$t")
+  algo=$(jq -r '.algo // .field' <<<"$t")
+  # Per-tarball URL list: support both `urls:` (plural) and `url:` (single).
+  mapfile -t urls < <(jq -r 'if .urls then .urls[] else .url end' <<<"$t")
+  digest=$(fetch_digest "$algo" "${urls[@]}")
   echo "  $field=$digest" >&2
   digests[$field]="$digest"
 done
@@ -78,11 +80,16 @@ for i in $(seq 0 $((file_count - 1))); do
   kind=$(jq -r 'type' <<<"$entry")
   if [ "$kind" = "string" ]; then
     path=$(jq -r '.' <<<"$entry")
-    # Default melange.yaml editing: version, every collected digest field, epoch.
+    # Default melange.yaml editing: version, every collected digest field, epoch,
+    # plus any row-level extra-fields: that should track the same value.
     sed -i "s/^  version: .*/  version: $new_version/" "$path"
     for field in "${!digests[@]}"; do
       sed -i "s/^  ${field}: .*/  ${field}: ${digests[$field]}/" "$path"
     done
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      sed -i "s/^  ${f}: .*/  ${f}: $new_version/" "$path"
+    done < <(jq -r '.["extra-fields"][]? // empty' <<<"$row")
     sed -i "s/^  epoch: .*/  epoch: 0/" "$path"
     echo "  edited $path" >&2
   else
@@ -91,7 +98,9 @@ for i in $(seq 0 $((file_count - 1))); do
     pattern=$(jq -r '.pattern' <<<"$entry")
     template=$(jq -r '.template' <<<"$entry")
     rendered_tmpl=$(render "$template")
-    sed -i "s|${pattern}|${rendered_tmpl}|" "$path"
+    # Use a control char as the sed delimiter — patterns/templates contain `|`,
+    # `/`, `#` etc, and we can't rely on any printable separator being safe.
+    sed -i $'s\x01'"${pattern}"$'\x01'"${rendered_tmpl}"$'\x01' "$path"
     echo "  edited $path (custom)" >&2
   fi
 done

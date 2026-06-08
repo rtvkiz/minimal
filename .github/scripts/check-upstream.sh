@@ -27,13 +27,22 @@ pin_major=$(j '.source["pin-major"] // empty')
 files_first=$(j '.files[0] | if type == "string" then . else .path end')
 
 # --- read CURRENT version ---
-# Default: grep `^  version:` in the first melange.yaml. Rows that edit
-# non-melange files (Makefile, README) must set source.current-grep to a
-# {file, pattern} pair; we don't try to be clever about it.
+# Resolution order:
+#   1. source.current-field      → grep '^  <field>:' files[0]            (melange shortcut)
+#   2. source.current-grep.{file, line?, pattern}                          (arbitrary files)
+#   3. default                   → grep '^  version:' files[0]
+current_field=$(j '.source["current-field"] // empty')
 current_grep_file=$(j '.source["current-grep"].file // empty')
-if [ -n "$current_grep_file" ]; then
-  current_pattern=$(j '.source["current-grep"].pattern')
-  current=$(grep -oE "$current_pattern" "$current_grep_file" | head -1)
+if [ -n "$current_field" ]; then
+  current=$(grep -E "^  ${current_field}:" "$files_first" | head -1 | awk '{print $2}')
+elif [ -n "$current_grep_file" ]; then
+  line_pat=$(j '.source["current-grep"].line // empty')
+  val_pat=$(j '.source["current-grep"].pattern')
+  if [ -n "$line_pat" ]; then
+    current=$(grep -E "$line_pat" "$current_grep_file" | head -1 | grep -oE "$val_pat" | head -1)
+  else
+    current=$(grep -oE "$val_pat" "$current_grep_file" | head -1)
+  fi
 else
   current=$(grep -E '^  version:' "$files_first" | head -1 | awk '{print $2}')
 fi
@@ -57,24 +66,92 @@ fetch_github_releases_latest() {
 
 # /repos/<repo>/tags filtered by jq regex pattern. Tags ordered by creation
 # date, not semver, so we sort numerically after filtering.
+# Optional source.tag-rewrite: {from, to} runs a tr-style char substitution
+# before semver-sorting (for ruby's underscore-separated tags).
 fetch_github_tags() {
-  local repo pattern strip_prefix tags
+  local repo pattern strip_prefix from to tags
   repo=$(j '.source.repo')
   pattern=$(j '.source.pattern')
   strip_prefix=$(j '.source["strip-prefix"] // ""')
+  from=$(j '.source["tag-rewrite"].from // empty')
+  to=$(j '.source["tag-rewrite"].to // empty')
   [ -n "$pattern" ] || { echo "::error::source.pattern required for github-tags"; return 1; }
-  # Pull all matching tags, strip the configured prefix, semver-sort, take last.
   tags=$(gh_curl "https://api.github.com/repos/${repo}/tags?per_page=100" \
     | jq -r --arg p "$pattern" --arg s "$strip_prefix" \
-        '[.[] | .name | select(test($p)) | sub("^" + $s; "")] | .[]' \
-    | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+        '[.[] | .name | select(test($p)) | sub("^" + $s; "")] | .[]')
+  if [ -n "$from" ]; then
+    tags=$(printf '%s\n' "$tags" | tr "$from" "$to")
+  fi
+  tags=$(printf '%s\n' "$tags" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
   [ -n "$tags" ] || { echo "::error::no tags matching /$pattern/ in $repo"; return 1; }
   printf '%s\n' "$tags"
+}
+
+# Single URL returning the bare version as text (e.g. jenkins latestCore.txt).
+fetch_plain_text() {
+  local url; url=$(j '.source.url')
+  curl -fsSL --retry 3 --retry-all-errors "$url" | tr -d '[:space:]'
+}
+
+# Substitute {series} = "MAJOR.MINOR" of current version into a URL template.
+# Used by sources whose discovery endpoint is series-scoped (php, mariadb).
+render_url() {
+  local tmpl="$1"
+  local series; series=$(cut -d. -f1,2 <<<"$current")
+  tmpl="${tmpl//\{series\}/$series}"
+  printf '%s' "$tmpl"
+}
+
+# Try a list of URLs in order; return body of the first that succeeds.
+fetch_first_url() {
+  # Reads URLs from $@; returns first non-empty body.
+  local u body
+  for u in "$@"; do
+    body=$(curl -fsSL --connect-timeout 20 --retry 3 --retry-all-errors "$u" 2>/dev/null) || continue
+    [ -n "$body" ] && { printf '%s' "$body"; return 0; }
+  done
+  return 1
+}
+
+# Build the URL list for sources with `url:` or `urls:` (post-template).
+url_list() {
+  if jq -e '.source.urls' <<<"$row" >/dev/null; then
+    jq -r '.source.urls[]' <<<"$row" | while read -r u; do render_url "$u"; echo; done
+  else
+    render_url "$(j '.source.url')"; echo
+  fi
+}
+
+# Generic scrape: fetch URL(s), grep -oE the pattern, semver-sort, take last.
+# Pattern's capture group 1 is the version; if no group, the full match is used.
+fetch_scrape() {
+  local pattern; pattern=$(j '.source.pattern')
+  [ -n "$pattern" ] || { echo "::error::source.pattern required for scrape"; return 1; }
+  mapfile -t urls < <(url_list)
+  local body; body=$(fetch_first_url "${urls[@]}") || { echo "::error::all scrape URLs failed"; return 1; }
+  # grep -oE returns full matches; if the pattern has a capture, post-process.
+  printf '%s' "$body" | grep -oE "$pattern" \
+    | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' \
+    | sort -t. -k1,1n -k2,2n -k3,3n | tail -1
+}
+
+# Fetch URL returning JSON, run the supplied jq expression, return its output.
+fetch_json() {
+  local jq_expr; jq_expr=$(j '.source.jq')
+  [ -n "$jq_expr" ] || { echo "::error::source.jq required for json"; return 1; }
+  mapfile -t urls < <(url_list)
+  local body; body=$(fetch_first_url "${urls[@]}") || { echo "::error::all json URLs failed"; return 1; }
+  local out; out=$(jq -r "$jq_expr" <<<"$body")
+  [ -n "$out" ] && [ "$out" != "null" ] || { echo "::error::jq expression returned empty"; return 1; }
+  printf '%s' "$out"
 }
 
 case "$source_type" in
   github-releases-latest) latest=$(fetch_github_releases_latest) ;;
   github-tags)            latest=$(fetch_github_tags) ;;
+  plain-text)             latest=$(fetch_plain_text) ;;
+  scrape)                 latest=$(fetch_scrape) ;;
+  json)                   latest=$(fetch_json) ;;
   *) echo "::error::source.type '$source_type' not implemented yet"; exit 1 ;;
 esac
 
