@@ -13,7 +13,17 @@ Install the following tools locally:
 
 ## Adding a New Image
 
-Adding an image requires 3 things: an apko config, a test script, and a matrix entry.
+Adding an image is mechanical. The work splits across 3–5 files depending on
+how much automation you want:
+
+| File | When you need it |
+|---|---|
+| `<name>/apko/<name>.yaml` + `<name>/test.sh` | always |
+| `<name>/melange.yaml` | only when building from source (rare — try Wolfi first) |
+| Build-list entry in `.github/workflows/build.yml` | always |
+| Row in `.github/versions.yaml` | if you want CI to auto-open PRs for new upstream releases |
+| Row in `.github/patch-deps.yaml` | if your image has Ruby/Rust/Maven deps and you want auto-CVE patches |
+| `<name>/apko/<name>-dev.yaml` | recommended — see [dev variant conventions](docs/dev-variants/CONVENTIONS.md) |
 
 ### 1. Create the directory structure
 
@@ -127,26 +137,107 @@ Test locally:
 IMAGE=ghcr.io/<owner>/minimal-<image-name>:latest ./<image-name>/test.sh
 ```
 
-### 4. Add the matrix entry
+### 4. Register the image with the build pipeline
 
-Add your image to the `matrix.include` list in `.github/workflows/build.yml`:
+`.github/workflows/build.yml` keeps two JSON arrays in a `Detect changes and
+generate matrices` step. Add your image to the right one. The arrays are at the
+top of that step; search for `MELANGE_IMAGES=` and `APKO_IMAGES=`.
+
+**Apko-only image** (uses a Wolfi pre-built package — most common):
+
+```jsonc
+APKO_IMAGES='[
+  ...
+  {"name":"<image-name>","grep":"<wolfi-pkg-pattern>","variants":["prod","dev"]}
+]'
+```
+
+The `grep` field is the regex used by the change-detection logic to decide
+whether your image needs a rebuild when Wolfi packages change. Use the apk
+name (e.g. `"nginx-mainline"`, `"openjdk-[0-9]+"`).
+
+**Source-built image** (you have a `melange.yaml`):
+
+```jsonc
+MELANGE_IMAGES='[
+  ...
+  {"name":"<image-name>","variants":["prod","dev"]}
+]'
+```
+
+If your apko config file isn't at the default `<name>/apko/<name>.yaml`,
+add an `"apko":"<path>"` field. Drop the `dev` variant from the list if
+you haven't created a `-dev.yaml`.
+
+That's it for builds: path triggers, scan, test, publish, sign, summary,
+and cleanup all pick up the new image automatically.
+
+### 5. (Optional) Wire up upstream-version auto-bumps
+
+If you want CI to open a PR whenever your upstream cuts a new release, add a
+row to `.github/versions.yaml`. The matrix workflow `update-versions.yml`
+reads this file and runs the discover → checksum → patch → PR cycle for
+every row daily.
+
+Pick the source type that matches your upstream:
+
+| Type | Use when |
+|---|---|
+| `github-releases-latest` | upstream publishes a single "latest" release on GitHub |
+| `github-tags` | upstream publishes tags but `/releases/latest` is unreliable (mixed-major repo, no GitHub Releases, etc.) |
+| `scrape` | upstream version lives in an HTML directory listing or homepage scrape |
+| `json` | upstream exposes a REST API returning JSON |
+| `plain-text` | a single URL returns the bare version as text |
+
+Minimal example (most common case — a Go/Rust project that publishes a
+release per tag on GitHub):
 
 ```yaml
 - name: <image-name>
-  apko_config: <image-name>/apko/<image-name>.yaml
-  build_type: apko
+  files: [<image-name>/melange.yaml]
+  source:
+    type: github-releases-latest
+    repo: <owner>/<repo>
+    strip-v: true
+    pin-major: 1
+  tarball:
+    url: "https://github.com/<owner>/<repo>/archive/refs/tags/v{version}.tar.gz"
+    field: sha256
+  major-issue: true        # open a tracking issue if a new major appears
+  links:
+    releases: "https://github.com/<owner>/<repo>/releases"
+    notes:    "https://github.com/<owner>/<repo>/releases/tag/v{version}"
 ```
 
-For source builds (melange):
+Full schema and worked examples for each source type live at the top of
+`.github/versions.yaml`. For dispatch testing before scheduling, run:
+
+```bash
+gh workflow run update-versions.yml -f only=<image-name>
+```
+
+To enable the daily cron for your row, add `cron-enabled: true` once
+you've verified the dispatch run produces a clean PR.
+
+### 6. (Optional) Wire up transitive-dep CVE patching
+
+If your image ships Ruby gems, Rust crates, or Maven JARs and you want
+grype-driven CVE patches auto-opened on a 6h cron, add an entry under
+the matching row in `.github/patch-deps.yaml`:
 
 ```yaml
-- name: <image-name>
-  apko_config: <image-name>/apko/<image-name>.yaml
-  melange_config: <image-name>/melange.yaml
-  build_type: melange
+- name: bundler           # or rust / maven
+  ...
+  images:
+    - { name: <image-name>, src-root: "/home/build/<name>-<<PKG_VERSION>>", build-marker: "<unique line in your melange pipeline>" }
 ```
 
-That's it. The path triggers, scan, test, publish, sign, summary, and cleanup steps all pick up the new image automatically.
+`build-marker` is grepped against your melange.yaml; the patch block is
+inserted before the `- runs:` step containing that marker. Go images use
+the separate, bespoke `patch-go-deps.yml` workflow — its accumulated
+production-tested rules (OTel family pinning, `+incompatible` suffix list,
+main-module self-bump filter, etc.) aren't worth lifting into a generic
+schema for one language.
 
 ## Build Locally
 
