@@ -1,0 +1,211 @@
+# Registry of upstream sources for every image we auto-bump.
+#
+# Consumed by .github/workflows/update-versions.yml — that workflow runs a
+# matrix over this file and shells out to .github/scripts/{check,apply,open-pr}.sh.
+#
+# This file is the single source of truth for "how do we discover, download,
+# and patch a new upstream version?" for each image. To onboard a new image,
+# add a row here — do not write a per-image workflow.
+#
+# Schema (per row)
+# ----------------
+#   name:    short identifier; used as matrix key, label, branch prefix
+#   files:   list of files to edit when a new version is found. Each entry is
+#            either a plain string (use default sed pattern for `version:`,
+#            `<field>:`, `epoch:` in a melange.yaml) or a {path, pattern,
+#            template} triple for arbitrary text files (Makefile, README).
+#   source:  how to discover the latest upstream version
+#     type:    github-releases-latest | github-tags | html-listing | plain-text | rubygems
+#     repo:    "owner/repo" for github-* types
+#     gem:     gem name for rubygems
+#     urls:    list of URLs for html-listing / plain-text (first non-empty wins)
+#     pattern: regex applied to candidates; capturing group 1 is the version
+#     strip-v: true to strip a leading "v" from tag names
+#     pin-major: integer; refuse upgrades that change major version. If a higher
+#                major appears, surface as next_major_* output (→ optional issue).
+#   tarball: (optional) how to fetch the artifact whose hash we record
+#     url:     template with {version} and any keys from `vars`
+#     urls:    list of templates; first that succeeds wins (mirror fallback)
+#     field:   melange.yaml key to write the digest into (sha256, sha512, …)
+#     algo:    digest algorithm (sha256 | sha512); defaults to field name
+#     vars:    extra template substitutions (e.g. {scala: "2.13"})
+#   tarballs: list form of `tarball:` for multi-asset images (e.g. envoy x86+arm)
+#   field:   for source-only rows (rails), the melange key to write the bare
+#            version into. No tarball, no checksum.
+#   major-issue: true to open a GitHub issue when a new major appears
+#   links:   metadata used in the PR body
+#     releases: URL of the upstream releases page
+#     notes:    template, may contain {version}
+
+# ============================================================================
+# github-releases-latest — hits /repos/<repo>/releases/latest, takes .tag_name
+# ============================================================================
+
+- name: qdrant
+  files: [qdrant/melange.yaml]
+  source: { type: github-releases-latest, repo: qdrant/qdrant, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/qdrant/qdrant/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/qdrant/qdrant/releases"
+    notes: "https://github.com/qdrant/qdrant/releases/tag/v{version}"
+
+- name: etcd
+  files: [etcd/melange.yaml]
+  source: { type: github-releases-latest, repo: etcd-io/etcd, strip-v: true, pin-major: 3 }
+  tarball: { url: "https://github.com/etcd-io/etcd/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/etcd-io/etcd/releases"
+    notes: "https://github.com/etcd-io/etcd/releases/tag/v{version}"
+
+- name: jaeger
+  files: [jaeger/melange.yaml]
+  source: { type: github-releases-latest, repo: jaegertracing/jaeger, strip-v: true, pin-major: 2 }
+  tarball: { url: "https://github.com/jaegertracing/jaeger/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/jaegertracing/jaeger/releases"
+    notes: "https://github.com/jaegertracing/jaeger/releases/tag/v{version}"
+
+- name: prometheus
+  files: [prometheus/melange.yaml]
+  source: { type: github-releases-latest, repo: prometheus/prometheus, strip-v: true, pin-major: 3 }
+  tarball: { url: "https://github.com/prometheus/prometheus/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/prometheus/prometheus/releases"
+    notes: "https://github.com/prometheus/prometheus/releases/tag/v{version}"
+
+- name: rabbitmq
+  files: [rabbitmq/melange.yaml]
+  source: { type: github-releases-latest, repo: rabbitmq/rabbitmq-server, strip-v: true, pin-major: 4 }
+  tarball:
+    url: "https://github.com/rabbitmq/rabbitmq-server/releases/download/v{version}/rabbitmq-server-generic-unix-{version}.tar.xz"
+    field: sha256
+  major-issue: true
+  links:
+    releases: "https://github.com/rabbitmq/rabbitmq-server/releases"
+    notes: "https://github.com/rabbitmq/rabbitmq-server/releases/tag/v{version}"
+
+- name: valkey
+  files: [valkey/melange.yaml]
+  source: { type: github-releases-latest, repo: valkey-io/valkey, strip-v: true, pin-major: 9 }
+  tarball: { url: "https://github.com/valkey-io/valkey/archive/refs/tags/{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/valkey-io/valkey/releases"
+    notes: "https://github.com/valkey-io/valkey/releases/tag/{version}"
+
+- name: victoria-metrics
+  files: [victoria-metrics/melange.yaml]
+  source: { type: github-releases-latest, repo: VictoriaMetrics/VictoriaMetrics, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/VictoriaMetrics/VictoriaMetrics/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/VictoriaMetrics/VictoriaMetrics/releases"
+    notes: "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v{version}"
+
+- name: otelcol
+  files: [otelcol/melange.yaml]
+  source: { type: github-releases-latest, repo: open-telemetry/opentelemetry-collector, strip-v: true }
+  tarball: { url: "https://github.com/open-telemetry/opentelemetry-collector/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/open-telemetry/opentelemetry-collector/releases"
+    notes: "https://github.com/open-telemetry/opentelemetry-collector/releases/tag/v{version}"
+
+# ============================================================================
+# github-tags — hits /repos/<repo>/tags?per_page=100, filters by regex,
+# strips prefix, semver-sorts, takes the highest match. Use this when the
+# upstream's `/releases/latest` is unreliable (e.g. mixed-major repos).
+# ============================================================================
+
+- name: caddy
+  files: [caddy/melange.yaml]
+  source: { type: github-tags, repo: caddyserver/caddy, pattern: '^v2\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  tarball: { url: "https://github.com/caddyserver/caddy/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/caddyserver/caddy/releases"
+    notes: "https://github.com/caddyserver/caddy/releases/tag/v{version}"
+
+- name: coredns
+  files: [coredns/melange.yaml]
+  source: { type: github-tags, repo: coredns/coredns, pattern: '^v1\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 1 }
+  tarball: { url: "https://github.com/coredns/coredns/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/coredns/coredns/releases"
+    notes: "https://github.com/coredns/coredns/releases/tag/v{version}"
+
+- name: fluent-bit
+  files: [fluent-bit/melange.yaml]
+  source: { type: github-tags, repo: fluent/fluent-bit, pattern: '^v5\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 5 }
+  tarball: { url: "https://github.com/fluent/fluent-bit/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/fluent/fluent-bit/releases"
+    notes: "https://github.com/fluent/fluent-bit/releases/tag/v{version}"
+
+- name: gitea
+  files: [gitea/melange.yaml]
+  source: { type: github-tags, repo: go-gitea/gitea, pattern: '^v1\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 1 }
+  tarball: { url: "https://github.com/go-gitea/gitea/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/go-gitea/gitea/releases"
+    notes: "https://github.com/go-gitea/gitea/releases/tag/v{version}"
+
+- name: haproxy
+  files: [haproxy/melange.yaml]
+  source: { type: github-tags, repo: haproxy/haproxy, pattern: '^v3\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
+  tarball: { url: "https://www.haproxy.org/download/{minor}/src/haproxy-{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://www.haproxy.org/#down"
+    notes: "https://www.haproxy.org/news.html"
+
+- name: keycloak
+  files: [keycloak/melange.yaml]
+  source: { type: github-tags, repo: keycloak/keycloak, pattern: '^26\.[0-9]+\.[0-9]+$', pin-major: 26 }
+  tarball: { url: "https://github.com/keycloak/keycloak/releases/download/{version}/keycloak-{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/keycloak/keycloak/releases"
+    notes: "https://github.com/keycloak/keycloak/releases/tag/{version}"
+
+- name: loki
+  files: [loki/melange.yaml]
+  source: { type: github-tags, repo: grafana/loki, pattern: '^v3\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
+  tarball: { url: "https://github.com/grafana/loki/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/grafana/loki/releases"
+    notes: "https://github.com/grafana/loki/releases/tag/v{version}"
+
+- name: nats
+  files: [nats/melange.yaml]
+  source: { type: github-tags, repo: nats-io/nats-server, pattern: '^v2\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  tarball: { url: "https://github.com/nats-io/nats-server/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/nats-io/nats-server/releases"
+    notes: "https://github.com/nats-io/nats-server/releases/tag/v{version}"
+
+- name: openbao
+  files: [openbao/melange.yaml]
+  source: { type: github-tags, repo: openbao/openbao, pattern: '^v2\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  tarball: { url: "https://github.com/openbao/openbao/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/openbao/openbao/releases"
+    notes: "https://github.com/openbao/openbao/releases/tag/v{version}"
+
+- name: traefik
+  files: [traefik/melange.yaml]
+  source: { type: github-tags, repo: traefik/traefik, pattern: '^v3\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
+  tarball: { url: "https://github.com/traefik/traefik/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/traefik/traefik/releases"
+    notes: "https://github.com/traefik/traefik/releases/tag/v{version}"

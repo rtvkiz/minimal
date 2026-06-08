@@ -1,0 +1,143 @@
+name: Update upstream versions
+
+# Consolidated replacement for the 30 update-<image>.yml workflows.
+# Driven by .github/versions.yaml; logic lives in .github/scripts/.
+#
+# Phase 1 (this commit): workflow_dispatch only. Old per-image workflows still
+# run on their cron and remain authoritative. Use `gh workflow run
+# update-versions.yml -f only=qdrant` to validate parity per image, then
+# delete each old workflow in the PR that adds its row's schedule.
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Comma-separated list of names to run (blank = all rows)"
+        required: false
+        default: ""
+
+permissions: {}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+      empty: ${{ steps.build.outputs.empty }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install yq
+        run: |
+          if ! command -v yq >/dev/null; then
+            sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+            sudo chmod +x /usr/local/bin/yq
+          fi
+      - id: build
+        env:
+          ONLY: ${{ inputs.only }}
+        run: |
+          # Convert versions.yaml -> JSON, optionally filter by name list.
+          rows=$(yq -o=json '.' .github/versions.yaml)
+          if [ -n "$ONLY" ]; then
+            filter=$(printf '%s' "$ONLY" | tr ',' ' ')
+            rows=$(jq --argjson keep "$(printf '%s' "$filter" | jq -R 'split(" ")')" \
+              '[.[] | select(.name as $n | $keep | index($n))]' <<<"$rows")
+          fi
+          count=$(jq 'length' <<<"$rows")
+          if [ "$count" -eq 0 ]; then
+            echo "empty=true" >> "$GITHUB_OUTPUT"
+            echo "matrix={\"include\":[]}" >> "$GITHUB_OUTPUT"
+          else
+            echo "empty=false" >> "$GITHUB_OUTPUT"
+            echo "matrix=$(jq -c '{include: .}' <<<"$rows")" >> "$GITHUB_OUTPUT"
+          fi
+
+  update:
+    needs: plan
+    if: needs.plan.outputs.empty == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Check upstream
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROW: ${{ toJson(matrix) }}
+        run: ./.github/scripts/check-upstream.sh "$ROW"
+
+      - name: Apply update
+        if: steps.check.outputs.update == 'true'
+        env:
+          ROW: ${{ toJson(matrix) }}
+        run: ./.github/scripts/apply-update.sh "$ROW" "${{ steps.check.outputs.new_version }}"
+
+      - name: Open PR
+        if: steps.check.outputs.update == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ROW: ${{ toJson(matrix) }}
+        run: ./.github/scripts/open-pr.sh "$ROW" "${{ steps.check.outputs.current_version }}" "${{ steps.check.outputs.new_version }}"
+
+      - name: Open new-major issue
+        if: steps.check.outputs.next_major != '' && matrix['major-issue'] == true
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        env:
+          NAME: ${{ matrix.name }}
+          NEXT_MAJOR: ${{ steps.check.outputs.next_major }}
+          NEXT_TAG: ${{ steps.check.outputs.next_major_tag }}
+          CURRENT: ${{ steps.check.outputs.current_version }}
+        with:
+          script: |
+            const { NAME, NEXT_MAJOR, NEXT_TAG, CURRENT } = process.env;
+            const title = `chore(${NAME}): new major version available — ${NAME} ${NEXT_MAJOR}.x`;
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: `${NAME},dependencies`,
+            });
+            if (issues.some(i => i.title.includes(`${NAME} ${NEXT_MAJOR}.x`))) {
+              console.log(`Issue for ${NAME} ${NEXT_MAJOR}.x already exists, skipping`);
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo, title,
+              labels: ['dependencies', NAME],
+              body: [
+                `## New major version detected`,
+                ``,
+                `\`${NAME}\` **${NEXT_MAJOR}.x** has appeared upstream (first tag: \`${NEXT_TAG}\`).`,
+                `We currently track \`${CURRENT}\` and \`versions.yaml\` pins the major to the previous line.`,
+                ``,
+                `### To upgrade`,
+                ``,
+                `- [ ] Review upstream release notes & migration guide`,
+                `- [ ] Update the row's \`source.pin-major\` in \`.github/versions.yaml\``,
+                `- [ ] Bump \`${NAME}/melange.yaml\` version + checksum, run the per-image smoke test locally`,
+                ``,
+                `Detected by the [update-versions](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/update-versions.yml) workflow.`,
+              ].join('\n'),
+            });
