@@ -7,6 +7,7 @@ on:
       - '*/apko/*.yaml'
       - '*/melange.yaml'
       - '*/test.sh'
+      - '*/test-dev.sh'
       - '.github/workflows/build.yml'
   pull_request:
     branches: [main]
