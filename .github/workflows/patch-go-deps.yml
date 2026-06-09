@@ -327,7 +327,15 @@ jobs:
               # patches it manually.
               mod="${mod_ver%@*}"
               ver="${mod_ver#*@}"
-              if ! curl -fs --max-time 10 "https://proxy.golang.org/${mod}/@v/${ver}.info" >/dev/null 2>&1; then
+              # proxy.golang.org requires uppercase chars in the module path to
+              # be `!`-escaped per the Go module proxy spec (golang.org/ref/mod
+              # #module-proxy). Without this, github.com/Azure/go-ntlmssp@v0.1.1
+              # returns 404 and the check skips a real, valid bump — that bug
+              # left 3 patchable CVEs unpatched across gitea/minio/openbao.
+              # `go get` itself accepts the literal path, so only this URL
+              # needs the escape; the rendered `go get` lines below stay raw.
+              mod_lc=$(echo "$mod" | sed 's/\([A-Z]\)/!\L\1/g')
+              if ! curl -fs --max-time 10 "https://proxy.golang.org/${mod_lc}/@v/${ver}.info" >/dev/null 2>&1; then
                 echo "  Skipping ${mod_ver}: version not in Go module proxy"
                 continue
               fi
