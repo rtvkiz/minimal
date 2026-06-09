@@ -239,6 +239,39 @@ production-tested rules (OTel family pinning, `+incompatible` suffix list,
 main-module self-bump filter, etc.) aren't worth lifting into a generic
 schema for one language.
 
+### 6a. Go images: register in patch-go-deps.yml
+
+> **Easy to miss.** A new Go image will sit with unpatched transitive CVEs
+> forever unless you add three entries to `.github/workflows/patch-go-deps.yml`.
+> alertmanager shipped with 24 critical/high CVEs from `golang.org/x/crypto`,
+> `golang.org/x/net`, and `go.opentelemetry.io/otel/*` for exactly this
+> reason — the workflow walks `for IMAGE in "${!MODROOTS[@]}"`, so an image
+> not in MODROOTS is silently skipped every cron cycle.
+
+Three dictionaries inside the `Scan ... and generate patches` step:
+
+```bash
+declare -A MODROOTS=(
+  # ...
+  [<image-name>]="/home/build/<source-tarball-dir>-${D}{{package.version}}"
+)
+
+declare -A MAIN_MODULES=(
+  # The image's OWN module path — used to drop self-bump `go get <self>@<ver>`
+  [<image-name>]="github.com/<upstream-owner>/<upstream-repo>"
+)
+
+declare -A BUILD_MARKERS=(
+  # A literal line that EXISTS in your melange.yaml's pipeline. The patch
+  # block gets spliced before the `- runs:` step containing this marker.
+  [<image-name>]='# Build foo from source'
+)
+```
+
+After adding, dispatch the workflow once (`gh workflow run patch-go-deps.yml`)
+to validate the splice and produce an initial patch PR. Without this step,
+the next 6h scheduled run will still skip your image.
+
 ## Build Locally
 
 ```bash

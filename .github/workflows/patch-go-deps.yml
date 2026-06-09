@@ -85,6 +85,7 @@ jobs:
             [nats]="/home/build/nats-server-${D}{{package.version}}"
             [minio]="/home/build/minio-${D}{{vars.minio_release}}"
             [prometheus]="/home/build/prometheus-${D}{{package.version}}"
+            [alertmanager]="/home/build/alertmanager-${D}{{package.version}}"
             [etcd]="/home/build/etcd-${D}{{package.version}}/server /home/build/etcd-${D}{{package.version}}/etcdctl /home/build/etcd-${D}{{package.version}}/etcdutl"
             [jaeger]="/home/build/jaeger-${D}{{package.version}}"
             [victoria-metrics]="/home/build/VictoriaMetrics-${D}{{package.version}}"
@@ -118,6 +119,7 @@ jobs:
             [nats]="github.com/nats-io/nats-server/v2"
             [minio]="github.com/minio/minio"
             [prometheus]="github.com/prometheus/prometheus"
+            [alertmanager]="github.com/prometheus/alertmanager"
             [etcd]="go.etcd.io/etcd/server/v3"
             [jaeger]="github.com/jaegertracing/jaeger"
             [victoria-metrics]="github.com/VictoriaMetrics/VictoriaMetrics"
@@ -141,6 +143,7 @@ jobs:
             [nats]='# Build NATS from source'
             [minio]='# Build MinIO from source'
             [prometheus]='# Build Prometheus from source'
+            [alertmanager]='# Build alertmanager and amtool from source'
             [etcd]='# etcd 3.6 is a multi-module monorepo'
             [jaeger]='CGO_ENABLED=0 go build'
             [victoria-metrics]='CGO_ENABLED=0 go build'
