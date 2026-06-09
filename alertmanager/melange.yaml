@@ -1,0 +1,104 @@
+# Melange build configuration for minimal Alertmanager
+# Builds Alertmanager + amtool from source (Go).
+# Single static binary per command; web UI is embedded in the binary via go embed.
+
+package:
+  name: alertmanager-minimal
+  version: 0.32.2
+  epoch: 0
+  description: "Minimal Alertmanager built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of source tarball — updated by .github/versions.yaml row + update-versions workflow
+  sha256: 92151e1b1e0108d4b8ce5795e9a06115954fefb93583c2bcf693f6ba80171dca
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/prometheus/alertmanager/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/alertmanager.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/alertmanager.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf alertmanager.tar.gz
+      rm alertmanager.tar.gz
+
+  # Build alertmanager and amtool from source (static binaries).
+  # The browser UI is NOT shipped — ui/web.go has //go:embed app/dist which
+  # normally points at the compiled Vite frontend. Building that needs node +
+  # yarn + the whole frontend toolchain; the embed pattern fails the build if
+  # no files match. Create an empty placeholder so the embed yields an empty
+  # FS; the binary serves the alertmanager API normally (/api/v2/...) and the
+  # configured-receivers webhook path. Same tradeoff as prometheus-minimal.
+  - runs: |
+      cd /home/build/alertmanager-${{package.version}}
+      # Empty placeholder so //go:embed app/dist matches. Filename must NOT
+      # start with `.` or `_` — Go's embed silently skips those.
+      mkdir -p ui/app/dist
+      echo 'Alertmanager web UI is intentionally not shipped in minimal-alertmanager. Use the API at /api/v2/.' \
+        > ui/app/dist/index.html
+
+      BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+      LDFLAGS="-s -w \
+        -X github.com/prometheus/common/version.Version=${{package.version}} \
+        -X github.com/prometheus/common/version.Branch=HEAD \
+        -X github.com/prometheus/common/version.BuildDate=${BUILD_DATE} \
+        -X github.com/prometheus/common/version.BuildUser=melange"
+
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath -ldflags="${LDFLAGS}" \
+        -o alertmanager ./cmd/alertmanager
+
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath -ldflags="${LDFLAGS}" \
+        -o amtool ./cmd/amtool
+
+  # Install to destdir + ship a minimal default config
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/alertmanager-${{package.version}}/alertmanager "${{targets.destdir}}/usr/bin/"
+      cp /home/build/alertmanager-${{package.version}}/amtool       "${{targets.destdir}}/usr/bin/"
+
+      mkdir -p "${{targets.destdir}}/etc/alertmanager"
+      cat > "${{targets.destdir}}/etc/alertmanager/alertmanager.yml" << 'EOF'
+      route:
+        receiver: 'noop'
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 4h
+      receivers:
+        - name: 'noop'
+      EOF
+
+  # Verify the build
+  - runs: |
+      echo "Verifying Alertmanager build..."
+      "${{targets.destdir}}/usr/bin/alertmanager" --version
+      "${{targets.destdir}}/usr/bin/amtool" --version
+      ls -lh "${{targets.destdir}}/usr/bin/"
+
+update:
+  enabled: true
+  github:
+    identifier: prometheus/alertmanager
+    use-tag: true
+    tag-filter: "v0."

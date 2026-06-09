@@ -65,7 +65,7 @@ jobs:
             {"name":"haproxy","variants":["prod","dev"]},{"name":"ruby","variants":["prod","dev"]},{"name":"php","variants":["prod","dev"]},{"name":"rails","variants":["prod","dev"]},
             {"name":"kafka","variants":["prod","dev"]},{"name":"valkey","variants":["prod","dev"]},{"name":"nats","variants":["prod","dev"]},
             {"name":"traefik","variants":["prod","dev"]},{"name":"rabbitmq","variants":["prod","dev"]},{"name":"minio","variants":["prod","dev"]},
-            {"name":"prometheus","variants":["prod","dev"]},{"name":"mariadb","variants":["prod","dev"]},{"name":"etcd","variants":["prod","dev"]},
+            {"name":"prometheus","variants":["prod","dev"]},{"name":"alertmanager","variants":["prod","dev"]},{"name":"mariadb","variants":["prod","dev"]},{"name":"etcd","variants":["prod","dev"]},
             {"name":"victoria-metrics","variants":["prod","dev"]},{"name":"jaeger","variants":["prod","dev"]},{"name":"otelcol","variants":["prod","dev"]},
             {"name":"qdrant","variants":["prod","dev"]},{"name":"envoy","variants":["prod","dev"]},{"name":"gitea","variants":["prod","dev"]},
             {"name":"coredns","variants":["prod","dev"]},{"name":"openbao","variants":["prod","dev"]},{"name":"loki","variants":["prod","dev"]},

@@ -81,6 +81,16 @@
     releases: "https://github.com/prometheus/prometheus/releases"
     notes: "https://github.com/prometheus/prometheus/releases/tag/v{version}"
 
+- name: alertmanager
+  cron-enabled: true
+  files: [alertmanager/melange.yaml]
+  source: { type: github-releases-latest, repo: prometheus/alertmanager, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/prometheus/alertmanager/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/prometheus/alertmanager/releases"
+    notes: "https://github.com/prometheus/alertmanager/releases/tag/v{version}"
+
 - name: rabbitmq
   cron-enabled: true   # wave 3
   files: [rabbitmq/melange.yaml]

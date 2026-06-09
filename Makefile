@@ -40,6 +40,7 @@ ENVOY_VERSION ?= $(call melange_version,envoy/melange.yaml)
 
 # --- Observability ---
 PROMETHEUS_VERSION ?= $(call melange_version,prometheus/melange.yaml)
+ALERTMANAGER_VERSION ?= $(call melange_version,alertmanager/melange.yaml)
 JAEGER_VERSION ?= $(call melange_version,jaeger/melange.yaml)
 OTELCOL_VERSION ?= $(call melange_version,otelcol/melange.yaml)
 VICTORIA_METRICS_VERSION ?= $(call melange_version,victoria-metrics/melange.yaml)
@@ -119,7 +120,7 @@ endef
 .PHONY: all build scan clean help
 .PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange memcached-dev caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite sqlite-dev dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange keygen opensearch opensearch-dev mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
-.PHONY: prometheus prometheus-melange mariadb mariadb-melange
+.PHONY: prometheus prometheus-melange alertmanager alertmanager-melange mariadb mariadb-melange
 .PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno
 .PHONY: cuda-python cuda-python-melange
 .PHONY: coredns coredns-melange openbao openbao-melange loki loki-melange fluent-bit fluent-bit-melange keycloak keycloak-melange
@@ -192,6 +193,7 @@ $(eval $(call DEV_IMAGE_RULE,caddy,caddy-melange,--repository-append ./packages 
 $(eval $(call DEV_IMAGE_RULE,traefik,traefik-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,envoy,envoy-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,prometheus,prometheus-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,alertmanager,alertmanager-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,victoria-metrics,victoria-metrics-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,jaeger,jaeger-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,otelcol,otelcol-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -638,6 +640,31 @@ prometheus: prometheus-melange
 		$(REGISTRY)/$(OWNER)/minimal-prometheus:latest
 	@rm -f prometheus.tar sbom-*.spdx.json
 	@echo "✓ minimal-prometheus built (source build)"
+
+alertmanager-melange: keygen
+	@echo "Building Alertmanager $(ALERTMANAGER_VERSION) from source via melange..."
+	# Local build is x86_64-only: bwrap sandbox can't run aarch64 binaries
+	# without QEMU binfmt registered. CI builds aarch64 on native ARM runners.
+	melange build alertmanager/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Alertmanager package built from source (x86_64)"
+
+alertmanager: alertmanager-melange
+	@echo "Assembling minimal-alertmanager image with apko..."
+	apko build alertmanager/apko/alertmanager.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-alertmanager:$(VERSION) \
+		alertmanager.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < alertmanager.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-alertmanager:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-alertmanager:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-alertmanager:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-alertmanager:latest
+	@rm -f alertmanager.tar sbom-*.spdx.json
+	@echo "✓ minimal-alertmanager built (source build)"
 
 
 #------------------------------------------------------------------------------
@@ -1528,6 +1555,12 @@ scan-prometheus:
 		$(REGISTRY)/$(OWNER)/minimal-prometheus:latest
 	@echo "✓ minimal-prometheus: scan passed"
 
+scan-alertmanager:
+	@echo "Scanning minimal-alertmanager..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-alertmanager:latest
+	@echo "✓ minimal-alertmanager: scan passed"
+
 
 scan-mariadb:
 	@echo "Scanning minimal-mariadb..."
@@ -2030,6 +2063,12 @@ test-prometheus:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-prometheus:latest" && \
 		prometheus/test.sh
 	@echo "✓ Prometheus tests passed"
+
+test-alertmanager:
+	@echo "Testing Alertmanager image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-alertmanager:latest" && \
+		alertmanager/test.sh
+	@echo "✓ Alertmanager tests passed"
 
 
 test-mariadb:
