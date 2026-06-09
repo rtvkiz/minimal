@@ -3,14 +3,14 @@
 
 package:
   name: coredns-minimal
-  version: 1.14.3
+  version: 1.14.4
   epoch: 0
   description: "Minimal CoreDNS DNS server built from source"
   copyright:
     - license: Apache-2.0
 
 vars:
-  sha256: 137a5da5f49c8eb81e2cc3929d462606146faaa651bd609031d867eb6c73748f
+  sha256: f9630172269b7e2afed73ae27e2701e4c0f1353ad3ab38385c27c766c489b015
 
 environment:
   contents:
