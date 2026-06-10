@@ -95,6 +95,14 @@ pipeline:
       echo "Checking binary size..."
       ls -lh "${{targets.destdir}}/usr/bin/telegraf"
 
+  # Workspace cleanup: telegraf depends on github.com/snowflakedb/gosnowflake,
+  # which drops $HOME/.cache/snowflake at compile time with permissions the
+  # host user cannot read once bwrap exits. Melange's post-build workspace
+  # xattr-export step then fails with EACCES on ARM runners. Fix permissions
+  # before the sandbox tears down.
+  - runs: |
+      chmod -R u+rwX /home/build/.cache 2>/dev/null || true
+
 update:
   enabled: true
   github:
