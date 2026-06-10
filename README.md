@@ -499,7 +499,7 @@ Patch updates are auto-PR'd and validated by CI. Minor/major bumps create a GitH
 | NATS | latest | nonroot (65532) | `/usr/bin/nats-server` | `/` |
 | Valkey | latest | nonroot (65532) | `/usr/bin/valkey-server` | `/` |
 | MinIO | RELEASE.2025-10-15 | minio (65532) | `/usr/bin/minio server --console-address :9001 /data` | `/data` |
-| OpenSearch | 3.6.0 | opensearch (65532) | `/usr/share/opensearch/opensearch-docker-entrypoint.sh` | `/usr/share/opensearch/data` |
+| OpenSearch | 3.7.0 | opensearch (65532) | `/usr/share/opensearch/opensearch-docker-entrypoint.sh` | `/usr/share/opensearch/data` |
 | etcd | 3.6.x | nonroot (65532) | `/usr/bin/etcd` | `/var/lib/etcd` |
 | VictoriaMetrics | 1.142.x | nonroot (65532) | `/usr/bin/victoria-metrics` | `/` |
 | Jaeger | 2.18.x | nonroot (65532) | `/usr/bin/jaeger` | `/` |
