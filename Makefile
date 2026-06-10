@@ -56,7 +56,7 @@ FLUENT_BIT_VERSION ?= $(call melange_version,fluent-bit/melange.yaml)
 
 # --- Search/AI ---
 QDRANT_VERSION ?= $(call melange_version,qdrant/melange.yaml)
-OPENSEARCH_VERSION ?= 3.6.0
+OPENSEARCH_VERSION ?= 3.7.0
 
 # --- Registries ---
 # NB: REGISTRY (above) is the OCI registry hostname; DISTRIBUTION_VERSION is the
