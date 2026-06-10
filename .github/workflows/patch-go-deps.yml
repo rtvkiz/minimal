@@ -105,6 +105,7 @@ jobs:
             [mailpit]="/home/build/mailpit-${D}{{package.version}}"
             [registry]="/home/build/distribution-${D}{{package.version}}"
             [tempo]="/home/build/tempo-${D}{{package.version}}"
+            [telegraf]="/home/build/telegraf-${D}{{package.version}}"
           )
 
           # Main module path per image. Grype's buildinfo scan reports the
