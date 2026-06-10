@@ -44,6 +44,7 @@ ALERTMANAGER_VERSION ?= $(call melange_version,alertmanager/melange.yaml)
 JAEGER_VERSION ?= $(call melange_version,jaeger/melange.yaml)
 OTELCOL_VERSION ?= $(call melange_version,otelcol/melange.yaml)
 VICTORIA_METRICS_VERSION ?= $(call melange_version,victoria-metrics/melange.yaml)
+TELEGRAF_VERSION ?= $(call melange_version,telegraf/melange.yaml)
 
 # --- DNS/Secrets/IAM ---
 COREDNS_VERSION ?= $(call melange_version,coredns/melange.yaml)
@@ -125,6 +126,7 @@ endef
 .PHONY: cuda-python cuda-python-melange
 .PHONY: coredns coredns-melange openbao openbao-melange loki loki-melange fluent-bit fluent-bit-melange keycloak keycloak-melange
 .PHONY: gitea gitea-melange
+.PHONY: telegraf telegraf-melange telegraf-dev test-telegraf test-telegraf-dev scan-telegraf
 .PHONY: registry registry-melange registry-dev test-registry test-registry-dev
 .PHONY: mailpit mailpit-melange mailpit-dev test-mailpit test-mailpit-dev
 .PHONY: consul consul-melange consul-dev test-consul test-consul-dev
@@ -136,7 +138,7 @@ endef
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java ruby php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus mariadb etcd victoria-metrics jaeger otelcol qdrant deno cuda-python coredns openbao loki fluent-bit keycloak
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java ruby php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus mariadb etcd victoria-metrics jaeger otelcol qdrant deno cuda-python coredns openbao loki fluent-bit keycloak telegraf
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -211,6 +213,7 @@ $(eval $(call DEV_IMAGE_RULE,mailpit,mailpit-melange,--repository-append ./packa
 $(eval $(call DEV_IMAGE_RULE,consul,consul-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,tempo,tempo-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,mosquitto,mosquitto-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,telegraf,telegraf-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -640,6 +643,32 @@ prometheus: prometheus-melange
 		$(REGISTRY)/$(OWNER)/minimal-prometheus:latest
 	@rm -f prometheus.tar sbom-*.spdx.json
 	@echo "✓ minimal-prometheus built (source build)"
+
+#------------------------------------------------------------------------------
+# TELEGRAF IMAGE (melange Go source build + apko; metrics agent)
+#------------------------------------------------------------------------------
+telegraf-melange: keygen
+	@echo "Building Telegraf $(TELEGRAF_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build telegraf/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Telegraf package built from source"
+
+telegraf: telegraf-melange
+	@echo "Assembling minimal-telegraf image with apko..."
+	apko build telegraf/apko/telegraf.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-telegraf:$(VERSION) \
+		telegraf.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < telegraf.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-telegraf:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-telegraf:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-telegraf:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-telegraf:latest
+	@rm -f telegraf.tar sbom-*.spdx.json
+	@echo "✓ minimal-telegraf built (source build)"
 
 alertmanager-melange: keygen
 	@echo "Building Alertmanager $(ALERTMANAGER_VERSION) from source via melange..."
@@ -1736,6 +1765,7 @@ $(eval $(call DEV_TEST_RULE,mailpit))
 $(eval $(call DEV_TEST_RULE,consul))
 $(eval $(call DEV_TEST_RULE,tempo))
 $(eval $(call DEV_TEST_RULE,mosquitto))
+$(eval $(call DEV_TEST_RULE,telegraf))
 
 test-python:
 	@echo "Testing Python image..."
@@ -2088,6 +2118,12 @@ test-victoria-metrics:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-victoria-metrics:latest" && \
 		victoria-metrics/test.sh
 	@echo "✓ VictoriaMetrics tests passed"
+
+test-telegraf:
+	@echo "Testing Telegraf image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-telegraf:latest" && \
+		telegraf/test.sh
+	@echo "✓ Telegraf tests passed"
 
 test-jaeger:
 	@echo "Testing Jaeger image..."
