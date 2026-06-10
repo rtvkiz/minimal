@@ -95,13 +95,30 @@ pipeline:
       echo "Checking binary size..."
       ls -lh "${{targets.destdir}}/usr/bin/telegraf"
 
-  # Workspace cleanup: telegraf depends on github.com/snowflakedb/gosnowflake,
-  # which drops $HOME/.cache/snowflake at compile time with permissions the
-  # host user cannot read once bwrap exits. Melange's post-build workspace
-  # xattr-export step then fails with EACCES on ARM runners. Fix permissions
-  # before the sandbox tears down.
+  # Diagnostic: dump workspace state before melange's xattr-store step.
+  # Earlier CI runs failed with `failed to store workspace xattrs: open
+  # /tmp/melange-workspace-<id>/.cache/snowflake: permission denied`, and we
+  # need to identify what .cache/snowflake actually is (file/dir/FIFO/socket),
+  # who owns it, and what permissions it has — before guessing at fixes.
   - runs: |
-      chmod -R u+rwX /home/build/.cache 2>/dev/null || true
+      echo "=== DEBUG: workspace state before xattr-store ==="
+      echo "--- whoami / id ---"
+      id
+      echo "--- /home/build top level ---"
+      ls -la /home/build/
+      echo "--- /home/build/.cache (if present) ---"
+      ls -la /home/build/.cache/ 2>&1 || echo "(no .cache dir)"
+      echo "--- recursive find of /home/build/.cache ---"
+      find /home/build/.cache -ls 2>&1 || true
+      echo "--- stat /home/build/.cache/snowflake ---"
+      stat /home/build/.cache/snowflake 2>&1 || echo "(stat failed)"
+      echo "--- file /home/build/.cache/snowflake ---"
+      file /home/build/.cache/snowflake 2>&1 || echo "(file failed)"
+      echo "--- getfacl /home/build/.cache/snowflake ---"
+      getfacl /home/build/.cache/snowflake 2>&1 || echo "(no getfacl)"
+      echo "--- attempt chmod -R u+rwX /home/build/.cache ---"
+      chmod -R u+rwX /home/build/.cache 2>&1 && echo "chmod OK" || echo "chmod FAILED"
+      echo "=== END DEBUG ==="
 
 update:
   enabled: true
