@@ -95,30 +95,18 @@ pipeline:
       echo "Checking binary size..."
       ls -lh "${{targets.destdir}}/usr/bin/telegraf"
 
-  # Diagnostic: dump workspace state before melange's xattr-store step.
-  # Earlier CI runs failed with `failed to store workspace xattrs: open
-  # /tmp/melange-workspace-<id>/.cache/snowflake: permission denied`, and we
-  # need to identify what .cache/snowflake actually is (file/dir/FIFO/socket),
-  # who owns it, and what permissions it has — before guessing at fixes.
+  # Workspace cleanup: telegraf imports github.com/snowflakedb/gosnowflake
+  # (via its SQL output plugin). When the verify step above runs
+  # `telegraf --version`, the Go runtime fires gosnowflake's init(), which
+  # calls os.MkdirAll($HOME/.cache/snowflake, 0o700) to set up its OCSP
+  # response cache. The dir ends up at /home/build/.cache/snowflake.
+  #
+  # After bwrap exits, melange's "store workspace xattrs" step (running as
+  # the host runner uid) can't open() a 0700 dir whose owner-uid was
+  # remapped by --unshare-user. Earlier `chmod -R u+rwX` was a no-op since
+  # the owner already had rwx; the host process needed o+rX. Fix with a+rX.
   - runs: |
-      echo "=== DEBUG: workspace state before xattr-store ==="
-      echo "--- whoami / id ---"
-      id
-      echo "--- /home/build top level ---"
-      ls -la /home/build/
-      echo "--- /home/build/.cache (if present) ---"
-      ls -la /home/build/.cache/ 2>&1 || echo "(no .cache dir)"
-      echo "--- recursive find of /home/build/.cache ---"
-      find /home/build/.cache -ls 2>&1 || true
-      echo "--- stat /home/build/.cache/snowflake ---"
-      stat /home/build/.cache/snowflake 2>&1 || echo "(stat failed)"
-      echo "--- file /home/build/.cache/snowflake ---"
-      file /home/build/.cache/snowflake 2>&1 || echo "(file failed)"
-      echo "--- getfacl /home/build/.cache/snowflake ---"
-      getfacl /home/build/.cache/snowflake 2>&1 || echo "(no getfacl)"
-      echo "--- attempt chmod -R u+rwX /home/build/.cache ---"
-      chmod -R u+rwX /home/build/.cache 2>&1 && echo "chmod OK" || echo "chmod FAILED"
-      echo "=== END DEBUG ==="
+      chmod -R a+rX /home/build/.cache 2>/dev/null || true
 
 update:
   enabled: true
