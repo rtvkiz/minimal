@@ -75,7 +75,8 @@ jobs:
             {"name":"consul","variants":["prod","dev"]},{"name":"tempo","variants":["prod","dev"]},
             {"name":"mosquitto","variants":["prod","dev"]},
             {"name":"helm","variants":["prod","dev"]},
-            {"name":"kubectl","variants":["prod","dev"]}
+            {"name":"kubectl","variants":["prod","dev"]},
+            {"name":"telegraf","variants":["prod","dev"]}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},

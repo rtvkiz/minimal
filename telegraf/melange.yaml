@@ -1,0 +1,103 @@
+# Melange build configuration for minimal Telegraf
+# Builds Telegraf from source (Go) — all core input/output plugins, no plugin
+# signing. Default agent loop, HTTP/file/cpu/mem/net/disk inputs, file/http/
+# prometheus_client/influxdb outputs all work fully.
+
+package:
+  name: telegraf-minimal
+  version: 1.39.0
+  epoch: 0
+  description: "Minimal Telegraf metrics agent built from source"
+  copyright:
+    - license: MIT
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
+  sha256: d072c38088df3ed9c6ed737ff34d6411c2796f231dc6ccdc5d7da3df69cc2838
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify Telegraf source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors "https://github.com/influxdata/telegraf/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/telegraf.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/telegraf.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf telegraf.tar.gz
+      rm telegraf.tar.gz
+
+  # Build Telegraf from source (static binary)
+  - runs: |
+      cd /home/build/telegraf-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X github.com/influxdata/telegraf/internal.Version=${{package.version}} \
+          -X github.com/influxdata/telegraf/internal.Branch=HEAD \
+          -X github.com/influxdata/telegraf/internal.Commit=melange" \
+        -o telegraf \
+        ./cmd/telegraf
+
+  # Install to destdir
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/telegraf-${{package.version}}/telegraf "${{targets.destdir}}/usr/bin/"
+
+      # Default configuration file (minimal: agent + http_listener_v2 disabled, cpu input only)
+      mkdir -p "${{targets.destdir}}/etc/telegraf"
+      cat > "${{targets.destdir}}/etc/telegraf/telegraf.conf" << 'EOF'
+      # Minimal Telegraf configuration. Override at runtime by mounting a
+      # different telegraf.conf or passing --config <url> to the entrypoint.
+      [agent]
+        interval = "10s"
+        round_interval = true
+        metric_batch_size = 1000
+        metric_buffer_limit = 10000
+        collection_jitter = "0s"
+        flush_interval = "10s"
+        flush_jitter = "0s"
+        precision = ""
+        hostname = ""
+        omit_hostname = false
+
+      [[inputs.cpu]]
+        percpu = true
+        totalcpu = true
+        collect_cpu_time = false
+        report_active = false
+
+      [[outputs.file]]
+        files = ["stdout"]
+        data_format = "influx"
+      EOF
+
+  # Verify the build
+  - runs: |
+      echo "Verifying Telegraf build..."
+      "${{targets.destdir}}/usr/bin/telegraf" --version
+      echo "Checking binary size..."
+      ls -lh "${{targets.destdir}}/usr/bin/telegraf"
+
+update:
+  enabled: true
+  github:
+    identifier: influxdata/telegraf
+    use-tag: true
+    tag-filter: "v1."
