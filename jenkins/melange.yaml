@@ -5,7 +5,7 @@
 
 package:
   name: jenkins-minimal
-  version: 2.555.2
+  version: 2.555.3
   epoch: 0
   description: "Minimal Jenkins with custom JRE (jlink)"
   copyright:
@@ -13,7 +13,7 @@ package:
 
 vars:
   # SHA256 checksum of jenkins.war - updated by update-jenkins.yml workflow
-  sha256: dfda09578c5c1b18f28d50ec362868305f572c3b7aef8b90d00f7a9436a62867
+  sha256: 5d19905e6c0f23aff89ff007de5564b96e0a05c13f4d1a92d0fdcb69b033bb9a
 
 environment:
   contents:
