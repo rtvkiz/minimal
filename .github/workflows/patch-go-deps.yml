@@ -106,6 +106,7 @@ jobs:
             [registry]="/home/build/distribution-${D}{{package.version}}"
             [tempo]="/home/build/tempo-${D}{{package.version}}"
             [telegraf]="/home/build/telegraf-${D}{{package.version}}"
+            [mimir]="/home/build/mimir-${D}{{package.version}}"
           )
 
           # Main module path per image. Grype's buildinfo scan reports the
@@ -136,6 +137,7 @@ jobs:
             [registry]="github.com/distribution/distribution/v3"
             [tempo]="github.com/grafana/tempo"
             [telegraf]="github.com/influxdata/telegraf"
+            [mimir]="github.com/grafana/mimir"
           )
 
           # Build step markers to insert before
@@ -161,6 +163,7 @@ jobs:
             [registry]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [tempo]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [telegraf]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [mimir]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
           HAS_PATCHES=false

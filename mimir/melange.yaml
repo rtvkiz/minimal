@@ -1,0 +1,180 @@
+# Melange build configuration for minimal Mimir
+# Builds Grafana Mimir from source (Go) — horizontally-scalable, multi-tenant
+# Prometheus long-term storage. Ships `mimir` (the daemon) + `mimirtool`
+# (operational CLI). All core functionality (ingester, distributor, querier,
+# query-frontend, compactor, store-gateway, ruler, alertmanager) works fully.
+
+package:
+  name: mimir-minimal
+  version: 3.1.0
+  epoch: 0
+  description: "Minimal Grafana Mimir long-term Prometheus storage built from source"
+  copyright:
+    - license: AGPL-3.0
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
+  sha256: 91f0c8321c463f49f8318a5e371a861e9f45ba25532007617e45f28afb7420a1
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify Mimir source. Mimir tags are formatted `mimir-X.Y.Z`
+  # (not `vX.Y.Z`), and the extracted tree is `mimir-mimir-X.Y.Z`.
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors "https://github.com/grafana/mimir/archive/refs/tags/mimir-${{package.version}}.tar.gz" \
+        -o /home/build/mimir.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/mimir.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf mimir.tar.gz
+      rm mimir.tar.gz
+      # Normalize directory so downstream steps don't have to know about the
+      # double-prefix from the `mimir-X.Y.Z` tag scheme.
+      mv mimir-mimir-${{package.version}} mimir-${{package.version}}
+
+  # Build Mimir + mimirtool from source (static binaries)
+  - runs: |
+      cd /home/build/mimir-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X github.com/grafana/mimir/pkg/util/version.Version=${{package.version}} \
+          -X github.com/grafana/mimir/pkg/util/version.Branch=HEAD \
+          -X github.com/grafana/mimir/pkg/util/version.Revision=melange" \
+        -o mimir \
+        ./cmd/mimir
+
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w \
+          -X main.Version=${{package.version}}" \
+        -o mimirtool \
+        ./cmd/mimirtool
+
+  # Install to destdir
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/mimir-${{package.version}}/mimir "${{targets.destdir}}/usr/bin/"
+      cp /home/build/mimir-${{package.version}}/mimirtool "${{targets.destdir}}/usr/bin/"
+
+      # Minimal monolithic single-binary config: all targets, filesystem
+      # storage at /var/mimir, listen on :8080. Override at runtime by
+      # mounting /etc/mimir/config.yaml or passing -config.file.
+      mkdir -p "${{targets.destdir}}/etc/mimir"
+      cat > "${{targets.destdir}}/etc/mimir/config.yaml" << 'EOF'
+      # Minimal monolithic Mimir config — all components in one process.
+      # Suitable for single-node deployments and dev; for production use a
+      # microservices topology and object storage backend.
+      target: all,alertmanager,overrides-exporter
+
+      # Activity tracker writes a circular log of in-flight work so a crashed
+      # process can be diagnosed post-mortem. Default path is CWD-relative,
+      # which fails as nonroot. Pin under /var/mimir so it's writable.
+      activity_tracker:
+        filepath: /var/mimir/metrics-activity.log
+
+      common:
+        storage:
+          backend: filesystem
+          filesystem:
+            dir: /var/mimir/data
+
+      blocks_storage:
+        backend: filesystem
+        filesystem:
+          dir: /var/mimir/blocks
+        bucket_store:
+          sync_dir: /var/mimir/tsdb-sync
+        tsdb:
+          dir: /var/mimir/tsdb
+
+      compactor:
+        data_dir: /var/mimir/compactor
+        sharding_ring:
+          kvstore:
+            store: memberlist
+
+      distributor:
+        ring:
+          instance_addr: 127.0.0.1
+          kvstore:
+            store: memberlist
+
+      ingester:
+        ring:
+          instance_addr: 127.0.0.1
+          kvstore:
+            store: memberlist
+          replication_factor: 1
+
+      ruler:
+        # rule_path defaults to ./data-ruler/ which is unwritable from
+        # the container root by the nonroot user. Pin under /var/mimir.
+        rule_path: /var/mimir/data-ruler
+
+      ruler_storage:
+        backend: filesystem
+        filesystem:
+          dir: /var/mimir/rules
+
+      alertmanager:
+        # data_dir defaults to ./data-alertmanager/ — same CWD-relative
+        # gotcha as ruler. Pin under /var/mimir.
+        data_dir: /var/mimir/data-alertmanager
+
+      alertmanager_storage:
+        backend: filesystem
+        filesystem:
+          dir: /var/mimir/alertmanager
+
+      server:
+        http_listen_port: 8080
+        grpc_listen_port: 9095
+        log_level: info
+
+      store_gateway:
+        sharding_ring:
+          replication_factor: 1
+      EOF
+
+  # Verify the build. Note: invoking the binaries fires every linked package's
+  # init(), which may create $HOME/.cache/<...> dirs with restrictive perms.
+  # See chmod cleanup step below.
+  - runs: |
+      echo "Verifying Mimir build..."
+      "${{targets.destdir}}/usr/bin/mimir" -version
+      "${{targets.destdir}}/usr/bin/mimirtool" version
+      echo "Checking binary sizes..."
+      ls -lh "${{targets.destdir}}/usr/bin/mimir" "${{targets.destdir}}/usr/bin/mimirtool"
+
+  # Workspace cleanup: if any transitive Go dep created a 0700 cache dir
+  # under $HOME/.cache during the verify step, melange's post-bwrap
+  # xattr-store step would fail to open() it from the host runner uid.
+  # Defensively chmod a+rX so all of .cache stays readable. (Same issue
+  # that bit telegraf via gosnowflake's OCSP cache init.)
+  - runs: |
+      chmod -R a+rX /home/build/.cache 2>/dev/null || true
+
+update:
+  enabled: true
+  github:
+    identifier: grafana/mimir
+    use-tag: true
+    tag-filter: "mimir-"
+    strip-prefix: "mimir-"
