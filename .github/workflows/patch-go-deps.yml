@@ -408,7 +408,12 @@ jobs:
             # that don't directly import it. Fixing that needs family-aware
             # bump grouping (golang.org/x/* family at consistent versions) —
             # see Chainguard's wolfi-dev/os/loki-3.7.yaml for the pattern.
-            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      export GOWORK=off\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        ( cd \"\$root\" \\\\\n          && go get${GO_GETS} \\\\\n          && go mod tidy -e \\\\\n          && { [ ! -d vendor ] || go mod vendor; } )\n      done\n  # end-patch-go-deps\n"
+            # _retry wraps go get with 3 attempts and 5/15/30s backoff to
+            # ride out transient proxy.golang.org HTTP/2 stream errors and
+            # 502s (kubectl x86_64 hit this in run #27361909125). go's own
+            # retry doesn't survive mid-stream INTERNAL_ERROR, and a failed
+            # `go get` aborts the whole melange build.
+            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      export GOWORK=off\n      _retry() { local i; for i in 5 15 30; do \"\$@\" && return 0; echo \"retry: \$* failed, sleeping \${i}s\"; sleep \$i; done; \"\$@\"; }\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        ( cd \"\$root\" \\\\\n          && _retry go get${GO_GETS} \\\\\n          && go mod tidy -e \\\\\n          && { [ ! -d vendor ] || go mod vendor; } )\n      done\n  # end-patch-go-deps\n"
 
             # Find the marker line and insert before it
             MARKER_LINE=$(grep -n "$MARKER" "$MELANGE_FILE" | head -1 | cut -d: -f1)
