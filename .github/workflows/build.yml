@@ -727,28 +727,37 @@ jobs:
           subject-digest: ${{ steps.publish.outputs.digest }}
           push-to-registry: true
 
+      # Sign/attest publish their results to GHCR + Rekor asynchronously;
+      # verification can race the propagation and report "no signatures found"
+      # for ~30–60s even though the sign step succeeded. nick-fields/retry
+      # rides out the GHCR/sigstore eventual-consistency gap (httpd hit this
+      # in scheduled run #27342089679). Three attempts with 15s backoff is
+      # plenty in practice — once propagation lands, verify is instant.
       - name: Verify attestations are discoverable
         if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
-        run: |
-          set -e
-          IMAGE="${{ steps.publish.outputs.image }}"
-          # Wait briefly for registry propagation.
-          sleep 5
-          echo "Verifying cosign signature..."
-          cosign verify \
-            --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
-            --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-            "$IMAGE" > /dev/null
-          echo "Verifying SBOM attestation..."
-          cosign verify-attestation --type spdxjson \
-            --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
-            --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-            "$IMAGE" > /dev/null
-          echo "Verifying SLSA provenance..."
-          gh attestation verify "oci://$IMAGE" --owner ${{ github.repository_owner }} > /dev/null
-          echo "All attestations verified."
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_wait_seconds: 15
+          command: |
+            set -e
+            IMAGE="${{ steps.publish.outputs.image }}"
+            echo "Verifying cosign signature..."
+            cosign verify \
+              --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+              --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+              "$IMAGE" > /dev/null
+            echo "Verifying SBOM attestation..."
+            cosign verify-attestation --type spdxjson \
+              --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+              --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+              "$IMAGE" > /dev/null
+            echo "Verifying SLSA provenance..."
+            gh attestation verify "oci://$IMAGE" --owner ${{ github.repository_owner }} > /dev/null
+            echo "All attestations verified."
 
   #----------------------------------------------------------------------------
   # BUILD MELANGE-BASED IMAGES (needs packages from melange-build)
@@ -1118,28 +1127,32 @@ jobs:
           subject-digest: ${{ steps.publish.outputs.digest }}
           push-to-registry: true
 
+      # Same propagation race as build-apko's verify step — see comment there.
       - name: Verify attestations are discoverable
         if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
-        run: |
-          set -e
-          IMAGE="${{ steps.publish.outputs.image }}"
-          # Wait briefly for registry propagation.
-          sleep 5
-          echo "Verifying cosign signature..."
-          cosign verify \
-            --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
-            --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-            "$IMAGE" > /dev/null
-          echo "Verifying SBOM attestation..."
-          cosign verify-attestation --type spdxjson \
-            --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
-            --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-            "$IMAGE" > /dev/null
-          echo "Verifying SLSA provenance..."
-          gh attestation verify "oci://$IMAGE" --owner ${{ github.repository_owner }} > /dev/null
-          echo "All attestations verified."
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_wait_seconds: 15
+          command: |
+            set -e
+            IMAGE="${{ steps.publish.outputs.image }}"
+            echo "Verifying cosign signature..."
+            cosign verify \
+              --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+              --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+              "$IMAGE" > /dev/null
+            echo "Verifying SBOM attestation..."
+            cosign verify-attestation --type spdxjson \
+              --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+              --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+              "$IMAGE" > /dev/null
+            echo "Verifying SLSA provenance..."
+            gh attestation verify "oci://$IMAGE" --owner ${{ github.repository_owner }} > /dev/null
+            echo "All attestations verified."
 
   #----------------------------------------------------------------------------
   # SUMMARY
