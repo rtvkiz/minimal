@@ -46,10 +46,11 @@ pipeline:
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
       for root in /home/build/traefik-${{package.version}}; do
         [ -f "$root/go.mod" ] || continue
         ( cd "$root" \
-          && go get github.com/quic-go/quic-go@v0.59.1 \
+          && _retry go get github.com/quic-go/quic-go@v0.59.1 \
           && go mod tidy -e \
           && { [ ! -d vendor ] || go mod vendor; } )
       done
