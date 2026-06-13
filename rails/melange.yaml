@@ -71,13 +71,13 @@ pipeline:
 
   # Install Rails and Bundler gems (using system Ruby)
 
+
   # patch-bundler-deps: auto-generated — do not edit manually
   - runs: |
       cd /home/build
       gem install json -v 2.19.2 --no-document
-      gem install net-imap -v 0.6.4 --no-document
+      gem install net-imap -v 0.6.4.1 --no-document
   # end-patch-bundler-deps
-
   - runs: |
       gem install --no-document rails:${{vars.rails_version}} bundler
 

@@ -2,8 +2,90 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://github.com/rtvkiz/minimal/vex/openbao",
   "author": "rtvkiz",
-  "timestamp": "2026-06-02T00:00:00Z",
-  "version": 1,
+  "timestamp": "2026-06-12T23:33:10Z",
+  "version": 2,
   "tooling": "tools/vex/validate.sh",
-  "statements": []
+  "statements": [
+    {
+      "vulnerability": { "name": "GO-2025-3858" },
+      "products": [
+        { "@id": "pkg:oci/minimal-openbao?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Fix commit a14053c9679d is an ancestor of the openbao v2.5.4 tag we build from (GitHub compare v2.5.4...a14053c9679d reports 'behind'), so the patched code ships in this image. govulndb records the fix only as a 0.0.0-20250806 pseudo-version because the openbao module path lacks a /v2 suffix, which makes version-range matchers treat every v2.x tag as affected."
+    },
+    {
+      "vulnerability": { "name": "GO-2025-3857" },
+      "products": [
+        { "@id": "pkg:oci/minimal-openbao?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Fix commit 9b0b5d4f345f is an ancestor of the openbao v2.5.4 tag we build from (GitHub compare v2.5.4...9b0b5d4f345f reports 'behind'), so the patched code ships in this image. govulndb records the fix only as a 0.0.0-20250806 pseudo-version because the openbao module path lacks a /v2 suffix, which makes version-range matchers treat every v2.x tag as affected."
+    },
+    {
+      "vulnerability": { "name": "GO-2025-3859" },
+      "products": [
+        { "@id": "pkg:oci/minimal-openbao?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Fix commit c52795c1ef74 is an ancestor of the openbao v2.5.4 tag we build from (GitHub compare v2.5.4...c52795c1ef74 reports 'behind'), so the patched code ships in this image. govulndb records the fix only as a 0.0.0-20250807 pseudo-version because the openbao module path lacks a /v2 suffix, which makes version-range matchers treat every v2.x tag as affected."
+    },
+    {
+      "vulnerability": { "name": "GO-2025-3853" },
+      "products": [
+        { "@id": "pkg:oci/minimal-openbao?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Fix commit 183891f8d535 is an ancestor of the openbao v2.5.4 tag we build from (GitHub compare v2.5.4...183891f8d535 reports 'behind'), so the patched code ships in this image. govulndb records the fix only as a 0.0.0-20250806 pseudo-version because the openbao module path lacks a /v2 suffix, which makes version-range matchers treat every v2.x tag as affected."
+    },
+    {
+      "vulnerability": { "name": "GO-2025-3855" },
+      "products": [
+        { "@id": "pkg:oci/minimal-openbao?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Fix commit c52795c1ef74 is an ancestor of the openbao v2.5.4 tag we build from (GitHub compare v2.5.4...c52795c1ef74 reports 'behind'), so the patched code ships in this image. govulndb records the fix only as a 0.0.0-20250807 pseudo-version because the openbao module path lacks a /v2 suffix, which makes version-range matchers treat every v2.x tag as affected."
+    },
+    {
+      "vulnerability": { "name": "GO-2025-3856" },
+      "products": [
+        { "@id": "pkg:oci/minimal-openbao?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Fix commit 8340a6918f6c is an ancestor of the openbao v2.5.4 tag we build from (GitHub compare v2.5.4...8340a6918f6c reports 'behind'), so the patched code ships in this image. govulndb records the fix only as a 0.0.0-20250807 pseudo-version because the openbao module path lacks a /v2 suffix, which makes version-range matchers treat every v2.x tag as affected."
+    },
+    {
+      "vulnerability": { "name": "GO-2025-3854" },
+      "products": [
+        { "@id": "pkg:oci/minimal-openbao?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Fix commit 4d9b5d3d6486 is an ancestor of the openbao v2.5.4 tag we build from (GitHub compare v2.5.4...4d9b5d3d6486 reports 'behind'), so the patched code ships in this image. govulndb records the fix only as a 0.0.0-20250806 pseudo-version because the openbao module path lacks a /v2 suffix, which makes version-range matchers treat every v2.x tag as affected."
+    },
+    {
+      "vulnerability": { "name": "GO-2022-0646" },
+      "products": [
+        { "@id": "pkg:oci/minimal-openbao?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The advisory affects only aws-sdk-go v1's S3 encryption client (service/s3/s3crypto). openbao/openbao contains zero references to s3crypto, and Go links only imported packages into the binary, so the vulnerable code is not present. No fixed aws-sdk-go v1 release exists or is planned (fixed only in aws-sdk-go-v2)."
+    },
+    {
+      "vulnerability": { "name": "GO-2022-0635" },
+      "products": [
+        { "@id": "pkg:oci/minimal-openbao?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The advisory affects only aws-sdk-go v1's S3 encryption client (service/s3/s3crypto). openbao/openbao contains zero references to s3crypto, and Go links only imported packages into the binary, so the vulnerable code is not present. No fixed aws-sdk-go v1 release exists or is planned (fixed only in aws-sdk-go-v2)."
+    }
+  ]
 }
