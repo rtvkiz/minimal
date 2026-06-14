@@ -4,7 +4,7 @@
 
 package:
   name: alertmanager-minimal
-  version: 0.32.2
+  version: 0.33.0
   epoch: 0
   description: "Minimal Alertmanager built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of source tarball — updated by .github/versions.yaml row + update-versions workflow
-  sha256: 92151e1b1e0108d4b8ce5795e9a06115954fefb93583c2bcf693f6ba80171dca
+  sha256: 99d24655565e1be74d6fff3ebb3b80d6a0bec2a587c84c3c4690949b82908758
 
 environment:
   contents:
