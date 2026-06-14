@@ -57,6 +57,17 @@ This PR was automatically created by the [update-versions](${GITHUB_SERVER_URL:-
 EOF
 )
 
+# Ensure the per-image label exists before referencing it. `gh pr create`
+# aborts the *entire* PR creation (not just labeling) if --label names a
+# label the repo doesn't have — which is exactly what happens the first time
+# a newly-added image gets a version bump (alertmanager hit this: branch
+# pushed, no PR, run failed). Create-if-missing only: gh exits non-zero when
+# the label already exists, which `|| true` swallows, so existing labels'
+# color/description are never overwritten (no --force).
+gh label create "$name" \
+  --color ededed \
+  --description "Updates to the ${name} image" 2>/dev/null || true
+
 pr_url=$(gh pr create \
   --title "$title" \
   --label dependencies --label "$name" \
