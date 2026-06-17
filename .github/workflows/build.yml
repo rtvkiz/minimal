@@ -469,8 +469,42 @@ jobs:
         if: matrix.scan_for_cves
         run: grype version
 
+      # Grype downloads its vulnerability DB on each scan. A connection reset
+      # or 502 from the DB CDN used to fail the entire scheduled rebuild
+      # (nginx scan, 2026-06-17: "connection reset by peer ... failed to load
+      # vulnerability db"; cosign had the same class of flake the day prior).
+      # Isolate the network fetch into a retried, best-effort `db update`
+      # backed by a date-keyed cache, then scan offline (auto-update off):
+      # a transient blip now retries, and a brief outage still scans from the
+      # cached DB, instead of taking down the run for every image.
+      - name: Grype DB cache key
+        if: matrix.scan_for_cves
+        id: grype-db-date
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Grype DB
+        if: matrix.scan_for_cves
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.cache/grype/db
+          key: grype-db-${{ env.GRYPE_VERSION }}-${{ steps.grype-db-date.outputs.date }}
+          restore-keys: |
+            grype-db-${{ env.GRYPE_VERSION }}-
+
+      - name: Update Grype DB (retried, best-effort)
+        if: matrix.scan_for_cves
+        continue-on-error: true
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 20
+          command: grype db update
+
       - name: Scan image for vulnerabilities
         if: matrix.scan_for_cves
+        env:
+          GRYPE_DB_AUTO_UPDATE: "false"
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
           grype "$IMAGE" \
@@ -886,8 +920,42 @@ jobs:
         if: matrix.scan_for_cves
         run: grype version
 
+      # Grype downloads its vulnerability DB on each scan. A connection reset
+      # or 502 from the DB CDN used to fail the entire scheduled rebuild
+      # (nginx scan, 2026-06-17: "connection reset by peer ... failed to load
+      # vulnerability db"; cosign had the same class of flake the day prior).
+      # Isolate the network fetch into a retried, best-effort `db update`
+      # backed by a date-keyed cache, then scan offline (auto-update off):
+      # a transient blip now retries, and a brief outage still scans from the
+      # cached DB, instead of taking down the run for every image.
+      - name: Grype DB cache key
+        if: matrix.scan_for_cves
+        id: grype-db-date
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Grype DB
+        if: matrix.scan_for_cves
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.cache/grype/db
+          key: grype-db-${{ env.GRYPE_VERSION }}-${{ steps.grype-db-date.outputs.date }}
+          restore-keys: |
+            grype-db-${{ env.GRYPE_VERSION }}-
+
+      - name: Update Grype DB (retried, best-effort)
+        if: matrix.scan_for_cves
+        continue-on-error: true
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 20
+          command: grype db update
+
       - name: Scan image for vulnerabilities
         if: matrix.scan_for_cves
+        env:
+          GRYPE_DB_AUTO_UPDATE: "false"
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
           grype "$IMAGE" \
