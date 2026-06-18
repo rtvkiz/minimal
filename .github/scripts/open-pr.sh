@@ -68,10 +68,25 @@ gh label create "$name" \
   --color ededed \
   --description "Updates to the ${name} image" 2>/dev/null || true
 
-pr_url=$(gh pr create \
-  --title "$title" \
-  --label dependencies --label "$name" \
-  --body "$body")
+# Reuse an existing open PR for this branch instead of creating a duplicate.
+# The bump branch is force-pushed above, so its diff is already current; but
+# `gh pr create` errors out when a PR for the head branch already exists. That
+# failed the whole run whenever an update PR hadn't merged before the next
+# scheduled cron fired (mysql 8.4.10: PR #281 still open → run exited 1).
+# Edit-if-exists, create otherwise — same pattern as patch-deps.yml.
+pr_url=$(gh pr list --head "$branch" --base main --state open --json url --jq '.[0].url // ""')
+if [ -n "$pr_url" ]; then
+  gh pr edit "$pr_url" \
+    --title "$title" \
+    --add-label dependencies --add-label "$name" \
+    --body "$body"
+  echo "Updated existing PR: $pr_url"
+else
+  pr_url=$(gh pr create \
+    --title "$title" \
+    --label dependencies --label "$name" \
+    --body "$body")
+  echo "Created PR: $pr_url"
+fi
 
-echo "Created PR: $pr_url"
 gh pr merge "$pr_url" --auto --squash --delete-branch
