@@ -50,7 +50,7 @@ pipeline:
       for root in /home/build/traefik-${{package.version}}; do
         [ -f "$root/go.mod" ] || continue
         ( cd "$root" \
-          && _retry go get github.com/quic-go/quic-go@v0.59.1 \
+          && _retry go get github.com/docker/cli@v29.2.0+incompatible github.com/quic-go/quic-go@v0.59.1 \
           && go mod tidy -e \
           && { [ ! -d vendor ] || go mod vendor; } )
       done
