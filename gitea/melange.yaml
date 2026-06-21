@@ -4,7 +4,7 @@
 
 package:
   name: gitea-minimal
-  version: 1.26.2
+  version: 1.26.3
   epoch: 0
   description: "Minimal Gitea git hosting server built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball
-  sha256: 1b2113ca1fe956b608ccc892a59b232668af8d30c7ee091cbf2446d5014be5ff
+  sha256: ae04ccc547ac3a56e576a934ee37b1864953b8ca13658556dd8f6072ed96a0d5
 
 environment:
   contents:
