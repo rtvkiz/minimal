@@ -2,7 +2,14 @@
 set -euo pipefail
 
 echo "Testing mailpit version..."
-docker run --rm --entrypoint /usr/bin/mailpit "$IMAGE" version
+# `mailpit version` prints the version, then phones GitHub to check for a
+# newer release; that check exits non-zero on any network hiccup (e.g. a 403
+# when the runner IP is rate-limited), which under `set -e` failed the whole
+# job even though the binary works. Capture output and assert the version
+# string instead of trusting the exit code.
+ver_out=$(docker run --rm --entrypoint /usr/bin/mailpit "$IMAGE" version 2>&1 || true)
+echo "$ver_out"
+echo "$ver_out" | grep -qiE 'mailpit v[0-9]' || { echo "FAIL: mailpit version not reported"; exit 1; }
 
 echo "Testing mailpit server starts..."
 docker run -d --name mailpit-test \
