@@ -765,8 +765,11 @@ jobs:
       # verification can race the propagation and report "no signatures found"
       # for ~30–60s even though the sign step succeeded. nick-fields/retry
       # rides out the GHCR/sigstore eventual-consistency gap (httpd hit this
-      # in scheduled run #27342089679). Three attempts with 15s backoff is
-      # plenty in practice — once propagation lands, verify is instant.
+      # in scheduled run #27342089679). It also covers transient sigstore TUF
+      # CDN outages: cosign fetches its trusted root from
+      # tuf-repo-cdn.sigstore.dev, and an i/o timeout there fails verify with
+      # "trusted root is required" (loki, scheduled run 2026-06-21). 5 attempts
+      # with 30s backoff widens the window enough to ride out a brief TUF blip.
       - name: Verify attestations are discoverable
         if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
@@ -774,8 +777,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           timeout_minutes: 5
-          max_attempts: 3
-          retry_wait_seconds: 15
+          max_attempts: 5
+          retry_wait_seconds: 30
           command: |
             set -e
             IMAGE="${{ steps.publish.outputs.image }}"
@@ -1203,8 +1206,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           timeout_minutes: 5
-          max_attempts: 3
-          retry_wait_seconds: 15
+          max_attempts: 5
+          retry_wait_seconds: 30
           command: |
             set -e
             IMAGE="${{ steps.publish.outputs.image }}"
