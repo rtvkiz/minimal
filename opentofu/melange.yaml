@@ -1,0 +1,66 @@
+# Melange build configuration for minimal OpenTofu
+# Pure Go from source. Single static `tofu` binary.
+# License: MPL-2.0 (OpenTofu / Linux Foundation).
+
+package:
+  name: opentofu-minimal
+  version: 1.12.3
+  epoch: 0
+  description: "Minimal OpenTofu (Terraform-compatible IaC) built from source"
+  copyright:
+    - license: MPL-2.0
+
+vars:
+  # SHA256 of opentofu source tarball - updated by update-versions.yml workflow
+  sha256: 0691d6c4ab43bcfa708120a0c71ece4be43ece4327445a572d91649e4e09af0e
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify OpenTofu source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/opentofu/opentofu/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/opentofu.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/opentofu.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf opentofu.tar.gz
+      rm opentofu.tar.gz
+
+  # Build the tofu binary (static).
+  # version.rawVersion is //go:embed'd from version/VERSION (already correct in
+  # the tag tarball); version.dev defaults to "yes" which appends a "-dev"
+  # prerelease marker, so set it to "no" for a clean release version string.
+  - runs: |
+      cd /home/build/opentofu-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -X github.com/opentofu/opentofu/version.dev=no" \
+        -o /home/build/tofu-bin \
+        ./cmd/tofu
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/tofu-bin "${{targets.destdir}}/usr/bin/tofu"
+      chmod 0755 "${{targets.destdir}}/usr/bin/tofu"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying tofu binary..."
+      "${{targets.destdir}}/usr/bin/tofu" version

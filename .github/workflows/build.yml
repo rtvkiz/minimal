@@ -77,7 +77,8 @@ jobs:
             {"name":"helm","variants":["prod","dev"]},
             {"name":"kubectl","variants":["prod","dev"]},
             {"name":"telegraf","variants":["prod","dev"]},
-            {"name":"mimir","variants":["prod","dev"]}
+            {"name":"mimir","variants":["prod","dev"]},
+            {"name":"opentofu","variants":["prod","dev"]}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},

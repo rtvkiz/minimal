@@ -132,6 +132,17 @@
     releases: "https://github.com/open-telemetry/opentelemetry-collector/releases"
     notes: "https://github.com/open-telemetry/opentelemetry-collector/releases/tag/v{version}"
 
+# cron-enabled added once a manual dispatch (gh workflow run
+# update-versions.yml -f only=opentofu) is confirmed to produce a clean PR.
+- name: opentofu
+  files: [opentofu/melange.yaml]
+  source: { type: github-releases-latest, repo: opentofu/opentofu, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/opentofu/opentofu/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/opentofu/opentofu/releases"
+    notes: "https://github.com/opentofu/opentofu/releases/tag/v{version}"
+
 # ============================================================================
 # github-tags — hits /repos/<repo>/tags?per_page=100, filters by regex,
 # strips prefix, semver-sorts, takes the highest match. Use this when the
