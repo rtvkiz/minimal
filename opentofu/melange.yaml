@@ -46,6 +46,18 @@ pipeline:
   # version.rawVersion is //go:embed'd from version/VERSION (already correct in
   # the tag tarball); version.dev defaults to "yes" which appends a "-dev"
   # prerelease marker, so set it to "no" for a clean release version string.
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/opentofu-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && _retry go get github.com/Azure/go-ntlmssp@v0.1.1 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8 github.com/aws/aws-sdk-go-v2/service/s3@v1.97.3 go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v1.44.0 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.44.0 go.opentelemetry.io/otel/sdk@v1.44.0 golang.org/x/crypto@v0.53.0 golang.org/x/net@v0.56.0 golang.org/x/sys@v0.46.0 golang.org/x/text@v0.38.0 golang.org/x/term@v0.44.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.21.0 golang.org/x/tools@v0.46.0 \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
   - runs: |
       cd /home/build/opentofu-${{package.version}}
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
