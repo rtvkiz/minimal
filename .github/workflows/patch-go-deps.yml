@@ -109,6 +109,7 @@ jobs:
             [mimir]="/home/build/mimir-${D}{{package.version}}"
             [opentofu]="/home/build/opentofu-${D}{{package.version}}"
             [trivy]="/home/build/trivy-${D}{{package.version}}"
+            [thanos]="/home/build/thanos-${D}{{package.version}}"
           )
 
           # Main module path per image. Grype's buildinfo scan reports the
@@ -142,6 +143,7 @@ jobs:
             [mimir]="github.com/grafana/mimir"
             [opentofu]="github.com/opentofu/opentofu"
             [trivy]="github.com/aquasecurity/trivy"
+            [thanos]="github.com/thanos-io/thanos"
           )
 
           # Build step markers to insert before
@@ -170,6 +172,7 @@ jobs:
             [mimir]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [opentofu]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [trivy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [thanos]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
           HAS_PATCHES=false
