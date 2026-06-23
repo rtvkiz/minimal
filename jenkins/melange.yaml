@@ -39,11 +39,27 @@ pipeline:
   # Download and verify Jenkins WAR
   - runs: |
       mkdir -p /home/build/jenkins
-      curl -fsSL --retry 5 --retry-all-errors "https://get.jenkins.io/war-stable/${{package.version}}/jenkins.war" \
-        -o /home/build/jenkins/jenkins.war
+      war=/home/build/jenkins/jenkins.war
+
+      # get.jenkins.io redirects to a community mirror; mirrorbits occasionally
+      # hands out a dead mirror (mirror.xmission.com was unreachable on
+      # 2026-06-21, and with no connect-timeout each of curl's retries hung
+      # ~132s before failing → exit 28, ~13 min wasted, whole build dead).
+      # Cap the connect time so a bad mirror is abandoned in seconds, then fall
+      # back to the directly-hosted archives.jenkins.io (no mirror redirect).
+      ok=0
+      for url in \
+        "https://get.jenkins.io/war-stable/${{package.version}}/jenkins.war" \
+        "https://archives.jenkins.io/war-stable/${{package.version}}/jenkins.war"; do
+        if curl -fsSL --connect-timeout 30 --max-time 600 --retry 5 --retry-all-errors "$url" -o "$war"; then
+          ok=1; break
+        fi
+        echo "WARN: jenkins.war download failed from $url, trying next source"
+      done
+      [ "$ok" = 1 ] || { echo "ERROR: all jenkins.war sources failed"; exit 1; }
 
       # Verify against pinned checksum (stored in repo, not fetched dynamically)
-      echo "${{vars.sha256}}  /home/build/jenkins/jenkins.war" | sha256sum -c -
+      echo "${{vars.sha256}}  $war" | sha256sum -c -
 
   # Create minimal JRE with jlink (only modules Jenkins needs)
   - runs: |
