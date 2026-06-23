@@ -325,8 +325,13 @@ jobs:
                 echo "  Skipping main-module self-bump: $mod_ver"
                 continue
               fi
-              if [ "$IMAGE" = "loki" ] && [[ "$mod_ver" == github.com/prometheus/prometheus@* ]]; then
-                echo "  Skipping incompatible Loki module bump: $mod_ver"
+              # loki and thanos both import internal prometheus packages from a
+              # pinned fork/older version (e.g. thanos: prometheus/tsdb/errors,
+              # which prometheus removed in newer tags). Bumping
+              # prometheus/prometheus to @latest breaks their build with
+              # "module found (vX) but does not contain package ...". Pin them.
+              if { [ "$IMAGE" = "loki" ] || [ "$IMAGE" = "thanos" ]; } && [[ "$mod_ver" == github.com/prometheus/prometheus@* ]]; then
+                echo "  Skipping incompatible ${IMAGE} module bump: $mod_ver"
                 continue
               fi
               # Telegraf ≤1.39 references rclone's fs.LogOutput, which rclone
