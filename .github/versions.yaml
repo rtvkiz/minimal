@@ -154,6 +154,17 @@
     releases: "https://github.com/aquasecurity/trivy/releases"
     notes: "https://github.com/aquasecurity/trivy/releases/tag/v{version}"
 
+# cron-enabled added once a manual dispatch (gh workflow run update-versions.yml
+# -f only=thanos) is confirmed to produce a clean PR.
+- name: thanos
+  files: [thanos/melange.yaml]
+  source: { type: github-releases-latest, repo: thanos-io/thanos, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/thanos-io/thanos/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/thanos-io/thanos/releases"
+    notes: "https://github.com/thanos-io/thanos/releases/tag/v{version}"
+
 # ============================================================================
 # github-tags — hits /repos/<repo>/tags?per_page=100, filters by regex,
 # strips prefix, semver-sorts, takes the highest match. Use this when the

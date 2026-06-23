@@ -79,7 +79,8 @@ jobs:
             {"name":"telegraf","variants":["prod","dev"]},
             {"name":"mimir","variants":["prod","dev"]},
             {"name":"opentofu","variants":["prod","dev"]},
-            {"name":"trivy","variants":["prod","dev"]}
+            {"name":"trivy","variants":["prod","dev"]},
+            {"name":"thanos","variants":["prod","dev"]}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},
