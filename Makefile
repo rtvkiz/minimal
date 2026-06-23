@@ -74,6 +74,9 @@ CONSUL_VERSION ?= $(call melange_version,consul/melange.yaml)
 # --- Observability (extra) ---
 TEMPO_VERSION ?= $(call melange_version,tempo/melange.yaml)
 
+# --- IaC / GitOps ---
+OPENTOFU_VERSION ?= $(call melange_version,opentofu/melange.yaml)
+
 # --- Messaging (MQTT) ---
 MOSQUITTO_VERSION ?= $(call melange_version,mosquitto/melange.yaml)
 HELM_VERSION ?= $(call melange_version,helm/melange.yaml)
@@ -133,6 +136,7 @@ endef
 .PHONY: mailpit mailpit-melange mailpit-dev test-mailpit test-mailpit-dev
 .PHONY: consul consul-melange consul-dev test-consul test-consul-dev
 .PHONY: tempo tempo-melange tempo-dev test-tempo test-tempo-dev
+.PHONY: opentofu opentofu-melange test-opentofu
 .PHONY: mosquitto mosquitto-melange mosquitto-dev test-mosquitto test-mosquitto-dev
 .PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
 .PHONY: test-python test-python-dev test-jenkins test-go test-go-dev test-node-slim test-node-slim-dev test-nginx test-httpd test-redis-slim test-redis-slim-dev test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-postgres-slim-dev test-bun test-bun-dev test-sqlite test-dotnet test-dotnet-dev test-java test-java-dev test-ruby test-ruby-dev test-php test-php-dev test-rails test-rails-dev test-deno test-deno-dev test-mariadb test-mariadb-dev test-valkey test-valkey-dev test-memcached-dev test-sqlite-dev test-opensearch-dev test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
@@ -1369,6 +1373,32 @@ tempo: tempo-melange
 	@echo "✓ minimal-tempo built (source build)"
 
 #------------------------------------------------------------------------------
+# OPENTOFU IMAGE (melange Go source build + apko; Terraform-compatible IaC CLI)
+#------------------------------------------------------------------------------
+opentofu-melange: keygen
+	@echo "Building OpenTofu $(OPENTOFU_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build opentofu/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ OpenTofu package built from source"
+
+opentofu: opentofu-melange
+	@echo "Assembling minimal-opentofu image with apko..."
+	apko build opentofu/apko/opentofu.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-opentofu:$(VERSION) \
+		opentofu.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < opentofu.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-opentofu:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-opentofu:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-opentofu:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-opentofu:latest
+	@rm -f opentofu.tar sbom-*.spdx.json
+	@echo "✓ minimal-opentofu built (source build)"
+
+#------------------------------------------------------------------------------
 # MOSQUITTO IMAGE (melange C source build + apko; Eclipse MQTT broker)
 #------------------------------------------------------------------------------
 mosquitto-melange: keygen
@@ -2093,6 +2123,12 @@ test-tempo:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-tempo:latest" && \
 		tempo/test.sh
 	@echo "✓ tempo tests passed"
+
+test-opentofu:
+	@echo "Testing opentofu image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-opentofu:latest" && \
+		opentofu/test.sh
+	@echo "✓ opentofu tests passed"
 
 test-mosquitto:
 	@echo "Testing mosquitto image..."

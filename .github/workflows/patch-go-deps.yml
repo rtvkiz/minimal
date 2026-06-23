@@ -107,6 +107,7 @@ jobs:
             [tempo]="/home/build/tempo-${D}{{package.version}}"
             [telegraf]="/home/build/telegraf-${D}{{package.version}}"
             [mimir]="/home/build/mimir-${D}{{package.version}}"
+            [opentofu]="/home/build/opentofu-${D}{{package.version}}"
           )
 
           # Main module path per image. Grype's buildinfo scan reports the
@@ -138,6 +139,7 @@ jobs:
             [tempo]="github.com/grafana/tempo"
             [telegraf]="github.com/influxdata/telegraf"
             [mimir]="github.com/grafana/mimir"
+            [opentofu]="github.com/opentofu/opentofu"
           )
 
           # Build step markers to insert before
@@ -164,6 +166,7 @@ jobs:
             [tempo]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [telegraf]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [mimir]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [opentofu]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
           HAS_PATCHES=false
