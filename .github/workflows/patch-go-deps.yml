@@ -71,6 +71,14 @@ jobs:
 
       - name: Scan Go images and generate patches
         id: scan
+        # Pass GHA context in via env, not inline ${{ }}. A `run:` block that
+        # contains any ${{ }} is treated by GitHub as a templated scalar and
+        # capped at 21000 chars; this block is ~24KB, so even one inline
+        # expression made the whole workflow fail to parse ("Exceeded max
+        # expression length 21000") once the image list grew. With zero ${{ }}
+        # here the block is a plain literal and can grow freely.
+        env:
+          OWNER: ${{ github.repository_owner }}
         run: |
           # Map of image name -> modroot (melange template vars)
           # Split $ from {{ so GHA doesn't parse them as expressions
@@ -181,7 +189,7 @@ jobs:
 
           for IMAGE in "${!MODROOTS[@]}"; do
             echo "=== Scanning $IMAGE ==="
-            FULL_IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${IMAGE}:latest"
+            FULL_IMAGE="${REGISTRY}/${OWNER}/minimal-${IMAGE}:latest"
             MELANGE_FILE="${IMAGE}/melange.yaml"
             BEFORE_HASH=$(sha256sum "$MELANGE_FILE" | awk '{print $1}')
 
@@ -317,8 +325,13 @@ jobs:
                 echo "  Skipping main-module self-bump: $mod_ver"
                 continue
               fi
-              if [ "$IMAGE" = "loki" ] && [[ "$mod_ver" == github.com/prometheus/prometheus@* ]]; then
-                echo "  Skipping incompatible Loki module bump: $mod_ver"
+              # loki and thanos both import internal prometheus packages from a
+              # pinned fork/older version (e.g. thanos: prometheus/tsdb/errors,
+              # which prometheus removed in newer tags). Bumping
+              # prometheus/prometheus to @latest breaks their build with
+              # "module found (vX) but does not contain package ...". Pin them.
+              if { [ "$IMAGE" = "loki" ] || [ "$IMAGE" = "thanos" ]; } && [[ "$mod_ver" == github.com/prometheus/prometheus@* ]]; then
+                echo "  Skipping incompatible ${IMAGE} module bump: $mod_ver"
                 continue
               fi
               # Telegraf ≤1.39 references rclone's fs.LogOutput, which rclone
