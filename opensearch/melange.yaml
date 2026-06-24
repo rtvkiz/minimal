@@ -61,6 +61,14 @@ pipeline:
       printf '\n# minimal image defaults\nnetwork.host: 0.0.0.0\ndiscovery.type: single-node\n' \
         >> "${{targets.destdir}}/usr/share/opensearch/config/opensearch.yml"
 
+      # Normalize permissions: the distro ships config/ files as 0660 and
+      # config/jvm.options.d as 0750 — both unreadable by "other". melange's
+      # post-build xattr step (rootless in CI, unlike a local root build) then
+      # fails to traverse them ("permission denied opening config/jvm.options.d").
+      # a+rX makes dirs traversable and files readable without granting write;
+      # apko re-chowns the tree to the runtime user (65532) afterward.
+      chmod -R a+rX "${{targets.destdir}}/usr/share/opensearch"
+
   # Verify the distribution shape + that the fixed netty shipped.
   - runs: |
       test -x "${{targets.destdir}}/usr/share/opensearch/bin/opensearch"
