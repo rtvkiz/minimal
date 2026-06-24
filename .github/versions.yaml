@@ -413,6 +413,20 @@
     releases: "https://github.com/envoyproxy/envoy/releases"
     notes: "https://github.com/envoyproxy/envoy/releases/tag/v{version}"
 
+# Deno ships official upstream binaries (we build from those, not Wolfi's
+# lagging package). Per-arch zips; sha256 of each zip recorded into melange
+# vars. cron-enabled after a dispatch check.
+- name: deno
+  files: [deno/melange.yaml]
+  source: { type: github-releases-latest, repo: denoland/deno, strip-v: true, pin-major: 2 }
+  tarballs:
+    - { url: "https://github.com/denoland/deno/releases/download/v{version}/deno-x86_64-unknown-linux-gnu.zip",  field: sha256_x86, algo: sha256 }
+    - { url: "https://github.com/denoland/deno/releases/download/v{version}/deno-aarch64-unknown-linux-gnu.zip", field: sha256_arm, algo: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/denoland/deno/releases"
+    notes: "https://github.com/denoland/deno/releases/tag/v{version}"
+
 # ============================================================================
 # Bespoke github-tags variants (custom prefix / tag normalization / non-melange
 # target files). All share the github-tags fetcher.

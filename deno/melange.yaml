@@ -1,0 +1,67 @@
+# Melange build for minimal Deno.
+# Installs Deno's official upstream release binary directly, rather than the
+# Wolfi `deno` package — the free Wolfi package lags behind upstream (stuck at
+# 2.8.2-r0 while 2.8.3 fixes bundled rustls-webpki / hickory CVEs; the fixed
+# Wolfi revision is enterprise-gated). Pulling the official binary lets us track
+# the latest upstream release and pick up its CVE fixes immediately.
+# License: MIT (Deno authors).
+
+package:
+  name: deno-minimal
+  version: 2.8.3
+  epoch: 0
+  description: "Minimal Deno from the official upstream release binary"
+  copyright:
+    - license: MIT
+
+vars:
+  # SHA256 of the official deno-<arch>-unknown-linux-gnu.zip release assets,
+  # updated by update-versions.yml. From:
+  #   https://github.com/denoland/deno/releases/download/v<ver>/deno-<arch>-unknown-linux-gnu.zip.sha256sum
+  sha256_x86: 30455b845ffa6082209c3590269c910ad3b7efdf28c9879afd4006c47ae54197
+  sha256_arm: d4589cc1ffcbf1995c92a0127d932aaf832ac70cfdcc6d5b7bf38043cf303575
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - unzip
+      # deno is a glibc-dynamic binary; needed to run --version at build verify
+      - glibc
+      - libgcc
+
+pipeline:
+  # Download and verify the official upstream binary for the build arch.
+  - runs: |
+      BUILD_ARCH=$(uname -m)
+      case "$BUILD_ARCH" in
+        x86_64)  ARCH_NAME="x86_64";  CHECKSUM="${{vars.sha256_x86}}" ;;
+        aarch64) ARCH_NAME="aarch64"; CHECKSUM="${{vars.sha256_arm}}" ;;
+        *) echo "Unsupported arch: $BUILD_ARCH"; exit 1 ;;
+      esac
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/denoland/deno/releases/download/v${{package.version}}/deno-${ARCH_NAME}-unknown-linux-gnu.zip" \
+        -o /tmp/deno.zip
+      echo "${CHECKSUM}  /tmp/deno.zip" | sha256sum -c -
+
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      unzip -o /tmp/deno.zip -d "${{targets.destdir}}/usr/bin/"
+      chmod 0755 "${{targets.destdir}}/usr/bin/deno"
+      rm -f /tmp/deno.zip
+
+  # Verify the installed binary runs and reports the expected version.
+  - runs: |
+      "${{targets.destdir}}/usr/bin/deno" --version
+
+update:
+  enabled: true
+  github:
+    identifier: denoland/deno
+    use-tag: true
+    strip-prefix: v
