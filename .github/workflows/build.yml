@@ -81,7 +81,8 @@ jobs:
             {"name":"opentofu","variants":["prod","dev"]},
             {"name":"trivy","variants":["prod","dev"]},
             {"name":"thanos","variants":["prod","dev"]},
-            {"name":"deno","variants":["prod","dev"]}
+            {"name":"deno","variants":["prod","dev"]},
+            {"name":"opensearch","variants":["prod","dev"]}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},
@@ -93,8 +94,7 @@ jobs:
             {"name":"bun","grep":"bun","variants":["prod","dev"]},
             {"name":"sqlite","grep":"sqlite","variants":["prod","dev"]},
             {"name":"dotnet","grep":"dotnet-[0-9].*-runtime","variants":["prod","dev"]},
-            {"name":"java","grep":"openjdk-[0-9]+","variants":["prod","dev"]},
-            {"name":"opensearch","grep":"opensearch-3","variants":["prod","dev"]}
+            {"name":"java","grep":"openjdk-[0-9]+","variants":["prod","dev"]}
           ]'
 
           # Determine if full rebuild is needed
