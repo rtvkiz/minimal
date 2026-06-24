@@ -49,6 +49,18 @@ pipeline:
   # behind this experiment — without it the build fails with "build constraints
   # exclude all Go files in .../encoding/json/v2". Matches upstream's
   # goreleaser.yml, which sets GOEXPERIMENT=jsonv2 for every build target.
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/trivy-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && _retry go get github.com/containerd/containerd/v2@v2.3.2 github.com/docker/cli@v29.2.0+incompatible \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
   - runs: |
       cd /home/build/trivy-${{package.version}}
       GOTOOLCHAIN=local CGO_ENABLED=0 GOEXPERIMENT=jsonv2 go build \
