@@ -338,6 +338,15 @@ jobs:
                 echo "  Skipping incompatible ${IMAGE} module bump: $mod_ver"
                 continue
               fi
+              # trivy ships docker/cli v29.5.2, but advisory GO-2026-4610 reports
+              # its fix as v29.2.0 — a *downgrade* (the advisory is the Windows-only
+              # PrivEsc, already past in 29.5.2), and v29.2.0 conflicts with
+              # trivy's buildkit@v0.28.1 which requires docker/cli v29.2.1, so
+              # `go get docker/cli@v29.2.0` fails the whole build. Skip it.
+              if [ "$IMAGE" = "trivy" ] && [[ "$mod_ver" == github.com/docker/cli@* ]]; then
+                echo "  Skipping incompatible trivy module bump: $mod_ver (advisory fix below installed 29.5.2; conflicts with buildkit's required 29.2.1)"
+                continue
+              fi
               # Telegraf ≤1.39 references rclone's fs.LogOutput, which rclone
               # removed in v1.73. Bumping rclone to grype's fix version breaks
               # `go build ./cmd/telegraf` (PR #265). Chainguard's telegraf image
