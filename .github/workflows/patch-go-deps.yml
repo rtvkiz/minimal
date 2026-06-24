@@ -179,7 +179,11 @@ jobs:
             [telegraf]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [mimir]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [opentofu]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
-            [trivy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            # trivy's build line carries GOEXPERIMENT=jsonv2 (it imports the
+            # experimental encoding/json/v2), so the generic
+            # "CGO_ENABLED=0 go build" marker doesn't substring-match and the
+            # block was silently skipped. Match the unique jsonv2 build instead.
+            [trivy]='GOEXPERIMENT=jsonv2 go build'
             [thanos]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
