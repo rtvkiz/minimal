@@ -1,0 +1,76 @@
+# Melange build for minimal OpenSearch.
+# Installs the official upstream OpenSearch "min" distribution (core only, no
+# bundled plugins) rather than Wolfi's `opensearch-3` package. The free Wolfi
+# package is frozen at 3.6.0-r5 while the CVE fixes (opensearch 3.7.0, which
+# also bundles the fixed netty 4.2.15.Final) are enterprise-gated. The official
+# 3.7.0 distribution is public, so we build from it and pick up the fixes.
+# The bundled JDK is dropped in favour of Wolfi's openjdk-21 (Wolfi patches it).
+# License: Apache-2.0 (OpenSearch).
+
+package:
+  name: opensearch-minimal
+  version: 3.7.0
+  epoch: 0
+  description: "Minimal OpenSearch from the official upstream min distribution"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA512 of the official opensearch-min-<ver>-linux-<arch>.tar.gz, from the
+  # upstream .sha512 files. Updated by update-versions.yml.
+  sha512_x86: e4a8a4129a8c4482b5c4fafd5fc5c05044dcc538fbb51700aba4c64c7c5af2c50f87f408043661b945b14575b279ee00a0899e3b9029a987805582f0647ac7cd
+  sha512_arm: 5adb892ef633e068409cf9e295d0c8af02b0b614f9387d2ac797fc1a1f9d36187b89d1d656b5eb750fdd0ef13894f5c96f8758c1962819afb9bc919d9dffbf13
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  # Download and verify the official min distribution for the build arch.
+  - runs: |
+      BUILD_ARCH=$(uname -m)
+      case "$BUILD_ARCH" in
+        x86_64)  OS_ARCH="x64";   CHECKSUM="${{vars.sha512_x86}}" ;;
+        aarch64) OS_ARCH="arm64"; CHECKSUM="${{vars.sha512_arm}}" ;;
+        *) echo "Unsupported arch: $BUILD_ARCH"; exit 1 ;;
+      esac
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://artifacts.opensearch.org/releases/core/opensearch/${{package.version}}/opensearch-min-${{package.version}}-linux-${OS_ARCH}.tar.gz" \
+        -o /home/build/opensearch.tar.gz
+      echo "${CHECKSUM}  /home/build/opensearch.tar.gz" | sha512sum -c -
+
+      mkdir -p "${{targets.destdir}}/usr/share/opensearch"
+      tar xzf /home/build/opensearch.tar.gz \
+        -C "${{targets.destdir}}/usr/share/opensearch" --strip-components=1
+      rm /home/build/opensearch.tar.gz
+
+      # Drop the bundled JDK — we run on Wolfi's openjdk-21 (kept patched by
+      # Wolfi). Saves ~300MB and removes the bundled JDK's CVE surface.
+      rm -rf "${{targets.destdir}}/usr/share/opensearch/jdk"
+
+      # Minimal single-node defaults for container usage. single-node discovery
+      # also skips the production bootstrap checks (max_map_count, etc.).
+      printf '\n# minimal image defaults\nnetwork.host: 0.0.0.0\ndiscovery.type: single-node\n' \
+        >> "${{targets.destdir}}/usr/share/opensearch/config/opensearch.yml"
+
+  # Verify the distribution shape + that the fixed netty shipped.
+  - runs: |
+      test -x "${{targets.destdir}}/usr/share/opensearch/bin/opensearch"
+      echo "Bundled netty version(s):"
+      ls "${{targets.destdir}}/usr/share/opensearch/lib/" | grep -oE 'netty[-a-z]*-[0-9.]+Final' | sort -u | head
+      ls "${{targets.destdir}}/usr/share/opensearch/lib/" | grep -q 'netty.*4\.2\.15' \
+        && echo "✓ netty 4.2.15 present" || echo "WARN: expected netty 4.2.15"
+
+update:
+  enabled: true
+  github:
+    identifier: opensearch-project/OpenSearch
+    use-tag: true

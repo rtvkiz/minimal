@@ -1,19 +1,27 @@
-# Minimal OpenSearch image - using Wolfi's pre-built opensearch-3 package
-# OpenSearch 3.x with OpenJDK 21 JRE
-# CVE patching via daily Wolfi package rebuilds
+# Minimal OpenSearch image - official upstream min distribution via melange.
+# OpenSearch 3.x with Wolfi OpenJDK 21. Built from the official 3.7.0 min
+# distribution (not Wolfi's lagging opensearch-3 package) to pick up CVE fixes
+# (opensearch 3.7.0 also bundles the fixed netty 4.2.15.Final).
 
 contents:
   repositories:
     - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
   packages:
     # Base filesystem
     - wolfi-baselayout
 
-    # OpenSearch 3.x from Wolfi (pulls openjdk-21-jre, bash, busybox, curl)
-    - opensearch-3
+    # OpenSearch core from the official min distribution (our melange package)
+    - opensearch-minimal
+    # Wolfi OpenJDK 21 (we dropped the distro's bundled JDK)
     - openjdk-21-default-jvm
+    # bin/opensearch is a bash script
+    - bash
+    - busybox
+    - curl
 
     # Core runtime libraries
     - glibc
@@ -34,30 +42,31 @@ accounts:
   run-as: 65532
 
 entrypoint:
-  command: /usr/share/opensearch/opensearch-docker-entrypoint.sh
+  command: /usr/share/opensearch/bin/opensearch
 
 environment:
   OPENSEARCH_HOME: /usr/share/opensearch
   OPENSEARCH_PATH_CONF: /usr/share/opensearch/config
-  # Point entrypoint to Wolfi's openjdk-21-jre (no bundled JDK in Wolfi package)
+  # bin/opensearch runs the JVM from Wolfi's openjdk-21 (bundled JDK removed)
   OPENSEARCH_JAVA_HOME: /usr/lib/jvm/java-21-openjdk
-  # Disable security plugin demo config — users configure TLS for production
-  DISABLE_INSTALL_DEMO_CONFIG: "true"
-  # Disable security plugin entirely for simple single-node dev usage
-  # Set to "false" and configure TLS for production clusters
-  DISABLE_SECURITY_PLUGIN: "true"
   OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
-  # Entrypoint converts dotted env vars to -E<key>=<value> OpenSearch flags.
-  # discovery.type=single-node bypasses multi-node bootstrap checks.
-  "discovery.type": "single-node"
+  # network.host + discovery.type=single-node are baked into config/opensearch.yml
+  # by the melange build (the min distro ships no docker entrypoint to translate
+  # dotted env vars). The min distribution has no security plugin, so it runs
+  # open by default — configure TLS in your own config for production.
   LANG: C.UTF-8
 
 paths:
-  - path: /usr/share/opensearch/config
+  # Own the whole OpenSearch home as the runtime user (matches the official
+  # OpenSearch image). The min distro's config/ ships subdirs like
+  # jvm.options.d that nonroot must read, plus config/ + data/ + logs/ must be
+  # writable (keystore, indices, logs). recursive chowns the package contents.
+  - path: /usr/share/opensearch
     type: directory
     uid: 65532
     gid: 65532
-    permissions: 0o750
+    permissions: 0o755
+    recursive: true
   - path: /usr/share/opensearch/data
     type: directory
     uid: 65532

@@ -58,7 +58,7 @@ FLUENT_BIT_VERSION ?= $(call melange_version,fluent-bit/melange.yaml)
 
 # --- Search/AI ---
 QDRANT_VERSION ?= $(call melange_version,qdrant/melange.yaml)
-OPENSEARCH_VERSION ?= 3.7.0
+OPENSEARCH_VERSION ?= $(call melange_version,opensearch/melange.yaml)
 
 # --- Registries ---
 # NB: REGISTRY (above) is the OCI registry hostname; DISTRIBUTION_VERSION is the
@@ -127,7 +127,7 @@ test-$(1)-dev:
 endef
 
 .PHONY: all build scan clean help
-.PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange memcached-dev caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite sqlite-dev dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange keygen opensearch opensearch-dev mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
+.PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange memcached-dev caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite sqlite-dev dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange keygen opensearch opensearch-melange opensearch-dev mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange alertmanager alertmanager-melange mariadb mariadb-melange
 .PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno deno-melange
@@ -1033,19 +1033,28 @@ java:
 #------------------------------------------------------------------------------
 # OPENSEARCH IMAGE (Wolfi pre-built package)
 #------------------------------------------------------------------------------
-opensearch:
+opensearch-melange: keygen
+	@echo "Building OpenSearch $(OPENSEARCH_VERSION) (official min distribution) via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build opensearch/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ OpenSearch package built (official min distribution)"
+
+opensearch: opensearch-melange
 	@echo "Assembling minimal-opensearch image with apko..."
 	apko build opensearch/apko/opensearch.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION) \
 		opensearch.tar \
-		--arch x86_64
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
 	docker load < opensearch.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-opensearch:latest
 	@rm -f opensearch.tar sbom-*.spdx.json
-	@echo "✓ minimal-opensearch built (Wolfi package)"
+	@echo "✓ minimal-opensearch built (official min distribution)"
 
 #------------------------------------------------------------------------------
 # PHP IMAGE (melange source build + apko)
