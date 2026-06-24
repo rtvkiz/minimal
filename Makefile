@@ -130,7 +130,7 @@ endef
 .PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange memcached-dev caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite sqlite-dev dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange keygen opensearch opensearch-dev mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange alertmanager alertmanager-melange mariadb mariadb-melange
-.PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno
+.PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno deno-melange
 .PHONY: cuda-python cuda-python-melange
 .PHONY: coredns coredns-melange openbao openbao-melange loki loki-melange fluent-bit fluent-bit-melange keycloak keycloak-melange
 .PHONY: gitea gitea-melange
@@ -892,21 +892,32 @@ qdrant: qdrant-melange
 	@echo "✓ minimal-qdrant built (Rust source build)"
 
 #------------------------------------------------------------------------------
-# DENO IMAGE (Wolfi pre-built package, shell-less)
+# DENO IMAGE (melange: official upstream binary, shell-less)
 #------------------------------------------------------------------------------
-deno:
+DENO_VERSION ?= $(call melange_version,deno/melange.yaml)
+
+deno-melange: keygen
+	@echo "Building Deno $(DENO_VERSION) (official upstream binary) via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build deno/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Deno package built (official binary)"
+
+deno: deno-melange
 	@echo "Assembling minimal-deno image with apko..."
 	apko build deno/apko/deno.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-deno:$(VERSION) \
 		deno.tar \
-		--arch x86_64
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
 	docker load < deno.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-deno:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-deno:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-deno:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-deno:latest
 	@rm -f deno.tar sbom-*.spdx.json
-	@echo "✓ minimal-deno built (Wolfi package, shell-less)"
+	@echo "✓ minimal-deno built (official binary, shell-less)"
 
 #------------------------------------------------------------------------------
 # CUDA PYTHON IMAGE (melange NVIDIA redist tarballs + Wolfi Python, x86_64 only)
