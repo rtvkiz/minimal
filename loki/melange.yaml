@@ -4,14 +4,14 @@
 
 package:
   name: loki-minimal
-  version: 3.7.2
+  version: 3.7.3
   epoch: 0
   description: "Minimal Loki log aggregation server built from source"
   copyright:
     - license: AGPL-3.0
 
 vars:
-  sha256: f91b7737cc0ca352dfb99e9307bc2f6a67135d6827922374ab4a31676d280790
+  sha256: 1f74768fc476978796b49455fd962587a6b0e3b75212215ed8449f792aa5c776
 
 environment:
   contents:
