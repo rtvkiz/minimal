@@ -2,8 +2,18 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://github.com/rtvkiz/minimal/vex/trivy",
   "author": "rtvkiz",
-  "timestamp": "2026-06-22T00:00:00Z",
-  "version": 1,
+  "timestamp": "2026-06-25T00:06:08Z",
+  "version": 2,
   "tooling": "tools/vex/validate.sh",
-  "statements": []
+  "statements": [
+    {
+      "vulnerability": { "name": "GO-2026-4610" },
+      "products": [
+        { "@id": "pkg:oci/minimal-trivy?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-4610 is a Windows-only uncontrolled-search-path local privilege escalation in docker/cli plugins; this is a Linux image so the code path does not exist. It is also already fixed: the advisory's fix is v29.2.0+incompatible and trivy ships docker/cli v29.5.2+incompatible (grype mis-ranks the +incompatible pseudo-version and flags it anyway)."
+    }
+  ]
 }
