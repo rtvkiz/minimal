@@ -205,6 +205,17 @@ tr.suppressed td.vex-cell { opacity: 1; text-decoration: none; }
   color: #ffffff;
   font-weight: 500;
 }
+.vex-drift {
+  display: inline-block;
+  font-size: 11px;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--high);
+  color: #ffffff;
+  font-weight: 600;
+  cursor: help;
+}
 .vex-section {
   margin: 24px 0;
   padding: 16px;
@@ -316,6 +327,7 @@ for f in "$REPORTS_DIR"/grype-*.json; do
   META="$REPORTS_DIR/meta-$NAME.json"
   SUPPRESSED_JSON='[]'
   VEX_STMT_COUNT=0
+  VEX_DRIFT_N=0
   if [ -f "$META" ]; then
     SIZE_BYTES=$(jq -r '.size_bytes // 0' "$META")
     BUILT_AT=$(jq -r '.built_at // ""' "$META")
@@ -326,6 +338,9 @@ for f in "$REPORTS_DIR"/grype-*.json; do
     EL=$(jq -r '.effective.low      // 0' "$META")
     SUPPRESSED_JSON=$(jq -c '.vex.suppressed // []' "$META")
     VEX_STMT_COUNT=$(jq -r '.vex.statements // 0' "$META")
+    # VEX drift: count of suppressions that have gone stale or become fixable.
+    # Surfaced so the published effective count can't quietly rest on rotten VEX.
+    VEX_DRIFT_N=$(jq -r '((.vex.drift.stale // []) | length) + ((.vex.drift.now_fixable // []) | length)' "$META")
   else
     SIZE_BYTES=0
     BUILT_AT=""
@@ -365,10 +380,16 @@ for f in "$REPORTS_DIR"/grype-*.json; do
 
   ETCLASS=$([ "$ET" -gt 0 ] && echo "" || echo "zero")
 
+  # VEX drift marker — flags when this image's suppressions have gone stale or
+  # become fixable, so a viewer never trusts an effective count backed by rotten
+  # VEX without seeing the warning.
+  NAME_DISPLAY="$NAME"
+  [ "$VEX_DRIFT_N" -gt 0 ] && NAME_DISPLAY="$NAME <span class=\"vex-drift\" title=\"${VEX_DRIFT_N} VEX suppression(s) stale or now-fixable — needs review\">&#9888; VEX</span>"
+
   # Index row
   printf '<tr data-name="%s" data-crit="%d" data-high="%d" data-med="%d" data-low="%d" data-total="%d" data-eff="%d" data-vex="%d" data-fixable="%d" data-size="%d" data-age="%d"><td><a href="%s.html">%s</a></td><td class="num %s">%d</td><td class="num %s">%d</td><td class="num %s">%d</td><td class="num %s">%d</td><td class="num">%d</td><td class="num %s">%d</td><td class="num">%d</td><td>%s</td><td class="num">%d</td><td class="num">%s</td><td>%s</td></tr>\n' \
     "$NAME" "$C" "$H" "$M" "$L" "$T" "$ET" "$VEX_STMT_COUNT" "$FIXABLE" "$SIZE_BYTES" "$AGE_DAYS" \
-    "$NAME" "$NAME" \
+    "$NAME" "$NAME_DISPLAY" \
     "$CCLASS" "$C" "$HCLASS" "$H" "$MCLASS" "$M" "$LCLASS" "$L" "$T" \
     "$ETCLASS" "$ET" "$VEX_STMT_COUNT" "$BAR" "$FIXABLE" "$SIZE_DISPLAY" "$AGE_DISPLAY" >> "$ROWS_FILE"
 

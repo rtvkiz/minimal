@@ -539,6 +539,22 @@ jobs:
               | .vulnerability.name] | unique' "$VEX_FILE")
           fi
 
+          # Reconcile VEX against this fresh scan so suppressions can't silently
+          # rot into false information. drift.stale = a suppressed CVE that's no
+          # longer present; drift.now_fixable = a suppressed CVE that now has a
+          # newer upstream fix (should be patched, not hidden). Surfaced in the
+          # sidecar -> dashboard and warned in the job summary; non-blocking.
+          VEX_DRIFT='{"stale":[],"now_fixable":[]}'
+          if [ -n "$VEX_FILE" ] && [ -f "$GRYPE_REPORT" ]; then
+            VEX_DRIFT=$(bash tools/vex/reconcile.sh --json "$GRYPE_REPORT" "$VEX_FILE" || true)
+            [ -z "$VEX_DRIFT" ] && VEX_DRIFT='{"stale":[],"now_fixable":[]}'
+            NSTALE=$(jq '.stale | length' <<<"$VEX_DRIFT")
+            NFIX=$(jq '.now_fixable | length' <<<"$VEX_DRIFT")
+            if [ "$NSTALE" -gt 0 ] || [ "$NFIX" -gt 0 ]; then
+              echo "::warning title=VEX drift::${{ matrix.name }}: $NSTALE stale, $NFIX now-fixable VEX suppression(s) — see vex/${{ matrix.name }}.openvex.json"
+            fi
+          fi
+
           # Severity counts — raw straight from grype, effective drops any
           # match whose .vulnerability.id is in the suppressed set.
           counts() {
@@ -576,6 +592,7 @@ jobs:
             --argjson effective "$EFF_COUNTS" \
             --argjson suppressed "$SUPPRESSED_JSON" \
             --argjson statements "$STMT_COUNT" \
+            --argjson drift "$VEX_DRIFT" \
             '{
               name: $name,
               size_bytes: $size,
@@ -584,7 +601,7 @@ jobs:
               image_ref: $image_ref,
               raw: $raw,
               effective: $effective,
-              vex: { statements: $statements, suppressed: $suppressed }
+              vex: { statements: $statements, suppressed: $suppressed, drift: $drift }
             }' \
             > meta-${{ matrix.name }}.json
           cat meta-${{ matrix.name }}.json
@@ -993,6 +1010,22 @@ jobs:
               | .vulnerability.name] | unique' "$VEX_FILE")
           fi
 
+          # Reconcile VEX against this fresh scan so suppressions can't silently
+          # rot into false information. drift.stale = a suppressed CVE that's no
+          # longer present; drift.now_fixable = a suppressed CVE that now has a
+          # newer upstream fix (should be patched, not hidden). Surfaced in the
+          # sidecar -> dashboard and warned in the job summary; non-blocking.
+          VEX_DRIFT='{"stale":[],"now_fixable":[]}'
+          if [ -n "$VEX_FILE" ] && [ -f "$GRYPE_REPORT" ]; then
+            VEX_DRIFT=$(bash tools/vex/reconcile.sh --json "$GRYPE_REPORT" "$VEX_FILE" || true)
+            [ -z "$VEX_DRIFT" ] && VEX_DRIFT='{"stale":[],"now_fixable":[]}'
+            NSTALE=$(jq '.stale | length' <<<"$VEX_DRIFT")
+            NFIX=$(jq '.now_fixable | length' <<<"$VEX_DRIFT")
+            if [ "$NSTALE" -gt 0 ] || [ "$NFIX" -gt 0 ]; then
+              echo "::warning title=VEX drift::${{ matrix.name }}: $NSTALE stale, $NFIX now-fixable VEX suppression(s) — see vex/${{ matrix.name }}.openvex.json"
+            fi
+          fi
+
           # Severity counts — raw straight from grype, effective drops any
           # match whose .vulnerability.id is in the suppressed set.
           counts() {
@@ -1030,6 +1063,7 @@ jobs:
             --argjson effective "$EFF_COUNTS" \
             --argjson suppressed "$SUPPRESSED_JSON" \
             --argjson statements "$STMT_COUNT" \
+            --argjson drift "$VEX_DRIFT" \
             '{
               name: $name,
               size_bytes: $size,
@@ -1038,7 +1072,7 @@ jobs:
               image_ref: $image_ref,
               raw: $raw,
               effective: $effective,
-              vex: { statements: $statements, suppressed: $suppressed }
+              vex: { statements: $statements, suppressed: $suppressed, drift: $drift }
             }' \
             > meta-${{ matrix.name }}.json
           cat meta-${{ matrix.name }}.json
