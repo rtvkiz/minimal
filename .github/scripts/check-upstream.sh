@@ -82,9 +82,32 @@ fetch_github_tags() {
   if [ -n "$from" ]; then
     tags=$(printf '%s\n' "$tags" | tr "$from" "$to")
   fi
-  tags=$(printf '%s\n' "$tags" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+  tags=$(printf '%s\n' "$tags" | sort -t. -k1,1n -k2,2n -k3,3n)
   [ -n "$tags" ] || { echo "::error::no tags matching /$pattern/ in $repo"; return 1; }
-  printf '%s\n' "$tags"
+
+  # Tags can be created before the release assets are published (keycloak cuts
+  # the tag, then publishes `releases/download/<v>/...` minutes-to-hours later).
+  # When the tarball is a release-download asset, picking the newest tag blindly
+  # makes apply-update.sh 404 on a not-yet-published asset. Probe from newest
+  # down and return the newest tag whose tarball actually exists; tags whose
+  # release is still pending are skipped (a later run picks them up).
+  local tb; tb=$(j '.tarball.url // .tarballs[0].url // empty')
+  if [[ "$tb" == *"/releases/download/"* ]]; then
+    local v url
+    while IFS= read -r v; do
+      [ -n "$v" ] || continue
+      url="${tb//\{version\}/$v}"
+      url="${url//\{major\}/${v%%.*}}"
+      url="${url//\{minor\}/${v%.*}}"
+      if curl -fsSLI -o /dev/null --connect-timeout 20 --retry 2 --retry-all-errors "$url" >/dev/null 2>&1; then
+        printf '%s\n' "$v"; return 0
+      fi
+      echo "::warning::$repo tag $v has no published release asset yet — skipping until it is" >&2
+    done < <(printf '%s\n' "$tags" | tac)
+    echo "::error::no released tag matching /$pattern/ in $repo"; return 1
+  fi
+
+  printf '%s\n' "$tags" | tail -1
 }
 
 # Single URL returning the bare version as text (e.g. jenkins latestCore.txt).
