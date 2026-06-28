@@ -1306,7 +1306,7 @@ jobs:
     permissions:
       pages: write
       id-token: write
-      actions: read
+      actions: write   # delete stale github-pages artifacts from earlier attempts
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -1335,6 +1335,22 @@ jobs:
           export RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           export VEX_DIR="src/vex"
           bash src/tools/dashboard/build.sh reports site
+
+      # On a partial re-run (`gh run rerun --failed`), this job runs again in a
+      # new attempt, but the "github-pages" artifact uploaded by the earlier
+      # attempt is retained for the run. deploy-pages then aborts with
+      # "Multiple artifacts named github-pages were unexpectedly found". Delete
+      # any pre-existing ones so the upload below is the only one that remains.
+      - name: Remove stale Pages artifacts from earlier attempts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ids=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+                  --paginate --jq '.artifacts[] | select(.name=="github-pages") | .id')
+          for id in $ids; do
+            echo "Deleting stale github-pages artifact $id"
+            gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" || true
+          done
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
