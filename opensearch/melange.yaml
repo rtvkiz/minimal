@@ -61,6 +61,32 @@ pipeline:
       printf '\n# minimal image defaults\nnetwork.host: 0.0.0.0\ndiscovery.type: single-node\n' \
         >> "${{targets.destdir}}/usr/share/opensearch/config/opensearch.yml"
 
+      # CVE fix: replace the bundled jackson-databind 2.21.3 (flagged by grype)
+      # with the patched 2.21.4. jackson 2.x patch releases are binary-compatible
+      # (the bundled jackson-core 2.21.3 stays within the supported 2.21.x range)
+      # and OpenSearch modules load every jar in their directory, so swapping the
+      # jar is safe. Pinned by sha256. Fails safe: matches only the known-
+      # vulnerable 2.21.3, so a future upstream bump that already ships >=2.21.4
+      # is left untouched (never downgrades), and a new vulnerable version would
+      # be caught by the build's grype scan rather than silently masked.
+      JDB_VER=2.21.4
+      JDB_SHA=3888e9e69ab66fbacaacc9aea0e9ffbf15368288e4aca468b024dba11c09fbf9
+      old=$(find "${{targets.destdir}}/usr/share/opensearch" -name 'jackson-databind-2.21.3.jar')
+      if [ -n "$old" ]; then
+        curl -fsSL --retry 5 --retry-all-errors \
+          "https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/${JDB_VER}/jackson-databind-${JDB_VER}.jar" \
+          -o /home/build/jdb.jar
+        echo "${JDB_SHA}  /home/build/jdb.jar" | sha256sum -c -
+        for o in $old; do
+          cp /home/build/jdb.jar "$(dirname "$o")/jackson-databind-${JDB_VER}.jar"
+          rm -f "$o"
+          echo "Replaced $o -> jackson-databind-${JDB_VER}.jar"
+        done
+        rm -f /home/build/jdb.jar
+      else
+        echo "No jackson-databind-2.21.3.jar found (upstream may already ship >=${JDB_VER})"
+      fi
+
       # Normalize permissions: the distro ships config/ files as 0660 and
       # config/jvm.options.d as 0750 — both unreadable by "other". melange's
       # post-build xattr step (rootless in CI, unlike a local root build) then
@@ -76,6 +102,12 @@ pipeline:
       ls "${{targets.destdir}}/usr/share/opensearch/lib/" | grep -oE 'netty[-a-z]*-[0-9.]+Final' | sort -u | head
       ls "${{targets.destdir}}/usr/share/opensearch/lib/" | grep -q 'netty.*4\.2\.15' \
         && echo "✓ netty 4.2.15 present" || echo "WARN: expected netty 4.2.15"
+      echo "jackson-databind jar(s):"
+      find "${{targets.destdir}}/usr/share/opensearch" -name 'jackson-databind-*.jar' -exec basename {} \;
+      if find "${{targets.destdir}}/usr/share/opensearch" -name 'jackson-databind-2.21.3.jar' | grep -q .; then
+        echo "ERROR: vulnerable jackson-databind 2.21.3 still present"; exit 1
+      fi
+      echo "✓ jackson-databind 2.21.3 removed"
 
 update:
   enabled: true
