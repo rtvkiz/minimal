@@ -2,27 +2,8 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://github.com/rtvkiz/minimal/vex/registry",
   "author": "rtvkiz",
-  "timestamp": "2026-06-12T23:33:10Z",
-  "version": 2,
+  "timestamp": "2026-06-28T00:00:00Z",
+  "version": 3,
   "tooling": "tools/vex/validate.sh",
-  "statements": [
-    {
-      "vulnerability": { "name": "GO-2022-0646" },
-      "products": [
-        { "@id": "pkg:oci/minimal-registry?repository_url=ghcr.io/rtvkiz" }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_present",
-      "impact_statement": "The advisory affects only aws-sdk-go v1's S3 encryption client (service/s3/s3crypto). distribution/distribution contains zero references to s3crypto, and Go links only imported packages into the binary, so the vulnerable code is not present. No fixed aws-sdk-go v1 release exists or is planned (fixed only in aws-sdk-go-v2)."
-    },
-    {
-      "vulnerability": { "name": "GO-2022-0635" },
-      "products": [
-        { "@id": "pkg:oci/minimal-registry?repository_url=ghcr.io/rtvkiz" }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_present",
-      "impact_statement": "The advisory affects only aws-sdk-go v1's S3 encryption client (service/s3/s3crypto). distribution/distribution contains zero references to s3crypto, and Go links only imported packages into the binary, so the vulnerable code is not present. No fixed aws-sdk-go v1 release exists or is planned (fixed only in aws-sdk-go-v2)."
-    }
-  ]
+  "statements": []
 }

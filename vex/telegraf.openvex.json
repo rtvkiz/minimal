@@ -2,19 +2,10 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://github.com/rtvkiz/minimal/vex/telegraf",
   "author": "rtvkiz",
-  "timestamp": "2026-06-25T00:06:08Z",
-  "version": 2,
+  "timestamp": "2026-06-27T00:00:00Z",
+  "version": 3,
   "tooling": "tools/vex/validate.sh",
   "statements": [
-    {
-      "vulnerability": { "name": "GO-2026-4964" },
-      "products": [
-        { "@id": "pkg:oci/minimal-telegraf?repository_url=ghcr.io/rtvkiz" }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "All four rclone CVEs are unauthenticated RCE/auth-bypass in rclone's remote-control HTTP server (`rclone rcd --rc-serve`, the rc/options/operations/fsinfo endpoints). Telegraf links rclone only as a library — the fs backend used by the remotefile output plugin — and never starts the rc daemon or exposes its HTTP API, so the vulnerable code path is unreachable. Bumping rclone to the fixed 1.73+ is not possible: telegraf references rclone's removed fs.LogOutput, so we pin 1.69.3 (matches Chainguard's telegraf)."
-    },
     {
       "vulnerability": { "name": "GHSA-25qr-6mpr-f7qx" },
       "products": [
