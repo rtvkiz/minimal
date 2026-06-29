@@ -25,6 +25,8 @@ environment:
       - busybox
       - ca-certificates-bundle
       - curl
+      # zip: repack the war after swapping CVE-fixed detached plugins
+      - zip
       # Full JDK needed for jlink (build-time only)
       - openjdk-21-default-jdk
       # jmods package required for jlink to create custom JRE
@@ -60,6 +62,27 @@ pipeline:
 
       # Verify against pinned checksum (stored in repo, not fetched dynamically)
       echo "${{vars.sha256}}  $war" | sha256sum -c -
+
+      # CVE fix (Critical): the bundled mina-sshd-api-core/common 2.16.0 plugins
+      # carry mina-core 2.2.4 (4 advisories incl. a Critical), fixed in mina-core
+      # 2.2.7. Replace both detached plugins in the war with 2.17.1, which bundles
+      # mina-core 2.2.7. core 2.17.1 requires common 2.17.1 (Plugin-Dependencies),
+      # so both move together. sha256-pinned. Jenkins LTS 2.555.3 still ships the
+      # vulnerable 2.16.0; drop this block once a newer LTS bundles >= 2.17.1.
+      PDIR=/home/build/jkplugins/WEB-INF/detached-plugins
+      mkdir -p "$PDIR"
+      PV=2.17.1-187.v0341274c2905
+      _fetch_plugin() {  # $1=plugin $2=sha256
+        curl -fsSL --retry 5 --retry-all-errors \
+          "https://updates.jenkins.io/download/plugins/$1/${PV}/$1.hpi" -o "$PDIR/$1.hpi"
+        echo "$2  $PDIR/$1.hpi" | sha256sum -c -
+      }
+      _fetch_plugin mina-sshd-api-core   9479d70a69201a0d75f816cfce4d55553402d56e0d480dbeb15f4f7333ec01b4
+      _fetch_plugin mina-sshd-api-common 4bf8d267ad9435bf249ebebb6b1b5efc90dd5a1ffd9398931a1ea3c026ec13e8
+      ( cd /home/build/jkplugins && zip "$war" \
+          WEB-INF/detached-plugins/mina-sshd-api-core.hpi \
+          WEB-INF/detached-plugins/mina-sshd-api-common.hpi )
+      echo "Swapped mina-sshd-api-core/common -> ${PV} (mina-core 2.2.7)"
 
   # Create minimal JRE with jlink (only modules Jenkins needs)
   - runs: |
@@ -105,6 +128,15 @@ pipeline:
       du -sh "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
       echo "Checking Jenkins WAR..."
       ls -lh "${{targets.destdir}}/usr/share/jenkins/jenkins.war"
+      echo "Checking mina-core CVE fix..."
+      unzip -p "${{targets.destdir}}/usr/share/jenkins/jenkins.war" \
+        'WEB-INF/detached-plugins/mina-sshd-api-core.hpi' > /tmp/_mina.hpi
+      if ! unzip -l /tmp/_mina.hpi | grep -q 'mina-core-2.2.7.jar'; then
+        echo "ERROR: mina-core 2.2.7 not found in war (Critical fix missing)"; exit 1
+      fi
+      ! unzip -l /tmp/_mina.hpi | grep -q 'mina-core-2.2.4.jar' || { echo "ERROR: vulnerable mina-core 2.2.4 still present"; exit 1; }
+      rm -f /tmp/_mina.hpi
+      echo "✓ mina-core 2.2.7 (Critical fixed)"
 
 # Automated version updates via wolfictl
 # Jenkins LTS uses release-monitor.org (releases don't follow standard GitHub tag pattern)
