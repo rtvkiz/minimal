@@ -24,6 +24,14 @@ out="${GITHUB_OUTPUT:-/dev/stdout}"
 j() { jq -r "$1" <<<"$row"; }
 
 name=$(j '.name')
+
+# Bundled-jar rows (jars baked into a prebuilt distro, not built by a package
+# manager) are handled by a dedicated script — the swap mechanics don't fit the
+# generic update-template model. It honours the same has_patches/summary output
+# contract, so the workflow's PR step is unchanged.
+if [ "$(jq -r '.mode // "deps"' <<<"$row")" = "bundled-jar" ]; then
+  exec "$(dirname "$0")/patch-bundled-jars.sh" "$row"
+fi
 artifact_type=$(j '.["artifact-type"]')
 update_template=$(j '.["update-template"]')
 verify_url_template=$(j '.["verify-url"]')

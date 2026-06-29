@@ -37,32 +37,6 @@ pipeline:
       mkdir -p "${{targets.destdir}}/opt/keycloak"
       cp -r /home/build/keycloak-${{package.version}}/* "${{targets.destdir}}/opt/keycloak/"
 
-      # CVE fix: the bundled jackson-databind 2.21.2 (Quarkus lib) is flagged by
-      # 14 advisories fixed in 2.21.4. Quarkus references jars by exact filename
-      # (quarkus-application.dat / quarkus-run.jar Class-Path), so we overwrite
-      # the jar CONTENTS in place and KEEP the 2.21.2 filename — the classpath
-      # stays valid and grype reads the real version (2.21.4) from the jar's
-      # internal pom.properties. jackson 2.x patch releases are binary-compatible
-      # (bundled jackson-core 2.21.2 stays within the supported 2.21.x range).
-      # Pinned by sha256; tolerant if a future upstream bump already ships >=2.21.4.
-      JDB_VER=2.21.4
-      JDB_SHA=3888e9e69ab66fbacaacc9aea0e9ffbf15368288e4aca468b024dba11c09fbf9
-      jar=$(find "${{targets.destdir}}/opt/keycloak" -name '*jackson-databind-2.21.2.jar')
-      if [ -n "$jar" ]; then
-        curl -fsSL --retry 5 --retry-all-errors \
-          "https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/${JDB_VER}/jackson-databind-${JDB_VER}.jar" \
-          -o /home/build/jdb.jar
-        echo "${JDB_SHA}  /home/build/jdb.jar" | sha256sum -c -
-        for j in $jar; do
-          cp /home/build/jdb.jar "$j"
-          echo "${JDB_SHA}  $j" | sha256sum -c -
-          echo "Patched $j -> jackson-databind ${JDB_VER} (filename kept for Quarkus classpath)"
-        done
-        rm -f /home/build/jdb.jar
-      else
-        echo "No jackson-databind-2.21.2.jar found (upstream may already ship >=${JDB_VER})"
-      fi
-
       # Ensure scripts are executable
       chmod +x "${{targets.destdir}}/opt/keycloak/bin/kc.sh"
       rm -f "${{targets.destdir}}/opt/keycloak/lib/quarkus/transformed-bytecode.jar"
@@ -74,6 +48,32 @@ pipeline:
       ls -lh "${{targets.destdir}}/opt/keycloak/bin/kc.sh"
       ls "${{targets.destdir}}/opt/keycloak/lib/" | head -5
 
+  # patch-bundled-jars: auto-generated — do not edit manually
+  - runs: |
+      # Bundled-jar CVE fixes, sha256-pinned. Regenerated from grype by
+      # .github/scripts/patch-bundled-jars.sh — do not edit by hand.
+      _swap() {  # $1=artifact $2=group-path $3=oldver $4=newver $5=sha256 $6=mode
+        # rename: jar filename carries the version, match it exactly. keep-filename:
+        # filename stays the upstream version while contents change, so match any
+        # version of the artifact and overwrite in place.
+        if [ "$6" = "keep-filename" ]; then
+          found=$(find "${{targets.destdir}}/opt/keycloak" -name "*$1-*.jar")
+        else
+          found=$(find "${{targets.destdir}}/opt/keycloak" -name "*$1-$3.jar")
+        fi
+        [ -n "$found" ] || { echo "  $1 $3 not present (upstream may already ship >=$4)"; return 0; }
+        curl -fsSL --retry 5 --retry-all-errors \
+          "https://repo1.maven.org/maven2/$2/$1/$4/$1-$4.jar" -o /tmp/_bj.jar
+        echo "$5  /tmp/_bj.jar" | sha256sum -c -
+        for f in $found; do
+          if [ "$6" = "keep-filename" ]; then cp /tmp/_bj.jar "$f";
+          else cp /tmp/_bj.jar "$(dirname "$f")/$1-$4.jar"; rm -f "$f"; fi
+          echo "  patched $1 $3 -> $4 ($6)"
+        done
+        rm -f /tmp/_bj.jar
+      }
+      _swap jackson-databind com/fasterxml/jackson/core 2.21.2 2.21.4 3888e9e69ab66fbacaacc9aea0e9ffbf15368288e4aca468b024dba11c09fbf9 keep-filename
+  # end-patch-bundled-jars
 update:
   enabled: true
   github:

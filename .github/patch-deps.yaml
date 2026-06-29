@@ -88,3 +88,39 @@
     protobuf-java:       com.google.protobuf:protobuf-java
   images:
     - { name: keycloak, src-root: "/home/build/keycloak-<<PKG_VERSION>>", build-marker: "mvn -B -DskipTests" }
+
+# Bundled-jar rows (mode: bundled-jar) are handled by patch-bundled-jars.sh, not
+# the generic update-template path. They target Java jars baked into a prebuilt
+# upstream distribution (tarball/war), which the maven patcher above can't reach
+# because there is no mvn build to override. The patcher grype-scans the image,
+# finds java-archive CVEs whose fix is a *published* Maven Central artifact, and
+# splices a sha256-pinned swap block into the image's melange.yaml.
+#
+# Per-image fields:
+#   jar-root       directory under the image root to search for jars
+#   strategy       rename        — install <artifact>-<newver>.jar, drop old
+#                                   (directory classpaths, e.g. opensearch)
+#                  keep-filename — overwrite jar contents, keep the old name so
+#                                   exact-filename classpaths still resolve
+#                                   (e.g. keycloak/Quarkus; grype reads the real
+#                                   version from the jar's internal pom)
+#   splice-before  melange line the auto-block is inserted before
+- name: bundled-jars
+  mode: bundled-jar
+  commit-title: "fix(bundled-jars): patch CVEs in vendored Java jars"
+  pr-summary: |
+    Scans prebuilt-distribution images (whose jars are baked into the upstream
+    tarball, so the maven patcher can't reach them) with grype, finds
+    java-archive CVEs whose fix is a published Maven Central artifact, and
+    splices sha256-pinned jar-swap blocks into each image's melange.yaml.
+  coord-map:
+    jackson-databind: com.fasterxml.jackson.core:jackson-databind
+  images:
+    - name: opensearch
+      jar-root: usr/share/opensearch
+      strategy: rename
+      splice-before: "  # Verify the distribution shape"
+    - name: keycloak
+      jar-root: opt/keycloak
+      strategy: keep-filename
+      splice-before: "update:"
