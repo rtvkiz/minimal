@@ -37,6 +37,32 @@ pipeline:
       mkdir -p "${{targets.destdir}}/opt/keycloak"
       cp -r /home/build/keycloak-${{package.version}}/* "${{targets.destdir}}/opt/keycloak/"
 
+      # CVE fix: the bundled jackson-databind 2.21.2 (Quarkus lib) is flagged by
+      # 14 advisories fixed in 2.21.4. Quarkus references jars by exact filename
+      # (quarkus-application.dat / quarkus-run.jar Class-Path), so we overwrite
+      # the jar CONTENTS in place and KEEP the 2.21.2 filename — the classpath
+      # stays valid and grype reads the real version (2.21.4) from the jar's
+      # internal pom.properties. jackson 2.x patch releases are binary-compatible
+      # (bundled jackson-core 2.21.2 stays within the supported 2.21.x range).
+      # Pinned by sha256; tolerant if a future upstream bump already ships >=2.21.4.
+      JDB_VER=2.21.4
+      JDB_SHA=3888e9e69ab66fbacaacc9aea0e9ffbf15368288e4aca468b024dba11c09fbf9
+      jar=$(find "${{targets.destdir}}/opt/keycloak" -name '*jackson-databind-2.21.2.jar')
+      if [ -n "$jar" ]; then
+        curl -fsSL --retry 5 --retry-all-errors \
+          "https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/${JDB_VER}/jackson-databind-${JDB_VER}.jar" \
+          -o /home/build/jdb.jar
+        echo "${JDB_SHA}  /home/build/jdb.jar" | sha256sum -c -
+        for j in $jar; do
+          cp /home/build/jdb.jar "$j"
+          echo "${JDB_SHA}  $j" | sha256sum -c -
+          echo "Patched $j -> jackson-databind ${JDB_VER} (filename kept for Quarkus classpath)"
+        done
+        rm -f /home/build/jdb.jar
+      else
+        echo "No jackson-databind-2.21.2.jar found (upstream may already ship >=${JDB_VER})"
+      fi
+
       # Ensure scripts are executable
       chmod +x "${{targets.destdir}}/opt/keycloak/bin/kc.sh"
       rm -f "${{targets.destdir}}/opt/keycloak/lib/quarkus/transformed-bytecode.jar"

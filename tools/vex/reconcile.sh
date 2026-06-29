@@ -9,11 +9,16 @@
 #                removed). The statement now suppresses nothing; remove it so a
 #                future re-introduction can't be auto-hidden without re-review.
 #
-#   NOW-FIXABLE  the suppressed CVE is still present AND an upstream fix newer
-#                than the installed version now exists. Suppressing a genuinely
-#                fixable CVE is the dishonest case — bump the dep instead.
-#                (Version-compared, so an advisory whose "fix" is <= what we
-#                 ship — e.g. a Windows-only false positive — is NOT flagged.)
+#   NOW-FIXABLE  a `fixed` statement is still present AND an upstream fix newer
+#                than the installed version now exists. A `fixed` statement
+#                asserts the shipped version already contains the fix, so a
+#                higher fix version proves that claim false — bump the dep
+#                instead of suppressing. (Version-compared, so an advisory whose
+#                "fix" is <= what we ship is NOT flagged.) This is intentionally
+#                NOT applied to `not_affected`: a reachability justification (the
+#                vulnerable code is absent or off the execute path) is
+#                independent of version, so a newer upstream release does not
+#                make it dishonest.
 #
 # Usage:  reconcile.sh <grype.json> <vex.openvex.json>
 # Exit:   non-zero if any NOW-FIXABLE drift is found (the integrity gate).
@@ -30,8 +35,8 @@ GRYPE="${1:?grype json required}"
 VEX="${2:?vex file required}"
 IMG=$(basename "$VEX" .openvex.json)
 
-# Suppressing statements: {id} for not_affected | fixed.
-mapfile -t SUP < <(jq -r '.statements[]? | select(.status=="not_affected" or .status=="fixed") | .vulnerability.name' "$VEX" 2>/dev/null || true)
+# Suppressing statements: "{id}<TAB>{status}" for not_affected | fixed.
+mapfile -t SUP < <(jq -r '.statements[]? | select(.status=="not_affected" or .status=="fixed") | "\(.vulnerability.name)\t\(.status)"' "$VEX" 2>/dev/null || true)
 if [ "${#SUP[@]}" -eq 0 ]; then
   [ "$JSON" -eq 1 ] && echo '{"stale":[],"now_fixable":[]}' || echo "ok   $IMG: no suppressing VEX statements"
   exit 0
@@ -43,11 +48,17 @@ SCAN=$(jq -r '.matches[] | "\(.vulnerability.id)\t\(.artifact.version)\t\(.vulne
 STALE_IDS=(); FIXABLE=()
 ver_gt() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" ]; }
 
-for id in "${SUP[@]}"; do
+for entry in "${SUP[@]}"; do
+  id=${entry%%$'\t'*}; status=${entry##*$'\t'}
   line=$(awk -F'\t' -v v="$id" '$1==v{print; exit}' <<<"$SCAN")
   if [ -z "$line" ]; then
     STALE_IDS+=("$id"); continue
   fi
+  # NOW-FIXABLE only applies to `fixed` claims. A not_affected statement is a
+  # reachability assertion independent of version — a newer fix existing does
+  # not make it dishonest, so don't flag it (see telegraf's rclone rc-server
+  # CVEs: fixed upstream, but telegraf never starts the rc daemon).
+  [ "$status" = "fixed" ] || continue
   installed=$(cut -f2 <<<"$line"); fix=$(cut -f3 <<<"$line")
   # strip a leading v and any +incompatible / pseudo suffix for the compare
   ic=${installed#v}; ic=${ic%%+*}; fc=${fix#v}; fc=${fc%%+*}
