@@ -85,7 +85,7 @@ across the catalog.
 
 ## Category-specific additions
 
-The three templates in `./templates/` map our 40 images to one of
+The three templates in `./templates/` map our 57 images to one of
 three categories. Pick the template that matches and customize the
 language/daemon-specific layer.
 

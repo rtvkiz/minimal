@@ -74,6 +74,9 @@ CONSUL_VERSION ?= $(call melange_version,consul/melange.yaml)
 # --- Observability (extra) ---
 TEMPO_VERSION ?= $(call melange_version,tempo/melange.yaml)
 THANOS_VERSION ?= $(call melange_version,thanos/melange.yaml)
+NODE_EXPORTER_VERSION ?= $(call melange_version,node-exporter/melange.yaml)
+BLACKBOX_EXPORTER_VERSION ?= $(call melange_version,blackbox-exporter/melange.yaml)
+PUSHGATEWAY_VERSION ?= $(call melange_version,pushgateway/melange.yaml)
 
 # --- IaC / GitOps ---
 OPENTOFU_VERSION ?= $(call melange_version,opentofu/melange.yaml)
@@ -143,6 +146,9 @@ endef
 .PHONY: opentofu opentofu-melange test-opentofu
 .PHONY: trivy trivy-melange test-trivy
 .PHONY: thanos thanos-melange test-thanos
+.PHONY: node-exporter node-exporter-melange test-node-exporter
+.PHONY: blackbox-exporter blackbox-exporter-melange test-blackbox-exporter
+.PHONY: pushgateway pushgateway-melange test-pushgateway
 .PHONY: mosquitto mosquitto-melange mosquitto-dev test-mosquitto test-mosquitto-dev
 .PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
 .PHONY: test-python test-python-dev test-jenkins test-go test-go-dev test-node-slim test-node-slim-dev test-nginx test-httpd test-redis-slim test-redis-slim-dev test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-postgres-slim-dev test-bun test-bun-dev test-sqlite test-dotnet test-dotnet-dev test-java test-java-dev test-ruby test-ruby-dev test-php test-php-dev test-rails test-rails-dev test-deno test-deno-dev test-mariadb test-mariadb-dev test-valkey test-valkey-dev test-memcached-dev test-sqlite-dev test-opensearch-dev test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
@@ -1477,6 +1483,84 @@ thanos: thanos-melange
 	@echo "✓ minimal-thanos built (source build)"
 
 #------------------------------------------------------------------------------
+# NODE-EXPORTER IMAGE (melange Go source build + apko; Prometheus host metrics)
+#------------------------------------------------------------------------------
+node-exporter-melange: keygen
+	@echo "Building node_exporter $(NODE_EXPORTER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build node-exporter/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ node_exporter package built from source"
+
+node-exporter: node-exporter-melange
+	@echo "Assembling minimal-node-exporter image with apko..."
+	apko build node-exporter/apko/node-exporter.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-node-exporter:$(VERSION) \
+		node-exporter.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < node-exporter.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-node-exporter:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-node-exporter:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-node-exporter:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-node-exporter:latest
+	@rm -f node-exporter.tar sbom-*.spdx.json
+	@echo "✓ minimal-node-exporter built (source build)"
+
+#------------------------------------------------------------------------------
+# BLACKBOX-EXPORTER IMAGE (melange Go source build + apko; Prometheus probing)
+#------------------------------------------------------------------------------
+blackbox-exporter-melange: keygen
+	@echo "Building blackbox_exporter $(BLACKBOX_EXPORTER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build blackbox-exporter/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ blackbox_exporter package built from source"
+
+blackbox-exporter: blackbox-exporter-melange
+	@echo "Assembling minimal-blackbox-exporter image with apko..."
+	apko build blackbox-exporter/apko/blackbox-exporter.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-blackbox-exporter:$(VERSION) \
+		blackbox-exporter.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < blackbox-exporter.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-blackbox-exporter:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-blackbox-exporter:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-blackbox-exporter:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-blackbox-exporter:latest
+	@rm -f blackbox-exporter.tar sbom-*.spdx.json
+	@echo "✓ minimal-blackbox-exporter built (source build)"
+
+#------------------------------------------------------------------------------
+# PUSHGATEWAY IMAGE (melange Go source build + apko; Prometheus push gateway)
+#------------------------------------------------------------------------------
+pushgateway-melange: keygen
+	@echo "Building pushgateway $(PUSHGATEWAY_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build pushgateway/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ pushgateway package built from source"
+
+pushgateway: pushgateway-melange
+	@echo "Assembling minimal-pushgateway image with apko..."
+	apko build pushgateway/apko/pushgateway.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-pushgateway:$(VERSION) \
+		pushgateway.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < pushgateway.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-pushgateway:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-pushgateway:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-pushgateway:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-pushgateway:latest
+	@rm -f pushgateway.tar sbom-*.spdx.json
+	@echo "✓ minimal-pushgateway built (source build)"
+
+#------------------------------------------------------------------------------
 # MOSQUITTO IMAGE (melange C source build + apko; Eclipse MQTT broker)
 #------------------------------------------------------------------------------
 mosquitto-melange: keygen
@@ -2219,6 +2303,24 @@ test-thanos:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-thanos:latest" && \
 		thanos/test.sh
 	@echo "✓ thanos tests passed"
+
+test-node-exporter:
+	@echo "Testing node-exporter image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-node-exporter:latest" && \
+		node-exporter/test.sh
+	@echo "✓ node-exporter tests passed"
+
+test-blackbox-exporter:
+	@echo "Testing blackbox-exporter image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-blackbox-exporter:latest" && \
+		blackbox-exporter/test.sh
+	@echo "✓ blackbox-exporter tests passed"
+
+test-pushgateway:
+	@echo "Testing pushgateway image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-pushgateway:latest" && \
+		pushgateway/test.sh
+	@echo "✓ pushgateway tests passed"
 
 test-mosquitto:
 	@echo "Testing mosquitto image..."

@@ -165,6 +165,33 @@
     releases: "https://github.com/thanos-io/thanos/releases"
     notes: "https://github.com/thanos-io/thanos/releases/tag/v{version}"
 
+- name: node-exporter
+  files: [node-exporter/melange.yaml]
+  source: { type: github-releases-latest, repo: prometheus/node_exporter, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/prometheus/node_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/prometheus/node_exporter/releases"
+    notes: "https://github.com/prometheus/node_exporter/releases/tag/v{version}"
+
+- name: blackbox-exporter
+  files: [blackbox-exporter/melange.yaml]
+  source: { type: github-releases-latest, repo: prometheus/blackbox_exporter, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/prometheus/blackbox_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/prometheus/blackbox_exporter/releases"
+    notes: "https://github.com/prometheus/blackbox_exporter/releases/tag/v{version}"
+
+- name: pushgateway
+  files: [pushgateway/melange.yaml]
+  source: { type: github-releases-latest, repo: prometheus/pushgateway, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/prometheus/pushgateway/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/prometheus/pushgateway/releases"
+    notes: "https://github.com/prometheus/pushgateway/releases/tag/v{version}"
+
 # ============================================================================
 # github-tags — hits /repos/<repo>/tags?per_page=100, filters by regex,
 # strips prefix, semver-sorts, takes the highest match. Use this when the

@@ -1,0 +1,95 @@
+# Melange build configuration for minimal Prometheus blackbox_exporter
+# Pure Go from source. Single `blackbox_exporter` binary for probing endpoints
+# over HTTP(S), DNS, TCP, ICMP and gRPC.
+# License: Apache-2.0 (Prometheus authors).
+
+package:
+  name: blackbox-exporter-minimal
+  version: 0.28.0
+  epoch: 0
+  description: "Minimal Prometheus blackbox_exporter (endpoint probing) built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of blackbox_exporter source tarball - updated by update-versions.yml workflow
+  sha256: 07c7c16a7b3448d2ede630356f1321f80ed8a46ca321ee3ce5e149cf1c7a7d2f
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify blackbox_exporter source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/prometheus/blackbox_exporter/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/blackbox_exporter.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/blackbox_exporter.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf blackbox_exporter.tar.gz
+      rm blackbox_exporter.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/blackbox_exporter-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && _retry go get golang.org/x/crypto@v0.53.0 golang.org/x/net@v0.56.0 golang.org/x/sys@v0.46.0 golang.org/x/text@v0.38.0 golang.org/x/term@v0.44.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.21.0 golang.org/x/tools@v0.47.0 \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+
+  # Build the blackbox_exporter binary (static).
+  - runs: |
+      cd /home/build/blackbox_exporter-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -tags netgo \
+        -ldflags="-s -w \
+          -X github.com/prometheus/common/version.Version=${{package.version}} \
+          -X github.com/prometheus/common/version.Revision=source-build \
+          -X github.com/prometheus/common/version.Branch=HEAD \
+          -X github.com/prometheus/common/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+          -X github.com/prometheus/common/version.BuildUser=melange" \
+        -o /home/build/blackbox_exporter-bin \
+        .
+
+  # Install binary + default config
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/blackbox_exporter-bin "${{targets.destdir}}/usr/bin/blackbox_exporter"
+      chmod 0755 "${{targets.destdir}}/usr/bin/blackbox_exporter"
+
+      # blackbox_exporter refuses to start without a config file. Ship a minimal
+      # default with the standard http_2xx module; users mount their own over it.
+      mkdir -p "${{targets.destdir}}/etc/blackbox_exporter"
+      cat > "${{targets.destdir}}/etc/blackbox_exporter/config.yml" << 'EOF'
+      modules:
+        http_2xx:
+          prober: http
+          timeout: 5s
+          http:
+            preferred_ip_protocol: ip4
+      EOF
+
+  # Verify the build
+  - runs: |
+      echo "Verifying blackbox_exporter binary..."
+      "${{targets.destdir}}/usr/bin/blackbox_exporter" --version

@@ -1,0 +1,83 @@
+# Melange build configuration for minimal Prometheus node_exporter
+# Pure Go from source. Single `node_exporter` binary exposing host metrics.
+# License: Apache-2.0 (Prometheus authors).
+
+package:
+  name: node-exporter-minimal
+  version: 1.11.1
+  epoch: 0
+  description: "Minimal Prometheus node_exporter (host hardware & OS metrics) built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of node_exporter source tarball - updated by update-versions.yml workflow
+  sha256: d2b5a7740b7526543429b41a5d741bc530277f406f7b121fc64cb3ca583f7387
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify node_exporter source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/prometheus/node_exporter/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/node_exporter.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/node_exporter.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf node_exporter.tar.gz
+      rm node_exporter.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/node_exporter-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && _retry go get golang.org/x/crypto@v0.53.0 golang.org/x/net@v0.56.0 golang.org/x/sys@v0.46.0 golang.org/x/text@v0.38.0 golang.org/x/term@v0.44.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.21.0 golang.org/x/tools@v0.47.0 \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+
+  # Build the node_exporter binary (static).
+  # Version is reported via github.com/prometheus/common/version.
+  - runs: |
+      cd /home/build/node_exporter-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -tags netgo \
+        -ldflags="-s -w \
+          -X github.com/prometheus/common/version.Version=${{package.version}} \
+          -X github.com/prometheus/common/version.Revision=source-build \
+          -X github.com/prometheus/common/version.Branch=HEAD \
+          -X github.com/prometheus/common/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+          -X github.com/prometheus/common/version.BuildUser=melange" \
+        -o /home/build/node_exporter-bin \
+        .
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/node_exporter-bin "${{targets.destdir}}/usr/bin/node_exporter"
+      chmod 0755 "${{targets.destdir}}/usr/bin/node_exporter"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying node_exporter binary..."
+      "${{targets.destdir}}/usr/bin/node_exporter" --version
