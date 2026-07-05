@@ -12,6 +12,5 @@ const { image } = Astro.props;
     <SeverityBar image={image} />
     {image.size && <span>{image.size.human}</span>}
     {image.updatedAgo && <span>· {image.updatedAgo}</span>}
-    {image.degraded && <span class="badge-degraded" title={image.notes.join('; ')}>partial data</span>}
   </div>
 </article>

@@ -51,21 +51,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      # Source scan data from the latest successful FULL build. Partial push
-      # builds only scan changed images, so their artifacts are an incomplete
-      # dataset — we deliberately ignore them and use the last schedule/dispatch
-      # run, which builds and scans all images. (This holds for every trigger,
-      # including workflow_run, so a partial build finishing never deploys a
-      # data-thin site over a good one.)
+      # Source scan data from the latest successful FULL build — one that scanned
+      # (nearly) all images. Partial push builds only scan changed images, so we
+      # judge completeness by the vulnerability-report artifact count rather than
+      # the trigger event: any run with >= MIN reports qualifies (full push,
+      # schedule, or dispatch), and thin partial builds are skipped. This keeps a
+      # data-thin build from ever deploying over a complete one.
       - name: Resolve source build run
         id: buildrun
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          RID=$(gh api "repos/${{ github.repository }}/actions/workflows/build.yml/runs?status=success&branch=main&per_page=40" \
-                  --jq '[.workflow_runs[] | select(.event=="schedule" or .event=="workflow_dispatch")][0].id')
-          if [ -z "$RID" ] || [ "$RID" = "null" ]; then
-            echo "::error::No successful full build (schedule/dispatch) found to source scan data from."
+          MIN=50   # catalog has 57 images; allow a few flaky scans
+          RID=""
+          for id in $(gh api "repos/${{ github.repository }}/actions/workflows/build.yml/runs?status=success&branch=main&per_page=20" \
+                        --jq '.workflow_runs[].id'); do
+            N=$(gh api "repos/${{ github.repository }}/actions/runs/$id/artifacts" --paginate \
+                  --jq '[.artifacts[].name | select(startswith("vulnerability-report-"))] | length')
+            echo "run $id → $N vulnerability-report artifacts"
+            if [ "${N:-0}" -ge "$MIN" ]; then RID=$id; break; fi
+          done
+          if [ -z "$RID" ]; then
+            echo "::error::No successful build with >= $MIN image reports found to source scan data from."
             exit 1
           fi
           echo "run_id=$RID" >> "$GITHUB_OUTPUT"
