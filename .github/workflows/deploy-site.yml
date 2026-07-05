@@ -66,8 +66,12 @@ jobs:
           RID=""
           for id in $(gh api "repos/${{ github.repository }}/actions/workflows/build.yml/runs?status=success&branch=main&per_page=20" \
                         --jq '.workflow_runs[].id'); do
+            # Stream the matching names and count with wc -l. Do NOT use
+            # `--jq '... | length'`: with --paginate, jq runs per page and emits
+            # one length per page (e.g. "44\n10" for a >100-artifact run), which
+            # then fails the numeric test below and skips a complete build.
             N=$(gh api "repos/${{ github.repository }}/actions/runs/$id/artifacts" --paginate \
-                  --jq '[.artifacts[].name | select(startswith("vulnerability-report-"))] | length')
+                  --jq '.artifacts[].name | select(startswith("vulnerability-report-"))' | wc -l)
             echo "run $id → $N vulnerability-report artifacts"
             if [ "${N:-0}" -ge "$MIN" ]; then RID=$id; break; fi
           done
