@@ -745,9 +745,14 @@ jobs:
           # when the index manifest references a blob the registry hasn't
           # finished receiving yet. Three attempts with 15s backoff.
           PUBLISH_OUT=apko-publish.out
+          # Immutable per-build dated tag (YYYYMMDD) so every rebuild is preserved
+          # as version history — the plain :<version> tag moves on same-version
+          # rebuilds. Daily granularity; retention is bounded by cleanup-packages.yml.
+          DATE_TAG=$(date -u +%Y%m%d)
           for attempt in 1 2 3; do
             if apko publish ${{ matrix.apko_config }} \
                 ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}${{ matrix.tag_suffix }} \
+                ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}-${DATE_TAG}${{ matrix.tag_suffix }} \
                 ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ matrix.latest_tag }} \
                 --arch x86_64,aarch64 \
                 --sbom-path . \
@@ -1230,9 +1235,14 @@ jobs:
           # when the index manifest references a blob the registry hasn't
           # finished receiving yet. Three attempts with 15s backoff.
           PUBLISH_OUT=apko-publish.out
+          # Immutable per-build dated tag (YYYYMMDD) so every rebuild is preserved
+          # as version history — the plain :<version> tag moves on same-version
+          # rebuilds. Daily granularity; retention is bounded by cleanup-packages.yml.
+          DATE_TAG=$(date -u +%Y%m%d)
           for attempt in 1 2 3; do
             if apko publish ${{ matrix.apko_config }} \
                 ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}${{ matrix.tag_suffix }} \
+                ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}-${DATE_TAG}${{ matrix.tag_suffix }} \
                 ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ matrix.latest_tag }} \
                 --arch ${{ matrix.arches }} \
                 --repository-append ./packages \
