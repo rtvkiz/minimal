@@ -66,8 +66,12 @@ jobs:
           RID=""
           for id in $(gh api "repos/${{ github.repository }}/actions/workflows/build.yml/runs?status=success&branch=main&per_page=20" \
                         --jq '.workflow_runs[].id'); do
+            # Stream the matching names and count with wc -l. Do NOT use
+            # `--jq '... | length'`: with --paginate, jq runs per page and emits
+            # one length per page (e.g. "44\n10" for a >100-artifact run), which
+            # then fails the numeric test below and skips a complete build.
             N=$(gh api "repos/${{ github.repository }}/actions/runs/$id/artifacts" --paginate \
-                  --jq '[.artifacts[].name | select(startswith("vulnerability-report-"))] | length')
+                  --jq '.artifacts[].name | select(startswith("vulnerability-report-"))' | wc -l)
             echo "run $id → $N vulnerability-report artifacts"
             if [ "${N:-0}" -ge "$MIN" ]; then RID=$id; break; fi
           done
@@ -78,26 +82,30 @@ jobs:
           echo "run_id=$RID" >> "$GITHUB_OUTPUT"
           echo "Sourcing scan artifacts from full build run $RID"
 
-      - name: Download scan reports
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          pattern: vulnerability-report-*
-          merge-multiple: true
-          path: reports
-          run-id: ${{ steps.buildrun.outputs.run_id }}
-          github-token: ${{ github.token }}
-
-      # SBOM sidecars only exist on builds produced after this feature merged, so
-      # tolerate their absence — the Packages tab falls back to the apko recipe.
-      - name: Download SBOM sidecars
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          pattern: catalog-sbom-*
-          merge-multiple: true
-          path: reports
-          run-id: ${{ steps.buildrun.outputs.run_id }}
-          github-token: ${{ github.token }}
+      # Download the per-image scan reports (+ SBOM sidecars) from that build.
+      # NOTE: we page through the artifact list via the API rather than using
+      # actions/download-artifact, which only sees the first 100 artifacts — a
+      # full build emits >100 (54+ reports, 44 packages-*, SBOMs, SARIF), so the
+      # action silently drops reports past the cap and images show as "partial".
+      - name: Download scan reports and SBOMs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p reports
+          RID="${{ steps.buildrun.outputs.run_id }}"
+          gh api "repos/${{ github.repository }}/actions/runs/$RID/artifacts" --paginate \
+            --jq '.artifacts[] | select((.name|startswith("vulnerability-report-")) or (.name|startswith("catalog-sbom-"))) | "\(.id)\t\(.name)"' \
+            > /tmp/arts.tsv
+          echo "Matching artifacts: $(wc -l < /tmp/arts.tsv)"
+          while IFS=$'\t' read -r id name; do
+            [ -n "$id" ] || continue
+            if gh api "repos/${{ github.repository }}/actions/artifacts/$id/zip" > "/tmp/$name.zip" 2>/dev/null; then
+              unzip -o -q "/tmp/$name.zip" -d reports
+            else
+              echo "::warning::failed to fetch artifact $name ($id)"
+            fi
+          done < /tmp/arts.tsv
+          echo "Report files downloaded: $(ls reports 2>/dev/null | wc -l)"
 
       - name: Set up Node.js
         uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
