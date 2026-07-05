@@ -1,0 +1,125 @@
+name: Deploy catalog site
+
+# Builds and deploys the minimalcontainers.com catalog to GitHub Pages.
+#
+# Decoupled from the image build: this runs on its own and reuses the scan /
+# SBOM artifacts uploaded by the most recent successful "Build Hardened Images"
+# run, so a site or catalog change ships in ~2 minutes without a 57-image rebuild.
+#
+# Triggers:
+#   workflow_run    — after each build completes → redeploy with fresh scan data
+#   push (main)     — site/catalog/apko changes  → fast redeploy reusing latest data
+#   workflow_dispatch — manual, on demand
+
+on:
+  workflow_run:
+    workflows: ["Build Hardened Images"]
+    types: [completed]
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'catalog.json'
+      - '**/apko/*.yaml'
+      - '.github/workflows/deploy-site.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time; don't cancel an in-flight deploy (Pages dislikes it).
+concurrency:
+  group: deploy-catalog-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # For workflow_run, only proceed when the build actually succeeded.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read      # download artifacts from the build run
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # Source scan data from the latest successful FULL build. Partial push
+      # builds only scan changed images, so their artifacts are an incomplete
+      # dataset — we deliberately ignore them and use the last schedule/dispatch
+      # run, which builds and scans all images. (This holds for every trigger,
+      # including workflow_run, so a partial build finishing never deploys a
+      # data-thin site over a good one.)
+      - name: Resolve source build run
+        id: buildrun
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RID=$(gh api "repos/${{ github.repository }}/actions/workflows/build.yml/runs?status=success&branch=main&per_page=40" \
+                  --jq '[.workflow_runs[] | select(.event=="schedule" or .event=="workflow_dispatch")][0].id')
+          if [ -z "$RID" ] || [ "$RID" = "null" ]; then
+            echo "::error::No successful full build (schedule/dispatch) found to source scan data from."
+            exit 1
+          fi
+          echo "run_id=$RID" >> "$GITHUB_OUTPUT"
+          echo "Sourcing scan artifacts from full build run $RID"
+
+      - name: Download scan reports
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: vulnerability-report-*
+          merge-multiple: true
+          path: reports
+          run-id: ${{ steps.buildrun.outputs.run_id }}
+          github-token: ${{ github.token }}
+
+      # SBOM sidecars only exist on builds produced after this feature merged, so
+      # tolerate their absence — the Packages tab falls back to the apko recipe.
+      - name: Download SBOM sidecars
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: catalog-sbom-*
+          merge-multiple: true
+          path: reports
+          run-id: ${{ steps.buildrun.outputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: '22'
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+
+      # Assemble the dataset from the reused reports, then build the static site.
+      # Call the data script + astro directly (NOT `npm run build`, whose prebuild
+      # hook would regenerate images.json WITHOUT the reports dir).
+      - name: Build site
+        working-directory: site
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          export BUILD_DATE="$(date -u +"%Y-%m-%d %H:%M UTC")"
+          export COMMIT_SHA="${GITHUB_SHA:0:7}"
+          node scripts/build-data.mjs ../reports
+          npx astro build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: site/dist
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

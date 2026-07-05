@@ -1,0 +1,20 @@
+{
+  "name": "minimalcontainers-site",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Catalog site for minimal hardened container images — minimalcontainers.com",
+  "scripts": {
+    "data": "node scripts/build-data.mjs",
+    "predev": "node scripts/build-data.mjs",
+    "dev": "astro dev",
+    "prebuild": "node scripts/build-data.mjs",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^5.6.1",
+    "yaml": "^2.7.0"
+  }
+}

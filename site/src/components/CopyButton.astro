@@ -1,0 +1,9 @@
+---
+// A dark code block with a copy-to-clipboard button.
+export interface Props { code: string; }
+const { code } = Astro.props;
+---
+<div class="codeblock">
+  <pre><code>{code}</code></pre>
+  <button class="copy-btn" type="button" data-copy={code} aria-label="Copy to clipboard">Copy</button>
+</div>

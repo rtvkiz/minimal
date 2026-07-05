@@ -1,0 +1,50 @@
+---
+import Layout from '../components/Layout.astro';
+import CopyButton from '../components/CopyButton.astro';
+---
+<Layout title="Verify & About — Minimal Containers" description="How to verify Minimal Containers images, and how they compare.">
+  <section>
+    <div class="container-narrow">
+      <h1 class="section-title">Verify any image</h1>
+      <p class="section-sub">The point of these images is that you don't have to trust us. Every claim below is checkable from your terminal, no account required.</p>
+
+      <h2 style="font-size:1.1rem;margin-top:28px">1 · Pull it (no login, no rate limit)</h2>
+      <CopyButton code={`docker pull ghcr.io/rtvkiz/minimal-python:latest`} />
+
+      <h2 style="font-size:1.1rem;margin-top:28px">2 · Verify build provenance (SLSA L3)</h2>
+      <p class="small muted">Proves the image was produced by the workflow in the repo, at a specific commit, on a GitHub-hosted runner.</p>
+      <CopyButton code={`gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz`} />
+
+      <h2 style="font-size:1.1rem;margin-top:28px">3 · Inspect the SBOM</h2>
+      <CopyButton code={`cosign verify-attestation --type spdxjson \\
+  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \\
+  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \\
+  ghcr.io/rtvkiz/minimal-python:latest \\
+  | jq -r '.payload | @base64d | fromjson | .predicate' > python-sbom.spdx.json`} />
+
+      <h2 class="section-title" style="margin-top:44px">How this compares</h2>
+      <table class="data">
+        <thead><tr><th></th><th>Minimal</th><th>Chainguard</th><th>Docker Hardened</th></tr></thead>
+        <tbody>
+          <tr><td><b>License</b></td><td>MIT</td><td>Proprietary</td><td>Apache-2.0</td></tr>
+          <tr><td><b>Cost</b></td><td>$0</td><td>~$30k/image/yr</td><td>Free + paid support</td></tr>
+          <tr><td><b>Auth to pull</b></td><td>No</td><td>Yes</td><td>Yes</td></tr>
+          <tr><td><b>Rate limits</b></td><td>None</td><td>Yes</td><td>Yes</td></tr>
+          <tr><td><b>Build recipes public</b></td><td>Yes</td><td>No</td><td>Yes</td></tr>
+          <tr><td><b>Cosign + SBOM + SLSA L3</b></td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+        </tbody>
+      </table>
+      <p class="small muted" style="margin-top:14px">
+        Reach for Minimal if you want hardened images without paying or signing up, and want to read every build recipe.
+        It's not the right fit if you need a vendor contract, FedRAMP/STIG paperwork, or thousands of images on day one.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">More</h2>
+      <p>
+        Source, build recipes and security policy live on
+        <a href="https://github.com/rtvkiz/minimal" rel="noopener">GitHub</a>.
+        Images are published to <code class="kv-mono">ghcr.io/rtvkiz/minimal-*</code>.
+      </p>
+    </div>
+  </section>
+</Layout>

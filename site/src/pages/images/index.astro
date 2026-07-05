@@ -1,0 +1,71 @@
+---
+import Layout from '../../components/Layout.astro';
+import ImageCard from '../../components/ImageCard.astro';
+import { byCategory, categories, images } from '../../lib/catalog';
+const grouped = byCategory();
+---
+<Layout title="Image directory — Minimal Containers" description="Browse all hardened container images.">
+  <section>
+    <div class="container">
+      <h1 class="section-title">Image directory</h1>
+      <p class="section-sub">{images.length} hardened images across {categories.length} categories.</p>
+
+      <div class="controls">
+        <input id="search" type="search" placeholder="Search images…" autocomplete="off" autocapitalize="off" spellcheck="false" />
+      </div>
+      <div class="facets" id="facets">
+        <span class="facet" data-cat="all" aria-pressed="true">All</span>
+        {categories.map((c) => <span class="facet" data-cat={c} aria-pressed="false">{c}</span>)}
+      </div>
+
+      <p id="noresults" class="notice" hidden style="margin-top:20px">No images match your search.</p>
+
+      <div id="catalog" style="margin-top:24px">
+        {categories.map((c) => (
+          <div class="cat-group" data-category={c}>
+            <h2 class="section-title" style="font-size:1.15rem;margin-top:28px">{c}</h2>
+            <div class="grid">
+              {grouped[c].map((img) => <ImageCard image={img} />)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  const search = document.getElementById('search') as HTMLInputElement;
+  const facets = Array.from(document.querySelectorAll<HTMLElement>('#facets .facet'));
+  const groups = Array.from(document.querySelectorAll<HTMLElement>('.cat-group'));
+  const cards = Array.from(document.querySelectorAll<HTMLElement>('.card'));
+  const noresults = document.getElementById('noresults') as HTMLElement;
+  let activeCat = 'all';
+
+  function apply() {
+    const q = search.value.trim().toLowerCase();
+    let visible = 0;
+    for (const card of cards) {
+      const matchCat = activeCat === 'all' || card.dataset.category === activeCat;
+      const matchText = !q || (card.dataset.search || '').includes(q);
+      const show = matchCat && matchText;
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    }
+    // hide empty category headers
+    for (const g of groups) {
+      const anyVisible = Array.from(g.querySelectorAll<HTMLElement>('.card')).some((c) => c.style.display !== 'none');
+      g.style.display = anyVisible ? '' : 'none';
+    }
+    noresults.hidden = visible !== 0;
+  }
+
+  search.addEventListener('input', apply);
+  for (const f of facets) {
+    f.addEventListener('click', () => {
+      activeCat = f.dataset.cat || 'all';
+      for (const other of facets) other.setAttribute('aria-pressed', String(other === f));
+      apply();
+    });
+  }
+</script>
