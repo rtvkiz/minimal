@@ -1,7 +1,24 @@
-name: Cleanup Untagged Package Versions
+name: Cleanup Package Versions
+
+# Two jobs of housekeeping on the GHCR packages:
+#   1. delete untagged versions (garbage left by same-tag re-pushes)
+#   2. enforce retention on the immutable dated build tags (<version>-YYYYMMDD)
+#      that build.yml publishes for version history — keep the newest N per
+#      image, prune older ones so storage stays bounded.
+#
+# SAFETY: destructive deletion is gated behind DRY_RUN, which defaults to true
+# (scheduled runs and the default dispatch only LOG what they would delete).
+# Run manually with dry_run=false once the dry-run output looks correct.
 
 on:
+  schedule:
+    - cron: '0 4 * * 0'   # weekly, Sunday 04:00 UTC (dry-run by default)
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Log deletions without performing them'
+        type: boolean
+        default: true
 
 permissions: {}
 
@@ -9,37 +26,64 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       packages: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Scheduled runs carry no inputs -> default to the safe dry-run.
+      DRY_RUN: ${{ github.event.inputs.dry_run == 'false' && 'false' || 'true' }}
+      KEEP_DATED: '30'   # newest dated builds to retain per image
     steps:
-      - name: Delete all untagged versions across all packages
+      - name: Checkout catalog.json
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          sparse-checkout: catalog.json
+          sparse-checkout-cone-mode: false
+
+      - name: Prune untagged versions and enforce dated-tag retention
         run: |
           OWNER="${{ github.repository_owner }}"
-          PACKAGES=(
-            minimal-python minimal-node-slim minimal-go minimal-nginx
-            minimal-httpd minimal-postgres-slim minimal-bun minimal-sqlite
-            minimal-dotnet minimal-java minimal-jenkins minimal-redis-slim
-            minimal-mysql minimal-memcached minimal-caddy minimal-haproxy
-            minimal-ruby minimal-php minimal-rails minimal-kafka
-          )
+          echo "DRY_RUN=$DRY_RUN · keeping newest $KEEP_DATED dated builds per image"
 
-          for pkg in "${PACKAGES[@]}"; do
-            echo "── $pkg"
+          # $1=package  $2=version id  $3=reason
+          del() {
+            if [ "$DRY_RUN" = "false" ]; then
+              if gh api --method DELETE "/users/${OWNER}/packages/container/$1/versions/$2" >/dev/null 2>&1; then
+                echo "   deleted $2 ($3)"
+              else
+                echo "   skipped $2 ($3) — delete failed or still referenced"
+              fi
+            else
+              echo "   [dry-run] would delete $2 ($3)"
+            fi
+          }
 
-            gh api "/users/${OWNER}/packages/container/${pkg}/versions" \
-              --paginate \
-              --jq '[.[] | select(.metadata.container.tags | length == 0)] | .[].id' \
-              2>/dev/null \
-            | while read -r id; do
-                if gh api --method DELETE \
-                  "/users/${OWNER}/packages/container/${pkg}/versions/${id}" \
-                  2>/dev/null; then
-                  echo "   deleted $id"
-                else
-                  echo "   skipped $id (referenced by a tagged image)"
-                fi
-              done
+          # Package list is derived from catalog.json so it never drifts.
+          for name in $(jq -r '.images[].name' catalog.json); do
+            pkg="minimal-${name}"
+            echo "── ${pkg}"
+
+            versions=$(gh api "/users/${OWNER}/packages/container/${pkg}/versions" --paginate \
+              --jq '.[] | {id, created: .created_at, tags: (.metadata.container.tags // [])}' 2>/dev/null) \
+              || { echo "   (no versions / not accessible)"; continue; }
+
+            # 1) untagged versions (safe to remove)
+            echo "$versions" | jq -r 'select(.tags | length == 0) | .id' | while read -r id; do
+              [ -n "$id" ] && del "$pkg" "$id" "untagged"
+            done
+
+            # 2) dated-build retention. A version is a pure dated build only when
+            #    EVERY tag it carries matches -YYYYMMDD (optionally -dev). Versions
+            #    holding latest / a moving <version> tag / cosign artifacts have a
+            #    non-dated tag and are therefore never selected. Keep newest N.
+            echo "$versions" \
+              | jq -r 'select((.tags | length > 0) and ([.tags[] | test("-[0-9]{8}(-dev)?$")] | all))
+                       | [.created, .id, (.tags | join(","))] | @tsv' \
+              | sort -r \
+              | awk -v keep="$KEEP_DATED" 'NR > keep { print }' \
+              | while IFS="$(printf '\t')" read -r created id tags; do
+                  [ -n "$id" ] && del "$pkg" "$id" "old dated build: ${tags}"
+                done
           done
 
-          echo "Done."
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "Done. (DRY_RUN=$DRY_RUN)"
