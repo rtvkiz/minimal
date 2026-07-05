@@ -21,19 +21,22 @@ const year = new Date().getFullYear();
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
   <meta property="og:type" content="website" />
-  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;640;680;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 </head>
 <body>
   <header class="site-header">
     <div class="container">
       <a href="/" class="brand">
-        <img src="/logo.svg" alt="" class="logo" />
-        <span>Minimal Containers</span>
+        <img src="/icon.svg" alt="" class="logo" width="26" height="26" />
+        <span class="brand-name">minimal</span>
       </a>
       <nav class="nav">
         <a href="/images">Images</a>
         <a href="/about">Verify</a>
-        <a href="https://github.com/rtvkiz/minimal" rel="noopener">GitHub</a>
+        <a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a>
       </nav>
     </div>
   </header>

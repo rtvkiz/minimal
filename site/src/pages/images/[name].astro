@@ -23,8 +23,7 @@ const sevOrder = ['critical', 'high', 'medium', 'low'] as const;
       <p style="margin:0 0 6px"><a href="/images" class="small muted">← All images</a></p>
       <h1>
         {image.name}
-        <span class="cat" style="font-size:0.8rem">{image.category}</span>
-        {image.degraded && <span class="badge-degraded">partial data</span>}
+        <span class="cat">{image.category}</span>
       </h1>
       <p class="summary">{image.summary}</p>
       <div class="quickfacts">
