@@ -1,0 +1,75 @@
+---
+import Layout from '../components/Layout.astro';
+import ImageCard from '../components/ImageCard.astro';
+import CopyButton from '../components/CopyButton.astro';
+import { images, siteStats } from '../lib/catalog';
+
+const stats = siteStats();
+const featuredNames = ['python', 'node-slim', 'go', 'nginx', 'postgres-slim', 'redis-slim'];
+const featured = featuredNames
+  .map((n) => images.find((i) => i.name === n))
+  .filter((i): i is NonNullable<typeof i> => Boolean(i));
+
+const verifyCmd = `# Pull — public, no login, no rate limit
+docker pull ghcr.io/rtvkiz/minimal-python:latest
+
+# Verify build provenance (SLSA L3)
+gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz`;
+---
+<Layout>
+  <section class="hero">
+    <div class="container">
+      <h1>Free, hardened container images</h1>
+      <p class="lead">
+        Small, MIT-licensed images built from source with Wolfi packages and rebuilt every
+        six hours. Every image is cosign-signed, ships an SPDX SBOM, and carries SLSA Level 3
+        provenance — verifiable without an account.
+      </p>
+      <div class="cta">
+        <a class="btn btn-primary" href="/images">Browse {stats.images} images →</a>
+        <a class="btn btn-ghost" href="/about">How to verify</a>
+      </div>
+      <div class="stats" style="margin-top:36px">
+        <div class="stat"><div class="num">{stats.images}</div><div class="lbl">Images</div></div>
+        <div class="stat"><div class="num">{stats.categories}</div><div class="lbl">Categories</div></div>
+        {stats.hasScanData && <div class="stat"><div class="num">{stats.clean}</div><div class="lbl">CVE-free</div></div>}
+        <div class="stat"><div class="num">$0</div><div class="lbl">Cost</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2 class="section-title">Pull and verify in 30 seconds</h2>
+      <p class="section-sub">You don't have to trust us — check the provenance yourself.</p>
+      <div class="container-narrow" style="padding:0">
+        <CopyButton code={verifyCmd} />
+      </div>
+    </div>
+  </section>
+
+  <section style="background:var(--bg-alt)">
+    <div class="container">
+      <h2 class="section-title">What every image ships with</h2>
+      <p class="section-sub">Signed, scanned, and reproducible — the same guarantees on every tag.</p>
+      <div class="verify-grid">
+        <div class="feature"><h3>Cosign keyless signature</h3><p>Verifiable against the public Rekor transparency log — no keys to manage.</p></div>
+        <div class="feature"><h3>SPDX SBOM attestation</h3><p>Every package, version and license, attached as an in-toto attestation.</p></div>
+        <div class="feature"><h3>SLSA v1.0 provenance</h3><p>Cryptographic proof of which workflow, commit and runner built the image.</p></div>
+        <div class="feature"><h3>Daily CVE scans</h3><p>Grype results published here and in the GitHub Security tab.</p></div>
+        <div class="feature"><h3>Non-root by default</h3><p>Runs as UID 65532 unless the upstream insists otherwise.</p></div>
+        <div class="feature"><h3>No shell where possible</h3><p>Most images don't ship /bin/sh, shrinking the attack surface.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2 class="section-title">Popular images</h2>
+      <p class="section-sub">A few of the {stats.images} available. <a href="/images">See all →</a></p>
+      <div class="grid">
+        {featured.map((img) => <ImageCard image={img} />)}
+      </div>
+    </div>
+  </section>
+</Layout>

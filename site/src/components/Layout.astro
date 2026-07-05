@@ -1,0 +1,76 @@
+---
+import '../styles/global.css';
+import { dataset } from '../lib/catalog';
+export interface Props {
+  title?: string;
+  description?: string;
+}
+const {
+  title = 'Minimal Containers — free, hardened container images',
+  description = 'Small, hardened, MIT-licensed container images. Cosign-signed, SBOM-attested, SLSA Level 3. No account, no rate limits.',
+} = Astro.props;
+const year = new Date().getFullYear();
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="/" class="brand">
+        <img src="/logo.svg" alt="" class="logo" />
+        <span>Minimal Containers</span>
+      </a>
+      <nav class="nav">
+        <a href="/images">Images</a>
+        <a href="/about">Verify</a>
+        <a href="https://github.com/rtvkiz/minimal" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <slot />
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div>
+        Minimal Containers · MIT-licensed · built from
+        <a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
+        <a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+      </div>
+      <div>
+        Updated {dataset.buildDate}
+        {dataset.commitSha && (dataset.runUrl
+          ? <> · <a href={dataset.runUrl} rel="noopener">{dataset.commitSha}</a></>
+          : <> · {dataset.commitSha}</>)}
+        · &copy; {year}
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Global copy-to-clipboard for any [data-copy] button.
+    document.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-copy]');
+      if (!btn) return;
+      const text = btn.getAttribute('data-copy') || '';
+      navigator.clipboard.writeText(text).then(() => {
+        const prev = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = prev; }, 1400);
+      }).catch(() => { btn.textContent = 'Failed'; });
+    });
+  </script>
+</body>
+</html>

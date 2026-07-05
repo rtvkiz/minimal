@@ -255,6 +255,34 @@ jobs:
         run: bash tools/vex/validate.sh
 
   #----------------------------------------------------------------------------
+  # CATALOG DRIFT CHECK
+  # The minimalcontainers.com site is generated from catalog.json, which must
+  # list exactly the images this workflow builds. Fail fast if they drift.
+  #----------------------------------------------------------------------------
+  validate-catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Assert catalog.json matches the build matrix
+        run: |
+          # Images the catalog site advertises.
+          jq -r '.images[].name' catalog.json | sort -u > /tmp/catalog.txt
+          # Images this workflow actually builds (both matrix arrays). The
+          # literal "foo" comes from an example in a code comment — exclude it.
+          grep -oE '"name":"[a-z0-9-]+"' .github/workflows/build.yml \
+            | sed 's/.*"name":"//; s/"//' | grep -vx foo | sort -u > /tmp/matrix.txt
+          if ! diff -u /tmp/matrix.txt /tmp/catalog.txt; then
+            echo "::error::catalog.json and the build matrix have drifted (< build matrix, > catalog.json). Update catalog.json."
+            exit 1
+          fi
+          echo "OK — catalog.json matches the build matrix ($(wc -l < /tmp/catalog.txt) images)."
+
+  #----------------------------------------------------------------------------
   # GENERATE EPHEMERAL SIGNING KEY (PRs only - secrets not available for forks)
   #----------------------------------------------------------------------------
   keygen:
@@ -819,6 +847,30 @@ jobs:
             gh attestation verify "oci://$IMAGE" --owner ${{ github.repository_owner }} > /dev/null
             echo "All attestations verified."
 
+      # Rename the per-arch SBOM apko wrote during publish to a stable,
+      # per-image name that the catalog site's data builder
+      # (site/scripts/build-data.mjs) consumes for the Packages tab. Prod only
+      # (matches grype/meta). Non-fatal if absent.
+      - name: Save SBOM sidecar for catalog site
+        if: always() && matrix.scan_for_cves && github.event_name != 'pull_request'
+        run: |
+          for S in sbom-x86_64.spdx.json sbom-aarch64.spdx.json sbom-index.spdx.json; do
+            if [ -f "$S" ]; then
+              cp "$S" "sbom-${{ matrix.name }}.spdx.json"
+              echo "Saved catalog SBOM from $S"
+              break
+            fi
+          done
+
+      - name: Upload SBOM sidecar for catalog site
+        if: always() && matrix.scan_for_cves && github.event_name != 'pull_request' && hashFiles(format('sbom-{0}.spdx.json', matrix.name)) != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: catalog-sbom-${{ matrix.name }}
+          path: sbom-${{ matrix.name }}.spdx.json
+          retention-days: 90
+          if-no-files-found: ignore
+
   #----------------------------------------------------------------------------
   # BUILD MELANGE-BASED IMAGES (needs packages from melange-build)
   #----------------------------------------------------------------------------
@@ -1265,6 +1317,27 @@ jobs:
             gh attestation verify "oci://$IMAGE" --owner ${{ github.repository_owner }} > /dev/null
             echo "All attestations verified."
 
+      # See build-apko for rationale — stable per-image SBOM for the catalog site.
+      - name: Save SBOM sidecar for catalog site
+        if: always() && matrix.scan_for_cves && github.event_name != 'pull_request'
+        run: |
+          for S in sbom-x86_64.spdx.json sbom-aarch64.spdx.json sbom-index.spdx.json; do
+            if [ -f "$S" ]; then
+              cp "$S" "sbom-${{ matrix.name }}.spdx.json"
+              echo "Saved catalog SBOM from $S"
+              break
+            fi
+          done
+
+      - name: Upload SBOM sidecar for catalog site
+        if: always() && matrix.scan_for_cves && github.event_name != 'pull_request' && hashFiles(format('sbom-{0}.spdx.json', matrix.name)) != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: catalog-sbom-${{ matrix.name }}
+          path: sbom-${{ matrix.name }}.spdx.json
+          retention-days: 90
+          if-no-files-found: ignore
+
   #----------------------------------------------------------------------------
   # SUMMARY
   #----------------------------------------------------------------------------
@@ -1297,72 +1370,11 @@ jobs:
           fi
           echo "All expected builds succeeded!"
 
-  #----------------------------------------------------------------------------
-  # PUBLISH VULNERABILITY REPORT TO GITHUB PAGES
-  #----------------------------------------------------------------------------
-  publish-vuln-report:
-    needs: [build-apko, build-melange]
-    runs-on: ubuntu-latest
-    # Only publish on full rebuilds (schedule/dispatch) — partial push builds
-    # would overwrite the full report page with incomplete data
-    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-    permissions:
-      pages: write
-      id-token: write
-      actions: write   # delete stale github-pages artifacts from earlier attempts
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - name: Download all vulnerability reports
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          pattern: vulnerability-report-*
-          merge-multiple: true
-          path: reports/
-
-      - name: Checkout dashboard script and VEX docs
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          sparse-checkout: |
-            tools/dashboard
-            vex
-          sparse-checkout-cone-mode: false
-          path: src
-
-      - name: Generate HTML report
-        run: |
-          SHA="${{ github.sha }}"
-          export BUILD_DATE="$(date -u +"%Y-%m-%d %H:%M UTC")"
-          export COMMIT_SHA="${SHA:0:7}"
-          export RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          export VEX_DIR="src/vex"
-          bash src/tools/dashboard/build.sh reports site
-
-      # On a partial re-run (`gh run rerun --failed`), this job runs again in a
-      # new attempt, but the "github-pages" artifact uploaded by the earlier
-      # attempt is retained for the run. deploy-pages then aborts with
-      # "Multiple artifacts named github-pages were unexpectedly found". Delete
-      # any pre-existing ones so the upload below is the only one that remains.
-      - name: Remove stale Pages artifacts from earlier attempts
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          ids=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
-                  --paginate --jq '.artifacts[] | select(.name=="github-pages") | .id')
-          for id in $ids; do
-            echo "Deleting stale github-pages artifact $id"
-            gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" || true
-          done
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
-        with:
-          path: site/
-
-      - name: Deploy to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+  # NOTE: the catalog site (minimalcontainers.com) is built and deployed by a
+  # separate workflow, .github/workflows/deploy-site.yml, which runs after this
+  # workflow completes (workflow_run) and reuses the scan/SBOM artifacts uploaded
+  # by the build jobs above. Deploy is decoupled from the image build so site
+  # changes ship in ~2 minutes without a full rebuild.
 
   #----------------------------------------------------------------------------
   # CLEANUP OLD VERSIONS
