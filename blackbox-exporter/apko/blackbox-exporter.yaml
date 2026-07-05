@@ -1,0 +1,51 @@
+# Minimal Prometheus blackbox_exporter image - endpoint probing, built from source via melange
+# Shell-less, distroless. CVE patching via daily rebuilds from upstream source.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - blackbox-exporter-minimal
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: blackbox-exporter
+      gid: 65532
+  users:
+    - username: blackbox-exporter
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+# Listens on :9115; own metrics at /metrics, probes at /probe?target=...&module=...
+entrypoint:
+  command: /usr/bin/blackbox_exporter
+
+cmd: --config.file=/etc/blackbox_exporter/config.yml
+
+environment:
+  PATH: /usr/bin:/bin
+
+paths:
+  - path: /etc/blackbox_exporter
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+
+annotations:
+  org.opencontainers.image.title: "minimal-blackbox-exporter"
+  org.opencontainers.image.description: "Hardened shell-less Prometheus blackbox_exporter (endpoint probing) built from source via melange with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/blackbox-exporter"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64
