@@ -139,8 +139,9 @@ jobs:
           test -f CNAME || echo "::warning::CNAME missing from build output"
           git init -q
           git checkout -q -b gh-pages
+          git add -A
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-              commit -q --allow-empty -m "deploy $(date -u +%FT%TZ) · data run ${{ steps.buildrun.outputs.run_id }} · site ${GITHUB_SHA:0:7}"
+              commit -q -m "deploy $(date -u +%FT%TZ) · data run ${{ steps.buildrun.outputs.run_id }} · site ${GITHUB_SHA:0:7}"
+          echo "Committing $(git ls-files | wc -l) files to gh-pages"
           git push -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" gh-pages:gh-pages
-          echo "Published to gh-pages ($(find . -type f | wc -l) files)"
