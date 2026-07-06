@@ -40,13 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
+      contents: write    # force-push the built site to the gh-pages branch
       actions: read      # download artifacts from the build run
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -130,11 +125,22 @@ jobs:
           node scripts/build-data.mjs ../reports
           npx astro build
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
-        with:
-          path: site/dist
-
-      - name: Deploy to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+      # Publish by force-pushing the build to the gh-pages branch. Each deploy is
+      # a fresh orphan commit, so the commit SHA changes every time and GitHub
+      # Pages always republishes — unlike actions/deploy-pages, which dedupes by
+      # commit and so ignores data-only refreshes on an unchanged main. The
+      # branch is kept at a single commit (force-push) to avoid history bloat.
+      - name: Publish to gh-pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd site/dist
+          touch .nojekyll   # serve _astro/ as-is (skip the Pages Jekyll build)
+          test -f CNAME || echo "::warning::CNAME missing from build output"
+          git init -q
+          git checkout -q -b gh-pages
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q --allow-empty -m "deploy $(date -u +%FT%TZ) · data run ${{ steps.buildrun.outputs.run_id }} · site ${GITHUB_SHA:0:7}"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" gh-pages:gh-pages
+          echo "Published to gh-pages ($(find . -type f | wc -l) files)"
