@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://minimalcontainers.com"><strong>🌐&nbsp; Browse the full catalog at minimalcontainers.com&nbsp; →</strong></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build status"></a>
   <a href="https://minimalcontainers.com"><img src="https://img.shields.io/badge/Image_Catalog-Live-0d9488" alt="Image Catalog"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
