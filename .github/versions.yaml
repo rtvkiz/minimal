@@ -192,6 +192,79 @@
     releases: "https://github.com/prometheus/pushgateway/releases"
     notes: "https://github.com/prometheus/pushgateway/releases/tag/v{version}"
 
+# --- Frozen-image backfill: these compiled from source but had no auto-bump
+# --- wiring at onboarding. cron-enabled deliberately omitted until each is
+# --- dispatch-tested (gh workflow run update-versions.yml -f only=<name>).
+# --- See docs/version-management.md.
+
+- name: consul
+  files: [consul/melange.yaml]
+  source: { type: github-releases-latest, repo: hashicorp/consul, strip-v: true, pin-major: 2 }
+  tarball: { url: "https://github.com/hashicorp/consul/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/hashicorp/consul/releases"
+    notes: "https://github.com/hashicorp/consul/releases/tag/v{version}"
+
+- name: mailpit
+  files: [mailpit/melange.yaml]
+  source: { type: github-releases-latest, repo: axllent/mailpit, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/axllent/mailpit/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/axllent/mailpit/releases"
+    notes: "https://github.com/axllent/mailpit/releases/tag/v{version}"
+
+- name: registry
+  files: [registry/melange.yaml]
+  source: { type: github-releases-latest, repo: distribution/distribution, strip-v: true, pin-major: 3 }
+  tarball: { url: "https://github.com/distribution/distribution/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/distribution/distribution/releases"
+    notes: "https://github.com/distribution/distribution/releases/tag/v{version}"
+
+- name: telegraf
+  files: [telegraf/melange.yaml]
+  source: { type: github-releases-latest, repo: influxdata/telegraf, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/influxdata/telegraf/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/influxdata/telegraf/releases"
+    notes: "https://github.com/influxdata/telegraf/releases/tag/v{version}"
+
+- name: tempo
+  files: [tempo/melange.yaml]
+  source: { type: github-releases-latest, repo: grafana/tempo, strip-v: true, pin-major: 3 }
+  tarball: { url: "https://github.com/grafana/tempo/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/grafana/tempo/releases"
+    notes: "https://github.com/grafana/tempo/releases/tag/v{version}"
+
+# kubectl builds from the giant kubernetes/kubernetes repo; releases/latest
+# returns a clean v1.MINOR.PATCH and the archive tarball resolves normally.
+- name: kubectl
+  files: [kubectl/melange.yaml]
+  source: { type: github-releases-latest, repo: kubernetes/kubernetes, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/kubernetes/kubernetes/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/kubernetes/kubernetes/releases"
+    notes: "https://github.com/kubernetes/kubernetes/releases/tag/v{version}"
+
+# mimir tags releases `mimir-X.Y.Z`. github-tags can't see them (buried under
+# 100+ mimir-distributed-*weekly chart tags), so use releases/latest + a
+# strip-prefix to drop the `mimir-` and read the bare version.
+- name: mimir
+  files: [mimir/melange.yaml]
+  source: { type: github-releases-latest, repo: grafana/mimir, strip-prefix: "mimir-", pin-major: 3 }
+  tarball: { url: "https://github.com/grafana/mimir/archive/refs/tags/mimir-{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/grafana/mimir/releases"
+    notes: "https://github.com/grafana/mimir/releases/tag/mimir-{version}"
+
 # ============================================================================
 # github-tags — hits /repos/<repo>/tags?per_page=100, filters by regex,
 # strips prefix, semver-sorts, takes the highest match. Use this when the
@@ -297,6 +370,19 @@
   links:
     releases: "https://github.com/traefik/traefik/releases"
     notes: "https://github.com/traefik/traefik/releases/tag/v{version}"
+
+# helm MUST use github-tags pinned to ^v3: releases/latest returns 4.x (Helm 4
+# shipped), so releases-latest would never bump the 3.x line — it'd only ever
+# flag the new major. github-tags with a v3 pattern tracks 3.x patches.
+# cron-enabled omitted until dispatch-tested.
+- name: helm
+  files: [helm/melange.yaml]
+  source: { type: github-tags, repo: helm/helm, pattern: '^v3\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
+  tarball: { url: "https://github.com/helm/helm/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/helm/helm/releases"
+    notes: "https://github.com/helm/helm/releases/tag/v{version}"
 
 # ============================================================================
 # plain-text — fetch a single URL that returns the bare version as text

@@ -57,9 +57,13 @@ gh_curl() {
 
 fetch_github_releases_latest() {
   local repo; repo=$(j '.source.repo')
-  local tag
+  local tag strip_prefix
   tag=$(gh_curl "https://api.github.com/repos/${repo}/releases/latest" | jq -r '.tag_name // empty')
   [ -n "$tag" ] || { echo "::error::no tag from $repo/releases/latest"; return 1; }
+  # Optional source.strip-prefix removes a fixed release-name prefix
+  # (e.g. grafana/mimir tags releases `mimir-3.1.2`). No-op when unset.
+  strip_prefix=$(j '.source["strip-prefix"] // ""')
+  if [ -n "$strip_prefix" ]; then tag="${tag#"$strip_prefix"}"; fi
   if [ "$strip_v" = "true" ]; then tag="${tag#v}"; fi
   printf '%s\n' "$tag"
 }
