@@ -164,6 +164,24 @@
     releases: "https://github.com/sigstore/cosign/releases"
     notes: "https://github.com/sigstore/cosign/releases/tag/v{version}"
 
+- name: syft
+  files: [syft/melange.yaml]
+  source: { type: github-releases-latest, repo: anchore/syft, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/anchore/syft/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/anchore/syft/releases"
+    notes: "https://github.com/anchore/syft/releases/tag/v{version}"
+
+- name: grype
+  files: [grype/melange.yaml]
+  source: { type: github-releases-latest, repo: anchore/grype, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/anchore/grype/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/anchore/grype/releases"
+    notes: "https://github.com/anchore/grype/releases/tag/v{version}"
+
 # cron-enabled added once a manual dispatch (gh workflow run update-versions.yml
 # -f only=thanos) is confirmed to produce a clean PR.
 - name: thanos

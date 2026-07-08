@@ -84,6 +84,8 @@ OPENTOFU_VERSION ?= $(call melange_version,opentofu/melange.yaml)
 # --- Security tooling ---
 TRIVY_VERSION ?= $(call melange_version,trivy/melange.yaml)
 COSIGN_VERSION ?= $(call melange_version,cosign/melange.yaml)
+SYFT_VERSION ?= $(call melange_version,syft/melange.yaml)
+GRYPE_VERSION ?= $(call melange_version,grype/melange.yaml)
 
 # --- Messaging (MQTT) ---
 MOSQUITTO_VERSION ?= $(call melange_version,mosquitto/melange.yaml)
@@ -147,6 +149,8 @@ endef
 .PHONY: opentofu opentofu-melange test-opentofu
 .PHONY: trivy trivy-melange test-trivy
 .PHONY: cosign cosign-melange test-cosign
+.PHONY: syft syft-melange test-syft
+.PHONY: grype grype-melange test-grype
 .PHONY: thanos thanos-melange test-thanos
 .PHONY: node-exporter node-exporter-melange test-node-exporter
 .PHONY: blackbox-exporter blackbox-exporter-melange test-blackbox-exporter
@@ -1485,6 +1489,58 @@ cosign: cosign-melange
 	@echo "✓ minimal-cosign built (source build)"
 
 #------------------------------------------------------------------------------
+# SYFT IMAGE (melange Go source build + apko; SBOM generation)
+#------------------------------------------------------------------------------
+syft-melange: keygen
+	@echo "Building Syft $(SYFT_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build syft/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Syft package built from source"
+
+syft: syft-melange
+	@echo "Assembling minimal-syft image with apko..."
+	apko build syft/apko/syft.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-syft:$(VERSION) \
+		syft.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < syft.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-syft:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-syft:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-syft:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-syft:latest
+	@rm -f syft.tar sbom-*.spdx.json
+	@echo "✓ minimal-syft built (source build)"
+
+#------------------------------------------------------------------------------
+# GRYPE IMAGE (melange Go source build + apko; vulnerability scanning)
+#------------------------------------------------------------------------------
+grype-melange: keygen
+	@echo "Building Grype $(GRYPE_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build grype/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Grype package built from source"
+
+grype: grype-melange
+	@echo "Assembling minimal-grype image with apko..."
+	apko build grype/apko/grype.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-grype:$(VERSION) \
+		grype.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < grype.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-grype:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-grype:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-grype:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-grype:latest
+	@rm -f grype.tar sbom-*.spdx.json
+	@echo "✓ minimal-grype built (source build)"
+
+#------------------------------------------------------------------------------
 # THANOS IMAGE (melange Go source build + apko; HA Prometheus long-term storage)
 #------------------------------------------------------------------------------
 thanos-melange: keygen
@@ -2331,6 +2387,18 @@ test-cosign:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-cosign:latest" && \
 		cosign/test.sh
 	@echo "✓ cosign tests passed"
+
+test-syft:
+	@echo "Testing syft image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-syft:latest" && \
+		syft/test.sh
+	@echo "✓ syft tests passed"
+
+test-grype:
+	@echo "Testing grype image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-grype:latest" && \
+		grype/test.sh
+	@echo "✓ grype tests passed"
 
 test-thanos:
 	@echo "Testing thanos image..."

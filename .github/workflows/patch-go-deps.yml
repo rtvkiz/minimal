@@ -119,6 +119,8 @@ jobs:
             [trivy]="/home/build/trivy-${D}{{package.version}}"
             [thanos]="/home/build/thanos-${D}{{package.version}}"
             [cosign]="/home/build/cosign-${D}{{package.version}}"
+            [syft]="/home/build/syft-${D}{{package.version}}"
+            [grype]="/home/build/grype-${D}{{package.version}}"
           )
 
           # Main module path per image. Grype's buildinfo scan reports the
@@ -154,6 +156,8 @@ jobs:
             [trivy]="github.com/aquasecurity/trivy"
             [thanos]="github.com/thanos-io/thanos"
             [cosign]="github.com/sigstore/cosign/v3"
+            [syft]="github.com/anchore/syft"
+            [grype]="github.com/anchore/grype"
           )
 
           # Build step markers to insert before
@@ -188,6 +192,8 @@ jobs:
             [trivy]='GOEXPERIMENT=jsonv2 go build'
             [thanos]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [cosign]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [syft]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [grype]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
           HAS_PATCHES=false

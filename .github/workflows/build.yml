@@ -81,6 +81,8 @@ jobs:
             {"name":"opentofu","variants":["prod","dev"]},
             {"name":"trivy","variants":["prod","dev"]},
             {"name":"cosign","variants":["prod","dev"]},
+            {"name":"syft","variants":["prod","dev"]},
+            {"name":"grype","variants":["prod","dev"]},
             {"name":"thanos","variants":["prod","dev"]},
             {"name":"node-exporter","variants":["prod","dev"]},
             {"name":"blackbox-exporter","variants":["prod","dev"]},
