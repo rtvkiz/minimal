@@ -1,0 +1,75 @@
+# Melange build configuration for minimal Grype
+# Pure Go from source. Single static `grype` binary (vulnerability scanning).
+# License: Apache-2.0 (Anchore).
+
+package:
+  name: grype-minimal
+  version: 0.115.0
+  epoch: 0
+  description: "Minimal Grype (vulnerability scanner for images & filesystems) built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of grype source tarball - updated by update-versions.yml workflow
+  sha256: 146d944636f0d6ebfe21a1287306ef742a2d495e5cf629c1bbd47b7515164165
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify grype source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/anchore/grype/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/grype.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/grype.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf grype.tar.gz
+      rm grype.tar.gz
+
+  # Version is reported via main.version (matches upstream .goreleaser.yaml).
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/grype-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && _retry go get golang.org/x/crypto@v0.53.0 golang.org/x/net@v0.56.0 golang.org/x/sys@v0.46.0 golang.org/x/text@v0.38.0 golang.org/x/term@v0.44.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.21.0 golang.org/x/tools@v0.47.0 \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/grype-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -X main.version=${{package.version}}" \
+        -o /home/build/grype-bin \
+        ./cmd/grype
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/grype-bin "${{targets.destdir}}/usr/bin/grype"
+      chmod 0755 "${{targets.destdir}}/usr/bin/grype"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying grype binary..."
+      "${{targets.destdir}}/usr/bin/grype" version
