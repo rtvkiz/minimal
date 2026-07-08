@@ -45,7 +45,7 @@ pipeline:
       for root in /home/build/openbao-${{package.version}} /home/build/openbao-${{package.version}}/api /home/build/openbao-${{package.version}}/sdk /home/build/openbao-${{package.version}}/api/auth/approle /home/build/openbao-${{package.version}}/api/auth/jwt /home/build/openbao-${{package.version}}/api/auth/kubernetes /home/build/openbao-${{package.version}}/api/auth/ldap /home/build/openbao-${{package.version}}/api/auth/userpass; do
         [ -f "$root/go.mod" ] || continue
         ( cd "$root" \
-          && _retry go get github.com/Azure/go-ntlmssp@v0.1.1 github.com/docker/cli@v29.2.0+incompatible github.com/jackc/pgx/v5@v5.9.2 golang.org/x/crypto@v0.53.0 golang.org/x/net@v0.56.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.39.0 golang.org/x/term@v0.44.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.47.0 \
+          && _retry go get github.com/Azure/go-ntlmssp@v0.1.1 github.com/docker/cli@v29.2.0+incompatible github.com/jackc/pgx/v5@v5.9.2 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.56.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.47.0 \
           && go mod tidy -e \
           && { [ ! -d vendor ] || go mod vendor; } )
       done
