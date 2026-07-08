@@ -154,6 +154,16 @@
     releases: "https://github.com/aquasecurity/trivy/releases"
     notes: "https://github.com/aquasecurity/trivy/releases/tag/v{version}"
 
+# cron-enabled omitted until a dispatch check produces a clean PR.
+- name: cosign
+  files: [cosign/melange.yaml]
+  source: { type: github-releases-latest, repo: sigstore/cosign, strip-v: true, pin-major: 3 }
+  tarball: { url: "https://github.com/sigstore/cosign/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/sigstore/cosign/releases"
+    notes: "https://github.com/sigstore/cosign/releases/tag/v{version}"
+
 # cron-enabled added once a manual dispatch (gh workflow run update-versions.yml
 # -f only=thanos) is confirmed to produce a clean PR.
 - name: thanos

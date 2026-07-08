@@ -118,6 +118,7 @@ jobs:
             [opentofu]="/home/build/opentofu-${D}{{package.version}}"
             [trivy]="/home/build/trivy-${D}{{package.version}}"
             [thanos]="/home/build/thanos-${D}{{package.version}}"
+            [cosign]="/home/build/cosign-${D}{{package.version}}"
           )
 
           # Main module path per image. Grype's buildinfo scan reports the
@@ -152,6 +153,7 @@ jobs:
             [opentofu]="github.com/opentofu/opentofu"
             [trivy]="github.com/aquasecurity/trivy"
             [thanos]="github.com/thanos-io/thanos"
+            [cosign]="github.com/sigstore/cosign/v3"
           )
 
           # Build step markers to insert before
@@ -185,6 +187,7 @@ jobs:
             # block was silently skipped. Match the unique jsonv2 build instead.
             [trivy]='GOEXPERIMENT=jsonv2 go build'
             [thanos]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [cosign]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
           HAS_PATCHES=false

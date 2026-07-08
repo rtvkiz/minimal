@@ -1,0 +1,81 @@
+# Melange build configuration for minimal Cosign
+# Pure Go from source. Single static `cosign` binary (container signing/verify).
+# License: Apache-2.0 (Sigstore authors).
+
+package:
+  name: cosign-minimal
+  version: 3.1.1
+  epoch: 0
+  description: "Minimal Sigstore Cosign (container signing & verification) built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of cosign source tarball - updated by update-versions.yml workflow
+  sha256: 2b44374321cd19b0eb27026ee16e519393139edd7ffe01860c2d78d6084c68eb
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify cosign source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/sigstore/cosign/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/cosign.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/cosign.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf cosign.tar.gz
+      rm cosign.tar.gz
+
+  # Version is reported via sigs.k8s.io/release-utils/version.gitVersion.
+  # CGO_ENABLED=0 gives a static binary; the pivkey/pkcs11key build tags
+  # (hardware token support) are intentionally omitted — they require CGO and
+  # are not needed for the core sign/verify/attest workflows.
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/cosign-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && _retry go get golang.org/x/crypto@v0.53.0 golang.org/x/net@v0.56.0 golang.org/x/sys@v0.46.0 golang.org/x/text@v0.38.0 golang.org/x/term@v0.44.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.21.0 golang.org/x/tools@v0.47.0 \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/cosign-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X sigs.k8s.io/release-utils/version.gitVersion=v${{package.version}} \
+          -X sigs.k8s.io/release-utils/version.gitTreeState=clean \
+          -X sigs.k8s.io/release-utils/version.buildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        -o /home/build/cosign-bin \
+        ./cmd/cosign
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/cosign-bin "${{targets.destdir}}/usr/bin/cosign"
+      chmod 0755 "${{targets.destdir}}/usr/bin/cosign"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying cosign binary..."
+      "${{targets.destdir}}/usr/bin/cosign" version

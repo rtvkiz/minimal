@@ -80,6 +80,7 @@ jobs:
             {"name":"mimir","variants":["prod","dev"]},
             {"name":"opentofu","variants":["prod","dev"]},
             {"name":"trivy","variants":["prod","dev"]},
+            {"name":"cosign","variants":["prod","dev"]},
             {"name":"thanos","variants":["prod","dev"]},
             {"name":"node-exporter","variants":["prod","dev"]},
             {"name":"blackbox-exporter","variants":["prod","dev"]},
