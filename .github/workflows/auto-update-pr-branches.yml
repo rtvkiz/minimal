@@ -1,0 +1,85 @@
+name: Auto-update PR branches
+
+# Keeps auto-merge PRs from stalling on "Update branch".
+#
+# Branch protection on main uses `strict: true` (Require branches to be up to
+# date before merging). When one PR merges, every other open PR falls BEHIND
+# and its auto-merge halts until the branch is updated — GitHub does not click
+# "Update branch" for you. This workflow does: on every push to main it finds
+# open, auto-merge PRs that are BEHIND and updates their branch.
+#
+# CRITICAL: the update MUST be pushed with the GitHub App token, not the
+# default GITHUB_TOKEN. Pushes made by GITHUB_TOKEN do NOT re-trigger required
+# checks (GitHub blocks recursive workflow runs from it), so the `summary`
+# check would never re-run and auto-merge would still stall. The app token
+# (same one update-versions.yml uses) does re-trigger checks.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '*/30 * * * *'   # safety net for PRs left BEHIND between pushes
+  workflow_dispatch:
+
+# Serialize runs so two rapid main pushes don't issue overlapping updates.
+concurrency:
+  group: auto-update-pr-branches
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Update behind auto-merge PRs
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Give GitHub a moment to recompute mergeability after the push,
+          # otherwise mergeStateStatus can be UNKNOWN for a few seconds.
+          sleep 10
+
+          # Open, non-draft PRs into main with auto-merge enabled that are
+          # BEHIND base. We deliberately act ONLY on BEHIND:
+          #   - DIRTY   = real conflict; update-branch can't fix it, skip.
+          #   - BLOCKED = failing/pending checks; nothing to do here.
+          #   - CLEAN   = already mergeable; auto-merge will handle it.
+          #   - UNKNOWN = not yet computed; next push/schedule catches it.
+          mapfile -t prs < <(
+            gh pr list --repo "$REPO" --base main --state open --limit 100 \
+              --json number,isDraft,autoMergeRequest,mergeStateStatus \
+              --jq '.[] | select(.isDraft == false
+                                 and .autoMergeRequest != null
+                                 and .mergeStateStatus == "BEHIND") | .number'
+          )
+
+          if [ "${#prs[@]}" -eq 0 ]; then
+            echo "No behind auto-merge PRs — nothing to do."
+            exit 0
+          fi
+
+          echo "Behind auto-merge PRs: ${prs[*]}"
+          for n in "${prs[@]}"; do
+            echo "::group::Updating branch for PR #$n"
+            # update-branch merges base into the PR head. 202 on success; 422
+            # if it can't (e.g. a conflict raced in). Never fail the whole job
+            # for one PR — log and move on; the next run retries.
+            if gh api --method PUT "repos/$REPO/pulls/$n/update-branch" \
+                 -H "Accept: application/vnd.github+json" >/dev/null; then
+              echo "PR #$n branch update requested."
+            else
+              echo "::warning::Could not update branch for PR #$n (conflict or transient); will retry next run."
+            fi
+            echo "::endgroup::"
+          done
