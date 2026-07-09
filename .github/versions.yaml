@@ -132,9 +132,8 @@
     releases: "https://github.com/open-telemetry/opentelemetry-collector/releases"
     notes: "https://github.com/open-telemetry/opentelemetry-collector/releases/tag/v{version}"
 
-# cron-enabled added once a manual dispatch (gh workflow run
-# update-versions.yml -f only=opentofu) is confirmed to produce a clean PR.
 - name: opentofu
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [opentofu/melange.yaml]
   source: { type: github-releases-latest, repo: opentofu/opentofu, strip-v: true, pin-major: 1 }
   tarball: { url: "https://github.com/opentofu/opentofu/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -143,9 +142,8 @@
     releases: "https://github.com/opentofu/opentofu/releases"
     notes: "https://github.com/opentofu/opentofu/releases/tag/v{version}"
 
-# cron-enabled added once a manual dispatch (gh workflow run update-versions.yml
-# -f only=trivy) is confirmed to produce a clean PR.
 - name: trivy
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [trivy/melange.yaml]
   source: { type: github-releases-latest, repo: aquasecurity/trivy, strip-v: true, pin-major: 0 }
   tarball: { url: "https://github.com/aquasecurity/trivy/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -154,8 +152,8 @@
     releases: "https://github.com/aquasecurity/trivy/releases"
     notes: "https://github.com/aquasecurity/trivy/releases/tag/v{version}"
 
-# cron-enabled omitted until a dispatch check produces a clean PR.
 - name: cosign
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [cosign/melange.yaml]
   source: { type: github-releases-latest, repo: sigstore/cosign, strip-v: true, pin-major: 3 }
   tarball: { url: "https://github.com/sigstore/cosign/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -165,6 +163,7 @@
     notes: "https://github.com/sigstore/cosign/releases/tag/v{version}"
 
 - name: syft
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [syft/melange.yaml]
   source: { type: github-releases-latest, repo: anchore/syft, strip-v: true, pin-major: 1 }
   tarball: { url: "https://github.com/anchore/syft/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -174,6 +173,7 @@
     notes: "https://github.com/anchore/syft/releases/tag/v{version}"
 
 - name: grype
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [grype/melange.yaml]
   source: { type: github-releases-latest, repo: anchore/grype, strip-v: true, pin-major: 0 }
   tarball: { url: "https://github.com/anchore/grype/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -222,9 +222,8 @@
     releases: "https://github.com/open-policy-agent/opa/releases"
     notes: "https://github.com/open-policy-agent/opa/releases/tag/v{version}"
 
-# cron-enabled added once a manual dispatch (gh workflow run update-versions.yml
-# -f only=thanos) is confirmed to produce a clean PR.
 - name: thanos
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [thanos/melange.yaml]
   source: { type: github-releases-latest, repo: thanos-io/thanos, strip-v: true, pin-major: 0 }
   tarball: { url: "https://github.com/thanos-io/thanos/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -234,6 +233,7 @@
     notes: "https://github.com/thanos-io/thanos/releases/tag/v{version}"
 
 - name: node-exporter
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [node-exporter/melange.yaml]
   source: { type: github-releases-latest, repo: prometheus/node_exporter, strip-v: true, pin-major: 1 }
   tarball: { url: "https://github.com/prometheus/node_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -243,6 +243,7 @@
     notes: "https://github.com/prometheus/node_exporter/releases/tag/v{version}"
 
 - name: blackbox-exporter
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [blackbox-exporter/melange.yaml]
   source: { type: github-releases-latest, repo: prometheus/blackbox_exporter, strip-v: true, pin-major: 0 }
   tarball: { url: "https://github.com/prometheus/blackbox_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -252,6 +253,7 @@
     notes: "https://github.com/prometheus/blackbox_exporter/releases/tag/v{version}"
 
 - name: pushgateway
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [pushgateway/melange.yaml]
   source: { type: github-releases-latest, repo: prometheus/pushgateway, strip-v: true, pin-major: 1 }
   tarball: { url: "https://github.com/prometheus/pushgateway/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -261,11 +263,11 @@
     notes: "https://github.com/prometheus/pushgateway/releases/tag/v{version}"
 
 # --- Frozen-image backfill: these compiled from source but had no auto-bump
-# --- wiring at onboarding. cron-enabled deliberately omitted until each is
-# --- dispatch-tested (gh workflow run update-versions.yml -f only=<name>).
+# --- wiring at onboarding; rows added + dispatch-validated in wave 8 (2026-07-08).
 # --- See docs/version-management.md.
 
 - name: consul
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [consul/melange.yaml]
   source: { type: github-releases-latest, repo: hashicorp/consul, strip-v: true, pin-major: 2 }
   tarball: { url: "https://github.com/hashicorp/consul/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -275,6 +277,7 @@
     notes: "https://github.com/hashicorp/consul/releases/tag/v{version}"
 
 - name: mailpit
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [mailpit/melange.yaml]
   source: { type: github-releases-latest, repo: axllent/mailpit, strip-v: true, pin-major: 1 }
   tarball: { url: "https://github.com/axllent/mailpit/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -284,6 +287,7 @@
     notes: "https://github.com/axllent/mailpit/releases/tag/v{version}"
 
 - name: registry
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [registry/melange.yaml]
   source: { type: github-releases-latest, repo: distribution/distribution, strip-v: true, pin-major: 3 }
   tarball: { url: "https://github.com/distribution/distribution/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -293,6 +297,7 @@
     notes: "https://github.com/distribution/distribution/releases/tag/v{version}"
 
 - name: telegraf
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [telegraf/melange.yaml]
   source: { type: github-releases-latest, repo: influxdata/telegraf, strip-v: true, pin-major: 1 }
   tarball: { url: "https://github.com/influxdata/telegraf/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -302,6 +307,7 @@
     notes: "https://github.com/influxdata/telegraf/releases/tag/v{version}"
 
 - name: tempo
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [tempo/melange.yaml]
   source: { type: github-releases-latest, repo: grafana/tempo, strip-v: true, pin-major: 3 }
   tarball: { url: "https://github.com/grafana/tempo/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -313,6 +319,7 @@
 # kubectl builds from the giant kubernetes/kubernetes repo; releases/latest
 # returns a clean v1.MINOR.PATCH and the archive tarball resolves normally.
 - name: kubectl
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [kubectl/melange.yaml]
   source: { type: github-releases-latest, repo: kubernetes/kubernetes, strip-v: true, pin-major: 1 }
   tarball: { url: "https://github.com/kubernetes/kubernetes/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -325,6 +332,7 @@
 # 100+ mimir-distributed-*weekly chart tags), so use releases/latest + a
 # strip-prefix to drop the `mimir-` and read the bare version.
 - name: mimir
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [mimir/melange.yaml]
   source: { type: github-releases-latest, repo: grafana/mimir, strip-prefix: "mimir-", pin-major: 3 }
   tarball: { url: "https://github.com/grafana/mimir/archive/refs/tags/mimir-{version}.tar.gz", field: sha256 }
@@ -442,8 +450,8 @@
 # helm MUST use github-tags pinned to ^v3: releases/latest returns 4.x (Helm 4
 # shipped), so releases-latest would never bump the 3.x line — it'd only ever
 # flag the new major. github-tags with a v3 pattern tracks 3.x patches.
-# cron-enabled omitted until dispatch-tested.
 - name: helm
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [helm/melange.yaml]
   source: { type: github-tags, repo: helm/helm, pattern: '^v3\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
   tarball: { url: "https://github.com/helm/helm/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -451,6 +459,20 @@
   links:
     releases: "https://github.com/helm/helm/releases"
     notes: "https://github.com/helm/helm/releases/tag/v{version}"
+
+# mosquitto: the melange comment referenced an update-mosquitto.yml that never
+# existed → silently frozen at 2.0.20 (audit 2026-07-08). Tags live on GitHub
+# (eclipse/mosquitto) but the source tarball is hosted on mosquitto.org, not the
+# GitHub archive.
+- name: mosquitto
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
+  files: [mosquitto/melange.yaml]
+  source: { type: github-tags, repo: eclipse-mosquitto/mosquitto, pattern: '^v2\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  tarball: { url: "https://mosquitto.org/files/source/mosquitto-{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/eclipse-mosquitto/mosquitto/releases"
+    notes: "https://github.com/eclipse-mosquitto/mosquitto/blob/v{version}/ChangeLog.txt"
 
 # ============================================================================
 # plain-text — fetch a single URL that returns the bare version as text
@@ -596,8 +618,9 @@
 
 # Deno ships official upstream binaries (we build from those, not Wolfi's
 # lagging package). Per-arch zips; sha256 of each zip recorded into melange
-# vars. cron-enabled after a dispatch check.
+# vars.
 - name: deno
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [deno/melange.yaml]
   source: { type: github-releases-latest, repo: denoland/deno, strip-v: true, pin-major: 2 }
   tarballs:
@@ -616,8 +639,8 @@
 # OpenSearch is built from the official upstream "min" distribution (not
 # Wolfi's lagging opensearch-3 package). Per-arch tarballs; sha512 of each
 # recorded into the melange vars. Replaces the old update-opensearch.yml.
-# cron-enabled after a dispatch check.
 - name: opensearch
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [opensearch/melange.yaml]
   source: { type: github-tags, repo: opensearch-project/OpenSearch, pattern: '^([0-9]+\.[0-9]+\.[0-9]+)$', pin-major: 3 }
   tarballs:
