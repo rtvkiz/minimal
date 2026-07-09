@@ -1,0 +1,78 @@
+# Melange build configuration for minimal step-cli
+# Pure Go from source. Single static `step` binary (smallstep PKI/cert toolkit).
+# License: Apache-2.0 (smallstep authors).
+
+package:
+  name: step-cli-minimal
+  version: 0.30.6
+  epoch: 0
+  description: "Minimal smallstep step CLI (PKI/certificate toolkit) built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of step-cli source tarball - updated by update-versions.yml workflow
+  sha256: 0c8562b95150cc24bf69ba18fcf9f0bf671f334f5d3ccb39f287692b61531b7c
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify step-cli source (upstream repo is smallstep/cli, so the
+  # archive's top-level dir is cli-<version>; --strip-components normalises it).
+  - runs: |
+      mkdir -p /home/build/step-cli-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/smallstep/cli/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/step-cli.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/step-cli.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/step-cli.tar.gz -C /home/build/step-cli-${{package.version}} --strip-components=1
+      rm /home/build/step-cli.tar.gz
+
+  # Version is reported via main.Version (see upstream Makefile LDFLAGS).
+  # CGO_ENABLED=0 gives a static binary; PKCS#11/PIV hardware-token support
+  # (which needs CGO) is intentionally omitted.
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/step-cli-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/step-cli-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X main.Version=${{package.version}} \
+          -X main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        -o /home/build/step-bin \
+        ./cmd/step
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/step-bin "${{targets.destdir}}/usr/bin/step"
+      chmod 0755 "${{targets.destdir}}/usr/bin/step"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying step binary..."
+      "${{targets.destdir}}/usr/bin/step" version

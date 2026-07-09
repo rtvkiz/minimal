@@ -1,0 +1,77 @@
+# Melange build configuration for minimal OPA (Open Policy Agent)
+# Pure Go from source. Single static `opa` binary (policy engine).
+# License: Apache-2.0 (Open Policy Agent authors).
+
+package:
+  name: opa-minimal
+  version: 1.18.2
+  epoch: 0
+  description: "Minimal Open Policy Agent (OPA) built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of opa source tarball - updated by update-versions.yml workflow
+  sha256: 4bec39f66682a370cac357c76303e4517cb35e236c04a221e315350550280c50
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify opa source
+  - runs: |
+      mkdir -p /home/build/opa-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/open-policy-agent/opa/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/opa.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/opa.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/opa.tar.gz -C /home/build/opa-${{package.version}} --strip-components=1
+      rm /home/build/opa.tar.gz
+
+  # Version is reported via github.com/open-policy-agent/opa/version.Version.
+  # Built WITHOUT the opa_wasm build tag: the WASM evaluator pulls in wasmtime,
+  # which requires CGO. CGO_ENABLED=0 keeps the binary fully static; Rego
+  # evaluation works without WASM. main package lives at the repo root.
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/opa-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/opa-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/open-policy-agent/opa/version.Version=${{package.version}}" \
+        -o /home/build/opa-bin \
+        .
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/opa-bin "${{targets.destdir}}/usr/bin/opa"
+      chmod 0755 "${{targets.destdir}}/usr/bin/opa"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying opa binary..."
+      "${{targets.destdir}}/usr/bin/opa" version
