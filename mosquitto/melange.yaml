@@ -11,7 +11,7 @@ package:
     - license: EPL-2.0
 
 vars:
-  # SHA256 of mosquitto source tarball - updated by update-mosquitto.yml workflow
+  # SHA256 of mosquitto source tarball - updated by update-versions.yml workflow
   sha256: ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8
 
 environment:

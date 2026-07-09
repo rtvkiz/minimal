@@ -460,6 +460,20 @@
     releases: "https://github.com/helm/helm/releases"
     notes: "https://github.com/helm/helm/releases/tag/v{version}"
 
+# mosquitto: the melange comment referenced an update-mosquitto.yml that never
+# existed → silently frozen at 2.0.20 (audit 2026-07-08). Tags live on GitHub
+# (eclipse/mosquitto) but the source tarball is hosted on mosquitto.org, not the
+# GitHub archive.
+- name: mosquitto
+  cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
+  files: [mosquitto/melange.yaml]
+  source: { type: github-tags, repo: eclipse-mosquitto/mosquitto, pattern: '^v2\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  tarball: { url: "https://mosquitto.org/files/source/mosquitto-{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/eclipse-mosquitto/mosquitto/releases"
+    notes: "https://github.com/eclipse-mosquitto/mosquitto/blob/v{version}/ChangeLog.txt"
+
 # ============================================================================
 # plain-text — fetch a single URL that returns the bare version as text
 # ============================================================================
