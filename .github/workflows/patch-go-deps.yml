@@ -121,6 +121,10 @@ jobs:
             [cosign]="/home/build/cosign-${D}{{package.version}}"
             [syft]="/home/build/syft-${D}{{package.version}}"
             [grype]="/home/build/grype-${D}{{package.version}}"
+            [oras]="/home/build/oras-${D}{{package.version}}"
+            [gitleaks]="/home/build/gitleaks-${D}{{package.version}}"
+            [step-cli]="/home/build/step-cli-${D}{{package.version}}"
+            [opa]="/home/build/opa-${D}{{package.version}}"
           )
 
           # Main module path per image. Grype's buildinfo scan reports the
@@ -158,6 +162,10 @@ jobs:
             [cosign]="github.com/sigstore/cosign/v3"
             [syft]="github.com/anchore/syft"
             [grype]="github.com/anchore/grype"
+            [oras]="oras.land/oras"
+            [gitleaks]="github.com/zricethezav/gitleaks/v8"
+            [step-cli]="github.com/smallstep/cli"
+            [opa]="github.com/open-policy-agent/opa"
           )
 
           # Build step markers to insert before
@@ -194,6 +202,10 @@ jobs:
             [cosign]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [syft]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [grype]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [oras]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [gitleaks]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [step-cli]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [opa]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
           HAS_PATCHES=false

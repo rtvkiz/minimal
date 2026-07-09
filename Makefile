@@ -86,6 +86,10 @@ TRIVY_VERSION ?= $(call melange_version,trivy/melange.yaml)
 COSIGN_VERSION ?= $(call melange_version,cosign/melange.yaml)
 SYFT_VERSION ?= $(call melange_version,syft/melange.yaml)
 GRYPE_VERSION ?= $(call melange_version,grype/melange.yaml)
+ORAS_VERSION ?= $(call melange_version,oras/melange.yaml)
+GITLEAKS_VERSION ?= $(call melange_version,gitleaks/melange.yaml)
+STEP_VERSION ?= $(call melange_version,step-cli/melange.yaml)
+OPA_VERSION ?= $(call melange_version,opa/melange.yaml)
 
 # --- Messaging (MQTT) ---
 MOSQUITTO_VERSION ?= $(call melange_version,mosquitto/melange.yaml)
@@ -151,6 +155,10 @@ endef
 .PHONY: cosign cosign-melange test-cosign
 .PHONY: syft syft-melange test-syft
 .PHONY: grype grype-melange test-grype
+.PHONY: oras oras-melange test-oras
+.PHONY: gitleaks gitleaks-melange test-gitleaks
+.PHONY: step-cli step-cli-melange test-step-cli
+.PHONY: opa opa-melange test-opa
 .PHONY: thanos thanos-melange test-thanos
 .PHONY: node-exporter node-exporter-melange test-node-exporter
 .PHONY: blackbox-exporter blackbox-exporter-melange test-blackbox-exporter
@@ -1541,6 +1549,110 @@ grype: grype-melange
 	@echo "✓ minimal-grype built (source build)"
 
 #------------------------------------------------------------------------------
+# ORAS IMAGE (melange Go source build + apko; OCI registry client)
+#------------------------------------------------------------------------------
+oras-melange: keygen
+	@echo "Building ORAS $(ORAS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build oras/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ ORAS package built from source"
+
+oras: oras-melange
+	@echo "Assembling minimal-oras image with apko..."
+	apko build oras/apko/oras.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-oras:$(VERSION) \
+		oras.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < oras.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-oras:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-oras:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-oras:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-oras:latest
+	@rm -f oras.tar sbom-*.spdx.json
+	@echo "✓ minimal-oras built (source build)"
+
+#------------------------------------------------------------------------------
+# GITLEAKS IMAGE (melange Go source build + apko; secret scanning)
+#------------------------------------------------------------------------------
+gitleaks-melange: keygen
+	@echo "Building Gitleaks $(GITLEAKS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build gitleaks/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Gitleaks package built from source"
+
+gitleaks: gitleaks-melange
+	@echo "Assembling minimal-gitleaks image with apko..."
+	apko build gitleaks/apko/gitleaks.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-gitleaks:$(VERSION) \
+		gitleaks.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < gitleaks.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-gitleaks:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-gitleaks:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-gitleaks:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-gitleaks:latest
+	@rm -f gitleaks.tar sbom-*.spdx.json
+	@echo "✓ minimal-gitleaks built (source build)"
+
+#------------------------------------------------------------------------------
+# STEP-CLI IMAGE (melange Go source build + apko; smallstep PKI/cert toolkit)
+#------------------------------------------------------------------------------
+step-cli-melange: keygen
+	@echo "Building step-cli $(STEP_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build step-cli/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ step-cli package built from source"
+
+step-cli: step-cli-melange
+	@echo "Assembling minimal-step-cli image with apko..."
+	apko build step-cli/apko/step-cli.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-step-cli:$(VERSION) \
+		step-cli.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < step-cli.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-step-cli:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-step-cli:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-step-cli:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-step-cli:latest
+	@rm -f step-cli.tar sbom-*.spdx.json
+	@echo "✓ minimal-step-cli built (source build)"
+
+#------------------------------------------------------------------------------
+# OPA IMAGE (melange Go source build + apko; Open Policy Agent)
+#------------------------------------------------------------------------------
+opa-melange: keygen
+	@echo "Building OPA $(OPA_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build opa/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ OPA package built from source"
+
+opa: opa-melange
+	@echo "Assembling minimal-opa image with apko..."
+	apko build opa/apko/opa.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-opa:$(VERSION) \
+		opa.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < opa.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-opa:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-opa:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-opa:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-opa:latest
+	@rm -f opa.tar sbom-*.spdx.json
+	@echo "✓ minimal-opa built (source build)"
+
+#------------------------------------------------------------------------------
 # THANOS IMAGE (melange Go source build + apko; HA Prometheus long-term storage)
 #------------------------------------------------------------------------------
 thanos-melange: keygen
@@ -2399,6 +2511,30 @@ test-grype:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-grype:latest" && \
 		grype/test.sh
 	@echo "✓ grype tests passed"
+
+test-oras:
+	@echo "Testing oras image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-oras:latest" && \
+		oras/test.sh
+	@echo "✓ oras tests passed"
+
+test-gitleaks:
+	@echo "Testing gitleaks image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-gitleaks:latest" && \
+		gitleaks/test.sh
+	@echo "✓ gitleaks tests passed"
+
+test-step-cli:
+	@echo "Testing step-cli image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-step-cli:latest" && \
+		step-cli/test.sh
+	@echo "✓ step-cli tests passed"
+
+test-opa:
+	@echo "Testing opa image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-opa:latest" && \
+		opa/test.sh
+	@echo "✓ opa tests passed"
 
 test-thanos:
 	@echo "Testing thanos image..."

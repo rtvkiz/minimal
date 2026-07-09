@@ -182,6 +182,42 @@
     releases: "https://github.com/anchore/grype/releases"
     notes: "https://github.com/anchore/grype/releases/tag/v{version}"
 
+- name: oras
+  files: [oras/melange.yaml]
+  source: { type: github-releases-latest, repo: oras-project/oras, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/oras-project/oras/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/oras-project/oras/releases"
+    notes: "https://github.com/oras-project/oras/releases/tag/v{version}"
+
+- name: gitleaks
+  files: [gitleaks/melange.yaml]
+  source: { type: github-releases-latest, repo: gitleaks/gitleaks, strip-v: true, pin-major: 8 }
+  tarball: { url: "https://github.com/gitleaks/gitleaks/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/gitleaks/gitleaks/releases"
+    notes: "https://github.com/gitleaks/gitleaks/releases/tag/v{version}"
+
+- name: step-cli
+  files: [step-cli/melange.yaml]
+  source: { type: github-releases-latest, repo: smallstep/cli, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/smallstep/cli/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/smallstep/cli/releases"
+    notes: "https://github.com/smallstep/cli/releases/tag/v{version}"
+
+- name: opa
+  files: [opa/melange.yaml]
+  source: { type: github-releases-latest, repo: open-policy-agent/opa, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/open-policy-agent/opa/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/open-policy-agent/opa/releases"
+    notes: "https://github.com/open-policy-agent/opa/releases/tag/v{version}"
+
 # cron-enabled added once a manual dispatch (gh workflow run update-versions.yml
 # -f only=thanos) is confirmed to produce a clean PR.
 - name: thanos

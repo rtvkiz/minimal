@@ -1,0 +1,75 @@
+# Melange build configuration for minimal Gitleaks
+# Pure Go from source. Single static `gitleaks` binary (secret scanning).
+# License: MIT (Gitleaks authors).
+
+package:
+  name: gitleaks-minimal
+  version: 8.30.1
+  epoch: 0
+  description: "Minimal Gitleaks (SAST secret scanner) built from source"
+  copyright:
+    - license: MIT
+
+vars:
+  # SHA256 of gitleaks source tarball - updated by update-versions.yml workflow
+  sha256: e90fb266d75837e75894c778bf594ab8e2787f12dce5a62651f21b893eaf9abb
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify gitleaks source
+  - runs: |
+      mkdir -p /home/build/gitleaks-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/gitleaks/gitleaks/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/gitleaks.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/gitleaks.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/gitleaks.tar.gz -C /home/build/gitleaks-${{package.version}} --strip-components=1
+      rm /home/build/gitleaks.tar.gz
+
+  # Version is reported via github.com/zricethezav/gitleaks/v8/version.Version.
+  # CGO_ENABLED=0 gives a static binary. main package lives at the repo root.
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/gitleaks-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/gitleaks-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/zricethezav/gitleaks/v8/version.Version=${{package.version}}" \
+        -o /home/build/gitleaks-bin \
+        .
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/gitleaks-bin "${{targets.destdir}}/usr/bin/gitleaks"
+      chmod 0755 "${{targets.destdir}}/usr/bin/gitleaks"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying gitleaks binary..."
+      "${{targets.destdir}}/usr/bin/gitleaks" version
