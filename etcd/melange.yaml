@@ -3,14 +3,14 @@
 
 package:
   name: etcd-minimal
-  version: 3.6.13
+  version: 3.7.0
   epoch: 0
   description: "Minimal etcd distributed key-value store built from source"
   copyright:
     - license: Apache-2.0
 
 vars:
-  sha256: acb4b4a7ce8e803b81f0bc0f0e97969f7b63ea73712c2ceec4ea954f41c3847b
+  sha256: 5e54f009d3c80e0fe5a07686a0d1b396016fa095c86fe78cce206322e97c93de
 
 environment:
   contents:
@@ -41,7 +41,7 @@ pipeline:
       for root in /home/build/etcd-${{package.version}}/server /home/build/etcd-${{package.version}}/etcdctl /home/build/etcd-${{package.version}}/etcdutl; do
         [ -f "$root/go.mod" ] || continue
         ( cd "$root" \
-          && _retry go get go.opentelemetry.io/otel/sdk@v1.44.0 go.opentelemetry.io/otel@v1.44.0 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.56.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.47.0 \
+          && _retry go get go.opentelemetry.io/otel/sdk@v1.44.0 go.opentelemetry.io/otel@v1.44.0 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.48.0 \
           && go mod tidy -e \
           && { [ ! -d vendor ] || go mod vendor; } )
       done
