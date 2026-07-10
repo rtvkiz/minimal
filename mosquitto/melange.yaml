@@ -4,7 +4,7 @@
 
 package:
   name: mosquitto-minimal
-  version: 2.0.20
+  version: 2.1.2
   epoch: 0
   description: "Minimal Eclipse Mosquitto MQTT broker built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of mosquitto source tarball - updated by update-versions.yml workflow
-  sha256: ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8
+  sha256: fd905380691ac65ea5a93779e8214941829e3d6e038d5edff9eac5fd74cbed02
 
 environment:
   contents:
@@ -44,8 +44,16 @@ pipeline:
 
   # Build: TLS yes, docs no, no bundled deps, no websockets/SRV (avoids
   # extra runtime deps we don't want), CJSON yes for mosquitto_ctrl.
+  # mosquitto 2.1 added several optional features we don't ship in a minimal
+  # broker and which pull extra dev deps: WITH_EDITLINE (mosquitto_ctrl shell →
+  # editline), WITH_HTTP_API (→ libmicrohttpd), WITH_SQLITE (persist-sqlite
+  # plugin → sqlite3). All disabled below. WITH_SQLITE=no skips *building* the
+  # plugin, but plugins/Makefile lists persist-sqlite in DIRS unconditionally so
+  # `make install` still tries to install its .so — drop it from DIRS so it is
+  # neither built nor installed (no sqlite dependency added).
   - runs: |
       cd /home/build/mosquitto-${{package.version}}
+      sed -i '/persist-sqlite/d' plugins/Makefile
       make -j"$(nproc)" \
         WITH_TLS=yes \
         WITH_TLS_PSK=yes \
@@ -55,6 +63,9 @@ pipeline:
         WITH_CJSON=yes \
         WITH_SRV=no \
         WITH_WEBSOCKETS=no \
+        WITH_EDITLINE=no \
+        WITH_HTTP_API=no \
+        WITH_SQLITE=no \
         WITH_SHARED_LIBRARIES=yes \
         WITH_STATIC_LIBRARIES=no \
         prefix=/usr
@@ -69,6 +80,9 @@ pipeline:
         WITH_CJSON=yes \
         WITH_SRV=no \
         WITH_WEBSOCKETS=no \
+        WITH_EDITLINE=no \
+        WITH_HTTP_API=no \
+        WITH_SQLITE=no \
         WITH_SHARED_LIBRARIES=yes \
         WITH_STATIC_LIBRARIES=no \
         prefix=/usr \
