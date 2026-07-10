@@ -8,7 +8,7 @@
 
 package:
   name: deno-minimal
-  version: 2.8.3
+  version: 2.9.2
   epoch: 0
   description: "Minimal Deno from the official upstream release binary"
   copyright:
@@ -18,8 +18,8 @@ vars:
   # SHA256 of the official deno-<arch>-unknown-linux-gnu.zip release assets,
   # updated by update-versions.yml. From:
   #   https://github.com/denoland/deno/releases/download/v<ver>/deno-<arch>-unknown-linux-gnu.zip.sha256sum
-  sha256_x86: 30455b845ffa6082209c3590269c910ad3b7efdf28c9879afd4006c47ae54197
-  sha256_arm: d4589cc1ffcbf1995c92a0127d932aaf832ac70cfdcc6d5b7bf38043cf303575
+  sha256_x86: 934d1bd5cb09eaed7f2e4a4fc58208d04a3c5c0fcde9f319d93d735265c67a4a
+  sha256_arm: 310b8f48e59964ff18890d35e64f64fb90e8b1cc5d9ebff8c818327d5afb16d2
 
 environment:
   contents:
