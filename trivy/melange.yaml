@@ -49,18 +49,13 @@ pipeline:
   # behind this experiment — without it the build fails with "build constraints
   # exclude all Go files in .../encoding/json/v2". Matches upstream's
   # goreleaser.yml, which sets GOEXPERIMENT=jsonv2 for every build target.
-  # patch-go-deps: auto-generated — do not edit manually
-  - runs: |
-      export GOWORK=off
-      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
-      for root in /home/build/trivy-${{package.version}}; do
-        [ -f "$root/go.mod" ] || continue
-        ( cd "$root" \
-          && _retry go get github.com/containerd/containerd/v2@v2.3.2 github.com/moby/buildkit@v0.28.1 github.com/sigstore/timestamp-authority/v2@v2.1.0 oras.land/oras-go/v2@v2.6.1 \
-          && go mod tidy -e \
-          && { [ ! -d vendor ] || go mod vendor; } )
-      done
-  # end-patch-go-deps
+  # No transitive Go dep-patching block here by design: trivy's dependency graph
+  # (buildkit, containerd, rclone, sigstore, aws-sdk, …) is too large and tightly
+  # coupled to force-bump — grype flags ~20 transitive CVEs at once and pinning
+  # them to exact fix versions fights Go's MVS into cascading conflicts. trivy is
+  # excluded from patch-go-deps.yml (SKIP_IMAGES); its transitive CVEs are picked
+  # up via the upstream version bump (update-versions.yml — Aqua bumps their own
+  # go.mod) plus the 6-hourly base rebuild. Build from pure upstream source.
   - runs: |
       cd /home/build/trivy-${{package.version}}
       GOTOOLCHAIN=local CGO_ENABLED=0 GOEXPERIMENT=jsonv2 go build \

@@ -212,7 +212,24 @@ jobs:
           PATCHED_LIST=""
           SUMMARY=""
 
+          # Images excluded from automated transitive dep-patching. Some Go apps
+          # have dependency graphs too large and tightly-coupled to force-bump
+          # safely: grype flags ~20 transitive CVEs at once and pinning them to
+          # exact fix versions fights Go's MVS, producing cascading conflicts
+          # that no generation-time resolver reliably untangles (trivy: rclone
+          # needs aws s3 v1.99.0, sigstore-go transitively needs v1.101.0, grype
+          # pinned v1.97.3 → build aborts). Wolfi's own HOW_TO_PATCH_CVES.md says
+          # to hand-resolve these locally, and Chainguard does not force-bump them
+          # either. For excluded images, transitive CVEs are picked up via the
+          # upstream app-version bump (update-versions.yml — the vendor bumps
+          # their own go.mod) plus the 6-hourly base rebuild; a genuinely
+          # reachable gap gets a manual targeted bump or a VEX not_affected.
+          SKIP_IMAGES=" trivy "
           for IMAGE in "${!MODROOTS[@]}"; do
+            if [[ "$SKIP_IMAGES" == *" $IMAGE "* ]]; then
+              echo "=== Skipping $IMAGE (excluded from auto transitive dep-patching; tracked via update-versions + base rebuild) ==="
+              continue
+            fi
             echo "=== Scanning $IMAGE ==="
             FULL_IMAGE="${REGISTRY}/${OWNER}/minimal-${IMAGE}:latest"
             MELANGE_FILE="${IMAGE}/melange.yaml"
@@ -400,15 +417,9 @@ jobs:
                 echo "  Skipping incompatible ${IMAGE} module bump: $mod_ver"
                 continue
               fi
-              # trivy ships docker/cli v29.5.2, but advisory GO-2026-4610 reports
-              # its fix as v29.2.0 — a *downgrade* (the advisory is the Windows-only
-              # PrivEsc, already past in 29.5.2), and v29.2.0 conflicts with
-              # trivy's buildkit@v0.28.1 which requires docker/cli v29.2.1, so
-              # `go get docker/cli@v29.2.0` fails the whole build. Skip it.
-              if [ "$IMAGE" = "trivy" ] && [[ "$mod_ver" == github.com/docker/cli@* ]]; then
-                echo "  Skipping incompatible trivy module bump: $mod_ver (advisory fix below installed 29.5.2; conflicts with buildkit's required 29.2.1)"
-                continue
-              fi
+              # (trivy is fully excluded via SKIP_IMAGES above — its graph is too
+              # tangled to force-bump; its transitive CVEs come in via the upstream
+              # version bump. No per-module trivy skips needed here anymore.)
               # Telegraf's remotefile plugin imports rclone's fs package directly
               # and tracks a specific rclone commit (pinned as a pseudo-version in
               # telegraf's go.mod). Bumping rclone ahead of that pin breaks
@@ -531,7 +542,7 @@ jobs:
             # 502s (kubectl x86_64 hit this in run #27361909125). go's own
             # retry doesn't survive mid-stream INTERNAL_ERROR, and a failed
             # `go get` aborts the whole melange build.
-            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      export GOWORK=off\n      _retry() { local i; for i in 5 15 30; do \"\$@\" && return 0; echo \"retry: \$* failed, sleeping \${i}s\"; sleep \$i; done; \"\$@\"; }\n      _gg() { local out reqs i a keep newargs r; for i in 1 2 3 4 5; do if out=\$(go get \"\$@\" 2>&1); then echo \"\$out\"; return 0; fi; reqs=\$(echo \"\$out\" | grep -oE 'requires [^ ]+@[^ ,]+' | awk '{print \$2}' | sort -t@ -k1,1 -k2,2V | awk -F@ '{m[\$1]=\$0} END{for(k in m) print m[k]}'); [ -n \"\$reqs\" ] || break; newargs=; for a in \"\$@\"; do keep=1; for r in \$reqs; do [ \"\${a%@*}\" = \"\${r%@*}\" ] && keep=0; done; [ \"\$keep\" = 1 ] && newargs=\"\$newargs \$a\"; done; set -- \$newargs \$reqs; done; go get \"\$@\"; }\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        ( cd \"\$root\" \\\\\n          && _retry _gg${GO_GETS} \\\\\n          && go mod tidy -e \\\\\n          && { [ ! -d vendor ] || go mod vendor; } )\n      done\n  # end-patch-go-deps\n"
+            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      export GOWORK=off\n      _retry() { local i; for i in 5 15 30; do \"\$@\" && return 0; echo \"retry: \$* failed, sleeping \${i}s\"; sleep \$i; done; \"\$@\"; }\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        ( cd \"\$root\" \\\\\n          && _retry go get${GO_GETS} \\\\\n          && go mod tidy -e \\\\\n          && { [ ! -d vendor ] || go mod vendor; } )\n      done\n  # end-patch-go-deps\n"
 
             # Find the marker line and insert before it
             MARKER_LINE=$(grep -n "$MARKER" "$MELANGE_FILE" | head -1 | cut -d: -f1)
