@@ -370,10 +370,10 @@ image to `SKIP_IMAGES` instead** and build from pure upstream source (no patch
 block). It stays current via its §9 version bump (upstream bumps their own deps
 each release) + the base rebuild; reachable gap CVEs get a **manual** targeted bump
 or a **VEX** `not_affected`. This mirrors Wolfi's own `HOW_TO_PATCH_CVES.md`
-("hand-resolve tangled graphs locally") and Chainguard's practice. See
-[`project` memory / this decision on PR #383]. Note: `patch-go-deps` opens **one
-shared PR** — one image's build failure blocks every image's patches, so a tangled
-graph left in the bot poisons the whole batch.
+("hand-resolve tangled graphs locally") and Chainguard's practice (trivy was moved
+to this model in PR #383). Note: `patch-go-deps` opens **one shared PR** — one
+image's build failure blocks every image's patches, so a tangled graph left in the
+bot poisons the whole batch.
 
 ### Ruby / Rust / Maven images — `.github/patch-deps.yaml`
 
