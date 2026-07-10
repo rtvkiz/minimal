@@ -7,7 +7,7 @@
 
 package:
   name: kubectl-minimal
-  version: 1.36.1
+  version: 1.36.2
   epoch: 0
   description: "Minimal kubectl CLI for Kubernetes built from source"
   copyright:
@@ -15,7 +15,7 @@ package:
 
 vars:
   # SHA256 of kubernetes source tarball - updated by update-kubectl.yml workflow
-  sha256: 1ebfa65cc95fbeb2ef4aad6832a3fae4edb88516e43b6437b69a40895803e0e8
+  sha256: ffbc46612cf32ad08a3b606de064b63afc350ae1dd1a691e99b5cd127d716c26
 
 environment:
   contents:
