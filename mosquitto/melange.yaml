@@ -4,7 +4,7 @@
 
 package:
   name: mosquitto-minimal
-  version: 2.0.20
+  version: 2.1.2
   epoch: 0
   description: "Minimal Eclipse Mosquitto MQTT broker built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of mosquitto source tarball - updated by update-versions.yml workflow
-  sha256: ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8
+  sha256: fd905380691ac65ea5a93779e8214941829e3d6e038d5edff9eac5fd74cbed02
 
 environment:
   contents:
