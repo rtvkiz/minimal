@@ -342,6 +342,47 @@ jobs:
               done
             fi
 
+            # Sibling-requirement harmonization (general; no per-module config).
+            # grype's fix version for a module can be LOWER than what another
+            # module in this same bump set requires. Example (trivy PR #380):
+            # grype says timestamp-authority/v2@v2.1.0, but the co-bumped
+            # sigstore-go@v1.2.0 requires timestamp-authority/v2@v2.1.2. `go get`
+            # then aborts the whole build with "requires X@v2.1.2, not X@v2.1.0".
+            # For each bumped module, fetch its go.mod from the proxy; for any
+            # sibling ALSO in this bump set, raise that sibling's pin to the
+            # required version when it's higher. The raised version is always
+            # >= grype's fix, so the CVE stays patched — this corrects upward,
+            # it never skips a bump. Generalizes the otel/x-family harmonizers
+            # above to arbitrary cross-module constraints.
+            declare -A PIN
+            while IFS= read -r mv; do
+              [ -z "$mv" ] && continue
+              PIN["${mv%@*}"]="${mv##*@}"
+            done <<< "$FIXES"
+            HARMONIZED=false
+            for mv in $FIXES; do
+              [ -z "$mv" ] && continue
+              hmod="${mv%@*}"; hver="${mv##*@}"
+              gomod=$(curl -fs --max-time 10 "https://proxy.golang.org/${hmod}/@v/${hver}.mod" 2>/dev/null) || continue
+              while read -r sib req; do
+                [ -n "$sib" ] || continue
+                cur="${PIN[$sib]:-}"
+                [ -n "$cur" ] || continue
+                hi=$(printf '%s\n%s\n' "$cur" "$req" | sort -V | tail -1)
+                if [ "$hi" != "$cur" ]; then
+                  echo "  Harmonizing $sib: $cur -> $hi (required by ${hmod}@${hver})"
+                  PIN["$sib"]="$hi"; HARMONIZED=true
+                fi
+              done < <(echo "$gomod" | awk '
+                  $1=="require" && NF>=3 { print $2, $3; next }
+                  $1 ~ /\// && $2 ~ /^v[0-9]/ { print $1, $2 }')
+            done
+            if [ "$HARMONIZED" = true ]; then
+              NEWFIXES=""
+              for k in "${!PIN[@]}"; do NEWFIXES=$(printf '%s\n%s@%s' "$NEWFIXES" "$k" "${PIN[$k]}"); done
+              FIXES=$(echo "$NEWFIXES" | grep -v '^$' | sort -u)
+            fi
+
             while IFS= read -r mod_ver; do
               [ -z "$mod_ver" ] && continue
               # Drop self-references — Go refuses `go get <main-module>@<ver>`
