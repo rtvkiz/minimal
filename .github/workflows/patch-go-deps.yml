@@ -409,24 +409,31 @@ jobs:
                 echo "  Skipping incompatible trivy module bump: $mod_ver (advisory fix below installed 29.5.2; conflicts with buildkit's required 29.2.1)"
                 continue
               fi
-              # Telegraf ≤1.39 references rclone's fs.LogOutput, which rclone
-              # removed in v1.73. Bumping rclone to grype's fix version breaks
-              # `go build ./cmd/telegraf` (PR #265). Chainguard's telegraf image
-              # carries the same CVEs (CVE-2026-41176/41179) at rclone v1.69.3
-              # for this reason — there is no clean fix until telegraf upstream
-              # catches up. Self-healing probe: skip only as long as the broken
-              # call site still exists upstream. The day telegraf removes the
-              # fs.LogOutput call, the probe returns "not found" and the bump
-              # proceeds automatically on the next cycle.
+              # Telegraf's remotefile plugin imports rclone's fs package directly
+              # and tracks a specific rclone commit (pinned as a pseudo-version in
+              # telegraf's go.mod). Bumping rclone ahead of that pin breaks
+              # `go build ./cmd/telegraf` against rclone API churn — first it was
+              # fs.LogOutput (removed v1.73), now fs.SetLogger (PR #380). Chainguard
+              # carries the same rclone CVEs for this reason.
+              #
+              # Robust, fail-safe self-healing probe (replaces the earlier
+              # fs.LogOutput symbol grep, which false-healed when telegraf switched
+              # to fs.SetLogger — a single symbol can't track arbitrary API churn):
+              # only take grype's rclone bump if telegraf's OWN go.mod already
+              # requires rclone >= the fix version. If telegraf upstream has moved
+              # to that rclone, its source is compatible with it; if not, defer.
+              # This is a version comparison, so it cannot false-heal on a symbol
+              # rename, and it auto-resumes the day telegraf adopts >= the fix.
               if [ "$IMAGE" = "telegraf" ] && [[ "$mod_ver" == github.com/rclone/rclone@* ]]; then
+                fix_ver="${mod_ver##*@}"
                 TG_VER=$(awk '/^package:/{p=1} p && /^  version:/{print $2; exit}' "$MELANGE_FILE" | tr -d '"')
-                PROBE_URL="https://raw.githubusercontent.com/influxdata/telegraf/v${TG_VER}/plugins/outputs/remotefile/remotefile.go"
-                PROBE=$(curl -fsSL --max-time 10 "$PROBE_URL" 2>/dev/null || true)
-                if [ -z "$PROBE" ] || echo "$PROBE" | grep -q "fs\.LogOutput"; then
-                  echo "  Skipping incompatible Telegraf module bump: $mod_ver (rclone fs.LogOutput still referenced at telegraf v${TG_VER}; matches Chainguard's pin)"
+                TG_RCLONE=$(curl -fsSL --max-time 10 "https://raw.githubusercontent.com/influxdata/telegraf/v${TG_VER}/go.mod" 2>/dev/null \
+                  | awk '$1=="github.com/rclone/rclone"{print $2; exit}')
+                if [ -z "$TG_RCLONE" ] || [ "$(printf '%s\n%s\n' "$TG_RCLONE" "$fix_ver" | sort -V | tail -1)" != "$TG_RCLONE" ]; then
+                  echo "  Skipping incompatible Telegraf module bump: $mod_ver (telegraf v${TG_VER} pins rclone ${TG_RCLONE:-unknown} < fix ${fix_ver}; source couples to rclone's fs API. Resumes when telegraf adopts rclone >= ${fix_ver})"
                   continue
                 fi
-                echo "  Telegraf v${TG_VER} no longer references rclone fs.LogOutput — letting bump $mod_ver proceed"
+                echo "  Telegraf v${TG_VER} pins rclone ${TG_RCLONE} >= ${fix_ver} — letting bump $mod_ver proceed"
               fi
               # gitleaks 8.30.x pins mholt/archives v0.1.2, whose rar.go targets
               # the old rardecode/v2 (<=v2.1.x) reader interface. grype flags a
