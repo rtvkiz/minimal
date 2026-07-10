@@ -8,7 +8,7 @@
 
 package:
   name: consul-minimal
-  version: 2.0.0
+  version: 2.0.2
   epoch: 0
   description: "Minimal HashiCorp Consul (service discovery + KV) built from source"
   copyright:
@@ -16,7 +16,7 @@ package:
 
 vars:
   # SHA256 of consul source tarball - updated by update-consul.yml workflow
-  sha256: cf0fb38b3150cc5be4e0e05d0ecfd9198e427725b8262a43396707b76193f3c7
+  sha256: 1b7efbd4667e6eb8897e357db0b4b9279e0aa370df0175a35f83894acaadb29f
 
 environment:
   contents:
