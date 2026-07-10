@@ -387,6 +387,20 @@ jobs:
                 fi
                 echo "  Telegraf v${TG_VER} no longer references rclone fs.LogOutput — letting bump $mod_ver proceed"
               fi
+              # gitleaks 8.30.x pins mholt/archives v0.1.2, whose rar.go targets
+              # the old rardecode/v2 (<=v2.1.x) reader interface. grype flags a
+              # rardecode CVE fixed in v2.2.0, but v2.2.0 changed that interface
+              # (added WriteTo), so bumping rardecode alone fails `go build` with
+              # "*rardecode.ReadCloser does not implement rarReader (missing
+              # method WriteTo)" (PR #364). mholt/archives v0.1.5 is the release
+              # built against rardecode v2.2.0 — so the clean fix arrives
+              # automatically once gitleaks upstream adopts archives >=v0.1.5
+              # (which pulls rardecode v2.2.0 itself). Until then, skip the lone
+              # rardecode bump. Matches Chainguard's own pin for this pair.
+              if [ "$IMAGE" = "gitleaks" ] && [[ "$mod_ver" == github.com/nwaples/rardecode/v2@* ]]; then
+                echo "  Skipping incompatible gitleaks module bump: $mod_ver (mholt/archives v0.1.2 needs rardecode <=v2.1.x; resolves when gitleaks adopts archives >=v0.1.5)"
+                continue
+              fi
               # Apply +incompatible suffix for known modules that need it.
               mod_path="${mod_ver%@*}"
               for incompat in "${INCOMPAT_MODULES[@]}"; do
