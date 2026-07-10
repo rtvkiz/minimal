@@ -6,7 +6,7 @@
 
 package:
   name: mimir-minimal
-  version: 3.1.0
+  version: 3.1.2
   epoch: 0
   description: "Minimal Grafana Mimir long-term Prometheus storage built from source"
   copyright:
@@ -14,7 +14,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: 91f0c8321c463f49f8318a5e371a861e9f45ba25532007617e45f28afb7420a1
+  sha256: 06fdcbe3d101ee41553beac56a238c2286eccffb92440c3c50cc8397eab1a5ab
 
 environment:
   contents:
