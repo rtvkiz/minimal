@@ -13,17 +13,27 @@ Install the following tools locally:
 
 ## Adding a New Image
 
-Adding an image is mechanical. The work splits across 3–5 files depending on
-how much automation you want:
+> **📋 The complete, authoritative checklist is [`docs/onboarding.md`](docs/onboarding.md).**
+> This section is a quick intro; that file is the source of truth and covers every
+> registration point (including the CI-enforced ones — `catalog.json` and `vex/` —
+> and the build/test patterns, versions.yaml conventions, and gotchas). Onboard
+> from the checklist, not from memory: two past incidents (the "frozen-8" and the
+> catalog-drift PR failure) were skipped-step bugs.
+
+Adding an image is mechanical. Every registration point:
 
 | File | When you need it |
 |---|---|
-| `<name>/apko/<name>.yaml` + `<name>/test.sh` | always |
-| `<name>/melange.yaml` | only when building from source (rare — try Wolfi first) |
-| Build-list entry in `.github/workflows/build.yml` | always |
-| Row in `.github/versions.yaml` | if you want CI to auto-open PRs for new upstream releases |
-| Row in `.github/patch-deps.yaml` | if your image has Ruby/Rust/Maven deps and you want auto-CVE patches |
-| `<name>/apko/<name>-dev.yaml` | recommended — see [dev variant conventions](docs/dev-variants/CONVENTIONS.md) |
+| `<name>/apko/<name>.yaml` + `<name>/test.sh` (`chmod +x`) | always |
+| `<name>/apko/<name>-dev.yaml` + `<name>/test-dev.sh` | recommended — see [dev variant conventions](docs/dev-variants/CONVENTIONS.md) |
+| `vex/<name>.openvex.json` | always (CI-validated) |
+| Entry in `.github/workflows/build.yml` matrix | always (CI-enforced) |
+| Entry in `catalog.json` | always — **`validate-catalog` fails the PR without it** |
+| `Makefile` version var + `.PHONY` + build/test targets | always |
+| `<name>/melange.yaml` | only when building from source (try Wolfi first) |
+| Row in `.github/versions.yaml` | source-built — to auto-bump the app version |
+| Three dicts in `.github/workflows/patch-go-deps.yml`, **or** `SKIP_IMAGES` | source-built **Go** — transitive CVE patching (or a documented exclusion) |
+| Row in `.github/patch-deps.yaml` | source-built Ruby/Rust/Maven |
 
 ### 1. Create the directory structure
 
