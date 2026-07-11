@@ -4,7 +4,7 @@
 
 package:
   name: node-exporter-minimal
-  version: 1.11.1
+  version: 1.12.0
   epoch: 0
   description: "Minimal Prometheus node_exporter (host hardware & OS metrics) built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of node_exporter source tarball - updated by update-versions.yml workflow
-  sha256: d2b5a7740b7526543429b41a5d741bc530277f406f7b121fc64cb3ca583f7387
+  sha256: 2b759f480fbb9bb756d051e2c6c0bc5f1a6bfc3720db734b6b5be7f4e24f45d7
 
 environment:
   contents:
