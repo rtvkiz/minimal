@@ -1,0 +1,36 @@
+# Minimal notation image - built from source via melange. Shell-less, distroless.
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - notation-minimal
+    - ca-certificates-bundle
+
+accounts:
+  groups: [{ groupname: nonroot, gid: 65532 }]
+  users:  [{ username: nonroot, uid: 65532, gid: 65532 }]
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/notation
+
+work-dir: /workspace
+environment:
+  PATH: /usr/bin:/bin
+  HOME: /tmp
+
+paths:
+  - { path: /workspace, type: directory, uid: 65532, gid: 65532, permissions: 0o755 }
+  - { path: /tmp, type: directory, uid: 65532, gid: 65532, permissions: 0o1777 }
+
+annotations:
+  org.opencontainers.image.title: "minimal-notation"
+  org.opencontainers.image.description: "Hardened shell-less Notation (OCI artifact signing & verification) CLI built from source (built from source via melange, daily CVE patches)"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/notation"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs: [x86_64, aarch64]

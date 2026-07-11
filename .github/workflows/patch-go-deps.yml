@@ -126,6 +126,11 @@ jobs:
             [step-cli]="/home/build/step-cli-${D}{{package.version}}"
             [opa]="/home/build/opa-${D}{{package.version}}"
             [osv-scanner]="/home/build/osv-scanner-${D}{{package.version}}"
+            [notation]="/home/build/notation-${D}{{package.version}}"
+            [conftest]="/home/build/conftest-${D}{{package.version}}"
+            [kubeconform]="/home/build/kubeconform-${D}{{package.version}}"
+            [kube-bench]="/home/build/kube-bench-${D}{{package.version}}"
+            [trufflehog]="/home/build/trufflehog-${D}{{package.version}}"
           )
 
           # Main module path per image. Grype's buildinfo scan reports the
@@ -168,7 +173,11 @@ jobs:
             [step-cli]="github.com/smallstep/cli"
             [opa]="github.com/open-policy-agent/opa"
             [osv-scanner]="github.com/google/osv-scanner/v2"
-          )
+            [notation]="github.com/notaryproject/notation/v2"
+            [conftest]="github.com/open-policy-agent/conftest"
+            [kubeconform]="github.com/yannh/kubeconform"
+            [kube-bench]="github.com/aquasecurity/kube-bench"
+            [trufflehog]="github.com/trufflesecurity/trufflehog/v3"
 
           # Build step markers to insert before
           declare -A BUILD_MARKERS=(
@@ -209,7 +218,11 @@ jobs:
             [step-cli]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [opa]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [osv-scanner]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
-          )
+            [notation]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [conftest]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kubeconform]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kube-bench]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [trufflehog]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
 
           HAS_PATCHES=false
           PATCHED_LIST=""

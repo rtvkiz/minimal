@@ -1,0 +1,69 @@
+# Melange build configuration for minimal notation
+# Pure Go from source. Single static `notation` binary.
+# License: Apache-2.0.
+
+package:
+  name: notation-minimal
+  version: 1.3.2
+  epoch: 0
+  description: "Notation (OCI artifact signing & verification) CLI built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of notation source tarball - updated by update-versions.yml workflow
+  sha256: f7239ca8155329b57f80e5fb01bf189441b3ade572ad9d6fc4582c1475b8e840
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/notation-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/notaryproject/notation/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/notation.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/notation.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/notation.tar.gz -C /home/build/notation-${{package.version}} --strip-components=1
+      rm /home/build/notation.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/notation-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/notation-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= -X github.com/notaryproject/notation/v2/internal/version.Version=${{package.version}}" \
+        -o /home/build/notation-bin \
+        ./cmd/notation
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/notation-bin "${{targets.destdir}}/usr/bin/notation"
+      chmod 0755 "${{targets.destdir}}/usr/bin/notation"
+
+  - runs: |
+      echo "Verifying notation binary..."
+      "${{targets.destdir}}/usr/bin/notation" version || "${{targets.destdir}}/usr/bin/notation" --version

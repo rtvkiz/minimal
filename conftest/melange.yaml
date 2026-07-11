@@ -1,0 +1,69 @@
+# Melange build configuration for minimal conftest
+# Pure Go from source. Single static `conftest` binary.
+# License: Apache-2.0.
+
+package:
+  name: conftest-minimal
+  version: 0.68.2
+  epoch: 0
+  description: "Conftest (OPA policy testing for structured config) CLI built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of conftest source tarball - updated by update-versions.yml workflow
+  sha256: 952ebb9e9eccc75521d0f618ab1a934c379f13ffdb000f0fa8b698f00eaf4601
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/conftest-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/open-policy-agent/conftest/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/conftest.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/conftest.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/conftest.tar.gz -C /home/build/conftest-${{package.version}} --strip-components=1
+      rm /home/build/conftest.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/conftest-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/conftest-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= -X github.com/open-policy-agent/conftest/internal/version.Version=${{package.version}}" \
+        -o /home/build/conftest-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/conftest-bin "${{targets.destdir}}/usr/bin/conftest"
+      chmod 0755 "${{targets.destdir}}/usr/bin/conftest"
+
+  - runs: |
+      echo "Verifying conftest binary..."
+      "${{targets.destdir}}/usr/bin/conftest" version || "${{targets.destdir}}/usr/bin/conftest" --version
