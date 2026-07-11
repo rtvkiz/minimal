@@ -6,7 +6,7 @@
 
 package:
   name: prometheus-minimal
-  version: 3.13.0
+  version: 3.13.1
   epoch: 0
   description: "Minimal Prometheus monitoring server built from source"
   copyright:
@@ -14,7 +14,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-prometheus.yml workflow
-  sha256: fd0bfdc1390e71c3eeb05532293f9e2a1279e75d3546aa86dc4881627c9e143d
+  sha256: 84109edc0eaa0ade4f9d3b96fa826cd3112a0b2f17262c1f8338a58fb9fc7b52
 
 environment:
   contents:
