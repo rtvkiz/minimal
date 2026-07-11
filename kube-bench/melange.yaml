@@ -1,0 +1,69 @@
+# Melange build configuration for minimal kube-bench
+# Pure Go from source. Single static `kube-bench` binary.
+# License: Apache-2.0.
+
+package:
+  name: kube-bench-minimal
+  version: 0.15.6
+  epoch: 0
+  description: "kube-bench CIS Kubernetes benchmark checker built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of kube-bench source tarball - updated by update-versions.yml workflow
+  sha256: ba68fa0541902dd8be430ef05a1a39a978d6051e99386dd64c5babc50ec1dd58
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/kube-bench-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/aquasecurity/kube-bench/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/kube-bench.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/kube-bench.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/kube-bench.tar.gz -C /home/build/kube-bench-${{package.version}} --strip-components=1
+      rm /home/build/kube-bench.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/kube-bench-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/kube-bench-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= -X github.com/aquasecurity/kube-bench/cmd.KubeBenchVersion=${{package.version}}" \
+        -o /home/build/kube-bench-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/kube-bench-bin "${{targets.destdir}}/usr/bin/kube-bench"
+      chmod 0755 "${{targets.destdir}}/usr/bin/kube-bench"
+
+  - runs: |
+      echo "Verifying kube-bench binary..."
+      "${{targets.destdir}}/usr/bin/kube-bench" version || "${{targets.destdir}}/usr/bin/kube-bench" --version

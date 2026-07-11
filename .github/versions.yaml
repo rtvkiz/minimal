@@ -222,6 +222,61 @@
     releases: "https://github.com/open-policy-agent/opa/releases"
     notes: "https://github.com/open-policy-agent/opa/releases/tag/v{version}"
 
+# cron-enabled after a dispatch check (gh workflow run update-versions.yml -f only=osv-scanner).
+- name: osv-scanner
+  files: [osv-scanner/melange.yaml]
+  source: { type: github-releases-latest, repo: google/osv-scanner, strip-v: true, pin-major: 2 }
+  tarball: { url: "https://github.com/google/osv-scanner/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/google/osv-scanner/releases"
+    notes: "https://github.com/google/osv-scanner/releases/tag/v{version}"
+
+- name: notation
+  files: [notation/melange.yaml]
+  source: { type: github-releases-latest, repo: notaryproject/notation, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/notaryproject/notation/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/notaryproject/notation/releases"
+    notes: "https://github.com/notaryproject/notation/releases/tag/v{version}"
+
+- name: conftest
+  files: [conftest/melange.yaml]
+  source: { type: github-releases-latest, repo: open-policy-agent/conftest, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/open-policy-agent/conftest/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/open-policy-agent/conftest/releases"
+    notes: "https://github.com/open-policy-agent/conftest/releases/tag/v{version}"
+
+- name: kubeconform
+  files: [kubeconform/melange.yaml]
+  source: { type: github-releases-latest, repo: yannh/kubeconform, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/yannh/kubeconform/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/yannh/kubeconform/releases"
+    notes: "https://github.com/yannh/kubeconform/releases/tag/v{version}"
+
+- name: kube-bench
+  files: [kube-bench/melange.yaml]
+  source: { type: github-releases-latest, repo: aquasecurity/kube-bench, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/aquasecurity/kube-bench/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/aquasecurity/kube-bench/releases"
+    notes: "https://github.com/aquasecurity/kube-bench/releases/tag/v{version}"
+
+- name: trufflehog
+  files: [trufflehog/melange.yaml]
+  source: { type: github-releases-latest, repo: trufflesecurity/trufflehog, strip-v: true, pin-major: 3 }
+  tarball: { url: "https://github.com/trufflesecurity/trufflehog/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/trufflesecurity/trufflehog/releases"
+    notes: "https://github.com/trufflesecurity/trufflehog/releases/tag/v{version}"
+
 - name: thanos
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [thanos/melange.yaml]

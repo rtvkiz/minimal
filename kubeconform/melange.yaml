@@ -1,0 +1,69 @@
+# Melange build configuration for minimal kubeconform
+# Pure Go from source. Single static `kubeconform` binary.
+# License: Apache-2.0.
+
+package:
+  name: kubeconform-minimal
+  version: 0.8.0
+  epoch: 0
+  description: "Kubeconform Kubernetes manifest validator built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of kubeconform source tarball - updated by update-versions.yml workflow
+  sha256: c345de9c3207f2d24628c64fe3cb9bed55c4248b12c181efe81ee907d6c994f2
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/kubeconform-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/yannh/kubeconform/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/kubeconform.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/kubeconform.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/kubeconform.tar.gz -C /home/build/kubeconform-${{package.version}} --strip-components=1
+      rm /home/build/kubeconform.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/kubeconform-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/kubeconform-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= -X main.version=${{package.version}}" \
+        -o /home/build/kubeconform-bin \
+        ./cmd/kubeconform
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/kubeconform-bin "${{targets.destdir}}/usr/bin/kubeconform"
+      chmod 0755 "${{targets.destdir}}/usr/bin/kubeconform"
+
+  - runs: |
+      echo "Verifying kubeconform binary..."
+      "${{targets.destdir}}/usr/bin/kubeconform" -v

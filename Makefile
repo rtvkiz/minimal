@@ -90,7 +90,12 @@ ORAS_VERSION ?= $(call melange_version,oras/melange.yaml)
 GITLEAKS_VERSION ?= $(call melange_version,gitleaks/melange.yaml)
 STEP_VERSION ?= $(call melange_version,step-cli/melange.yaml)
 OPA_VERSION ?= $(call melange_version,opa/melange.yaml)
-
+OSV_SCANNER_VERSION ?= $(call melange_version,osv-scanner/melange.yaml)
+NOTATION_VERSION ?= $(call melange_version,notation/melange.yaml)
+CONFTEST_VERSION ?= $(call melange_version,conftest/melange.yaml)
+KUBECONFORM_VERSION ?= $(call melange_version,kubeconform/melange.yaml)
+KUBE_BENCH_VERSION ?= $(call melange_version,kube-bench/melange.yaml)
+TRUFFLEHOG_VERSION ?= $(call melange_version,trufflehog/melange.yaml)
 # --- Messaging (MQTT) ---
 MOSQUITTO_VERSION ?= $(call melange_version,mosquitto/melange.yaml)
 HELM_VERSION ?= $(call melange_version,helm/melange.yaml)
@@ -159,6 +164,12 @@ endef
 .PHONY: gitleaks gitleaks-melange test-gitleaks
 .PHONY: step-cli step-cli-melange test-step-cli
 .PHONY: opa opa-melange test-opa
+.PHONY: osv-scanner osv-scanner-melange test-osv-scanner
+.PHONY: notation notation-melange test-notation
+.PHONY: conftest conftest-melange test-conftest
+.PHONY: kubeconform kubeconform-melange test-kubeconform
+.PHONY: kube-bench kube-bench-melange test-kube-bench
+.PHONY: trufflehog trufflehog-melange test-trufflehog
 .PHONY: thanos thanos-melange test-thanos
 .PHONY: node-exporter node-exporter-melange test-node-exporter
 .PHONY: blackbox-exporter blackbox-exporter-melange test-blackbox-exporter
@@ -1653,6 +1664,118 @@ opa: opa-melange
 	@echo "✓ minimal-opa built (source build)"
 
 #------------------------------------------------------------------------------
+# OSV-SCANNER IMAGE (melange Go source build + apko; dependency vuln scanning)
+#------------------------------------------------------------------------------
+osv-scanner-melange: keygen
+	@echo "Building OSV-Scanner $(OSV_SCANNER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build osv-scanner/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ OSV-Scanner package built from source"
+
+osv-scanner: osv-scanner-melange
+	@echo "Assembling minimal-osv-scanner image with apko..."
+	apko build osv-scanner/apko/osv-scanner.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-osv-scanner:$(VERSION) \
+		osv-scanner.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < osv-scanner.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-osv-scanner:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-osv-scanner:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-osv-scanner:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-osv-scanner:latest
+	@rm -f osv-scanner.tar sbom-*.spdx.json
+	@echo "✓ minimal-osv-scanner built (source build)"
+
+
+#------------------------------------------------------------------------------
+# NOTATION IMAGE (melange Go source build + apko)
+#------------------------------------------------------------------------------
+notation-melange: keygen
+	@echo "Building notation $(NOTATION_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build notation/melange.yaml --arch x86_64 --signing-key melange.rsa
+	@echo "✓ notation package built from source"
+
+notation: notation-melange
+	@echo "Assembling minimal-notation image with apko..."
+	apko build notation/apko/notation.yaml $(REGISTRY)/$(OWNER)/minimal-notation:$(VERSION) notation.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
+	docker load < notation.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-notation:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-notation:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-notation:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-notation:latest
+	@rm -f notation.tar sbom-*.spdx.json
+	@echo "✓ minimal-notation built (source build)"
+
+#------------------------------------------------------------------------------
+# CONFTEST IMAGE (melange Go source build + apko)
+#------------------------------------------------------------------------------
+conftest-melange: keygen
+	@echo "Building conftest $(CONFTEST_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build conftest/melange.yaml --arch x86_64 --signing-key melange.rsa
+	@echo "✓ conftest package built from source"
+
+conftest: conftest-melange
+	@echo "Assembling minimal-conftest image with apko..."
+	apko build conftest/apko/conftest.yaml $(REGISTRY)/$(OWNER)/minimal-conftest:$(VERSION) conftest.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
+	docker load < conftest.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-conftest:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-conftest:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-conftest:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-conftest:latest
+	@rm -f conftest.tar sbom-*.spdx.json
+	@echo "✓ minimal-conftest built (source build)"
+
+#------------------------------------------------------------------------------
+# KUBECONFORM IMAGE (melange Go source build + apko)
+#------------------------------------------------------------------------------
+kubeconform-melange: keygen
+	@echo "Building kubeconform $(KUBECONFORM_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build kubeconform/melange.yaml --arch x86_64 --signing-key melange.rsa
+	@echo "✓ kubeconform package built from source"
+
+kubeconform: kubeconform-melange
+	@echo "Assembling minimal-kubeconform image with apko..."
+	apko build kubeconform/apko/kubeconform.yaml $(REGISTRY)/$(OWNER)/minimal-kubeconform:$(VERSION) kubeconform.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
+	docker load < kubeconform.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kubeconform:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-kubeconform:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kubeconform:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-kubeconform:latest
+	@rm -f kubeconform.tar sbom-*.spdx.json
+	@echo "✓ minimal-kubeconform built (source build)"
+
+#------------------------------------------------------------------------------
+# KUBE_BENCH IMAGE (melange Go source build + apko)
+#------------------------------------------------------------------------------
+kube-bench-melange: keygen
+	@echo "Building kube-bench $(KUBE_BENCH_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build kube-bench/melange.yaml --arch x86_64 --signing-key melange.rsa
+	@echo "✓ kube-bench package built from source"
+
+kube-bench: kube-bench-melange
+	@echo "Assembling minimal-kube-bench image with apko..."
+	apko build kube-bench/apko/kube-bench.yaml $(REGISTRY)/$(OWNER)/minimal-kube-bench:$(VERSION) kube-bench.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
+	docker load < kube-bench.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kube-bench:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-kube-bench:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kube-bench:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-kube-bench:latest
+	@rm -f kube-bench.tar sbom-*.spdx.json
+	@echo "✓ minimal-kube-bench built (source build)"
+
+#------------------------------------------------------------------------------
+# TRUFFLEHOG IMAGE (melange Go source build + apko)
+#------------------------------------------------------------------------------
+trufflehog-melange: keygen
+	@echo "Building trufflehog $(TRUFFLEHOG_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build trufflehog/melange.yaml --arch x86_64 --signing-key melange.rsa
+	@echo "✓ trufflehog package built from source"
+
+trufflehog: trufflehog-melange
+	@echo "Assembling minimal-trufflehog image with apko..."
+	apko build trufflehog/apko/trufflehog.yaml $(REGISTRY)/$(OWNER)/minimal-trufflehog:$(VERSION) trufflehog.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
+	docker load < trufflehog.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-trufflehog:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-trufflehog:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-trufflehog:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-trufflehog:latest
+	@rm -f trufflehog.tar sbom-*.spdx.json
+	@echo "✓ minimal-trufflehog built (source build)"
+
+#------------------------------------------------------------------------------
 # THANOS IMAGE (melange Go source build + apko; HA Prometheus long-term storage)
 #------------------------------------------------------------------------------
 thanos-melange: keygen
@@ -2535,6 +2658,37 @@ test-opa:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-opa:latest" && \
 		opa/test.sh
 	@echo "✓ opa tests passed"
+
+test-osv-scanner:
+	@echo "Testing osv-scanner image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-osv-scanner:latest" && \
+		osv-scanner/test.sh
+	@echo "✓ osv-scanner tests passed"
+
+test-notation:
+	@echo "Testing notation image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-notation:latest" && notation/test.sh
+	@echo "✓ notation tests passed"
+
+test-conftest:
+	@echo "Testing conftest image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-conftest:latest" && conftest/test.sh
+	@echo "✓ conftest tests passed"
+
+test-kubeconform:
+	@echo "Testing kubeconform image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kubeconform:latest" && kubeconform/test.sh
+	@echo "✓ kubeconform tests passed"
+
+test-kube-bench:
+	@echo "Testing kube-bench image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kube-bench:latest" && kube-bench/test.sh
+	@echo "✓ kube-bench tests passed"
+
+test-trufflehog:
+	@echo "Testing trufflehog image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-trufflehog:latest" && trufflehog/test.sh
+	@echo "✓ trufflehog tests passed"
 
 test-thanos:
 	@echo "Testing thanos image..."

@@ -1,0 +1,69 @@
+# Melange build configuration for minimal trufflehog
+# Pure Go from source. Single static `trufflehog` binary.
+# License: AGPL-3.0.
+
+package:
+  name: trufflehog-minimal
+  version: 3.95.9
+  epoch: 0
+  description: "TruffleHog secret scanner built from source"
+  copyright:
+    - license: AGPL-3.0
+
+vars:
+  # SHA256 of trufflehog source tarball - updated by update-versions.yml workflow
+  sha256: 11c98a8990cdc8a8db1e92d1938a47bf762ab9d8554fa21f87985ce1a4286d26
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/trufflehog-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/trufflesecurity/trufflehog/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/trufflehog.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/trufflehog.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/trufflehog.tar.gz -C /home/build/trufflehog-${{package.version}} --strip-components=1
+      rm /home/build/trufflehog.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/trufflehog-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/trufflehog-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= -X github.com/trufflesecurity/trufflehog/v3/pkg/version.BuildVersion=${{package.version}}" \
+        -o /home/build/trufflehog-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/trufflehog-bin "${{targets.destdir}}/usr/bin/trufflehog"
+      chmod 0755 "${{targets.destdir}}/usr/bin/trufflehog"
+
+  - runs: |
+      echo "Verifying trufflehog binary..."
+      "${{targets.destdir}}/usr/bin/trufflehog" version || "${{targets.destdir}}/usr/bin/trufflehog" --version
