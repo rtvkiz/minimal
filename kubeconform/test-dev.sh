@@ -4,8 +4,7 @@ set -eu
 : "${IMAGE:?IMAGE env var required}"
 
 echo "Testing kubeconform version (parity with prod)..."
-docker run --rm --entrypoint /usr/bin/kubeconform "$IMAGE" version 2>&1 | grep -qiE '0\.[0-9]' \
-  || docker run --rm --entrypoint /usr/bin/kubeconform "$IMAGE" --version 2>&1 | grep -qiE '0\.[0-9]'
+docker run --rm --entrypoint /usr/bin/kubeconform "$IMAGE" -v 2>&1 | grep -qiE '0\.[0-9]'
 
 echo "Testing /bin/sh + /bin/bash..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo sh-ok" | grep -q sh-ok
