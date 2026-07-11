@@ -125,6 +125,7 @@ jobs:
             [gitleaks]="/home/build/gitleaks-${D}{{package.version}}"
             [step-cli]="/home/build/step-cli-${D}{{package.version}}"
             [opa]="/home/build/opa-${D}{{package.version}}"
+            [osv-scanner]="/home/build/osv-scanner-${D}{{package.version}}"
           )
 
           # Main module path per image. Grype's buildinfo scan reports the
@@ -166,6 +167,7 @@ jobs:
             [gitleaks]="github.com/zricethezav/gitleaks/v8"
             [step-cli]="github.com/smallstep/cli"
             [opa]="github.com/open-policy-agent/opa"
+            [osv-scanner]="github.com/google/osv-scanner/v2"
           )
 
           # Build step markers to insert before
@@ -206,6 +208,7 @@ jobs:
             [gitleaks]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [step-cli]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [opa]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [osv-scanner]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
           HAS_PATCHES=false

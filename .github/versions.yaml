@@ -222,6 +222,16 @@
     releases: "https://github.com/open-policy-agent/opa/releases"
     notes: "https://github.com/open-policy-agent/opa/releases/tag/v{version}"
 
+# cron-enabled after a dispatch check (gh workflow run update-versions.yml -f only=osv-scanner).
+- name: osv-scanner
+  files: [osv-scanner/melange.yaml]
+  source: { type: github-releases-latest, repo: google/osv-scanner, strip-v: true, pin-major: 2 }
+  tarball: { url: "https://github.com/google/osv-scanner/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/google/osv-scanner/releases"
+    notes: "https://github.com/google/osv-scanner/releases/tag/v{version}"
+
 - name: thanos
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [thanos/melange.yaml]

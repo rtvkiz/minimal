@@ -90,6 +90,7 @@ ORAS_VERSION ?= $(call melange_version,oras/melange.yaml)
 GITLEAKS_VERSION ?= $(call melange_version,gitleaks/melange.yaml)
 STEP_VERSION ?= $(call melange_version,step-cli/melange.yaml)
 OPA_VERSION ?= $(call melange_version,opa/melange.yaml)
+OSV_SCANNER_VERSION ?= $(call melange_version,osv-scanner/melange.yaml)
 
 # --- Messaging (MQTT) ---
 MOSQUITTO_VERSION ?= $(call melange_version,mosquitto/melange.yaml)
@@ -159,6 +160,7 @@ endef
 .PHONY: gitleaks gitleaks-melange test-gitleaks
 .PHONY: step-cli step-cli-melange test-step-cli
 .PHONY: opa opa-melange test-opa
+.PHONY: osv-scanner osv-scanner-melange test-osv-scanner
 .PHONY: thanos thanos-melange test-thanos
 .PHONY: node-exporter node-exporter-melange test-node-exporter
 .PHONY: blackbox-exporter blackbox-exporter-melange test-blackbox-exporter
@@ -1653,6 +1655,32 @@ opa: opa-melange
 	@echo "✓ minimal-opa built (source build)"
 
 #------------------------------------------------------------------------------
+# OSV-SCANNER IMAGE (melange Go source build + apko; dependency vuln scanning)
+#------------------------------------------------------------------------------
+osv-scanner-melange: keygen
+	@echo "Building OSV-Scanner $(OSV_SCANNER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build osv-scanner/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ OSV-Scanner package built from source"
+
+osv-scanner: osv-scanner-melange
+	@echo "Assembling minimal-osv-scanner image with apko..."
+	apko build osv-scanner/apko/osv-scanner.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-osv-scanner:$(VERSION) \
+		osv-scanner.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < osv-scanner.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-osv-scanner:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-osv-scanner:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-osv-scanner:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-osv-scanner:latest
+	@rm -f osv-scanner.tar sbom-*.spdx.json
+	@echo "✓ minimal-osv-scanner built (source build)"
+
+#------------------------------------------------------------------------------
 # THANOS IMAGE (melange Go source build + apko; HA Prometheus long-term storage)
 #------------------------------------------------------------------------------
 thanos-melange: keygen
@@ -2535,6 +2563,12 @@ test-opa:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-opa:latest" && \
 		opa/test.sh
 	@echo "✓ opa tests passed"
+
+test-osv-scanner:
+	@echo "Testing osv-scanner image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-osv-scanner:latest" && \
+		osv-scanner/test.sh
+	@echo "✓ osv-scanner tests passed"
 
 test-thanos:
 	@echo "Testing thanos image..."

@@ -87,6 +87,7 @@ jobs:
             {"name":"gitleaks","variants":["prod","dev"]},
             {"name":"step-cli","variants":["prod","dev"]},
             {"name":"opa","variants":["prod","dev"]},
+            {"name":"osv-scanner","variants":["prod","dev"]},
             {"name":"thanos","variants":["prod","dev"]},
             {"name":"node-exporter","variants":["prod","dev"]},
             {"name":"blackbox-exporter","variants":["prod","dev"]},
