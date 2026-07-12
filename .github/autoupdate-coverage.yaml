@@ -1,0 +1,48 @@
+# Auto-update coverage classification for PACKAGE-BASED prod images.
+#
+# Source-built images (those with a <name>/melange.yaml) are NOT listed here —
+# their auto-update is inferred directly from .github/versions.yaml (a row whose
+# files: points at the melange, with cron-enabled: true). scripts/check-autoupdate-coverage.sh
+# enforces that every catalog.json image resolves to exactly one mechanism.
+#
+# Package-based images pull Wolfi packages at apko assemble time, so they have
+# two valid mechanisms:
+
+# wolfi-versioned: apko pins a *versioned* Wolfi package (e.g. python-3.14, go-1.26).
+# Patch/minor releases flow in on the 6-hourly rebuild; a MAJOR-line bump requires
+# editing the apko package name, which update-wolfi-packages.yml detects and PRs.
+wolfi-versioned:
+  - python          # python-3.14
+  - go              # go-1.26
+  - node-slim       # nodejs-*
+  - dotnet          # dotnet-*
+  - java            # openjdk-*
+  - postgres-slim   # postgresql-*
+
+# wolfi-rolling: apko references an *unversioned / rolling* Wolfi package
+# (e.g. apache2, nginx-mainline, sqlite, bun). Wolfi keeps that single package at
+# the latest release, so the image is always current via the 6-hourly rebuild.
+# No dedicated updater is needed by design.
+wolfi-rolling:
+  - nginx           # nginx-mainline (rolling)
+  - httpd           # apache2 (unversioned)
+  - sqlite          # sqlite (unversioned)
+  - bun             # bun (unversioned)
+
+# bespoke: SOURCE-BUILT images auto-updated by a dedicated workflow instead of
+# the shared .github/versions.yaml pipeline. Each MUST name the workflow and a
+# reason. These are migration targets — fold them into versions.yaml once the
+# shared pipeline supports their versioning model.
+bespoke:
+  - name: minio
+    workflow: .github/workflows/update-minio.yml
+    reason: >-
+      MinIO ships date-based RELEASE.YYYY-MM-DDTHH-MM-SSZ tags mapped to a
+      YYYY.MM.DD version, plus a separate full-tag var (minio_release) used in
+      the tarball URL. That needs a tag->version transform and a raw-{tag}
+      template var the shared versions.yaml pipeline does not yet support.
+      Tracked for migration into versions.yaml.
+
+# exempt: images with a deliberate, documented reason for having NO auto-update.
+# Each entry MUST carry a reason. Empty for now — kept as an explicit escape hatch.
+exempt: []
