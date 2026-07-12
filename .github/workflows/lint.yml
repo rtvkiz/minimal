@@ -1,0 +1,37 @@
+name: Lint workflows
+
+# Guardrail: validate GitHub Actions workflows (schema + embedded Bash) on every
+# change to them. Most workflows here run only on schedule/workflow_dispatch, so a
+# shell syntax error inside a `run:` block never executes on the PR that introduces
+# it — it detonates hours later on the scheduled run on main, blocking the shared
+# 6-hourly rebuild. This job runs actionlint + shellcheck (error severity) so such
+# breaks fail the PR instead. Same entrypoint as local `make lint-workflows`.
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/lint-workflows.sh'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/lint-workflows.sh'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-workflows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      # shellcheck is preinstalled on ubuntu-latest; the script fetches pinned
+      # actionlint. Reusing `make lint-workflows` keeps CI and local identical.
+      - name: Lint workflows (actionlint + shellcheck)
+        run: make lint-workflows
