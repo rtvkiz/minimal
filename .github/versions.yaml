@@ -222,8 +222,9 @@
     releases: "https://github.com/open-policy-agent/opa/releases"
     notes: "https://github.com/open-policy-agent/opa/releases/tag/v{version}"
 
-# cron-enabled after a dispatch check (gh workflow run update-versions.yml -f only=osv-scanner).
+# Batch-B security CLIs — wave 9, dispatch-validated 2026-07-12.
 - name: osv-scanner
+  cron-enabled: true   # wave 9 (validated 2026-07-12)
   files: [osv-scanner/melange.yaml]
   source: { type: github-releases-latest, repo: google/osv-scanner, strip-v: true, pin-major: 2 }
   tarball: { url: "https://github.com/google/osv-scanner/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -233,6 +234,7 @@
     notes: "https://github.com/google/osv-scanner/releases/tag/v{version}"
 
 - name: notation
+  cron-enabled: true   # wave 9 (validated 2026-07-12)
   files: [notation/melange.yaml]
   source: { type: github-releases-latest, repo: notaryproject/notation, strip-v: true, pin-major: 1 }
   tarball: { url: "https://github.com/notaryproject/notation/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -242,6 +244,7 @@
     notes: "https://github.com/notaryproject/notation/releases/tag/v{version}"
 
 - name: conftest
+  cron-enabled: true   # wave 9 (validated 2026-07-12)
   files: [conftest/melange.yaml]
   source: { type: github-releases-latest, repo: open-policy-agent/conftest, strip-v: true, pin-major: 0 }
   tarball: { url: "https://github.com/open-policy-agent/conftest/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -251,6 +254,7 @@
     notes: "https://github.com/open-policy-agent/conftest/releases/tag/v{version}"
 
 - name: kubeconform
+  cron-enabled: true   # wave 9 (validated 2026-07-12)
   files: [kubeconform/melange.yaml]
   source: { type: github-releases-latest, repo: yannh/kubeconform, strip-v: true, pin-major: 0 }
   tarball: { url: "https://github.com/yannh/kubeconform/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -260,6 +264,7 @@
     notes: "https://github.com/yannh/kubeconform/releases/tag/v{version}"
 
 - name: kube-bench
+  cron-enabled: true   # wave 9 (validated 2026-07-12)
   files: [kube-bench/melange.yaml]
   source: { type: github-releases-latest, repo: aquasecurity/kube-bench, strip-v: true, pin-major: 0 }
   tarball: { url: "https://github.com/aquasecurity/kube-bench/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -269,6 +274,7 @@
     notes: "https://github.com/aquasecurity/kube-bench/releases/tag/v{version}"
 
 - name: trufflehog
+  cron-enabled: true   # wave 9 (validated 2026-07-12)
   files: [trufflehog/melange.yaml]
   source: { type: github-releases-latest, repo: trufflesecurity/trufflehog, strip-v: true, pin-major: 3 }
   tarball: { url: "https://github.com/trufflesecurity/trufflehog/archive/refs/tags/v{version}.tar.gz", field: sha256 }

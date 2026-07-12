@@ -66,7 +66,9 @@ Tick every box. The ones marked **⛔ CI-enforced** will fail your PR if missing
 - [ ] **`Makefile`** — version var + `.PHONY` + build/test targets (§6)
 - [ ] **`.github/workflows/build.yml`** — add to `MELANGE_IMAGES` or `APKO_IMAGES` (§7) **⛔**
 - [ ] **`catalog.json`** — one entry (§7) **⛔ validate-catalog fails the PR without it**
-- [ ] **`.github/versions.yaml`** — auto-bump row — **source-built only** (§9)
+- [ ] **auto-update configured (§9)** **⛔ check-autoupdate fails the PR without it** —
+      source-built → `cron-enabled` `.github/versions.yaml` row; apko-only →
+      classify in `.github/autoupdate-coverage.yaml`
 - [ ] **transitive-dep patching** — source-built only (§10):
       Go → three dicts in `patch-go-deps.yml` **or** add to `SKIP_IMAGES`;
       Ruby/Rust/Maven → `.github/patch-deps.yaml`
@@ -299,7 +301,21 @@ and unreachable CVEs. Tooling: `tools/vex/{validate,reconcile}.sh`.
 
 ---
 
-## 9. versions.yaml auto-bump (source-built only)
+## 9. Auto-update — mandatory for every image
+
+**Every prod image must have exactly one live auto-update mechanism.** This is
+enforced by `make check-autoupdate` (§12) against `catalog.json`, so an image
+cannot be onboarded without it. Which mechanism depends on the image type:
+
+- **apko-only (package-based)** — declare it in **`.github/autoupdate-coverage.yaml`**:
+  `wolfi-versioned` if apko pins a versioned package (`python-3.14`, `go-1.26`) whose
+  major-line bumps come from `update-wolfi-packages.yml`; `wolfi-rolling` if apko
+  references an unversioned/rolling package (`apache2`, `nginx-mainline`, `sqlite`)
+  that is always current via the 6-hourly rebuild. (`exempt`/`bespoke` exist as
+  documented escape hatches — each requires a reason.)
+- **source-built** — add a `cron-enabled` `versions.yaml` row (below).
+
+### versions.yaml auto-bump (source-built only)
 
 The `update-versions.yml` cron advances the **app version** (see
 [version-management.md](version-management.md) for the full two-loop model). Add a
@@ -333,17 +349,21 @@ row. Full schema + examples are at the top of `.github/versions.yaml`.
 - **Non-github tarball?** Point `tarball.url` at the real host (mosquitto builds
   from `mosquitto.org/files/source/...`, not the GitHub archive).
 
-### Safe rollout (mandatory two-step)
+### Safe rollout (validate once, then ship enabled)
 
-A new row ships **cron-disabled**. Then:
+**Validate before you enable — but the onboarding PR must land the row already
+`cron-enabled: true`.** The `check-autoupdate` gate (§12) fails any PR that ships a
+source-built image with a missing or frozen (not-yet-enabled) row, so you cannot
+merge an image without live auto-update. Validate first, then enable in the same PR:
 
 ```bash
 gh workflow run update-versions.yml -f only=<name>   # ignores the cron gate
 ```
-Confirm it produces a correct PR (or a clean "no update"). **Only then** add
-`cron-enabled: true`. Why: update-versions PRs **auto-merge**, and a wrong row
-would auto-merge a bad bump to `main` and stall the whole fleet. Never enable an
-unvalidated row.
+Confirm it produces a correct PR (or a clean "no update"), **then** set
+`cron-enabled: true` on the row before pushing. Why validate first: update-versions
+PRs **auto-merge**, and a wrong row would auto-merge a bad bump to `main` and stall
+the whole fleet. Never enable an unvalidated row — but never leave a validated one
+frozen either (that is exactly how the batch-b CLIs silently stopped auto-updating).
 
 ---
 
@@ -404,6 +424,8 @@ Before you push (source-built):
 make <name>-melange && make <name> && make test-<name>   # §0 — must all pass
 python3 -c "import json; json.load(open('catalog.json'))" # valid JSON
 ruby -ryaml -e "YAML.load_file('.github/versions.yaml')"  # valid YAML
+make check-autoupdate                                     # §9 — auto-update configured
+make lint-workflows                                       # if you touched .github/workflows/**
 ```
 
 CI will independently enforce:
@@ -411,13 +433,17 @@ CI will independently enforce:
 | Check | Fails when |
 |---|---|
 | `validate-catalog` | `catalog.json` ≠ build matrix |
+| `check-autoupdate` | a prod image has no live auto-update (missing/frozen row, or unclassified apko-only image) |
 | `melange-build` / `build-apko` (both arches) | the image doesn't build or its test fails |
+| `lint-workflows` (actionlint + shellcheck) | a workflow schema error or shell syntax error in a `run:` block |
 | gitleaks (pre-commit + CI) | a secret is committed |
 | VEX validation | malformed `vex/*.openvex.json` |
 
 ## 13. Post-merge follow-ups (source-built)
 
-1. **Dispatch-test then enable** the versions.yaml row (§9 safe rollout).
+1. The versions.yaml row already lands **validated + `cron-enabled`** in the onboarding
+   PR (§9 safe rollout) — `check-autoupdate` blocks a frozen row, so there is no
+   post-merge "enable" step to forget.
 2. **Dispatch `patch-go-deps`** once to seed the transitive patch block (§10), if registered.
 3. First grype scan may surface transitive CVEs — let the next patch cycle handle
    them, or VEX the false-positives.

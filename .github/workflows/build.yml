@@ -295,6 +295,12 @@ jobs:
           fi
           echo "OK — catalog.json matches the build matrix ($(wc -l < /tmp/catalog.txt) images)."
 
+      - name: Assert every prod image has auto-update configured
+        # Invariant: no image ships without a live auto-update mechanism (a
+        # cron-enabled versions.yaml row, a declared Wolfi-package class, or a
+        # bespoke updater). Same check as local `make check-autoupdate`.
+        run: make check-autoupdate
+
   #----------------------------------------------------------------------------
   # GENERATE EPHEMERAL SIGNING KEY (PRs only - secrets not available for forks)
   #----------------------------------------------------------------------------

@@ -141,7 +141,7 @@ test-$(1)-dev:
 	@echo "✓ $(1) dev tests passed"
 endef
 
-.PHONY: all build scan clean help lint-workflows
+.PHONY: all build scan clean help lint-workflows check-autoupdate
 .PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange memcached-dev caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite sqlite-dev dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange keygen opensearch opensearch-melange opensearch-dev mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange alertmanager alertmanager-melange mariadb mariadb-melange
@@ -2969,6 +2969,12 @@ clean:
 # never executes on the PR and would otherwise only surface on main.
 lint-workflows:
 	@./scripts/lint-workflows.sh
+
+# Assert every prod image (catalog.json) has exactly one live auto-update
+# mechanism (a cron-enabled versions.yaml row, or a declared Wolfi-package
+# class). Run before pushing any new image or versions.yaml/catalog.json change.
+check-autoupdate:
+	@./scripts/check-autoupdate-coverage.sh
 
 #------------------------------------------------------------------------------
 # HELP
