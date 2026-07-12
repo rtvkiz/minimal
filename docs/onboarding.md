@@ -9,6 +9,8 @@ appear on the catalog site — with nothing silently skipped.
 > When they disagree, this file wins. Two related deep-dives:
 > [`version-management.md`](version-management.md) (the two-loop update model) and
 > [`dev-variants/CONVENTIONS.md`](dev-variants/CONVENTIONS.md) (the `-dev` image).
+>
+> **What to onboard next:** [`roadmap.md`](roadmap.md) — the demand-ranked road to 100.
 
 ---
 
