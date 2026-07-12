@@ -141,7 +141,7 @@ test-$(1)-dev:
 	@echo "✓ $(1) dev tests passed"
 endef
 
-.PHONY: all build scan clean help
+.PHONY: all build scan clean help lint-workflows
 .PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange memcached-dev caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite sqlite-dev dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange keygen opensearch opensearch-melange opensearch-dev mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange alertmanager alertmanager-melange mariadb mariadb-melange
@@ -2959,6 +2959,16 @@ clean:
 	rm -f *.tar sbom-*.spdx.json
 	rm -rf packages/
 	@echo "✓ Cleanup complete"
+
+#------------------------------------------------------------------------------
+# LINT
+#------------------------------------------------------------------------------
+# Validate all GitHub Actions workflows (schema + embedded Bash in `run:` blocks)
+# via actionlint + shellcheck. Run this before pushing any .github/workflows/**
+# change — most workflows only run on schedule, so a shell syntax error there
+# never executes on the PR and would otherwise only surface on main.
+lint-workflows:
+	@./scripts/lint-workflows.sh
 
 #------------------------------------------------------------------------------
 # HELP

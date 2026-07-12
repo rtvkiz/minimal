@@ -178,6 +178,7 @@ jobs:
             [kubeconform]="github.com/yannh/kubeconform"
             [kube-bench]="github.com/aquasecurity/kube-bench"
             [trufflehog]="github.com/trufflesecurity/trufflehog/v3"
+          )
 
           # Build step markers to insert before
           declare -A BUILD_MARKERS=(
@@ -223,6 +224,7 @@ jobs:
             [kubeconform]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [kube-bench]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [trufflehog]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+          )
 
           HAS_PATCHES=false
           PATCHED_LIST=""
