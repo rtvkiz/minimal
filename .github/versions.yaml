@@ -283,6 +283,17 @@
     releases: "https://github.com/trufflesecurity/trufflehog/releases"
     notes: "https://github.com/trufflesecurity/trufflehog/releases/tag/v{version}"
 
+# Tier 1 — Kubernetes / GitOps + proxies (docs/roadmap.md)
+- name: oauth2-proxy
+  cron-enabled: true   # tier 1 (validated 2026-07-12)
+  files: [oauth2-proxy/melange.yaml]
+  source: { type: github-releases-latest, repo: oauth2-proxy/oauth2-proxy, strip-v: true, pin-major: 7 }
+  tarball: { url: "https://github.com/oauth2-proxy/oauth2-proxy/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/oauth2-proxy/oauth2-proxy/releases"
+    notes: "https://github.com/oauth2-proxy/oauth2-proxy/releases/tag/v{version}"
+
 - name: thanos
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [thanos/melange.yaml]
