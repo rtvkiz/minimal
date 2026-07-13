@@ -48,6 +48,7 @@ pipeline:
       for root in /home/build/flux-${{package.version}}; do
         [ -f "$root/go.mod" ] || continue
         ( cd "$root" \
+          && _retry go get github.com/Azure/go-ntlmssp@v0.1.1 \
           && go mod tidy -e \
           && { [ ! -d vendor ] || go mod vendor; } )
       done
