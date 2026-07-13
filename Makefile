@@ -91,6 +91,7 @@ GITLEAKS_VERSION ?= $(call melange_version,gitleaks/melange.yaml)
 STEP_VERSION ?= $(call melange_version,step-cli/melange.yaml)
 OPA_VERSION ?= $(call melange_version,opa/melange.yaml)
 OSV_SCANNER_VERSION ?= $(call melange_version,osv-scanner/melange.yaml)
+OAUTH2_PROXY_VERSION ?= $(call melange_version,oauth2-proxy/melange.yaml)
 NOTATION_VERSION ?= $(call melange_version,notation/melange.yaml)
 CONFTEST_VERSION ?= $(call melange_version,conftest/melange.yaml)
 KUBECONFORM_VERSION ?= $(call melange_version,kubeconform/melange.yaml)
@@ -165,6 +166,7 @@ endef
 .PHONY: step-cli step-cli-melange test-step-cli
 .PHONY: opa opa-melange test-opa
 .PHONY: osv-scanner osv-scanner-melange test-osv-scanner
+.PHONY: oauth2-proxy oauth2-proxy-melange test-oauth2-proxy
 .PHONY: notation notation-melange test-notation
 .PHONY: conftest conftest-melange test-conftest
 .PHONY: kubeconform kubeconform-melange test-kubeconform
@@ -1689,6 +1691,29 @@ osv-scanner: osv-scanner-melange
 	@rm -f osv-scanner.tar sbom-*.spdx.json
 	@echo "✓ minimal-osv-scanner built (source build)"
 
+oauth2-proxy-melange: keygen
+	@echo "Building OAuth2 Proxy $(OAUTH2_PROXY_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build oauth2-proxy/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ OAuth2 Proxy package built from source"
+
+oauth2-proxy: oauth2-proxy-melange
+	@echo "Assembling minimal-oauth2-proxy image with apko..."
+	apko build oauth2-proxy/apko/oauth2-proxy.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-oauth2-proxy:$(VERSION) \
+		oauth2-proxy.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < oauth2-proxy.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-oauth2-proxy:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-oauth2-proxy:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-oauth2-proxy:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-oauth2-proxy:latest
+	@rm -f oauth2-proxy.tar sbom-*.spdx.json
+	@echo "✓ minimal-oauth2-proxy built (source build)"
+
 
 #------------------------------------------------------------------------------
 # NOTATION IMAGE (melange Go source build + apko)
@@ -2664,6 +2689,12 @@ test-osv-scanner:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-osv-scanner:latest" && \
 		osv-scanner/test.sh
 	@echo "✓ osv-scanner tests passed"
+
+test-oauth2-proxy:
+	@echo "Testing oauth2-proxy image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-oauth2-proxy:latest" && \
+		oauth2-proxy/test.sh
+	@echo "✓ oauth2-proxy tests passed"
 
 test-notation:
 	@echo "Testing notation image..."

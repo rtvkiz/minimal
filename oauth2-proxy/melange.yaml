@@ -1,0 +1,76 @@
+# Melange build configuration for minimal OAuth2 Proxy
+# Pure Go from source. Single static `oauth2-proxy` binary (reverse proxy /
+# auth sidecar providing OIDC/OAuth2 authentication in front of upstreams).
+# License: MIT (oauth2-proxy authors).
+
+package:
+  name: oauth2-proxy-minimal
+  version: 7.15.3
+  epoch: 0
+  description: "Minimal OAuth2 Proxy (OIDC/OAuth2 authenticating reverse proxy) built from source"
+  copyright:
+    - license: MIT
+
+vars:
+  # SHA256 of oauth2-proxy source tarball - updated by update-versions.yml workflow
+  sha256: a13491bfd083e570d451275458728fb3f722b4d46657644df1ea90c676c552da
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify oauth2-proxy source
+  - runs: |
+      mkdir -p /home/build/oauth2-proxy-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/oauth2-proxy/oauth2-proxy/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/oauth2-proxy.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/oauth2-proxy.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/oauth2-proxy.tar.gz -C /home/build/oauth2-proxy-${{package.version}} --strip-components=1
+      rm /home/build/oauth2-proxy.tar.gz
+
+  # Version is reported via pkg/version.VERSION (see upstream Makefile).
+  # CGO_ENABLED=0 gives a static binary.
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/oauth2-proxy-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/oauth2-proxy-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version.VERSION=${{package.version}}" \
+        -o /home/build/oauth2-proxy-bin \
+        .
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/oauth2-proxy-bin "${{targets.destdir}}/usr/bin/oauth2-proxy"
+      chmod 0755 "${{targets.destdir}}/usr/bin/oauth2-proxy"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying oauth2-proxy binary..."
+      "${{targets.destdir}}/usr/bin/oauth2-proxy" --version

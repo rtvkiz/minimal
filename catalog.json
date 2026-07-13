@@ -43,6 +43,7 @@
     { "name": "haproxy", "category": "Web Servers & Proxies", "variants": ["prod", "dev"], "primary_package": "haproxy", "upstream_url": "https://www.haproxy.org", "summary": "Shell-less HAProxy built from source via melange." },
     { "name": "traefik", "category": "Web Servers & Proxies", "variants": ["prod", "dev"], "primary_package": "traefik", "upstream_url": "https://traefik.io", "summary": "Shell-less Traefik reverse proxy built from source via melange." },
     { "name": "envoy", "category": "Web Servers & Proxies", "variants": ["prod", "dev"], "primary_package": "envoy", "upstream_url": "https://www.envoyproxy.io", "summary": "Shell-less Envoy proxy." },
+    { "name": "oauth2-proxy", "category": "Web Servers & Proxies", "variants": ["prod", "dev"], "primary_package": "oauth2-proxy", "upstream_url": "https://oauth2-proxy.github.io/oauth2-proxy/", "summary": "Shell-less OAuth2 Proxy (OIDC/OAuth2 authenticating reverse proxy), built from source via melange." },
 
     { "name": "prometheus", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "prometheus", "upstream_url": "https://prometheus.io", "summary": "Prometheus monitoring server built from source via melange." },
     { "name": "alertmanager", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "alertmanager", "upstream_url": "https://prometheus.io/docs/alerting/latest/alertmanager/", "summary": "Prometheus Alertmanager built from source via melange." },
