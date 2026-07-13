@@ -1,0 +1,67 @@
+# Melange build configuration for minimal regctl
+# Pure Go from source. Single static `regctl` binary. License: Apache-2.0.
+
+package:
+  name: regctl-minimal
+  version: 0.11.5
+  epoch: 0
+  description: "Minimal regctl OCI registry client built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of regctl source tarball - updated by update-versions.yml workflow
+  sha256: ad802e0dcf2852c8e263146227f3430229f911f8404c2a5aa8d4022f13776d8a
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/regctl-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/regclient/regclient/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/regctl.tar.gz
+      echo "${{vars.sha256}}  /home/build/regctl.tar.gz" | sha256sum -c -
+      tar xzf /home/build/regctl.tar.gz -C /home/build/regctl-${{package.version}} --strip-components=1
+      rm /home/build/regctl.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/regctl-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/regctl-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/regclient/regclient/internal/version.vcsTag=${{package.version}}" \
+        -o /home/build/regctl-bin \
+        ./cmd/regctl
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/regctl-bin "${{targets.destdir}}/usr/bin/regctl"
+      chmod 0755 "${{targets.destdir}}/usr/bin/regctl"
+
+  - runs: |
+      echo "Verifying regctl binary..."
+      "${{targets.destdir}}/usr/bin/regctl" version

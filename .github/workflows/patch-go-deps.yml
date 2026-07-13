@@ -137,6 +137,9 @@ jobs:
             [sops]="/home/build/sops-${D}{{package.version}}"
             [crane]="/home/build/crane-${D}{{package.version}}"
             [kubeseal]="/home/build/kubeseal-${D}{{package.version}}"
+            [helmfile]="/home/build/helmfile-${D}{{package.version}}"
+            [regctl]="/home/build/regctl-${D}{{package.version}}"
+            [stern]="/home/build/stern-${D}{{package.version}}"
           )
 
           # Main module path per image. Grype's buildinfo scan reports the
@@ -190,6 +193,9 @@ jobs:
             [sops]="github.com/getsops/sops/v3"
             [crane]="github.com/google/go-containerregistry"
             [kubeseal]="github.com/bitnami/sealed-secrets"
+            [helmfile]="github.com/helmfile/helmfile"
+            [regctl]="github.com/regclient/regclient"
+            [stern]="github.com/stern/stern"
           )
 
           # Build step markers to insert before
@@ -242,6 +248,9 @@ jobs:
             [sops]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [crane]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [kubeseal]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [helmfile]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [regctl]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [stern]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
           HAS_PATCHES=false

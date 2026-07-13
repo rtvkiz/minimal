@@ -97,6 +97,9 @@ KUSTOMIZE_VERSION ?= $(call melange_version,kustomize/melange.yaml)
 SOPS_VERSION ?= $(call melange_version,sops/melange.yaml)
 CRANE_VERSION ?= $(call melange_version,crane/melange.yaml)
 KUBESEAL_VERSION ?= $(call melange_version,kubeseal/melange.yaml)
+HELMFILE_VERSION ?= $(call melange_version,helmfile/melange.yaml)
+REGCTL_VERSION ?= $(call melange_version,regctl/melange.yaml)
+STERN_VERSION ?= $(call melange_version,stern/melange.yaml)
 NOTATION_VERSION ?= $(call melange_version,notation/melange.yaml)
 CONFTEST_VERSION ?= $(call melange_version,conftest/melange.yaml)
 KUBECONFORM_VERSION ?= $(call melange_version,kubeconform/melange.yaml)
@@ -177,6 +180,9 @@ endef
 .PHONY: sops sops-melange test-sops
 .PHONY: crane crane-melange test-crane
 .PHONY: kubeseal kubeseal-melange test-kubeseal
+.PHONY: helmfile helmfile-melange test-helmfile
+.PHONY: regctl regctl-melange test-regctl
+.PHONY: stern stern-melange test-stern
 .PHONY: notation notation-melange test-notation
 .PHONY: conftest conftest-melange test-conftest
 .PHONY: kubeconform kubeconform-melange test-kubeconform
@@ -1839,6 +1845,75 @@ kubeseal: kubeseal-melange
 	@rm -f kubeseal.tar sbom-*.spdx.json
 	@echo "✓ minimal-kubeseal built (source build)"
 
+helmfile-melange: keygen
+	@echo "Building helmfile $(HELMFILE_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build helmfile/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ helmfile package built from source"
+
+helmfile: helmfile-melange
+	@echo "Assembling minimal-helmfile image with apko..."
+	apko build helmfile/apko/helmfile.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-helmfile:$(VERSION) \
+		helmfile.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < helmfile.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-helmfile:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-helmfile:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-helmfile:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-helmfile:latest
+	@rm -f helmfile.tar sbom-*.spdx.json
+	@echo "✓ minimal-helmfile built (source build)"
+
+regctl-melange: keygen
+	@echo "Building regctl $(REGCTL_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build regctl/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ regctl package built from source"
+
+regctl: regctl-melange
+	@echo "Assembling minimal-regctl image with apko..."
+	apko build regctl/apko/regctl.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-regctl:$(VERSION) \
+		regctl.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < regctl.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-regctl:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-regctl:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-regctl:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-regctl:latest
+	@rm -f regctl.tar sbom-*.spdx.json
+	@echo "✓ minimal-regctl built (source build)"
+
+stern-melange: keygen
+	@echo "Building stern $(STERN_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build stern/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ stern package built from source"
+
+stern: stern-melange
+	@echo "Assembling minimal-stern image with apko..."
+	apko build stern/apko/stern.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-stern:$(VERSION) \
+		stern.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < stern.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-stern:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-stern:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-stern:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-stern:latest
+	@rm -f stern.tar sbom-*.spdx.json
+	@echo "✓ minimal-stern built (source build)"
+
 
 
 #------------------------------------------------------------------------------
@@ -2851,6 +2926,24 @@ test-kubeseal:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kubeseal:latest" && \
 		kubeseal/test.sh
 	@echo "✓ kubeseal tests passed"
+
+test-helmfile:
+	@echo "Testing helmfile image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-helmfile:latest" && \
+		helmfile/test.sh
+	@echo "✓ helmfile tests passed"
+
+test-regctl:
+	@echo "Testing regctl image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-regctl:latest" && \
+		regctl/test.sh
+	@echo "✓ regctl tests passed"
+
+test-stern:
+	@echo "Testing stern image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-stern:latest" && \
+		stern/test.sh
+	@echo "✓ stern tests passed"
 
 
 test-notation:

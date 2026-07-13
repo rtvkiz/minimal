@@ -53,9 +53,9 @@ Single static Go binaries **and** genuinely run as containers. Best impact-per-e
 
 | ✓ | Image | Upstream | License | 🐳 pulls | ⭐ | Notes |
 |---|---|---|---|---:|---:|---|
-| [ ] | helmfile | helmfile/helmfile | 🟢 MIT | — | 5k | declarative Helm, CD pipelines |
-| [ ] | regctl | regclient/regclient | 🟢 Apache-2.0 | — | 2k | registry client, CI |
-| [ ] | stern | stern/stern | 🟢 Apache-2.0 | — | 5k | multi-pod log tail (borderline: often local) |
+| [x] | helmfile | helmfile/helmfile | 🟢 MIT | — | 5k | declarative Helm, CD pipelines |
+| [x] | regctl | regclient/regclient | 🟢 Apache-2.0 | — | 2k | registry client, CI |
+| [x] | stern | stern/stern | 🟢 Apache-2.0 | — | 5k | multi-pod log tail (borderline: often local) |
 
 ## Tier 3 — high demand, heavier builds (deliberate; fills thin DB/proxy/app categories)
 

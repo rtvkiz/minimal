@@ -1,0 +1,37 @@
+# Minimal minimal-helmfile image - built from source via melange. Shell-less, distroless.
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - helmfile-minimal
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/helmfile
+
+environment:
+  PATH: /usr/bin:/bin
+
+annotations:
+  org.opencontainers.image.title: "minimal-helmfile"
+  org.opencontainers.image.description: "Hardened shell-less Helmfile declarative Helm manager built from source via melange with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/helmfile"
+  org.opencontainers.image.licenses: "MIT"
+
+archs:
+  - x86_64
+  - aarch64

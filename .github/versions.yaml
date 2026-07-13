@@ -348,6 +348,36 @@
     releases: "https://github.com/bitnami/sealed-secrets/releases"
     notes: "https://github.com/bitnami/sealed-secrets/releases/tag/v{version}"
 
+- name: helmfile
+  cron-enabled: true   # tier 2 (validated 2026-07-12)
+  files: [helmfile/melange.yaml]
+  source: { type: github-releases-latest, repo: helmfile/helmfile, strip-v: true, pin-major: 7 }
+  tarball: { url: "https://github.com/helmfile/helmfile/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/helmfile/helmfile/releases"
+    notes: "https://github.com/helmfile/helmfile/releases/tag/v{version}"
+
+- name: regctl
+  cron-enabled: true   # tier 2 (validated 2026-07-12)
+  files: [regctl/melange.yaml]
+  source: { type: github-releases-latest, repo: regclient/regclient, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/regclient/regclient/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/regclient/regclient/releases"
+    notes: "https://github.com/regclient/regclient/releases/tag/v{version}"
+
+- name: stern
+  cron-enabled: true   # tier 2 (validated 2026-07-12)
+  files: [stern/melange.yaml]
+  source: { type: github-releases-latest, repo: stern/stern, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/stern/stern/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/stern/stern/releases"
+    notes: "https://github.com/stern/stern/releases/tag/v{version}"
+
 
 - name: thanos
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
