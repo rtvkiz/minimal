@@ -1,0 +1,67 @@
+# Melange build configuration for minimal crane
+# Pure Go from source. Single static `crane` binary. License: Apache-2.0.
+
+package:
+  name: crane-minimal
+  version: 0.21.7
+  epoch: 0
+  description: "Minimal crane OCI registry tool built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of crane source tarball - updated by update-versions.yml workflow
+  sha256: 4fa695c6a1f79793598d804cab380a3ba4f03539c0dbd4f0b9f38cdaf175ef3b
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/crane-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/google/go-containerregistry/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/crane.tar.gz
+      echo "${{vars.sha256}}  /home/build/crane.tar.gz" | sha256sum -c -
+      tar xzf /home/build/crane.tar.gz -C /home/build/crane-${{package.version}} --strip-components=1
+      rm /home/build/crane.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/crane-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/crane-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=${{package.version}}" \
+        -o /home/build/crane-bin \
+        ./cmd/crane
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/crane-bin "${{targets.destdir}}/usr/bin/crane"
+      chmod 0755 "${{targets.destdir}}/usr/bin/crane"
+
+  - runs: |
+      echo "Verifying crane binary..."
+      "${{targets.destdir}}/usr/bin/crane" version

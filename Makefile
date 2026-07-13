@@ -92,6 +92,11 @@ STEP_VERSION ?= $(call melange_version,step-cli/melange.yaml)
 OPA_VERSION ?= $(call melange_version,opa/melange.yaml)
 OSV_SCANNER_VERSION ?= $(call melange_version,osv-scanner/melange.yaml)
 OAUTH2_PROXY_VERSION ?= $(call melange_version,oauth2-proxy/melange.yaml)
+FLUX_VERSION ?= $(call melange_version,flux/melange.yaml)
+KUSTOMIZE_VERSION ?= $(call melange_version,kustomize/melange.yaml)
+SOPS_VERSION ?= $(call melange_version,sops/melange.yaml)
+CRANE_VERSION ?= $(call melange_version,crane/melange.yaml)
+KUBESEAL_VERSION ?= $(call melange_version,kubeseal/melange.yaml)
 NOTATION_VERSION ?= $(call melange_version,notation/melange.yaml)
 CONFTEST_VERSION ?= $(call melange_version,conftest/melange.yaml)
 KUBECONFORM_VERSION ?= $(call melange_version,kubeconform/melange.yaml)
@@ -167,6 +172,11 @@ endef
 .PHONY: opa opa-melange test-opa
 .PHONY: osv-scanner osv-scanner-melange test-osv-scanner
 .PHONY: oauth2-proxy oauth2-proxy-melange test-oauth2-proxy
+.PHONY: flux flux-melange test-flux
+.PHONY: kustomize kustomize-melange test-kustomize
+.PHONY: sops sops-melange test-sops
+.PHONY: crane crane-melange test-crane
+.PHONY: kubeseal kubeseal-melange test-kubeseal
 .PHONY: notation notation-melange test-notation
 .PHONY: conftest conftest-melange test-conftest
 .PHONY: kubeconform kubeconform-melange test-kubeconform
@@ -1714,6 +1724,122 @@ oauth2-proxy: oauth2-proxy-melange
 	@rm -f oauth2-proxy.tar sbom-*.spdx.json
 	@echo "✓ minimal-oauth2-proxy built (source build)"
 
+flux-melange: keygen
+	@echo "Building flux $(FLUX_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build flux/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ flux package built from source"
+
+flux: flux-melange
+	@echo "Assembling minimal-flux image with apko..."
+	apko build flux/apko/flux.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-flux:$(VERSION) \
+		flux.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < flux.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-flux:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-flux:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-flux:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-flux:latest
+	@rm -f flux.tar sbom-*.spdx.json
+	@echo "✓ minimal-flux built (source build)"
+
+kustomize-melange: keygen
+	@echo "Building kustomize $(KUSTOMIZE_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build kustomize/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ kustomize package built from source"
+
+kustomize: kustomize-melange
+	@echo "Assembling minimal-kustomize image with apko..."
+	apko build kustomize/apko/kustomize.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-kustomize:$(VERSION) \
+		kustomize.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < kustomize.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kustomize:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kustomize:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kustomize:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kustomize:latest
+	@rm -f kustomize.tar sbom-*.spdx.json
+	@echo "✓ minimal-kustomize built (source build)"
+
+sops-melange: keygen
+	@echo "Building sops $(SOPS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build sops/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ sops package built from source"
+
+sops: sops-melange
+	@echo "Assembling minimal-sops image with apko..."
+	apko build sops/apko/sops.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-sops:$(VERSION) \
+		sops.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < sops.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-sops:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-sops:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-sops:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-sops:latest
+	@rm -f sops.tar sbom-*.spdx.json
+	@echo "✓ minimal-sops built (source build)"
+
+crane-melange: keygen
+	@echo "Building crane $(CRANE_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build crane/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ crane package built from source"
+
+crane: crane-melange
+	@echo "Assembling minimal-crane image with apko..."
+	apko build crane/apko/crane.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-crane:$(VERSION) \
+		crane.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < crane.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-crane:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-crane:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-crane:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-crane:latest
+	@rm -f crane.tar sbom-*.spdx.json
+	@echo "✓ minimal-crane built (source build)"
+
+kubeseal-melange: keygen
+	@echo "Building kubeseal $(KUBESEAL_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build kubeseal/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ kubeseal package built from source"
+
+kubeseal: kubeseal-melange
+	@echo "Assembling minimal-kubeseal image with apko..."
+	apko build kubeseal/apko/kubeseal.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-kubeseal:$(VERSION) \
+		kubeseal.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < kubeseal.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kubeseal:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kubeseal:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kubeseal:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kubeseal:latest
+	@rm -f kubeseal.tar sbom-*.spdx.json
+	@echo "✓ minimal-kubeseal built (source build)"
+
+
 
 #------------------------------------------------------------------------------
 # NOTATION IMAGE (melange Go source build + apko)
@@ -2695,6 +2821,37 @@ test-oauth2-proxy:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-oauth2-proxy:latest" && \
 		oauth2-proxy/test.sh
 	@echo "✓ oauth2-proxy tests passed"
+
+test-flux:
+	@echo "Testing flux image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-flux:latest" && \
+		flux/test.sh
+	@echo "✓ flux tests passed"
+
+test-kustomize:
+	@echo "Testing kustomize image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kustomize:latest" && \
+		kustomize/test.sh
+	@echo "✓ kustomize tests passed"
+
+test-sops:
+	@echo "Testing sops image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-sops:latest" && \
+		sops/test.sh
+	@echo "✓ sops tests passed"
+
+test-crane:
+	@echo "Testing crane image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-crane:latest" && \
+		crane/test.sh
+	@echo "✓ crane tests passed"
+
+test-kubeseal:
+	@echo "Testing kubeseal image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kubeseal:latest" && \
+		kubeseal/test.sh
+	@echo "✓ kubeseal tests passed"
+
 
 test-notation:
 	@echo "Testing notation image..."
