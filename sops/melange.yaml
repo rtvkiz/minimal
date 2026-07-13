@@ -1,0 +1,67 @@
+# Melange build configuration for minimal sops
+# Pure Go from source. Single static `sops` binary. License: MPL-2.0.
+
+package:
+  name: sops-minimal
+  version: 3.13.2
+  epoch: 0
+  description: "Minimal SOPS secrets OPerationS editor built from source"
+  copyright:
+    - license: MPL-2.0
+
+vars:
+  # SHA256 of sops source tarball - updated by update-versions.yml workflow
+  sha256: 79560b53814e20031d094a293d6c169314eaaf97efd6e95a6d765e61e881db2c
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/sops-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/getsops/sops/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/sops.tar.gz
+      echo "${{vars.sha256}}  /home/build/sops.tar.gz" | sha256sum -c -
+      tar xzf /home/build/sops.tar.gz -C /home/build/sops-${{package.version}} --strip-components=1
+      rm /home/build/sops.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/sops-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/sops-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/getsops/sops/v3/version.Version=${{package.version}}" \
+        -o /home/build/sops-bin \
+        ./cmd/sops
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/sops-bin "${{targets.destdir}}/usr/bin/sops"
+      chmod 0755 "${{targets.destdir}}/usr/bin/sops"
+
+  - runs: |
+      echo "Verifying sops binary..."
+      "${{targets.destdir}}/usr/bin/sops" --version

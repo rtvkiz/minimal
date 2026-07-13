@@ -1,0 +1,67 @@
+# Melange build configuration for minimal kustomize
+# Pure Go from source. Single static `kustomize` binary. License: Apache-2.0.
+
+package:
+  name: kustomize-minimal
+  version: 5.8.1
+  epoch: 0
+  description: "Minimal Kustomize Kubernetes config tool built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of kustomize source tarball - updated by update-versions.yml workflow
+  sha256: 4ea5a974c46ad6efcde4fd9c339ab1bd278a80b6872dda2d1a366936e4638475
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/kustomize-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/kubernetes-sigs/kustomize/archive/refs/tags/kustomize/v${{package.version}}.tar.gz" \
+        -o /home/build/kustomize.tar.gz
+      echo "${{vars.sha256}}  /home/build/kustomize.tar.gz" | sha256sum -c -
+      tar xzf /home/build/kustomize.tar.gz -C /home/build/kustomize-${{package.version}} --strip-components=1
+      rm /home/build/kustomize.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/kustomize-${{package.version}}/kustomize; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/kustomize-${{package.version}}/kustomize
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X sigs.k8s.io/kustomize/api/provenance.version=${{package.version}}" \
+        -o /home/build/kustomize-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/kustomize-bin "${{targets.destdir}}/usr/bin/kustomize"
+      chmod 0755 "${{targets.destdir}}/usr/bin/kustomize"
+
+  - runs: |
+      echo "Verifying kustomize binary..."
+      "${{targets.destdir}}/usr/bin/kustomize" version

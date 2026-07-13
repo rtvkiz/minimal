@@ -1,0 +1,67 @@
+# Melange build configuration for minimal kubeseal
+# Pure Go from source. Single static `kubeseal` binary. License: Apache-2.0.
+
+package:
+  name: kubeseal-minimal
+  version: 0.38.4
+  epoch: 0
+  description: "Minimal kubeseal Sealed Secrets CLI built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of kubeseal source tarball - updated by update-versions.yml workflow
+  sha256: 7076a3278ac29e5f3f8ac6676414e4c24f01303c1405b99a1caebe88f5977d7e
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/kubeseal-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/bitnami/sealed-secrets/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/kubeseal.tar.gz
+      echo "${{vars.sha256}}  /home/build/kubeseal.tar.gz" | sha256sum -c -
+      tar xzf /home/build/kubeseal.tar.gz -C /home/build/kubeseal-${{package.version}} --strip-components=1
+      rm /home/build/kubeseal.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/kubeseal-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/kubeseal-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X main.VERSION=${{package.version}}" \
+        -o /home/build/kubeseal-bin \
+        ./cmd/kubeseal
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/kubeseal-bin "${{targets.destdir}}/usr/bin/kubeseal"
+      chmod 0755 "${{targets.destdir}}/usr/bin/kubeseal"
+
+  - runs: |
+      echo "Verifying kubeseal binary..."
+      "${{targets.destdir}}/usr/bin/kubeseal" --version

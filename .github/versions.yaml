@@ -294,6 +294,61 @@
     releases: "https://github.com/oauth2-proxy/oauth2-proxy/releases"
     notes: "https://github.com/oauth2-proxy/oauth2-proxy/releases/tag/v{version}"
 
+- name: flux
+  cron-enabled: true   # tier 1 (validated 2026-07-12)
+  files: [flux/melange.yaml]
+  source: { type: github-releases-latest, repo: fluxcd/flux2, strip-v: true, pin-major: 2 }
+  tarball: { url: "https://github.com/fluxcd/flux2/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/fluxcd/flux2/releases"
+    notes: "https://github.com/fluxcd/flux2/releases/tag/v{version}"
+
+- name: kustomize
+  cron-enabled: true   # tier 1 (validated 2026-07-12)
+  files: [kustomize/melange.yaml]
+  # kustomize is a monorepo — api/kyaml/ tags crowd out kustomize/vX from the
+  # tags API, but /releases/latest returns the CLI release. strip the prefix.
+  source: { type: github-releases-latest, repo: kubernetes-sigs/kustomize, strip-prefix: 'kustomize/v', pin-major: 5 }
+  tarball: { url: "https://github.com/kubernetes-sigs/kustomize/archive/refs/tags/kustomize/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/kubernetes-sigs/kustomize/releases"
+    notes: "https://github.com/kubernetes-sigs/kustomize/releases/tag/v{version}"
+
+- name: sops
+  cron-enabled: true   # tier 1 (validated 2026-07-12)
+  files: [sops/melange.yaml]
+  source: { type: github-releases-latest, repo: getsops/sops, strip-v: true, pin-major: 3 }
+  tarball: { url: "https://github.com/getsops/sops/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/getsops/sops/releases"
+    notes: "https://github.com/getsops/sops/releases/tag/v{version}"
+
+- name: crane
+  cron-enabled: true   # tier 1 (validated 2026-07-12)
+  files: [crane/melange.yaml]
+  source: { type: github-releases-latest, repo: google/go-containerregistry, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/google/go-containerregistry/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/google/go-containerregistry/releases"
+    notes: "https://github.com/google/go-containerregistry/releases/tag/v{version}"
+
+- name: kubeseal
+  cron-enabled: true   # tier 1 (validated 2026-07-12)
+  files: [kubeseal/melange.yaml]
+  # canonical repo is bitnami/sealed-secrets (bitnami-labs 301-redirects; the
+  # resolver's raw curl won't follow it — same gotcha as eclipse/mosquitto).
+  source: { type: github-releases-latest, repo: bitnami/sealed-secrets, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/bitnami/sealed-secrets/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/bitnami/sealed-secrets/releases"
+    notes: "https://github.com/bitnami/sealed-secrets/releases/tag/v{version}"
+
+
 - name: thanos
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [thanos/melange.yaml]

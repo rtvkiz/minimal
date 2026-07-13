@@ -1,0 +1,73 @@
+# Melange build configuration for minimal flux
+# Pure Go from source. Single static `flux` binary. License: Apache-2.0.
+
+package:
+  name: flux-minimal
+  version: 2.9.1
+  epoch: 0
+  description: "Minimal Flux CD GitOps toolkit CLI built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of flux source tarball - updated by update-versions.yml workflow
+  sha256: 08f9dba90d83664a3bc3231428a4ac9d496b1cafe30172819a9b3dd8ca48557e
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - bash
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+      # flux embeds its install manifests via manifests/scripts/bundle.sh,
+      # which runs `kustomize build` per controller base.
+      - kustomize
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/flux-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/fluxcd/flux2/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/flux.tar.gz
+      echo "${{vars.sha256}}  /home/build/flux.tar.gz" | sha256sum -c -
+      tar xzf /home/build/flux.tar.gz -C /home/build/flux-${{package.version}} --strip-components=1
+      rm /home/build/flux.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/flux-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/flux-${{package.version}}
+      # Generate the embedded install manifests (//go:embed manifests/*.yaml).
+      bash ./manifests/scripts/bundle.sh
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X main.VERSION=${{package.version}}" \
+        -o /home/build/flux-bin \
+        ./cmd/flux
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/flux-bin "${{targets.destdir}}/usr/bin/flux"
+      chmod 0755 "${{targets.destdir}}/usr/bin/flux"
+
+  - runs: |
+      echo "Verifying flux binary..."
+      "${{targets.destdir}}/usr/bin/flux" --version

@@ -132,6 +132,11 @@ jobs:
             [kube-bench]="/home/build/kube-bench-${D}{{package.version}}"
             [trufflehog]="/home/build/trufflehog-${D}{{package.version}}"
             [oauth2-proxy]="/home/build/oauth2-proxy-${D}{{package.version}}"
+            [flux]="/home/build/flux-${D}{{package.version}}"
+            [kustomize]="/home/build/kustomize-${D}{{package.version}}/kustomize"
+            [sops]="/home/build/sops-${D}{{package.version}}"
+            [crane]="/home/build/crane-${D}{{package.version}}"
+            [kubeseal]="/home/build/kubeseal-${D}{{package.version}}"
           )
 
           # Main module path per image. Grype's buildinfo scan reports the
@@ -180,6 +185,11 @@ jobs:
             [kube-bench]="github.com/aquasecurity/kube-bench"
             [trufflehog]="github.com/trufflesecurity/trufflehog/v3"
             [oauth2-proxy]="github.com/oauth2-proxy/oauth2-proxy/v7"
+            [flux]="github.com/fluxcd/flux2/v2"
+            [kustomize]="sigs.k8s.io/kustomize/kustomize/v5"
+            [sops]="github.com/getsops/sops/v3"
+            [crane]="github.com/google/go-containerregistry"
+            [kubeseal]="github.com/bitnami/sealed-secrets"
           )
 
           # Build step markers to insert before
@@ -227,6 +237,11 @@ jobs:
             [kube-bench]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [trufflehog]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [oauth2-proxy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [flux]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kustomize]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [sops]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [crane]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kubeseal]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
           HAS_PATCHES=false

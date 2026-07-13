@@ -38,14 +38,16 @@ Single static Go binaries **and** genuinely run as containers. Best impact-per-e
 
 | ✓ | Image | Upstream | License | 🐳 pulls | ⭐ | Notes |
 |---|---|---|---|---:|---:|---|
-| [ ] | oauth2-proxy | oauth2-proxy/oauth2-proxy | 🟢 MIT | 97M | 15k | k8s auth sidecar, ubiquitous, CG-gated |
-| [ ] | pomerium | pomerium/pomerium | 🟢 Apache-2.0 | 1.6B\* | 5k | identity-aware proxy |
-| [ ] | flux (CLI) | fluxcd/flux2 | 🟢 Apache-2.0 | 3.8M | 8k | GitOps, CG-gated |
-| [ ] | kustomize | kubernetes-sigs/kustomize | 🟢 Apache-2.0 | 12M | 12k | CI/CD standard, CG-gated |
-| [ ] | sops | getsops/sops | 🟢 MPL-2.0 | — | 22k | secrets in CI, CG-gated |
-| [ ] | crane | google/go-containerregistry | 🟢 Apache-2.0 | — | 4k | registry ops, heavy CI use |
-| [ ] | cmctl | cert-manager/cmctl | 🟢 Apache-2.0 | — | 14k | cert-manager CLI (single binary) |
-| [ ] | kubeseal | bitnami-labs/sealed-secrets | 🟢 Apache-2.0 | — | 9k | sealed-secrets CLI |
+| [x] | oauth2-proxy | oauth2-proxy/oauth2-proxy | 🟢 MIT | 97M | 15k | k8s auth sidecar, ubiquitous, CG-gated (#393) |
+| [x] | flux (CLI) | fluxcd/flux2 | 🟢 Apache-2.0 | 3.8M | 8k | GitOps, CG-gated — embeds install manifests (kustomize bundle at build) |
+| [x] | kustomize | kubernetes-sigs/kustomize | 🟢 Apache-2.0 | 12M | 12k | CI/CD standard, CG-gated — monorepo, `kustomize/vX` tag |
+| [x] | sops | getsops/sops | 🟢 MPL-2.0 | — | 22k | secrets in CI, CG-gated |
+| [x] | crane | google/go-containerregistry | 🟢 Apache-2.0 | — | 4k | registry ops, heavy CI use |
+| [x] | kubeseal | bitnami/sealed-secrets | 🟢 Apache-2.0 | — | 9k | sealed-secrets CLI (canonical repo, not bitnami-labs 301) |
+
+**Reclassified out of Tier 1 (not clean Go single-binaries — moved to "deferred"):**
+- **pomerium** — huge demand (1.6B pulls) but `//go:embed`s an arch-specific **Envoy** binary as its data plane → Tier-3-complexity build, own effort.
+- **cmctl** — cert-manager's `makefile-modules`/klone build, no clean `-X` version injection → needs its own investigation.
 
 ## Tier 2 — solid demand, easy Go CLIs
 
@@ -76,6 +78,8 @@ by effort. Fills the catalog's thinnest categories (databases, proxies, apps).
 | Image | Reason |
 |---|---|
 | kubescape | Go, but a large build — needs ~40 G local disk freed (stale `/tmp/bubblewrap-guest-*`). Recipe already generated in batch-b; onboard once disk allows. |
+| pomerium | 1.6B pulls but `//go:embed`s an arch-specific Envoy binary (data plane). Needs an Envoy-fetch step + cross-arch handling — Envoy-image-class effort, not a clean crank. |
+| cmctl | cert-manager's `makefile-modules`/klone build; no clean `-X` version injection. Needs its own investigation of the version mechanism. |
 | cert-manager (core) | Multi-image (controller + webhook + cainjector + startupapicheck + acmesolver). High demand, in-cluster. Mirror the upstream image split — own effort after Tier 1. |
 | flux (controllers) | source/kustomize/helm/notification-controller, separate repos. Multi-image, in-cluster. Own effort. |
 | uptime-kuma | 166M pulls (MIT) but Node/yarn frontend → the bwrap frontend quagmire (see grafana). Backend-from-source + prebuilt frontend assets, own effort. |
