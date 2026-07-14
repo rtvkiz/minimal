@@ -1,0 +1,67 @@
+# Melange build configuration for minimal helmfile
+# Pure Go from source. Single static `helmfile` binary. License: MIT.
+
+package:
+  name: helmfile-minimal
+  version: 1.7.0
+  epoch: 0
+  description: "Minimal Helmfile declarative Helm manager built from source"
+  copyright:
+    - license: MIT
+
+vars:
+  # SHA256 of helmfile source tarball - updated by update-versions.yml workflow
+  sha256: dc9b62c842068ab7aad6fa82ddfa034b6973bda71322a283cf0a8a5151f149d3
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/helmfile-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/helmfile/helmfile/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/helmfile.tar.gz
+      echo "${{vars.sha256}}  /home/build/helmfile.tar.gz" | sha256sum -c -
+      tar xzf /home/build/helmfile.tar.gz -C /home/build/helmfile-${{package.version}} --strip-components=1
+      rm /home/build/helmfile.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/helmfile-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/helmfile-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X go.szostok.io/version.version=${{package.version}}" \
+        -o /home/build/helmfile-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/helmfile-bin "${{targets.destdir}}/usr/bin/helmfile"
+      chmod 0755 "${{targets.destdir}}/usr/bin/helmfile"
+
+  - runs: |
+      echo "Verifying helmfile binary..."
+      "${{targets.destdir}}/usr/bin/helmfile" version
