@@ -29,6 +29,7 @@ RAILS_VERSION ?= $(shell grep '^  rails_version:' rails/melange.yaml 2>/dev/null
 # --- Messaging/Coordination ---
 KAFKA_VERSION ?= $(call melange_version,kafka/melange.yaml)
 ZOOKEEPER_VERSION ?= $(call melange_version,zookeeper/melange.yaml)
+TOMCAT_VERSION ?= $(call melange_version,tomcat/melange.yaml)
 VALKEY_VERSION ?= $(call melange_version,valkey/melange.yaml)
 NATS_VERSION ?= $(call melange_version,nats/melange.yaml)
 RABBITMQ_VERSION ?= $(call melange_version,rabbitmq/melange.yaml)
@@ -153,6 +154,7 @@ endef
 
 .PHONY: all build scan clean help lint-workflows check-autoupdate
 .PHONY: zookeeper zookeeper-melange test-zookeeper
+.PHONY: tomcat tomcat-melange test-tomcat
 .PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange memcached-dev caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite sqlite-dev dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange keygen opensearch opensearch-melange opensearch-dev mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange alertmanager alertmanager-melange mariadb mariadb-melange
@@ -1239,6 +1241,30 @@ zookeeper: zookeeper-melange
 		$(REGISTRY)/$(OWNER)/minimal-zookeeper:latest
 	@rm -f zookeeper.tar sbom-*.spdx.json
 	@echo "✓ minimal-zookeeper built (official binary + jlink JRE)"
+
+tomcat-melange: keygen
+	@echo "Building Tomcat $(TOMCAT_VERSION) package via melange..."
+	# x86_64 only locally: jlink runs inside the melange sandbox.
+	melange build tomcat/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Tomcat package built"
+
+tomcat: tomcat-melange
+	@echo "Assembling minimal-tomcat image with apko..."
+	apko build tomcat/apko/tomcat.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-tomcat:$(TOMCAT_VERSION) \
+		tomcat.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < tomcat.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-tomcat:$(TOMCAT_VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-tomcat:$(TOMCAT_VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-tomcat:$(TOMCAT_VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-tomcat:latest
+	@rm -f tomcat.tar sbom-*.spdx.json
+	@echo "✓ minimal-tomcat built (official binary + jlink JRE)"
 
 #------------------------------------------------------------------------------
 # COREDNS IMAGE (melange source build + apko)
@@ -2803,6 +2829,12 @@ test-zookeeper:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-zookeeper:latest" && \
 		zookeeper/test.sh
 	@echo "✓ zookeeper tests passed"
+
+test-tomcat:
+	@echo "Testing tomcat image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-tomcat:latest" && \
+		tomcat/test.sh
+	@echo "✓ tomcat tests passed"
 
 test-valkey:
 	@echo "Testing Valkey image..."

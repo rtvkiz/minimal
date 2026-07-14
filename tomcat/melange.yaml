@@ -1,0 +1,118 @@
+# Melange build configuration for minimal Apache Tomcat
+# Official binary release + custom JRE via jlink (kafka/zookeeper JVM pattern).
+# License: Apache-2.0.
+
+package:
+  name: tomcat-minimal
+  version: 11.0.24
+  epoch: 0
+  description: "Minimal Apache Tomcat servlet container with custom JRE (jlink)"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA512 of apache-tomcat-{version}.tar.gz - updated by update-versions.yml
+  sha512: a2fb1bd511735bd3d135b87f628d2b1f71a43aed7c4d7511e770092e571bad6d5ad9e97a580852119770477fd86d7ed156d83d3cee2854bce260725ce48934d0
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - openjdk-21-default-jdk
+      - openjdk-21-jmods
+      - binutils
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://dlcdn.apache.org/tomcat/tomcat-11/v${{package.version}}/bin/apache-tomcat-${{package.version}}.tar.gz" \
+        -o /home/build/tomcat.tar.gz || \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://downloads.apache.org/tomcat/tomcat-11/v${{package.version}}/bin/apache-tomcat-${{package.version}}.tar.gz" \
+        -o /home/build/tomcat.tar.gz || \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://archive.apache.org/dist/tomcat/tomcat-11/v${{package.version}}/bin/apache-tomcat-${{package.version}}.tar.gz" \
+        -o /home/build/tomcat.tar.gz
+
+      echo "${{vars.sha512}}  /home/build/tomcat.tar.gz" | sha512sum -c -
+
+      cd /home/build
+      tar xzf tomcat.tar.gz
+      rm tomcat.tar.gz
+
+  # Custom minimal JRE (kafka module set + java.instrument/java.desktop for Tomcat)
+  - runs: |
+      JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      $JAVA_HOME/bin/jlink \
+        --module-path $JAVA_HOME/jmods \
+        --add-modules java.base,java.desktop,java.instrument,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.rmi,java.security.jgss,java.security.sasl,java.sql,java.xml,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs \
+        --strip-debug \
+        --no-man-pages \
+        --no-header-files \
+        --compress=zip-6 \
+        --output /home/build/custom-jre
+
+  - runs: |
+      TC_SRC="/home/build/apache-tomcat-${{package.version}}"
+
+      # Custom JRE
+      mkdir -p "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+      cp -a /home/build/custom-jre/* "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf ../lib/jvm/java-21-minimal/bin/java "${{targets.destdir}}/usr/bin/java"
+
+      # Tomcat install
+      mkdir -p "${{targets.destdir}}/opt/tomcat"
+      cp -a "$TC_SRC"/bin "$TC_SRC"/conf "$TC_SRC"/lib "$TC_SRC"/webapps \
+        "${{targets.destdir}}/opt/tomcat/"
+
+      # Harden: drop the default manager/host-manager/docs/examples webapps,
+      # keep only ROOT. (These are the usual Tomcat CVE/attack surface.)
+      rm -rf "${{targets.destdir}}/opt/tomcat/webapps/docs" \
+             "${{targets.destdir}}/opt/tomcat/webapps/examples" \
+             "${{targets.destdir}}/opt/tomcat/webapps/manager" \
+             "${{targets.destdir}}/opt/tomcat/webapps/host-manager"
+
+      # Writable runtime dirs (populated as apko paths at assemble time)
+      mkdir -p "${{targets.destdir}}/opt/tomcat/logs" \
+               "${{targets.destdir}}/opt/tomcat/temp" \
+               "${{targets.destdir}}/opt/tomcat/work"
+
+      # Tomcat's tarball ships bin/conf/lib/webapps as root:root 0750 (expects a
+      # dedicated tomcat OS user). We run as nonroot 65532, so make the static
+      # install world-readable/traversable (dirs +X, already-exec files keep +x).
+      chmod -R a+rX "${{targets.destdir}}/opt/tomcat"
+
+      # Entrypoint: run Catalina in the foreground
+      cat > "${{targets.destdir}}/usr/bin/tomcat-entrypoint.sh" << 'ENTRY'
+      #!/bin/sh
+      set -e
+      CATALINA_HOME=/opt/tomcat
+      CATALINA_BASE=/opt/tomcat
+      exec /usr/bin/java \
+        ${CATALINA_OPTS:--Xmx512M -Xms128M} \
+        -Dcatalina.home="$CATALINA_HOME" \
+        -Dcatalina.base="$CATALINA_BASE" \
+        -Djava.io.tmpdir="$CATALINA_BASE/temp" \
+        -Djava.util.logging.config.file="$CATALINA_BASE/conf/logging.properties" \
+        -Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager \
+        -cp "$CATALINA_HOME/bin/bootstrap.jar:$CATALINA_HOME/bin/tomcat-juli.jar" \
+        org.apache.catalina.startup.Bootstrap "$@" start
+      ENTRY
+      chmod +x "${{targets.destdir}}/usr/bin/tomcat-entrypoint.sh"
+
+      find "${{targets.destdir}}/usr/lib/jvm/java-21-minimal" -name '*.so' \
+        -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  - runs: |
+      echo "Verifying JRE..."
+      "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/bin/java" -version
+      echo "Checking Tomcat bootstrap..."
+      test -f "${{targets.destdir}}/opt/tomcat/bin/bootstrap.jar"
