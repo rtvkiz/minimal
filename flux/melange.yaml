@@ -3,7 +3,7 @@
 
 package:
   name: flux-minimal
-  version: 2.9.1
+  version: 2.9.2
   epoch: 0
   description: "Minimal Flux CD GitOps toolkit CLI built from source"
   copyright:
@@ -11,7 +11,7 @@ package:
 
 vars:
   # SHA256 of flux source tarball - updated by update-versions.yml workflow
-  sha256: 08f9dba90d83664a3bc3231428a4ac9d496b1cafe30172819a9b3dd8ca48557e
+  sha256: 19b26615adc4a10c53e3fcea3d3426ea7a0b77fab6dcc95d034f47ea27c9db03
 
 environment:
   contents:
