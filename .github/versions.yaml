@@ -669,6 +669,48 @@
     releases: "https://kafka.apache.org/downloads"
     notes: "https://archive.apache.org/dist/kafka/{version}/RELEASE_NOTES.html"
 
+- name: zookeeper
+  cron-enabled: true   # batch A JVM (validated 2026-07-13)
+  files: [zookeeper/melange.yaml]
+  source:
+    type: scrape
+    urls:
+      - "https://downloads.apache.org/zookeeper/"
+      - "https://dlcdn.apache.org/zookeeper/"
+    pattern: 'href="zookeeper-(3\.[0-9]+\.[0-9]+)/"'
+    pin-major: 3
+  tarball:
+    urls:
+      - "https://downloads.apache.org/zookeeper/zookeeper-{version}/apache-zookeeper-{version}-bin.tar.gz"
+      - "https://dlcdn.apache.org/zookeeper/zookeeper-{version}/apache-zookeeper-{version}-bin.tar.gz"
+      - "https://archive.apache.org/dist/zookeeper/zookeeper-{version}/apache-zookeeper-{version}-bin.tar.gz"
+    field: sha512
+  major-issue: true
+  links:
+    releases: "https://zookeeper.apache.org/releases.html"
+    notes: "https://archive.apache.org/dist/zookeeper/zookeeper-{version}/"
+
+- name: tomcat
+  cron-enabled: true   # batch A JVM (validated 2026-07-13)
+  files: [tomcat/melange.yaml]
+  source:
+    type: scrape
+    urls:
+      - "https://downloads.apache.org/tomcat/tomcat-11/"
+      - "https://dlcdn.apache.org/tomcat/tomcat-11/"
+    pattern: 'href="v(11\.[0-9]+\.[0-9]+)/"'
+    pin-major: 11
+  tarball:
+    urls:
+      - "https://downloads.apache.org/tomcat/tomcat-11/v{version}/bin/apache-tomcat-{version}.tar.gz"
+      - "https://dlcdn.apache.org/tomcat/tomcat-11/v{version}/bin/apache-tomcat-{version}.tar.gz"
+      - "https://archive.apache.org/dist/tomcat/tomcat-11/v{version}/bin/apache-tomcat-{version}.tar.gz"
+    field: sha512
+  major-issue: true
+  links:
+    releases: "https://tomcat.apache.org/download-11.cgi"
+    notes: "https://tomcat.apache.org/tomcat-11.0-doc/changelog.html"
+
 - name: redis
   cron-enabled: true   # wave 5
   image-name: minimal-redis-slim
