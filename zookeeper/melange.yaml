@@ -1,0 +1,116 @@
+# Melange build configuration for minimal Apache ZooKeeper
+# Downloads official Apache binary release + creates a custom JRE with jlink.
+# JVM app (prebuilt JARs), same pattern as kafka. License: Apache-2.0.
+
+package:
+  name: zookeeper-minimal
+  version: 3.9.5
+  epoch: 0
+  description: "Minimal Apache ZooKeeper with custom JRE (jlink)"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA512 of apache-zookeeper-{version}-bin.tar.gz - updated by update-versions.yml
+  sha512: baa1c21dda4d57238fca751e4fa2bbf1daff9a28612b125e497dccd5c188ee6449e2f79947e474c2dd4d19992789d4d36b27b1ba2feb80c2b0c45e7df0e22aa8
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      # Full JDK needed for jlink (build-time only)
+      - openjdk-21-default-jdk
+      - openjdk-21-jmods
+      # binutils provides objcopy required by jlink --strip-debug
+      - binutils
+
+pipeline:
+  # Download and verify the official ZooKeeper binary release
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://dlcdn.apache.org/zookeeper/zookeeper-${{package.version}}/apache-zookeeper-${{package.version}}-bin.tar.gz" \
+        -o /home/build/zk.tar.gz || \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://downloads.apache.org/zookeeper/zookeeper-${{package.version}}/apache-zookeeper-${{package.version}}-bin.tar.gz" \
+        -o /home/build/zk.tar.gz || \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://archive.apache.org/dist/zookeeper/zookeeper-${{package.version}}/apache-zookeeper-${{package.version}}-bin.tar.gz" \
+        -o /home/build/zk.tar.gz
+
+      echo "${{vars.sha512}}  /home/build/zk.tar.gz" | sha512sum -c -
+
+      cd /home/build
+      tar xzf zk.tar.gz
+      rm zk.tar.gz
+
+  # Create minimal JRE with jlink (module set shared with kafka)
+  - runs: |
+      JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      $JAVA_HOME/bin/jlink \
+        --module-path $JAVA_HOME/jmods \
+        --add-modules java.base,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.rmi,java.security.jgss,java.security.sasl,java.sql,java.xml,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs \
+        --strip-debug \
+        --no-man-pages \
+        --no-header-files \
+        --compress=zip-6 \
+        --output /home/build/custom-jre
+
+  # Install to destdir
+  - runs: |
+      ZK_SRC="/home/build/apache-zookeeper-${{package.version}}-bin"
+
+      # Custom JRE
+      mkdir -p "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+      cp -a /home/build/custom-jre/* "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf ../lib/jvm/java-21-minimal/bin/java "${{targets.destdir}}/usr/bin/java"
+
+      # ZooKeeper JARs (server + deps, everything in lib/)
+      mkdir -p "${{targets.destdir}}/opt/zookeeper/lib"
+      cp "$ZK_SRC"/lib/*.jar "${{targets.destdir}}/opt/zookeeper/lib/"
+
+      # Config: a container-friendly standalone zoo.cfg + the shipped logback
+      mkdir -p "${{targets.destdir}}/opt/zookeeper/conf"
+      cat > "${{targets.destdir}}/opt/zookeeper/conf/zoo.cfg" << 'CFG'
+      tickTime=2000
+      initLimit=10
+      syncLimit=5
+      dataDir=/var/zookeeper/data
+      clientPort=2181
+      admin.enableServer=false
+      4lw.commands.whitelist=srvr,ruok,stat,mntr,conf
+      CFG
+      cp "$ZK_SRC/conf/logback.xml" "${{targets.destdir}}/opt/zookeeper/conf/" 2>/dev/null || true
+
+      # Entrypoint: start the ZooKeeper server against the config, log to console
+      cat > "${{targets.destdir}}/usr/bin/zookeeper-entrypoint.sh" << 'ENTRY'
+      #!/bin/sh
+      set -e
+      ZOO_CONFIG=${ZOO_CONFIG:-/opt/zookeeper/conf/zoo.cfg}
+      CLASSPATH="/opt/zookeeper/lib/*:/opt/zookeeper/conf"
+      exec /usr/bin/java \
+        ${ZOO_HEAP_OPTS:--Xmx1G -Xms256M} \
+        -Dzookeeper.log.dir=/var/log/zookeeper \
+        -Dzookeeper.root.logger=INFO,CONSOLE \
+        -cp "$CLASSPATH" \
+        org.apache.zookeeper.server.quorum.QuorumPeerMain "$ZOO_CONFIG" "$@"
+      ENTRY
+      chmod +x "${{targets.destdir}}/usr/bin/zookeeper-entrypoint.sh"
+
+      # Strip native libs in the JRE to reduce size
+      find "${{targets.destdir}}/usr/lib/jvm/java-21-minimal" -name '*.so' \
+        -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  # Verify
+  - runs: |
+      echo "Verifying JRE..."
+      "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/bin/java" -version
+      echo "Checking ZooKeeper JARs..."
+      ls "${{targets.destdir}}/opt/zookeeper/lib/" | grep -c 'zookeeper-'
