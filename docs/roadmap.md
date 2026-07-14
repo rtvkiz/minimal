@@ -64,10 +64,25 @@ Only **three obstacle classes** are genuinely own-effort:
 | [ ] | **kvrocks** | 3.5M | 🟢 Apache | C++ | Redis-on-RocksDB |
 | [ ] | **patroni** | — | 🟢 MIT | Python | Postgres HA |
 
-**Suggested crank order:** JVM tier (zookeeper → solr → cassandra → flink) reuses the kafka
-jlink recipe; **temporal** is the quick Go win; **wordpress** leans on our PHP pattern; the C
-proxies (pgbouncer/unbound/varnish) mirror mysql/haproxy. Batch ~4–6 per PR, build+test each
-locally first (watch the disk cap on the JVM/C ones).
+## Batch plan: 79 → 100+ (pattern-grouped, one template per batch)
+
+Each batch reuses a single build template so it cranks fast; ordered by aggregate demand.
+Build + prod/dev test every image locally before push.
+
+| Batch | Template | Images | Pulls (agg) | Running total |
+|---|---|---|---:|---:|
+| **A — JVM tier** | kafka jlink | tomcat 817M · zookeeper 350M · solr 354M · cassandra 259M · flink 96M | ~1.9B | **84** |
+| **B — Go servers** | Go crank | gitlab-runner 3.6B* · pomerium 1.6B (envoy-fetch) · temporal 44M · step-ca 13M | ~5.3B | **88** |
+| **C — C network** | mysql/haproxy | varnish 21M · pgbouncer 20M · unbound 12M · keepalived 4M (🟡 GPL) | ~57M | **92** |
+| **D — JVM messaging+agent** | kafka jlink | jenkins-agent 480M · activemq-artemis · pulsar 36M | ~520M | **95** |
+| **E — count-fillers** | Go crank (trivial) | k9s · dive · age | low | **98** |
+| **→ 100+** | mixed | wordpress 1.48B (PHP) · kvrocks (C++) · couchdb 202M (Erlang†) · cmctl (#9) | ~1.7B | **102** |
+
+\* gitlab-runner needs executor/shell semantics — flag. † couchdb needs an Erlang runtime (new pattern).
+
+**Start with Batch A** — highest impact-per-effort: ~1.9B aggregate pulls on the jlink template
+we've already proven 4× (kafka, keycloak, jenkins, opensearch). zookeeper is the simplest → use
+it as the JVM template, then tomcat/solr/cassandra/flink follow.
 
 ## Own-effort — genuine obstacles (not a crank)
 
