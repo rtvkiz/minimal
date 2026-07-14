@@ -47,6 +47,12 @@ pipeline:
       tar xzf tomcat.tar.gz
       rm tomcat.tar.gz
 
+      # Tomcat's tarball extracts bin/ (and others) as 0750. melange's post-build
+      # workspace/SBOM step runs as the host user after bwrap exits and can't
+      # traverse 0750 dirs → "failed to store workspace xattrs: ... permission
+      # denied" (passes locally, fails in CI). Make the workspace traversable.
+      chmod -R a+rX /home/build/apache-tomcat-${{package.version}}
+
   # Custom minimal JRE (kafka module set + java.instrument/java.desktop for Tomcat)
   - runs: |
       JAVA_HOME=/usr/lib/jvm/java-21-openjdk
