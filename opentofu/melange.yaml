@@ -4,7 +4,7 @@
 
 package:
   name: opentofu-minimal
-  version: 1.12.3
+  version: 1.12.4
   epoch: 0
   description: "Minimal OpenTofu (Terraform-compatible IaC) built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of opentofu source tarball - updated by update-versions.yml workflow
-  sha256: 0691d6c4ab43bcfa708120a0c71ece4be43ece4327445a572d91649e4e09af0e
+  sha256: 170a9c143a35fe0ef8a9ae02c3bb1585e669f0cd6934da6c421e4cdd4403ffb0
 
 environment:
   contents:
