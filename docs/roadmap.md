@@ -1,102 +1,106 @@
-# Image Roadmap — the road to 100 (demand-ranked)
+# Image Roadmap — the road to 100
 
-**Status: 70 / 100 images.** This is the source-of-truth plan for growing the catalog.
-It supersedes the batch order from earlier sessions, which was ordered by *build ease* and
-*GitHub popularity*. This version is ordered by **actual container demand first**, then
-build effort.
+**Status: 79 / 100 images.** Source-of-truth plan for growing the catalog. Prioritized by
+**demand × free-gap × build-obstacle** — not by GitHub stars, and not by a blunt "heavy/skip".
 
-## Why demand, not stars
+## Why these images now — the free-hardened gap
 
-For a hardened-**container** catalog, the metric that matters is "how often is this run as a
-container," not GitHub stars. They diverge sharply:
+For a hardened-**container** catalog the metric is "how often is this run as a container"
+(Docker pulls), not GitHub stars (dive has 54k⭐ / 1.7M pulls — a laptop tool; oauth2-proxy
+15k⭐ / 97M pulls — run everywhere). And the *opportunity* is images whose only hardened
+option is now **paid**:
 
-| Image | ⭐ stars | 🐳 Docker pulls | Reality |
-|---|---:|---:|---|
-| dive | 54k | 1.7M | laptop image-inspector — rarely containerized |
-| k9s | 34k | 169k | terminal UI run locally — almost never a prod container |
-| oauth2-proxy | 15k | 97M | auth sidecar — run as a container everywhere |
-| pomerium | 5k | 1.6B\* | identity-aware proxy — massive container use |
+- **Chainguard** free tier = **5 images of your choice** out of 2,100+ → the rest is paywalled.
+- **Bitnami** (280+ apps: Postgres, Redis, Kafka, Cassandra, Solr, InfluxDB, WordPress…) moved
+  to **paid ($50–72k/yr) as of Aug 2025**; the rest is archived/deleted ~Sept 2026. Source
+  stays **Apache-2.0**, so we can build from it.
 
-So popular-but-local tools (k9s, stern, dive, age) are **deprioritized**, and high-pull
-proxies/apps (oauth2-proxy, pomerium, …) are **promoted**.
+So "high pulls + no free hardened option" describes a large set. We rank the gap by pulls,
+gate on license (🟢 permissive / 🟡 AGPL ok / 🔴 SSPL·BUSL·Elastic avoid), and classify by
+**build obstacle**.
 
-\* Docker pull counts are noisy — cumulative since inception, inflated by CI/bot pulls, and
-some namespaces (bitnami/\*) are being deprecated. Treat as order-of-magnitude, not precise.
+## Build obstacle — the real filter (not "heavy")
 
-**License lens:** 🟢 permissive (MIT/BSD/Apache/MPL/ISC) add freely · 🟡 AGPL/GPL ok
-(precedent: loki/tempo/mimir/minio/trufflehog) · 🔴 SSPL/BUSL/EULA avoid or fork.
+We already ship every "heavy" build class, so build weight is **not** a blocker:
 
-**Build effort:** Go single-binary = the proven Batch-B crank (fast). C/Rust/C++ = heavier.
-Node/frontend = the bwrap frontend quagmire (defer, own effort). Controllers = multi-image,
-run in-cluster (high demand, more work).
+| Pattern | Examples we ship |
+|---|---|
+| Go from source | openbao, loki, mimir, thanos, gitea, trivy |
+| **JVM jlink from source** | kafka, keycloak, jenkins, opensearch |
+| **C/C++ compiled** | mysql, mariadb, redis-slim, memcached, haproxy, mosquitto |
+| Interpreter runtimes | php, ruby, rails |
+| Binary-repackage | envoy (fetches the official binary — no compile) |
+
+Only **three obstacle classes** are genuinely own-effort:
+1. **Frontend-in-bwrap** — a yarn/React build fighting the sandbox. grafana was *added then
+   removed* after 7 fix commits. Fix = backend-from-source + prebuilt official frontend assets.
+2. **Local-build disk cap** — we build+test locally before push (see §0 in `onboarding.md`);
+   the biggest compiles exhaust the dev box. Fine on CI native runners, awkward locally.
+3. **Exotic build system** — non-standard version/build injection (cmctl's klone).
 
 ---
 
-## Tier 1 — high demand × easy Go build (do next)
+## Shipped this push (70 → 79)
 
-Single static Go binaries **and** genuinely run as containers. Best impact-per-effort.
+**Tier 1** ✅ oauth2-proxy · flux · kustomize · sops · crane · kubeseal
+**Tier 2** ✅ helmfile · regctl · stern
 
-| ✓ | Image | Upstream | License | 🐳 pulls | ⭐ | Notes |
-|---|---|---|---|---:|---:|---|
-| [x] | oauth2-proxy | oauth2-proxy/oauth2-proxy | 🟢 MIT | 97M | 15k | k8s auth sidecar, ubiquitous, CG-gated (#393) |
-| [x] | flux (CLI) | fluxcd/flux2 | 🟢 Apache-2.0 | 3.8M | 8k | GitOps, CG-gated — embeds install manifests (kustomize bundle at build) |
-| [x] | kustomize | kubernetes-sigs/kustomize | 🟢 Apache-2.0 | 12M | 12k | CI/CD standard, CG-gated — monorepo, `kustomize/vX` tag |
-| [x] | sops | getsops/sops | 🟢 MPL-2.0 | — | 22k | secrets in CI, CG-gated |
-| [x] | crane | google/go-containerregistry | 🟢 Apache-2.0 | — | 4k | registry ops, heavy CI use |
-| [x] | kubeseal | bitnami/sealed-secrets | 🟢 Apache-2.0 | — | 9k | sealed-secrets CLI (canonical repo, not bitnami-labs 301) |
+---
 
-**Reclassified out of Tier 1 (not clean Go single-binaries — moved to "deferred"):**
-- **pomerium** — huge demand (1.6B pulls) but `//go:embed`s an arch-specific **Envoy** binary as its data plane → Tier-3-complexity build, own effort.
-- **cmctl** — cert-manager's `makefile-modules`/klone build, no clean `-X` version injection → needs its own investigation.
+## Crankable next — demand-ranked gap, all on proven patterns
 
-## Tier 2 — solid demand, easy Go CLIs
+| ✓ | Image | 🐳 pulls | License | Pattern | Notes |
+|---|---|---:|---|---|---|
+| [ ] | **zookeeper** | 350M | 🟢 Apache | JVM jlink | pairs with our kafka; Bitnami-stranded |
+| [ ] | **solr** | 354M | 🟢 Apache | JVM jlink | search; Bitnami-stranded |
+| [ ] | **cassandra** | 259M | 🟢 Apache | JVM jlink | wide-column DB; thin DB cat |
+| [ ] | **flink** | 96M | 🟢 Apache | JVM jlink | stream processing |
+| [ ] | **temporal** | 44M↑ | 🟢 MIT | Go, no frontend | durable workflow engine — cleanest crank |
+| [ ] | **wordpress** | 1.48B | 🟢 GPL | PHP (php/rails pattern) | app + bundled assets; huge demand |
+| [ ] | **pgbouncer** | 20M | 🟢 ISC | C (mysql/haproxy pattern) | Postgres pooler |
+| [ ] | **unbound** | 12M | 🟢 BSD | C | DNS resolver |
+| [ ] | **varnish** | 21M | 🟢 BSD | C | HTTP cache |
+| [ ] | **kong** | 356M | 🟢 Apache | OpenResty/Lua | API gateway (nginx+Lua, like apisix) |
+| [ ] | **kvrocks** | 3.5M | 🟢 Apache | C++ | Redis-on-RocksDB |
+| [ ] | **patroni** | — | 🟢 MIT | Python | Postgres HA |
 
-| ✓ | Image | Upstream | License | 🐳 pulls | ⭐ | Notes |
-|---|---|---|---|---:|---:|---|
-| [x] | helmfile | helmfile/helmfile | 🟢 MIT | — | 5k | declarative Helm, CD pipelines |
-| [x] | regctl | regclient/regclient | 🟢 Apache-2.0 | — | 2k | registry client, CI |
-| [x] | stern | stern/stern | 🟢 Apache-2.0 | — | 5k | multi-pod log tail (borderline: often local) |
+**Suggested crank order:** JVM tier (zookeeper → solr → cassandra → flink) reuses the kafka
+jlink recipe; **temporal** is the quick Go win; **wordpress** leans on our PHP pattern; the C
+proxies (pgbouncer/unbound/varnish) mirror mysql/haproxy. Batch ~4–6 per PR, build+test each
+locally first (watch the disk cap on the JVM/C ones).
 
-## Tier 3 — high demand, heavier builds (deliberate; fills thin DB/proxy/app categories)
+## Own-effort — genuine obstacles (not a crank)
 
-Real container demand, but C/Rust/C++/Node — each is its own effort, not a crank. Sequence
-by effort. Fills the catalog's thinnest categories (databases, proxies, apps).
+| Image | 🐳 pulls | Obstacle |
+|---|---:|---|
+| grafana | 5.3B | frontend-in-bwrap (AGPL) — backend + prebuilt assets, own effort |
+| argocd | — | frontend + repo-server needs git/helm/kustomize at runtime |
+| superset | 601M | Python + React frontend |
+| uptime-kuma | 166M | Node/yarn frontend |
+| influxdb (v2) | 1.1B | Go **but** embeds a React UI (frontend); v3 is Rust |
+| harbor | 28M | multi-image + portal frontend |
+| clickhouse | 260M | C++ compile too large for the local pre-push build (OK on CI) |
+| kubescape | 12M | large Go build — needs ~40 G local disk freed |
+| cmctl | 14k⭐ | cert-manager klone build; no clean `-X` version injection |
+| pomerium | 1.6B | `//go:embed`s an Envoy binary — **tractable via our envoy binary-fetch pattern**; re-open |
+| cert-manager (core) / flux (controllers) | — | multi-image, in-cluster; mirror upstream split |
+| opensearch-dashboards | — | free **Kibana** replacement (we ship `opensearch`) — but has a frontend build |
 
-| ✓ | Image | Upstream | License | Build | 🐳 pulls | ⭐ | Notes |
-|---|---|---|---|---|---:|---:|---|
-| [ ] | pgbouncer | pgbouncer/pgbouncer | 🟢 ISC | C | 20M | 4k | Postgres pooler (thin DB cat) |
-| [ ] | unbound | NLnetLabs/unbound | 🟢 BSD | C | 12M | 5k | DNS resolver |
-| [ ] | varnish | varnishcache/varnish-cache | 🟢 BSD | C | 21M | 4k | HTTP cache |
-| [ ] | apisix | apache/apisix | 🟢 Apache-2.0 | C/Lua/OpenResty | 37M | 17k | API gateway (harder: OpenResty) |
-| [ ] | vaultwarden | dani-garcia/vaultwarden | 🟡 AGPL-3.0 | Rust | 304M | 64k | self-hosted Bitwarden |
-| [ ] | kvrocks | apache/kvrocks | 🟢 Apache-2.0 | C++ | 3.5M | 4k | Redis-on-RocksDB |
-| [ ] | patroni | patroni/patroni | 🟢 MIT | Python | — | 9k | Postgres HA (Python pattern — new) |
-| [ ] | woodpecker | woodpecker-ci/woodpecker | 🟢 Apache-2.0 | Go+frontend | 2.7M | 7k | CI server (has web UI) |
+## Avoid — non-free license (🔴), free fork exists
 
-## Deferred / heavier efforts (own project, not a batch)
+| Paywalled/closed | 🐳 pulls | Free fork we ship / should ship |
+|---|---:|---|
+| mongodb | 4.8B | 🔴 SSPL — no fork onboarded (skip) |
+| elasticsearch | 966M | 🔴 SSPL/Elastic → **opensearch** ✅ (have) |
+| kibana | 224M | Elastic → **opensearch-dashboards** (own-effort, frontend) |
+| logstash | 202M | Elastic → **fluent-bit** ✅ (have) |
 
-| Image | Reason |
-|---|---|
-| kubescape | Go, but a large build — needs ~40 G local disk freed (stale `/tmp/bubblewrap-guest-*`). Recipe already generated in batch-b; onboard once disk allows. |
-| pomerium | 1.6B pulls but `//go:embed`s an arch-specific Envoy binary (data plane). Needs an Envoy-fetch step + cross-arch handling — Envoy-image-class effort, not a clean crank. |
-| cmctl | cert-manager's `makefile-modules`/klone build; no clean `-X` version injection. Needs its own investigation of the version mechanism. |
-| cert-manager (core) | Multi-image (controller + webhook + cainjector + startupapicheck + acmesolver). High demand, in-cluster. Mirror the upstream image split — own effort after Tier 1. |
-| flux (controllers) | source/kustomize/helm/notification-controller, separate repos. Multi-image, in-cluster. Own effort. |
-| uptime-kuma | 166M pulls (MIT) but Node/yarn frontend → the bwrap frontend quagmire (see grafana). Backend-from-source + prebuilt frontend assets, own effort. |
-| argocd | Embeds a yarn-built React UI **and** repo-server needs git/helm/kustomize at runtime (fights distroless). Grafana-bucket effort. |
+## Deprioritized — popular but low container demand (laptop/CLI/embedded)
 
-## Deprioritized — popular but low container demand (laptop / CLI / embedded)
+`k9s` · `dive` · `age` · `duckdb` · `zig`/`erlang`/`lua` (languages have official base images).
+Easy builds, but nobody runs them as a hardened container. Add only on explicit demand.
 
-`k9s` (terminal UI) · `dive` (image inspector) · `age` (local crypto CLI) · `duckdb`
-(embedded lib, not a server) · `zig`/`erlang`/`lua` (languages — official base images exist).
-Add later only on explicit demand.
-
-## Avoided — non-OSS licenses (🔴)
-
-MongoDB / Elasticsearch (SSPL) · CockroachDB / Dragonfly (BSL). Use permissive forks if a
-real need appears (e.g. `kvrocks`/`valkey` cover the Redis/BSL gap).
-
-## Existing 🔴 exposures to resolve (pre-existing, tracked separately)
+## Pre-existing 🔴 exposures to resolve (tracked separately)
 
 - `redis-slim` declares SSPL-1.0 but 8.x is tri-licensed → re-declare AGPL-3.0-only.
 - `consul` 2.0.0 = BUSL-1.1 (no OSS fork) → keep-vs-drop decision pending.
@@ -105,10 +109,8 @@ real need appears (e.g. `kvrocks`/`valkey` cover the Redis/BSL gap).
 
 ## Execution model
 
-- **One PR per tier group (~6–8 images).** Each image: 10 registration points
-  (see `docs/onboarding.md`) incl. a validated `cron-enabled` `versions.yaml` row — the
-  `check-autoupdate` gate blocks the PR otherwise.
-- Build **and** prod+dev smoke-test every image locally before push (`make <img>`,
-  `make test-<img>`, and assemble+test the `-dev` variant). Never push a failing image.
-- Registration inserts use **Python (newline-safe)**, not bash `$(...)` (which strips
-  newlines and glues YAML lines — same failure family as the batch-b dropped paren).
+- **One PR per group (~4–6 images).** Each image: 10 registration points (`onboarding.md`)
+  incl. a validated `cron-enabled` `versions.yaml` row — `check-autoupdate` blocks the PR otherwise.
+- Build **and** prod+dev smoke-test every image locally before push. Never push a failing image.
+- Registration inserts use **Python (newline-safe)**, not bash `$(...)`.
+- Pull counts are noisy (cumulative, CI/bot pulls) — order-of-magnitude, not precise.
