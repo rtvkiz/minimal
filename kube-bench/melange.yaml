@@ -44,12 +44,32 @@ pipeline:
   - runs: |
       export GOWORK=off
       _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      _pgd_reqs() { awk '$1=="require" && $2=="(" {b=1;next} b && $1==")" {b=0;next} b && index($1,"/")>0 && substr($2,1,1)=="v" {print $1,$2;next} $1=="require" && NF>=3 && index($2,"/")>0 && substr($3,1,1)=="v" {print $2,$3}' "$1"; }
       for root in /home/build/kube-bench-${{package.version}}; do
         [ -f "$root/go.mod" ] || continue
-        ( cd "$root" \
-          && _retry go get golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.48.0 \
-          && go mod tidy -e \
-          && { [ ! -d vendor ] || go mod vendor; } )
+        ( set -e
+          cd "$root"
+          cp go.mod .pgd-orig.mod
+          _retry go get golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.48.0
+          go mod tidy -e
+          # go mod tidy can downgrade a source-pinned require below what the
+          # source shipped (e.g. a lockstep family like openbao's
+          # go-kms-wrapping transit v2.8.0 -> v2.1.0, which then fails to build
+          # against its core sibling still at v2.8.0). Re-raise any require tidy
+          # dropped below its pre-tidy version. Corrects only upward, so CVE
+          # bumps (>= source) are never undone.
+          _pgd_reqs .pgd-orig.mod > .pgd-o.txt
+          _pgd_reqs go.mod > .pgd-n.txt
+          awk 'NR==FNR{o[$1]=$2;next} ($1 in o) && o[$1]!=$2 {print $1,o[$1],$2}' .pgd-o.txt .pgd-n.txt | while read -r p ov cv; do
+            hi=$( { echo "$ov"; echo "$cv"; } | sort -V | tail -1 )
+            if [ "$hi" = "$ov" ]; then
+              echo "pgd-guard: restoring $p: $cv -> $ov (tidy downgraded below source pin)"
+              _retry go get "$p@$ov"
+            fi
+          done
+          rm -f .pgd-orig.mod .pgd-o.txt .pgd-n.txt
+          [ ! -d vendor ] || go mod vendor
+        )
       done
   # end-patch-go-deps
   - runs: |
