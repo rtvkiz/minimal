@@ -4,14 +4,14 @@
 
 package:
   name: openbao-minimal
-  version: 2.5.5
+  version: 2.6.0
   epoch: 0
   description: "Minimal OpenBao secret management server built from source"
   copyright:
     - license: MPL-2.0
 
 vars:
-  sha256: 809046e84e5c9bea9bf1e5347708f25c7549735c662ccc8fbb1dfb136df29265
+  sha256: 9421107361492a8c7014d92459ed1fe04c0621dc6c49bd966ee7e0b65c29cbc4
 
 environment:
   contents:
