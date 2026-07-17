@@ -1,0 +1,87 @@
+# Development variant of minimal-pgbouncer.
+# Same source-built pgbouncer as prod, plus a shell and the tools you actually
+# reach for when debugging a pooler: psql (talk to the PgBouncer admin console
+# on :6432), curl/openssl, and bind-tools (DNS is the usual misconfig).
+#
+# In-house composition. Not for production.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base + pgbouncer (same as prod)
+    - wolfi-baselayout
+    - pgbouncer-minimal
+    - glibc
+    - ld-linux
+    - libgcc
+    - libevent
+    - libssl3
+    - libcrypto3
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- Postgres client: talk to the PgBouncer admin console
+    #     (`psql -p 6432 pgbouncer` → SHOW POOLS / SHOW STATS) ---
+    - postgresql-client
+
+    # --- HTTP / TLS debugging ---
+    - curl
+    - openssl
+
+    # --- DNS debugging (pooler resolves upstream DB hostnames) ---
+    - bind-tools
+
+    # --- VCS ---
+    - git
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/pgbouncer /etc/pgbouncer/pgbouncer.ini
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  LANG: C.UTF-8
+
+paths:
+  - path: /etc/pgbouncer
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-pgbouncer-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-pgbouncer: same pgbouncer + shell + psql (admin console) + curl/openssl/dig. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/pgbouncer"
+  org.opencontainers.image.licenses: "ISC"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

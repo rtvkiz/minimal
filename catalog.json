@@ -26,6 +26,8 @@
     { "name": "mysql", "category": "Databases", "variants": ["prod", "dev"], "primary_package": "mysql", "upstream_url": "https://www.mysql.com", "summary": "MySQL LTS built from source via melange." },
     { "name": "mariadb", "category": "Databases", "variants": ["prod", "dev"], "primary_package": "mariadb", "upstream_url": "https://mariadb.org", "summary": "MariaDB LTS built from source via melange." },
     { "name": "postgres-slim", "category": "Databases", "variants": ["prod", "dev"], "primary_package": "postgresql", "upstream_url": "https://www.postgresql.org", "summary": "PostgreSQL built on Wolfi." },
+    { "name": "pgbouncer", "category": "Databases", "variants": ["prod", "dev"], "primary_package": "pgbouncer", "upstream_url": "https://www.pgbouncer.org", "summary": "Shell-less PgBouncer PostgreSQL connection pooler built from source via melange." },
+    { "name": "unbound", "category": "Infrastructure", "variants": ["prod", "dev"], "primary_package": "unbound", "upstream_url": "https://www.nlnetlabs.nl/projects/unbound/", "summary": "Shell-less Unbound validating recursive DNS resolver built from source via melange." },
     { "name": "sqlite", "category": "Databases", "variants": ["prod", "dev"], "primary_package": "sqlite", "upstream_url": "https://www.sqlite.org", "summary": "Shell-less SQLite built on Wolfi." },
     { "name": "opensearch", "category": "Databases", "variants": ["prod", "dev"], "primary_package": "opensearch", "upstream_url": "https://opensearch.org", "summary": "OpenSearch 3.x on Wolfi with OpenJDK 21." },
 

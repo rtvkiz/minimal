@@ -1,0 +1,104 @@
+# Melange build configuration for minimal PgBouncer
+# Pure C from source, autotools build. Lightweight PostgreSQL connection pooler.
+# License: ISC.
+
+package:
+  name: pgbouncer-minimal
+  version: 1.25.2
+  epoch: 0
+  description: "Minimal PgBouncer PostgreSQL connection pooler built from source"
+  copyright:
+    - license: ISC
+
+vars:
+  # SHA256 of pgbouncer-{version}.tar.gz - updated by update-versions.yml
+  sha256: 924ad35113fd0a71c8e2dbe85b5d03445532e2b7b37a9f8a48983beea238b332
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - pkgconf
+      - libevent-dev
+      - openssl-dev
+
+pipeline:
+  # Download and verify the release dist tarball (ships a pre-generated
+  # configure — no autoreconf/autotools-dev needed).
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://www.pgbouncer.org/downloads/files/${{package.version}}/pgbouncer-${{package.version}}.tar.gz" \
+        -o /home/build/pgbouncer.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/pgbouncer.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf pgbouncer.tar.gz
+      rm pgbouncer.tar.gz
+
+  # Build: TLS via OpenSSL, DNS via libevent's evdns (no c-ares dep). Build the
+  # `pgbouncer` binary target only — the default `all` target also builds the
+  # man page via pandoc (doc/pgbouncer.1), which we don't ship in the sandbox.
+  - runs: |
+      cd /home/build/pgbouncer-${{package.version}}
+      ./configure \
+        --prefix=/usr \
+        --with-openssl \
+        --disable-debug
+      make -j"$(nproc)" pgbouncer
+
+  # Install into destdir (copy the binary directly to avoid `make install`,
+  # which depends on the docs target) + a sane minimal container config.
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/pgbouncer-${{package.version}}/pgbouncer "${{targets.destdir}}/usr/bin/"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/pgbouncer"
+
+      # Default config: pool on :6432, log to stdout, no pidfile, sockets in
+      # /tmp (the only writable dir for nonroot). Users override by mounting
+      # their own /etc/pgbouncer/pgbouncer.ini. auth_type=trust + an empty
+      # userlist keeps a fresh container runnable; tighten for real use.
+      mkdir -p "${{targets.destdir}}/etc/pgbouncer"
+      cat > "${{targets.destdir}}/etc/pgbouncer/pgbouncer.ini" << 'CFG'
+      [databases]
+      ;; Add your target databases here, e.g.:
+      ;; mydb = host=postgres port=5432 dbname=mydb
+
+      [pgbouncer]
+      listen_addr = 0.0.0.0
+      listen_port = 6432
+      unix_socket_dir = /tmp
+      auth_type = trust
+      auth_file = /etc/pgbouncer/userlist.txt
+      admin_users = postgres
+      pool_mode = transaction
+      max_client_conn = 100
+      default_pool_size = 20
+      logfile =
+      pidfile =
+      CFG
+      cat > "${{targets.destdir}}/etc/pgbouncer/userlist.txt" << 'USERS'
+      ;; "username" "password"  — populate for md5/scram auth.
+      USERS
+
+  # Verify the build
+  - runs: |
+      echo "Verifying PgBouncer build..."
+      "${{targets.destdir}}/usr/bin/pgbouncer" --version
+      echo "Binary size:"
+      ls -lh "${{targets.destdir}}/usr/bin/pgbouncer"
+
+update:
+  enabled: true
+  github:
+    identifier: pgbouncer/pgbouncer
+    use-tag: true
+    tag-filter: "pgbouncer_1_"

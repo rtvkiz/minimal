@@ -73,7 +73,7 @@ jobs:
             {"name":"fluent-bit","variants":["prod","dev"]},{"name":"keycloak","variants":["prod","dev"]},
             {"name":"registry","variants":["prod","dev"]},{"name":"mailpit","variants":["prod","dev"]},
             {"name":"consul","variants":["prod","dev"]},{"name":"tempo","variants":["prod","dev"]},
-            {"name":"mosquitto","variants":["prod","dev"]},
+            {"name":"mosquitto","variants":["prod","dev"]},{"name":"pgbouncer","variants":["prod","dev"]},{"name":"unbound","variants":["prod","dev"]},
             {"name":"helm","variants":["prod","dev"]},
             {"name":"kubectl","variants":["prod","dev"]},
             {"name":"telegraf","variants":["prod","dev"]},

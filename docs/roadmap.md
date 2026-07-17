@@ -1,6 +1,6 @@
 # Image Roadmap — the road to 100 (demand-ranked)
 
-**Status: 70 / 100 images.** This is the source-of-truth plan for growing the catalog.
+**Status: 83 / 100 images.** This is the source-of-truth plan for growing the catalog.
 It supersedes the batch order from earlier sessions, which was ordered by *build ease* and
 *GitHub popularity*. This version is ordered by **actual container demand first**, then
 build effort.
@@ -64,9 +64,9 @@ by effort. Fills the catalog's thinnest categories (databases, proxies, apps).
 
 | ✓ | Image | Upstream | License | Build | 🐳 pulls | ⭐ | Notes |
 |---|---|---|---|---|---:|---:|---|
-| [ ] | pgbouncer | pgbouncer/pgbouncer | 🟢 ISC | C | 20M | 4k | Postgres pooler (thin DB cat) |
-| [ ] | unbound | NLnetLabs/unbound | 🟢 BSD | C | 12M | 5k | DNS resolver |
-| [ ] | varnish | varnishcache/varnish-cache | 🟢 BSD | C | 21M | 4k | HTTP cache |
+| [x] | pgbouncer | pgbouncer/pgbouncer | 🟢 ISC | C | 20M | 4k | Postgres pooler (thin DB cat) — shipped; underscore tags (tag-rewrite) |
+| [x] | unbound | NLnetLabs/unbound | 🟢 BSD | C | 12M | 5k | DNS resolver — shipped; `--sbindir=/usr/bin`, builtin evloop, local-data smoke test |
+| [ ] | ~~varnish~~ | varnishcache/varnish-cache | 🟢 BSD | C | 21M | 4k | **Deferred → see below.** varnishd compiles VCL with `cc` at runtime → needs gcc+binutils+headers in prod (breaks the shell-less/minimal thesis). |
 | [ ] | apisix | apache/apisix | 🟢 Apache-2.0 | C/Lua/OpenResty | 37M | 17k | API gateway (harder: OpenResty) |
 | [ ] | vaultwarden | dani-garcia/vaultwarden | 🟡 AGPL-3.0 | Rust | 304M | 64k | self-hosted Bitwarden |
 | [ ] | kvrocks | apache/kvrocks | 🟢 Apache-2.0 | C++ | 3.5M | 4k | Redis-on-RocksDB |
@@ -77,6 +77,7 @@ by effort. Fills the catalog's thinnest categories (databases, proxies, apps).
 
 | Image | Reason |
 |---|---|
+| varnish | varnishd compiles VCL → C → `.so` by invoking `cc` at runtime (`VCC_CC="exec cc … -fpic -shared -o %o %s"`), on every config load. A working prod image must therefore ship gcc + binutils + C headers + varnish's headers — a permanent compiler/attack-surface that breaks the "no compiler, minimum packages" thesis (Chainguard ships the toolchain for the same reason). Revisit only as a deliberate, documented exception, or pick a compiler-free HTTP-cache alternative. |
 | kubescape | Go, but a large build — needs ~40 G local disk freed (stale `/tmp/bubblewrap-guest-*`). Recipe already generated in batch-b; onboard once disk allows. |
 | pomerium | 1.6B pulls but `//go:embed`s an arch-specific Envoy binary (data plane). Needs an Envoy-fetch step + cross-arch handling — Envoy-image-class effort, not a clean crank. |
 | cmctl | cert-manager's `makefile-modules`/klone build; no clean `-X` version injection. Needs its own investigation of the version mechanism. |

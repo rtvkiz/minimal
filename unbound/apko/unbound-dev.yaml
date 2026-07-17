@@ -1,0 +1,83 @@
+# Development variant of minimal-unbound.
+# Same source-built unbound as prod, plus a shell and the tools you reach for
+# when debugging a resolver: bind-tools (dig/drill), curl/openssl. Also carries
+# unbound-control/unbound-checkconf (already in the package) for live inspection.
+#
+# In-house composition. Not for production.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base + unbound (same as prod)
+    - wolfi-baselayout
+    - unbound-minimal
+    - glibc
+    - ld-linux
+    - libgcc
+    - libssl3
+    - libcrypto3
+    - expat
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- DNS debugging: dig / drill / nslookup ---
+    - bind-tools
+
+    # --- HTTP / TLS debugging ---
+    - curl
+    - openssl
+
+    # --- VCS ---
+    - git
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/unbound -d -c /etc/unbound/unbound.conf
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  LANG: C.UTF-8
+
+paths:
+  - path: /etc/unbound
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-unbound-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-unbound: same unbound + shell + bind-tools (dig) + curl/openssl. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/unbound"
+  org.opencontainers.image.licenses: "BSD-3-Clause"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

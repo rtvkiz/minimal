@@ -631,6 +631,31 @@
     releases: "https://github.com/eclipse-mosquitto/mosquitto/releases"
     notes: "https://github.com/eclipse-mosquitto/mosquitto/blob/v{version}/ChangeLog.txt"
 
+# pgbouncer tags are underscore-separated (pgbouncer_1_25_2); strip the prefix
+# then tag-rewrite '_'→'.' before semver sort. Tarballs live on pgbouncer.org
+# with a dotted-version path, so no release-download probe is needed.
+- name: pgbouncer
+  cron-enabled: true   # wave 10 (dispatch-validated 2026-07-16)
+  files: [pgbouncer/melange.yaml]
+  source: { type: github-tags, repo: pgbouncer/pgbouncer, pattern: '^pgbouncer_1_[0-9]+_[0-9]+$', strip-prefix: 'pgbouncer_', tag-rewrite: { from: '_', to: '.' }, pin-major: 1 }
+  tarball: { url: "https://www.pgbouncer.org/downloads/files/{version}/pgbouncer-{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/pgbouncer/pgbouncer/releases"
+    notes: "https://github.com/pgbouncer/pgbouncer/releases/tag/pgbouncer_{version}"
+
+# unbound tags are `release-X.Y.Z` (with `release-X.Y.Zrc1` pre-releases the
+# pattern deliberately excludes). Tarballs live on nlnetlabs.nl.
+- name: unbound
+  cron-enabled: true   # wave 10 (dispatch-validated 2026-07-16)
+  files: [unbound/melange.yaml]
+  source: { type: github-tags, repo: NLnetLabs/unbound, pattern: '^release-1\.[0-9]+\.[0-9]+$', strip-prefix: 'release-', pin-major: 1 }
+  tarball: { url: "https://nlnetlabs.nl/downloads/unbound/unbound-{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/NLnetLabs/unbound/releases"
+    notes: "https://github.com/NLnetLabs/unbound/releases/tag/release-{version}"
+
 # ============================================================================
 # plain-text — fetch a single URL that returns the bare version as text
 # ============================================================================

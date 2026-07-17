@@ -1,0 +1,119 @@
+# Melange build configuration for minimal Unbound
+# Pure C from source, autotools build. Validating, recursive, caching DNS resolver.
+# License: BSD-3-Clause.
+
+package:
+  name: unbound-minimal
+  version: 1.25.1
+  epoch: 0
+  description: "Minimal Unbound validating recursive DNS resolver built from source"
+  copyright:
+    - license: BSD-3-Clause
+
+vars:
+  # SHA256 of unbound-{version}.tar.gz - updated by update-versions.yml
+  sha256: 0fe8b6277b0959cfd17562debac0aa5f71e0b02dc4ffa9c60271c583edab586f
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - openssl-dev
+      - expat-dev
+
+pipeline:
+  # Download and verify the source tarball.
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://nlnetlabs.nl/downloads/unbound/unbound-${{package.version}}.tar.gz" \
+        -o /home/build/unbound.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/unbound.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf unbound.tar.gz
+      rm unbound.tar.gz
+
+  # Build: TLS via OpenSSL, config parsing via libexpat, builtin event loop
+  # (--with-libevent=no avoids a libevent runtime dep), no Python module.
+  # --sbindir=/usr/bin installs the daemon straight into /usr/bin (Wolfi is
+  # usrmerge — /usr/sbin doesn't exist), avoiding a post-install relocate.
+  - runs: |
+      cd /home/build/unbound-${{package.version}}
+      ./configure \
+        --prefix=/usr \
+        --sbindir=/usr/bin \
+        --sysconfdir=/etc \
+        --with-ssl \
+        --with-libexpat=/usr \
+        --with-libevent=no \
+        --without-pythonmodule \
+        --without-pyunbound \
+        --disable-static \
+        --disable-rpath
+      make -j"$(nproc)"
+
+  # Install into destdir + a nonroot-friendly recursive-resolver config.
+  - runs: |
+      cd /home/build/unbound-${{package.version}}
+      make install DESTDIR="${{targets.destdir}}"
+
+      # Drop control-setup helper cruft we don't ship; strip the binaries.
+      for b in unbound unbound-checkconf unbound-control unbound-anchor unbound-host; do
+        [ -f "${{targets.destdir}}/usr/bin/$b" ] && strip --strip-unneeded "${{targets.destdir}}/usr/bin/$b" || true
+      done
+
+      # Default config: foreground recursive resolver on :53, no chroot/setuid
+      # (the image already runs as nonroot 65532), logs to stderr. Answers a
+      # local health record from local-data with no recursion — used by the
+      # smoke test for an offline resolution round-trip. Users mount their own
+      # /etc/unbound/unbound.conf to override. Binding :53 as nonroot needs the
+      # NET_BIND_SERVICE cap or `--sysctl net.ipv4.ip_unprivileged_port_start=0`.
+      mkdir -p "${{targets.destdir}}/etc/unbound"
+      cat > "${{targets.destdir}}/etc/unbound/unbound.conf" << 'CFG'
+      server:
+          verbosity: 1
+          interface: 0.0.0.0
+          port: 53
+          do-daemonize: no
+          username: ""
+          chroot: ""
+          directory: "/etc/unbound"
+          pidfile: ""
+          use-syslog: no
+          logfile: ""
+          do-ip6: no
+          hide-identity: yes
+          hide-version: yes
+          access-control: 127.0.0.0/8 allow
+          access-control: 10.0.0.0/8 allow
+          access-control: 172.16.0.0/12 allow
+          access-control: 192.168.0.0/16 allow
+          local-zone: "health.local." static
+          local-data: "health.local. IN A 127.0.0.1"
+      CFG
+
+  # Verify the build. NB: don't run unbound-checkconf here — it chdir's to the
+  # config's runtime `directory: /etc/unbound`, which doesn't exist in the build
+  # sandbox (only destdir/etc/unbound does). The smoke test runs checkconf inside
+  # the assembled container, where /etc/unbound is present.
+  - runs: |
+      echo "Verifying Unbound build..."
+      "${{targets.destdir}}/usr/bin/unbound" -V | head -2
+      echo "Binary size:"
+      ls -lh "${{targets.destdir}}/usr/bin/unbound"
+
+update:
+  enabled: true
+  github:
+    identifier: NLnetLabs/unbound
+    use-tag: true
+    tag-filter: "release-1."
