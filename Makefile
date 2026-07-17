@@ -109,6 +109,8 @@ KUBE_BENCH_VERSION ?= $(call melange_version,kube-bench/melange.yaml)
 TRUFFLEHOG_VERSION ?= $(call melange_version,trufflehog/melange.yaml)
 # --- Messaging (MQTT) ---
 MOSQUITTO_VERSION ?= $(call melange_version,mosquitto/melange.yaml)
+PGBOUNCER_VERSION ?= $(call melange_version,pgbouncer/melange.yaml)
+UNBOUND_VERSION ?= $(call melange_version,unbound/melange.yaml)
 HELM_VERSION ?= $(call melange_version,helm/melange.yaml)
 KUBECTL_VERSION ?= $(call melange_version,kubectl/melange.yaml)
 
@@ -155,6 +157,8 @@ endef
 .PHONY: all build scan clean help lint-workflows check-autoupdate
 .PHONY: zookeeper zookeeper-melange test-zookeeper
 .PHONY: tomcat tomcat-melange test-tomcat
+.PHONY: pgbouncer pgbouncer-melange pgbouncer-dev test-pgbouncer test-pgbouncer-dev
+.PHONY: unbound unbound-melange unbound-dev test-unbound test-unbound-dev
 .PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange memcached-dev caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite sqlite-dev dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange keygen opensearch opensearch-melange opensearch-dev mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange alertmanager alertmanager-melange mariadb mariadb-melange
@@ -278,6 +282,8 @@ $(eval $(call DEV_IMAGE_RULE,mailpit,mailpit-melange,--repository-append ./packa
 $(eval $(call DEV_IMAGE_RULE,consul,consul-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,tempo,tempo-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,mosquitto,mosquitto-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,pgbouncer,pgbouncer-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,unbound,unbound-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,telegraf,telegraf-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,mimir,mimir-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
@@ -2184,6 +2190,52 @@ mosquitto: mosquitto-melange
 	@rm -f mosquitto.tar sbom-*.spdx.json
 	@echo "✓ minimal-mosquitto built (source build)"
 
+pgbouncer-melange: keygen
+	@echo "Building PgBouncer $(PGBOUNCER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build pgbouncer/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ PgBouncer package built from source"
+
+pgbouncer: pgbouncer-melange
+	@echo "Assembling minimal-pgbouncer image with apko..."
+	apko build pgbouncer/apko/pgbouncer.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-pgbouncer:$(VERSION) \
+		pgbouncer.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < pgbouncer.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-pgbouncer:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-pgbouncer:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-pgbouncer:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-pgbouncer:latest
+	@rm -f pgbouncer.tar sbom-*.spdx.json
+	@echo "✓ minimal-pgbouncer built (source build)"
+
+unbound-melange: keygen
+	@echo "Building Unbound $(UNBOUND_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build unbound/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Unbound package built from source"
+
+unbound: unbound-melange
+	@echo "Assembling minimal-unbound image with apko..."
+	apko build unbound/apko/unbound.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-unbound:$(VERSION) \
+		unbound.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < unbound.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-unbound:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-unbound:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-unbound:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-unbound:latest
+	@rm -f unbound.tar sbom-*.spdx.json
+	@echo "✓ minimal-unbound built (source build)"
+
 helm-melange: keygen
 	@echo "Building Helm $(HELM_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build helm/melange.yaml \
@@ -2584,6 +2636,8 @@ $(eval $(call DEV_TEST_RULE,mailpit))
 $(eval $(call DEV_TEST_RULE,consul))
 $(eval $(call DEV_TEST_RULE,tempo))
 $(eval $(call DEV_TEST_RULE,mosquitto))
+$(eval $(call DEV_TEST_RULE,pgbouncer))
+$(eval $(call DEV_TEST_RULE,unbound))
 $(eval $(call DEV_TEST_RULE,telegraf))
 $(eval $(call DEV_TEST_RULE,mimir))
 
@@ -3065,6 +3119,18 @@ test-mosquitto:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-mosquitto:latest" && \
 		mosquitto/test.sh
 	@echo "✓ mosquitto tests passed"
+
+test-pgbouncer:
+	@echo "Testing pgbouncer image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-pgbouncer:latest" && \
+		pgbouncer/test.sh
+	@echo "✓ pgbouncer tests passed"
+
+test-unbound:
+	@echo "Testing unbound image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-unbound:latest" && \
+		unbound/test.sh
+	@echo "✓ unbound tests passed"
 
 test-helm:
 	@echo "Testing helm image..."
