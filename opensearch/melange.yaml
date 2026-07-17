@@ -94,7 +94,7 @@ pipeline:
         done
         rm -f /tmp/_bj.jar
       }
-      _swap jackson-databind com/fasterxml/jackson/core 2.21.4 2.21.5 507418c0fafd38b2b2cfb704521630da613a8e4cc8381195a6f418017883e2c0 rename
+      _swap jackson-databind com/fasterxml/jackson/core 2.21.3 2.21.5 507418c0fafd38b2b2cfb704521630da613a8e4cc8381195a6f418017883e2c0 rename
   # end-patch-bundled-jars
   # Verify the distribution shape + that the fixed netty shipped.
   - runs: |
