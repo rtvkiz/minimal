@@ -69,6 +69,7 @@ pipeline:
       # apko re-chowns the tree to the runtime user (65532) afterward.
       chmod -R a+rX "${{targets.destdir}}/usr/share/opensearch"
 
+
   # patch-bundled-jars: auto-generated — do not edit manually
   - runs: |
       # Bundled-jar CVE fixes, sha256-pinned. Regenerated from grype by
@@ -93,9 +94,8 @@ pipeline:
         done
         rm -f /tmp/_bj.jar
       }
-      _swap jackson-databind com/fasterxml/jackson/core 2.21.3 2.21.4 3888e9e69ab66fbacaacc9aea0e9ffbf15368288e4aca468b024dba11c09fbf9 rename
+      _swap jackson-databind com/fasterxml/jackson/core 2.21.4 2.21.5 507418c0fafd38b2b2cfb704521630da613a8e4cc8381195a6f418017883e2c0 rename
   # end-patch-bundled-jars
-
   # Verify the distribution shape + that the fixed netty shipped.
   - runs: |
       test -x "${{targets.destdir}}/usr/share/opensearch/bin/opensearch"
