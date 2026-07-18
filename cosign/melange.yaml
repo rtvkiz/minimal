@@ -4,7 +4,7 @@
 
 package:
   name: cosign-minimal
-  version: 3.1.1
+  version: 3.1.2
   epoch: 0
   description: "Minimal Sigstore Cosign (container signing & verification) built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of cosign source tarball - updated by update-versions.yml workflow
-  sha256: 2b44374321cd19b0eb27026ee16e519393139edd7ffe01860c2d78d6084c68eb
+  sha256: cddaacb84071a1f843bf0d46f02232b35c808f4eadbfe1e0be452069dc03816f
 
 environment:
   contents:
