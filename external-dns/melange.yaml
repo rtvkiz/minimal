@@ -1,0 +1,82 @@
+# Melange build configuration for minimal ExternalDNS
+# Pure Go from source. Single static `external-dns` binary — a Kubernetes
+# controller that syncs Services/Ingresses to external DNS providers.
+# License: Apache-2.0.
+
+package:
+  name: external-dns-minimal
+  version: 0.21.0
+  epoch: 0
+  description: "Minimal ExternalDNS Kubernetes DNS controller built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of external-dns source tarball - updated by update-versions.yml
+  sha256: 78fd72654681bb6ebf13f1360551f8aafb08f2d0eeecdd6523a89c8631b5cf64
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify ExternalDNS source
+  - runs: |
+      mkdir -p /home/build/external-dns-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/kubernetes-sigs/external-dns/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/external-dns.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/external-dns.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/external-dns.tar.gz -C /home/build/external-dns-${{package.version}} --strip-components=1
+      rm /home/build/external-dns.tar.gz
+
+  # Version is reported via pkg/apis/externaldns.Version (see upstream Makefile).
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/external-dns-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/external-dns-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X sigs.k8s.io/external-dns/pkg/apis/externaldns.Version=${{package.version}}" \
+        -o /home/build/external-dns-bin \
+        .
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/external-dns-bin "${{targets.destdir}}/usr/bin/external-dns"
+      chmod 0755 "${{targets.destdir}}/usr/bin/external-dns"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying external-dns binary..."
+      "${{targets.destdir}}/usr/bin/external-dns" --version
+
+update:
+  enabled: true
+  github:
+    identifier: kubernetes-sigs/external-dns
+    use-tag: true
+    tag-filter: "v0."

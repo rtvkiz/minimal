@@ -1,0 +1,83 @@
+# Melange build configuration for minimal Velero
+# Pure Go from source. Single static `velero` binary — Kubernetes cluster
+# backup/restore and migration (runs as both CLI and in-cluster server).
+# License: Apache-2.0.
+
+package:
+  name: velero-minimal
+  version: 1.18.2
+  epoch: 0
+  description: "Minimal Velero Kubernetes backup and restore tool built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of velero source tarball - updated by update-versions.yml
+  sha256: 68d8c95817d882b2832c4c08689eb5f7b14dd581f71292a6c794acd15633b6d9
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify Velero source
+  - runs: |
+      mkdir -p /home/build/velero-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/velero-io/velero/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/velero.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/velero.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/velero.tar.gz -C /home/build/velero-${{package.version}} --strip-components=1
+      rm /home/build/velero.tar.gz
+
+  # Version is reported via pkg/buildinfo.Version (see upstream hack/build.sh).
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/velero-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/velero-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/vmware-tanzu/velero/pkg/buildinfo.Version=v${{package.version}} \
+          -X github.com/vmware-tanzu/velero/pkg/buildinfo.GitTreeState=clean" \
+        -o /home/build/velero-bin \
+        ./cmd/velero
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/velero-bin "${{targets.destdir}}/usr/bin/velero"
+      chmod 0755 "${{targets.destdir}}/usr/bin/velero"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying velero binary..."
+      "${{targets.destdir}}/usr/bin/velero" version --client-only
+
+update:
+  enabled: true
+  github:
+    identifier: velero-io/velero
+    use-tag: true
+    tag-filter: "v1."

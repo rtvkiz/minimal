@@ -1,0 +1,47 @@
+# Minimal Kaniko image - built from source via melange
+# Shell-less, distroless. CVE patching via daily rebuilds from upstream source.
+#
+# NOTE: kaniko runs as ROOT by design — the executor unpacks base-image layers
+# into the container root filesystem to build images, which requires uid 0.
+# This mirrors the official gcr.io/kaniko-project/executor image.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - kaniko-minimal
+    - ca-certificates-bundle
+
+# kaniko must be root to extract image filesystems to / (no run-as override).
+
+entrypoint:
+  command: /kaniko/executor
+
+environment:
+  PATH: /kaniko:/usr/bin:/bin
+  DOCKER_CONFIG: /kaniko/.docker
+  SSL_CERT_DIR: /etc/ssl/certs
+
+paths:
+  - path: /kaniko/.docker
+    type: directory
+    permissions: 0o755
+  - path: /workspace
+    type: directory
+    permissions: 0o755
+
+annotations:
+  org.opencontainers.image.title: "minimal-kaniko"
+  org.opencontainers.image.description: "Hardened shell-less Kaniko container image builder (executor) built from source via melange with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/kaniko"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

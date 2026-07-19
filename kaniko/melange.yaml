@@ -1,0 +1,85 @@
+# Melange build configuration for minimal Kaniko
+# Pure Go from source. Single static `executor` binary — builds container
+# images from a Dockerfile inside a container/Kubernetes, without a Docker daemon.
+# License: Apache-2.0.
+
+package:
+  name: kaniko-minimal
+  version: 1.24.0
+  epoch: 0
+  description: "Minimal Kaniko container image builder (executor) built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of kaniko source tarball - updated by update-versions.yml
+  sha256: a61cb1e24fe9d818cb07521fb4f177fcebc4828b3d5571a8cfa590a6804f7669
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify Kaniko source
+  - runs: |
+      mkdir -p /home/build/kaniko-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/GoogleContainerTools/kaniko/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/kaniko.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/kaniko.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/kaniko.tar.gz -C /home/build/kaniko-${{package.version}} --strip-components=1
+      rm /home/build/kaniko.tar.gz
+
+  # Version is reported via pkg/version.version (see upstream Makefile).
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/kaniko-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/kaniko-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/GoogleContainerTools/kaniko/pkg/version.version=v${{package.version}}" \
+        -o /home/build/executor \
+        ./cmd/executor
+
+  # Install into /kaniko (the path the ecosystem expects the executor at).
+  - runs: |
+      mkdir -p "${{targets.destdir}}/kaniko"
+      cp /home/build/executor "${{targets.destdir}}/kaniko/executor"
+      chmod 0755 "${{targets.destdir}}/kaniko/executor"
+      # Also expose it on PATH for convenience.
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf ../../kaniko/executor "${{targets.destdir}}/usr/bin/executor"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying kaniko executor..."
+      "${{targets.destdir}}/kaniko/executor" version
+
+update:
+  enabled: true
+  github:
+    identifier: GoogleContainerTools/kaniko
+    use-tag: true
+    tag-filter: "v1."

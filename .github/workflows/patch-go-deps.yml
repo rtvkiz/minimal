@@ -133,6 +133,11 @@ jobs:
             [trufflehog]="/home/build/trufflehog-${D}{{package.version}}"
             [oauth2-proxy]="/home/build/oauth2-proxy-${D}{{package.version}}"
             [flux]="/home/build/flux-${D}{{package.version}}"
+            [external-dns]="/home/build/external-dns-${D}{{package.version}}"
+            [velero]="/home/build/velero-${D}{{package.version}}"
+            [kaniko]="/home/build/kaniko-${D}{{package.version}}"
+            [step-ca]="/home/build/step-ca-${D}{{package.version}}"
+            [skopeo]="/home/build/skopeo-${D}{{package.version}}"
             [kustomize]="/home/build/kustomize-${D}{{package.version}}/kustomize"
             [sops]="/home/build/sops-${D}{{package.version}}"
             [crane]="/home/build/crane-${D}{{package.version}}"
@@ -189,6 +194,11 @@ jobs:
             [trufflehog]="github.com/trufflesecurity/trufflehog/v3"
             [oauth2-proxy]="github.com/oauth2-proxy/oauth2-proxy/v7"
             [flux]="github.com/fluxcd/flux2/v2"
+            [external-dns]="sigs.k8s.io/external-dns"
+            [velero]="github.com/vmware-tanzu/velero"
+            [kaniko]="github.com/GoogleContainerTools/kaniko"
+            [step-ca]="github.com/smallstep/certificates"
+            [skopeo]="go.podman.io/skopeo"
             [kustomize]="sigs.k8s.io/kustomize/kustomize/v5"
             [sops]="github.com/getsops/sops/v3"
             [crane]="github.com/google/go-containerregistry"
@@ -244,6 +254,11 @@ jobs:
             [trufflehog]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [oauth2-proxy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [flux]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [external-dns]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [velero]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kaniko]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [step-ca]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [skopeo]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [kustomize]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [sops]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [crane]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

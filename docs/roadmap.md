@@ -104,6 +104,43 @@ real need appears (e.g. `kvrocks`/`valkey` cover the Redis/BSL gap).
 
 ---
 
+## Road to 100 — remaining batches (F–K), policy × usage × license
+
+Ordered by our **proven build templates first** (fastest impact-per-effort), then demand.
+Policy filter = buildable under the shell-less/minimal thesis: ✅ static-Go binary · clean
+C daemon (no *runtime* compiler — the varnish lesson) · JVM-jlink · interpreter ·
+binary-repackage. Excluded from the 100-path: frontend-in-bwrap (grafana/argocd/uptime-kuma),
+runtime-compiler (varnish), tangled force-bump graphs, huge-disk C++ (clickhouse), and
+🔴 SSPL/BUSL/EULA. 83 → 100 = 17 images.
+
+### Batch F — static Go (the crank) → 88   [IN PROGRESS]
+| Image | Upstream | License | Build notes |
+|---|---|---|---|
+| external-dns | kubernetes-sigs/external-dns v0.21.0 | 🟢 Apache | main `.`, CGO=0, `-X …/pkg/apis/externaldns.Version` |
+| velero | vmware-tanzu/velero v1.18.2 | 🟢 Apache | main `./cmd/velero`, CGO=0, `…/pkg/buildinfo.Version` |
+| kaniko | GoogleContainerTools/kaniko v1.24.0 | 🟢 Apache | main `./cmd/executor` (binary `executor` → /kaniko/executor), `…/pkg/version.version` |
+| step-ca | smallstep/certificates v0.30.2 | 🟢 Apache | main `./cmd/step-ca`, CGO=0 (drops pkcs11 KMS), `-X main.Version`; server |
+| skopeo | containers/skopeo v1.23.0 | 🟢 Apache | module `go.podman.io/skopeo`; CGO=0 + `-tags containers_image_openpgp` drops libgpgme/btrfs |
+
+### Batch G — clean C daemon (pgbouncer/unbound template) → 90
+dnsmasq (🟡 GPL-2.0, DNS/DHCP/TFTP) · keepalived (🟡 GPL-2.0, VRRP/LVS HA). Fills thin **Infrastructure**.
+
+### Batch H — JVM-jlink (kafka/zookeeper template) → 94
+solr (🟢 search) · cassandra (🟢 wide-column DB, needs Java-17 + jamm agent) · pulsar (🟢 messaging) ·
+flink (🟢 stream processing). All Apache. Fills thin DB/search/messaging.
+
+### Batch I — Rust (qdrant/vector precedent, own effort each) → 96
+vector (🟢 MPL-2.0, observability pipeline) · vaultwarden (🟡 AGPL-3.0, Bitwarden server; ~304M pulls).
+
+### Batch J — Erlang / Python → 98
+couchdb (🟢 Apache, Erlang — rabbitmq precedent) · patroni (🟢 MIT, Postgres HA — new Python-daemon pattern).
+
+### Batch K — own-effort revisit → 100
+cmctl (🟢 Apache — revisit klone build) · + one of {cert-manager core (multi-image) / pomerium (Envoy fetch) / apisix (OpenResty)}.
+
+**Beyond the 100-path (deliberate exceptions, not scheduled):** varnish (runtime cc), grafana/argocd/uptime-kuma
+(frontend-in-bwrap), clickhouse/kubescape (disk-cap). See the deferred table above.
+
 ## Execution model
 
 - **One PR per tier group (~6–8 images).** Each image: 10 registration points

@@ -1,0 +1,84 @@
+# Melange build configuration for minimal step-ca
+# Pure Go from source. Single static `step-ca` binary — an online private
+# certificate authority / ACME server (smallstep).
+# License: Apache-2.0.
+
+package:
+  name: step-ca-minimal
+  version: 0.30.2
+  epoch: 0
+  description: "Minimal step-ca online certificate authority built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of step-ca (smallstep/certificates) source tarball - updated by update-versions.yml
+  sha256: 327391f301b79818f2418302516b4f6b41bdf08e38edc9011cc7f1b351e19452
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify step-ca source (repo: smallstep/certificates)
+  - runs: |
+      mkdir -p /home/build/step-ca-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/smallstep/certificates/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/step-ca.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/step-ca.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/step-ca.tar.gz -C /home/build/step-ca-${{package.version}} --strip-components=1
+      rm /home/build/step-ca.tar.gz
+
+  # CGO_ENABLED=0 → static binary; the PKCS#11/HSM KMS (which needs cgo) is
+  # excluded by build constraints. The default (file/soft) KMS is unaffected.
+  # Version is reported via main.Version (see upstream Makefile).
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/step-ca-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/step-ca-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X main.Version=v${{package.version}}" \
+        -o /home/build/step-ca-bin \
+        ./cmd/step-ca
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/step-ca-bin "${{targets.destdir}}/usr/bin/step-ca"
+      chmod 0755 "${{targets.destdir}}/usr/bin/step-ca"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying step-ca binary..."
+      "${{targets.destdir}}/usr/bin/step-ca" version
+
+update:
+  enabled: true
+  github:
+    identifier: smallstep/certificates
+    use-tag: true
+    tag-filter: "v0."
