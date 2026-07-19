@@ -1,0 +1,63 @@
+# Development variant of minimal-velero.
+# Same source-built velero as prod, plus a shell and debugging tools
+# (curl/openssl for object-store endpoints, jq for backup metadata).
+#
+# In-house composition. Not for production.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - velero-minimal
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- HTTP / TLS debugging (object store + k8s API) ---
+    - curl
+    - openssl
+
+    # --- JSON (backup/restore metadata) ---
+    - jq
+
+    # --- VCS ---
+    - git
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/velero
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  LANG: C.UTF-8
+
+annotations:
+  org.opencontainers.image.title: "minimal-velero-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-velero: same velero + shell + curl/openssl/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/velero"
+  org.opencontainers.image.licenses: "Apache-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

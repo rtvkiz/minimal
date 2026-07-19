@@ -1,0 +1,9 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/rtvkiz/minimal/vex/skopeo",
+  "author": "rtvkiz",
+  "timestamp": "2026-07-18T21:23:39Z",
+  "version": 1,
+  "tooling": "tools/vex/validate.sh",
+  "statements": []
+}

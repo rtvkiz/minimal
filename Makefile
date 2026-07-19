@@ -111,6 +111,11 @@ TRUFFLEHOG_VERSION ?= $(call melange_version,trufflehog/melange.yaml)
 MOSQUITTO_VERSION ?= $(call melange_version,mosquitto/melange.yaml)
 PGBOUNCER_VERSION ?= $(call melange_version,pgbouncer/melange.yaml)
 UNBOUND_VERSION ?= $(call melange_version,unbound/melange.yaml)
+EXTERNAL_DNS_VERSION ?= $(call melange_version,external-dns/melange.yaml)
+VELERO_VERSION ?= $(call melange_version,velero/melange.yaml)
+KANIKO_VERSION ?= $(call melange_version,kaniko/melange.yaml)
+STEP_CA_VERSION ?= $(call melange_version,step-ca/melange.yaml)
+SKOPEO_VERSION ?= $(call melange_version,skopeo/melange.yaml)
 HELM_VERSION ?= $(call melange_version,helm/melange.yaml)
 KUBECTL_VERSION ?= $(call melange_version,kubectl/melange.yaml)
 
@@ -159,6 +164,11 @@ endef
 .PHONY: tomcat tomcat-melange test-tomcat
 .PHONY: pgbouncer pgbouncer-melange pgbouncer-dev test-pgbouncer test-pgbouncer-dev
 .PHONY: unbound unbound-melange unbound-dev test-unbound test-unbound-dev
+.PHONY: external-dns external-dns-melange external-dns-dev test-external-dns test-external-dns-dev
+.PHONY: velero velero-melange velero-dev test-velero test-velero-dev
+.PHONY: kaniko kaniko-melange kaniko-dev test-kaniko test-kaniko-dev
+.PHONY: step-ca step-ca-melange step-ca-dev test-step-ca test-step-ca-dev
+.PHONY: skopeo skopeo-melange skopeo-dev test-skopeo test-skopeo-dev
 .PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange memcached-dev caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite sqlite-dev dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange keygen opensearch opensearch-melange opensearch-dev mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange alertmanager alertmanager-melange mariadb mariadb-melange
@@ -284,6 +294,11 @@ $(eval $(call DEV_IMAGE_RULE,tempo,tempo-melange,--repository-append ./packages 
 $(eval $(call DEV_IMAGE_RULE,mosquitto,mosquitto-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,pgbouncer,pgbouncer-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,unbound,unbound-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,external-dns,external-dns-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,velero,velero-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,kaniko,kaniko-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,step-ca,step-ca-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,skopeo,skopeo-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,telegraf,telegraf-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,mimir,mimir-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
@@ -2236,6 +2251,121 @@ unbound: unbound-melange
 	@rm -f unbound.tar sbom-*.spdx.json
 	@echo "✓ minimal-unbound built (source build)"
 
+external-dns-melange: keygen
+	@echo "Building ExternalDNS $(EXTERNAL_DNS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build external-dns/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ ExternalDNS package built from source"
+
+external-dns: external-dns-melange
+	@echo "Assembling minimal-external-dns image with apko..."
+	apko build external-dns/apko/external-dns.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-external-dns:$(VERSION) \
+		external-dns.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < external-dns.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-external-dns:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-external-dns:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-external-dns:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-external-dns:latest
+	@rm -f external-dns.tar sbom-*.spdx.json
+	@echo "✓ minimal-external-dns built (source build)"
+
+velero-melange: keygen
+	@echo "Building Velero $(VELERO_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build velero/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Velero package built from source"
+
+velero: velero-melange
+	@echo "Assembling minimal-velero image with apko..."
+	apko build velero/apko/velero.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-velero:$(VERSION) \
+		velero.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < velero.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-velero:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-velero:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-velero:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-velero:latest
+	@rm -f velero.tar sbom-*.spdx.json
+	@echo "✓ minimal-velero built (source build)"
+
+kaniko-melange: keygen
+	@echo "Building Kaniko $(KANIKO_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build kaniko/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Kaniko package built from source"
+
+kaniko: kaniko-melange
+	@echo "Assembling minimal-kaniko image with apko..."
+	apko build kaniko/apko/kaniko.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-kaniko:$(VERSION) \
+		kaniko.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < kaniko.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kaniko:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kaniko:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kaniko:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kaniko:latest
+	@rm -f kaniko.tar sbom-*.spdx.json
+	@echo "✓ minimal-kaniko built (source build)"
+
+step-ca-melange: keygen
+	@echo "Building step-ca $(STEP_CA_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build step-ca/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ step-ca package built from source"
+
+step-ca: step-ca-melange
+	@echo "Assembling minimal-step-ca image with apko..."
+	apko build step-ca/apko/step-ca.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-step-ca:$(VERSION) \
+		step-ca.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < step-ca.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-step-ca:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-step-ca:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-step-ca:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-step-ca:latest
+	@rm -f step-ca.tar sbom-*.spdx.json
+	@echo "✓ minimal-step-ca built (source build)"
+
+skopeo-melange: keygen
+	@echo "Building Skopeo $(SKOPEO_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build skopeo/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Skopeo package built from source"
+
+skopeo: skopeo-melange
+	@echo "Assembling minimal-skopeo image with apko..."
+	apko build skopeo/apko/skopeo.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-skopeo:$(VERSION) \
+		skopeo.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < skopeo.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-skopeo:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-skopeo:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-skopeo:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-skopeo:latest
+	@rm -f skopeo.tar sbom-*.spdx.json
+	@echo "✓ minimal-skopeo built (source build)"
+
 helm-melange: keygen
 	@echo "Building Helm $(HELM_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build helm/melange.yaml \
@@ -2638,6 +2768,11 @@ $(eval $(call DEV_TEST_RULE,tempo))
 $(eval $(call DEV_TEST_RULE,mosquitto))
 $(eval $(call DEV_TEST_RULE,pgbouncer))
 $(eval $(call DEV_TEST_RULE,unbound))
+$(eval $(call DEV_TEST_RULE,external-dns))
+$(eval $(call DEV_TEST_RULE,velero))
+$(eval $(call DEV_TEST_RULE,kaniko))
+$(eval $(call DEV_TEST_RULE,step-ca))
+$(eval $(call DEV_TEST_RULE,skopeo))
 $(eval $(call DEV_TEST_RULE,telegraf))
 $(eval $(call DEV_TEST_RULE,mimir))
 
@@ -3131,6 +3266,36 @@ test-unbound:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-unbound:latest" && \
 		unbound/test.sh
 	@echo "✓ unbound tests passed"
+
+test-external-dns:
+	@echo "Testing external-dns image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-external-dns:latest" && \
+		external-dns/test.sh
+	@echo "✓ external-dns tests passed"
+
+test-velero:
+	@echo "Testing velero image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-velero:latest" && \
+		velero/test.sh
+	@echo "✓ velero tests passed"
+
+test-kaniko:
+	@echo "Testing kaniko image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kaniko:latest" && \
+		kaniko/test.sh
+	@echo "✓ kaniko tests passed"
+
+test-step-ca:
+	@echo "Testing step-ca image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-step-ca:latest" && \
+		step-ca/test.sh
+	@echo "✓ step-ca tests passed"
+
+test-skopeo:
+	@echo "Testing skopeo image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-skopeo:latest" && \
+		skopeo/test.sh
+	@echo "✓ skopeo tests passed"
 
 test-helm:
 	@echo "Testing helm image..."

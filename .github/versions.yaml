@@ -656,6 +656,64 @@
     releases: "https://github.com/NLnetLabs/unbound/releases"
     notes: "https://github.com/NLnetLabs/unbound/releases/tag/release-{version}"
 
+- name: external-dns
+  cron-enabled: true   # wave 11 (dispatch-validated 2026-07-18)
+  files: [external-dns/melange.yaml]
+  source: { type: github-releases-latest, repo: kubernetes-sigs/external-dns, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/kubernetes-sigs/external-dns/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/kubernetes-sigs/external-dns/releases"
+    notes: "https://github.com/kubernetes-sigs/external-dns/releases/tag/v{version}"
+
+# velero moved orgs: vmware-tanzu/velero → velero-io/velero (a 301 the resolver's
+# raw curl won't follow). Use the canonical repo. NB the Go *module* path is still
+# github.com/vmware-tanzu/velero (unchanged in go.mod) — that's the ldflags path.
+- name: velero
+  cron-enabled: true   # wave 11 (dispatch-validated 2026-07-18)
+  files: [velero/melange.yaml]
+  source: { type: github-releases-latest, repo: velero-io/velero, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/velero-io/velero/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/velero-io/velero/releases"
+    notes: "https://github.com/velero-io/velero/releases/tag/v{version}"
+
+- name: kaniko
+  cron-enabled: true   # wave 11 (dispatch-validated 2026-07-18)
+  files: [kaniko/melange.yaml]
+  source: { type: github-releases-latest, repo: GoogleContainerTools/kaniko, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/GoogleContainerTools/kaniko/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/GoogleContainerTools/kaniko/releases"
+    notes: "https://github.com/GoogleContainerTools/kaniko/releases/tag/v{version}"
+
+# step-ca lives in the smallstep/certificates repo (binary/package name step-ca).
+- name: step-ca
+  cron-enabled: true   # wave 11 (dispatch-validated 2026-07-18)
+  files: [step-ca/melange.yaml]
+  source: { type: github-releases-latest, repo: smallstep/certificates, strip-v: true, pin-major: 0 }
+  tarball: { url: "https://github.com/smallstep/certificates/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/smallstep/certificates/releases"
+    notes: "https://github.com/smallstep/certificates/releases/tag/v{version}"
+
+# skopeo moved: containers/skopeo → podman-container-tools/skopeo (a 301 the
+# resolver's raw curl won't follow), matching the go.podman.io module migration.
+# Use the canonical repo. The Go *module* path is go.podman.io/skopeo (that's the
+# patch-go-deps main-module key, not the GitHub repo).
+- name: skopeo
+  cron-enabled: true   # wave 11 (dispatch-validated 2026-07-18)
+  files: [skopeo/melange.yaml]
+  source: { type: github-releases-latest, repo: podman-container-tools/skopeo, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/podman-container-tools/skopeo/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/podman-container-tools/skopeo/releases"
+    notes: "https://github.com/podman-container-tools/skopeo/releases/tag/v{version}"
+
 # ============================================================================
 # plain-text — fetch a single URL that returns the bare version as text
 # ============================================================================

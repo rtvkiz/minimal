@@ -1,0 +1,99 @@
+# Melange build configuration for minimal Skopeo
+# Pure Go from source. Single `skopeo` binary — inspect/copy/sign container
+# images between registries without a daemon.
+# Built CGO-free with the containers_image_openpgp tag to drop the libgpgme
+# and containers/storage C dependencies (btrfs/devmapper).
+# License: Apache-2.0.
+
+package:
+  name: skopeo-minimal
+  version: 1.23.0
+  epoch: 0
+  description: "Minimal Skopeo container image inspection/copy tool built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of skopeo source tarball - updated by update-versions.yml
+  sha256: de96bfc2bb523c852af675ffdadd934484812ce190aa8620e1d5fd6c51442e25
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify Skopeo source
+  - runs: |
+      mkdir -p /home/build/skopeo-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/podman-container-tools/skopeo/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/skopeo.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/skopeo.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/skopeo.tar.gz -C /home/build/skopeo-${{package.version}} --strip-components=1
+      rm /home/build/skopeo.tar.gz
+
+  # CGO_ENABLED=0 + -tags containers_image_openpgp → static binary with no
+  # libgpgme/btrfs/devmapper C deps (Go-native OpenPGP, graphdrivers excluded).
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      for root in /home/build/skopeo-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        ( cd "$root" \
+          && go mod tidy -e \
+          && { [ ! -d vendor ] || go mod vendor; } )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/skopeo-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -tags containers_image_openpgp \
+        -ldflags="-s -w -buildid=" \
+        -o /home/build/skopeo-bin \
+        ./cmd/skopeo
+
+  # Install binary + default containers config (skopeo fails without a signature
+  # policy at /etc/containers/policy.json).
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/skopeo-bin "${{targets.destdir}}/usr/bin/skopeo"
+      chmod 0755 "${{targets.destdir}}/usr/bin/skopeo"
+
+      mkdir -p "${{targets.destdir}}/etc/containers"
+      cat > "${{targets.destdir}}/etc/containers/policy.json" << 'POLICY'
+      {
+        "default": [{ "type": "insecureAcceptAnything" }],
+        "transports": {
+          "docker-daemon": { "": [{ "type": "insecureAcceptAnything" }] }
+        }
+      }
+      POLICY
+      cat > "${{targets.destdir}}/etc/containers/registries.conf" << 'REG'
+      unqualified-search-registries = ["docker.io"]
+      REG
+
+  # Verify the build
+  - runs: |
+      echo "Verifying skopeo binary..."
+      "${{targets.destdir}}/usr/bin/skopeo" --version
+
+update:
+  enabled: true
+  github:
+    identifier: podman-container-tools/skopeo
+    use-tag: true
+    tag-filter: "v1."
