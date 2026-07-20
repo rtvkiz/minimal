@@ -851,7 +851,14 @@
   source:
     type: json
     # {series} is templated from current MAJOR.MINOR (e.g. 8.5) at check time.
-    url: "https://www.php.net/releases/index.php?json&version={series}"
+    # php.net's per-series JSON endpoint intermittently stalls for the current
+    # series (it hung on 8.5 in the 2026-07-20 run and 4-min-timed-out the job),
+    # so fall back to the major-only query — same {"version": ...} shape,
+    # currently reliable. fetch_first_url tries these in order; --max-time now
+    # bounds a stalled primary so the fallback is actually reached.
+    urls:
+      - "https://www.php.net/releases/index.php?json&version={series}"
+      - "https://www.php.net/releases/index.php?json&version=8"
     jq: '.version // empty'
     pin-major: 8
   tarball:

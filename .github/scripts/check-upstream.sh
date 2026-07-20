@@ -50,7 +50,10 @@ fi
 
 # --- fetch LATEST per source type ---
 gh_curl() {
-  curl -sS --retry 3 --retry-all-errors \
+  # --max-time bounds each attempt so a stalled endpoint (server accepts the
+  # connection then never sends a body — --connect-timeout alone won't catch it)
+  # fails fast instead of hanging the whole update-versions job.
+  curl -sS --connect-timeout 20 --max-time 20 --retry 3 --retry-all-errors \
     ${GH_TOKEN:+-H "Authorization: Bearer $GH_TOKEN"} \
     "$1"
 }
@@ -117,7 +120,7 @@ fetch_github_tags() {
 # Single URL returning the bare version as text (e.g. jenkins latestCore.txt).
 fetch_plain_text() {
   local url; url=$(j '.source.url')
-  curl -fsSL --retry 3 --retry-all-errors "$url" | tr -d '[:space:]'
+  curl -fsSL --connect-timeout 20 --max-time 20 --retry 3 --retry-all-errors "$url" | tr -d '[:space:]'
 }
 
 # Substitute {series} = "MAJOR.MINOR" of current version into a URL template.
@@ -134,7 +137,8 @@ fetch_first_url() {
   # Reads URLs from $@; returns first non-empty body.
   local u body
   for u in "$@"; do
-    body=$(curl -fsSL --connect-timeout 20 --retry 3 --retry-all-errors "$u" 2>/dev/null) || continue
+    # --max-time so a stalled URL fails fast and we fall through to the next one.
+    body=$(curl -fsSL --connect-timeout 20 --max-time 20 --retry 3 --retry-all-errors "$u" 2>/dev/null) || continue
     [ -n "$body" ] && { printf '%s' "$body"; return 0; }
   done
   return 1
