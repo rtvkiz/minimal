@@ -44,19 +44,13 @@ pipeline:
       tar xzf /home/build/skopeo.tar.gz -C /home/build/skopeo-${{package.version}} --strip-components=1
       rm /home/build/skopeo.tar.gz
 
+  # NOTE: excluded from patch-go-deps (SKIP_IMAGES) — skopeo vendors the
+  # containers/buildkit/docker stack, whose graph is too tangled to force-bump
+  # (buildkit needs docker/cli v29.2.1, fulcio v29.4.0 → `go get` conflicts).
+  # Builds pure upstream from vendor/; transitive CVEs ride the version bump +
+  # base rebuild + VEX.
   # CGO_ENABLED=0 + -tags containers_image_openpgp → static binary with no
   # libgpgme/btrfs/devmapper C deps (Go-native OpenPGP, graphdrivers excluded).
-  # patch-go-deps: auto-generated — do not edit manually
-  - runs: |
-      export GOWORK=off
-      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
-      for root in /home/build/skopeo-${{package.version}}; do
-        [ -f "$root/go.mod" ] || continue
-        ( cd "$root" \
-          && go mod tidy -e \
-          && { [ ! -d vendor ] || go mod vendor; } )
-      done
-  # end-patch-go-deps
   - runs: |
       cd /home/build/skopeo-${{package.version}}
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
