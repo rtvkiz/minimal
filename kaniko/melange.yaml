@@ -42,18 +42,11 @@ pipeline:
       tar xzf /home/build/kaniko.tar.gz -C /home/build/kaniko-${{package.version}} --strip-components=1
       rm /home/build/kaniko.tar.gz
 
+  # NOTE: excluded from patch-go-deps (SKIP_IMAGES) — kaniko vendors the
+  # docker/moby stack, whose graph is too tangled to force-bump (a docker/docker
+  # bump breaks vendored archive_deprecated.go). Builds pure upstream from
+  # vendor/; transitive CVEs ride the version bump + base rebuild + VEX.
   # Version is reported via pkg/version.version (see upstream Makefile).
-  # patch-go-deps: auto-generated — do not edit manually
-  - runs: |
-      export GOWORK=off
-      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
-      for root in /home/build/kaniko-${{package.version}}; do
-        [ -f "$root/go.mod" ] || continue
-        ( cd "$root" \
-          && go mod tidy -e \
-          && { [ ! -d vendor ] || go mod vendor; } )
-      done
-  # end-patch-go-deps
   - runs: |
       cd /home/build/kaniko-${{package.version}}
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \

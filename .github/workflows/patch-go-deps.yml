@@ -284,7 +284,14 @@ jobs:
           # upstream app-version bump (update-versions.yml — the vendor bumps
           # their own go.mod) plus the 6-hourly base rebuild; a genuinely
           # reachable gap gets a manual targeted bump or a VEX not_affected.
-          SKIP_IMAGES=" trivy "
+          # kaniko and skopeo joined trivy here (2026-07-19, PR #426 fallout):
+          # both vendor the docker/moby/buildkit/containers stack, so grype's
+          # bumps break them the same way — kaniko: docker/docker bump →
+          # "undefined: archive.Compression" in vendored archive_deprecated.go;
+          # skopeo: buildkit needs docker/cli v29.2.1 + fulcio needs v29.4.0 vs
+          # grype's v29.2.0 → `go get` aborts on the version conflict. Pure
+          # upstream + version-bump + VEX, same as trivy.
+          SKIP_IMAGES=" trivy kaniko skopeo "
           for IMAGE in "${!MODROOTS[@]}"; do
             if [[ "$SKIP_IMAGES" == *" $IMAGE "* ]]; then
               echo "=== Skipping $IMAGE (excluded from auto transitive dep-patching; tracked via update-versions + base rebuild) ==="
