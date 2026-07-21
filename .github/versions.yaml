@@ -351,7 +351,7 @@
 - name: helmfile
   cron-enabled: true   # tier 2 (validated 2026-07-12)
   files: [helmfile/melange.yaml]
-  source: { type: github-releases-latest, repo: helmfile/helmfile, strip-v: true, pin-major: 7 }
+  source: { type: github-releases-latest, repo: helmfile/helmfile, strip-v: true, pin-major: 1 }
   tarball: { url: "https://github.com/helmfile/helmfile/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -507,7 +507,7 @@
 - name: caddy
   cron-enabled: true   # wave 3
   files: [caddy/melange.yaml]
-  source: { type: github-tags, repo: caddyserver/caddy, pattern: '^v2\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  source: { type: github-tags, repo: caddyserver/caddy, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
   tarball: { url: "https://github.com/caddyserver/caddy/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -517,7 +517,7 @@
 - name: coredns
   cron-enabled: true   # wave 3
   files: [coredns/melange.yaml]
-  source: { type: github-tags, repo: coredns/coredns, pattern: '^v1\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 1 }
+  source: { type: github-tags, repo: coredns/coredns, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 1 }
   tarball: { url: "https://github.com/coredns/coredns/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -527,7 +527,7 @@
 - name: fluent-bit
   cron-enabled: true   # wave 4
   files: [fluent-bit/melange.yaml]
-  source: { type: github-tags, repo: fluent/fluent-bit, pattern: '^v5\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 5 }
+  source: { type: github-tags, repo: fluent/fluent-bit, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 5 }
   tarball: { url: "https://github.com/fluent/fluent-bit/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -537,7 +537,7 @@
 - name: gitea
   cron-enabled: true   # wave 4
   files: [gitea/melange.yaml]
-  source: { type: github-tags, repo: go-gitea/gitea, pattern: '^v1\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 1 }
+  source: { type: github-tags, repo: go-gitea/gitea, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 1 }
   tarball: { url: "https://github.com/go-gitea/gitea/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -547,7 +547,7 @@
 - name: haproxy
   cron-enabled: true   # wave 4
   files: [haproxy/melange.yaml]
-  source: { type: github-tags, repo: haproxy/haproxy, pattern: '^v3\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
+  source: { type: github-tags, repo: haproxy/haproxy, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
   tarball: { url: "https://www.haproxy.org/download/{minor}/src/haproxy-{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -557,7 +557,7 @@
 - name: keycloak
   cron-enabled: true   # wave 4
   files: [keycloak/melange.yaml]
-  source: { type: github-tags, repo: keycloak/keycloak, pattern: '^26\.[0-9]+\.[0-9]+$', pin-major: 26 }
+  source: { type: github-tags, repo: keycloak/keycloak, pattern: '^[0-9]+\.[0-9]+\.[0-9]+$', pin-major: 26 }
   tarball: { url: "https://github.com/keycloak/keycloak/releases/download/{version}/keycloak-{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -567,7 +567,7 @@
 - name: loki
   cron-enabled: true   # wave 4
   files: [loki/melange.yaml]
-  source: { type: github-tags, repo: grafana/loki, pattern: '^v3\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
+  source: { type: github-tags, repo: grafana/loki, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
   tarball: { url: "https://github.com/grafana/loki/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -577,7 +577,7 @@
 - name: nats
   cron-enabled: true   # wave 4
   files: [nats/melange.yaml]
-  source: { type: github-tags, repo: nats-io/nats-server, pattern: '^v2\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  source: { type: github-tags, repo: nats-io/nats-server, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
   tarball: { url: "https://github.com/nats-io/nats-server/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -587,7 +587,7 @@
 - name: openbao
   cron-enabled: true   # wave 4
   files: [openbao/melange.yaml]
-  source: { type: github-tags, repo: openbao/openbao, pattern: '^v2\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  source: { type: github-tags, repo: openbao/openbao, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
   tarball: { url: "https://github.com/openbao/openbao/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -597,7 +597,7 @@
 - name: traefik
   cron-enabled: true   # wave 4
   files: [traefik/melange.yaml]
-  source: { type: github-tags, repo: traefik/traefik, pattern: '^v3\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
+  source: { type: github-tags, repo: traefik/traefik, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
   tarball: { url: "https://github.com/traefik/traefik/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -610,7 +610,7 @@
 - name: helm
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [helm/melange.yaml]
-  source: { type: github-tags, repo: helm/helm, pattern: '^v3\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
+  source: { type: github-tags, repo: helm/helm, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
   tarball: { url: "https://github.com/helm/helm/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -624,7 +624,7 @@
 - name: mosquitto
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [mosquitto/melange.yaml]
-  source: { type: github-tags, repo: eclipse-mosquitto/mosquitto, pattern: '^v2\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  source: { type: github-tags, repo: eclipse-mosquitto/mosquitto, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
   tarball: { url: "https://mosquitto.org/files/source/mosquitto-{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -637,7 +637,7 @@
 - name: pgbouncer
   cron-enabled: true   # wave 10 (dispatch-validated 2026-07-16)
   files: [pgbouncer/melange.yaml]
-  source: { type: github-tags, repo: pgbouncer/pgbouncer, pattern: '^pgbouncer_1_[0-9]+_[0-9]+$', strip-prefix: 'pgbouncer_', tag-rewrite: { from: '_', to: '.' }, pin-major: 1 }
+  source: { type: github-tags, repo: pgbouncer/pgbouncer, pattern: '^pgbouncer_[0-9]+_[0-9]+_[0-9]+$', strip-prefix: 'pgbouncer_', tag-rewrite: { from: '_', to: '.' }, pin-major: 1 }
   tarball: { url: "https://www.pgbouncer.org/downloads/files/{version}/pgbouncer-{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -649,7 +649,7 @@
 - name: unbound
   cron-enabled: true   # wave 10 (dispatch-validated 2026-07-16)
   files: [unbound/melange.yaml]
-  source: { type: github-tags, repo: NLnetLabs/unbound, pattern: '^release-1\.[0-9]+\.[0-9]+$', strip-prefix: 'release-', pin-major: 1 }
+  source: { type: github-tags, repo: NLnetLabs/unbound, pattern: '^release-[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'release-', pin-major: 1 }
   tarball: { url: "https://nlnetlabs.nl/downloads/unbound/unbound-{version}.tar.gz", field: sha256 }
   major-issue: true
   links:
@@ -944,6 +944,9 @@
   cron-enabled: true   # wave 7
   files: [mysql/melange.yaml]
   # MySQL 8.4 LTS tags upstream are mysql-cluster-8.4.X. Strip prefix on read.
+  # NB: pattern is deliberately locked to the 8.4 LTS minor line (not just
+  # major 8) — broadening would pull 8.5+ innovation releases. New majors are
+  # tracked manually (see issue #87), so major-detection here is intentional-off.
   source:
     type: github-tags
     repo: mysql/mysql-server

@@ -127,9 +127,60 @@ for name in "${bespoke[@]:-}" "${exempt[@]:-}"; do
   in_prod "$name" || err "$COVERAGE lists '$name' which is not a prod image in $CATALOG"
 done
 
+# --- VEX existence: every prod image ships a vex/<name>.openvex.json ----------
+for img in "${prod[@]}"; do
+  [ -f "vex/$img.openvex.json" ] || err "$img: missing vex/$img.openvex.json (every catalog image needs a VEX file)"
+done
+
+# --- pin-alignment: a row's pin-major must equal its melange's current major --
+# A wrong pin silently freezes the image — the resolver treats every same-major
+# release as an un-adopted "new major" (helmfile 1.7.0 pinned to 7 → zero
+# updates since onboarding, yet coverage passed). Assert it here at PR time.
+# Read current the way the resolver does: a row may track a non-default field
+# (rails tracks `rails_version`, not `version`) or use a custom grep — skip those
+# we can't read simply rather than misfire.
+# NB: emit "-" for an absent current-field — never an empty field. IFS=$'\t'
+# treats tab as whitespace, so `read` collapses an empty field between two tabs
+# and misaligns the rest (this silently defeated the check at first).
+while IFS=$'\t' read -r rname melpath pinmaj curfield hasgrep; do
+  [ -n "$pinmaj" ] || continue
+  [ -f "$melpath" ] || continue
+  [ "$curfield" = "-" ] && curfield=""
+  if [ "$hasgrep" = "true" ] && [ -z "$curfield" ]; then
+    continue   # custom current-grep — resolver handles it; don't guess here
+  fi
+  field="${curfield:-version}"
+  # single awk (no grep|head pipe — that SIGPIPEs under set -o pipefail)
+  cur=$(awk -v f="$field" 'index($0,"  " f ":")==1 {v=$2; gsub(/"/,"",v); print v; exit}' "$melpath")
+  [ -n "$cur" ] || continue
+  curmaj="${cur%%.*}"
+  [ "$curmaj" = "$pinmaj" ] || err "$rname: versions.yaml pin-major=$pinmaj != current major $curmaj (version $cur) — this freezes the image"
+done < <(jq -r '
+  .[] | select(.source["pin-major"] != null) |
+  [ .name,
+    (.files[0] | if type=="string" then . else .path end),
+    (.source["pin-major"]|tostring),
+    (.source["current-field"] // "-"),
+    ((.source["current-grep"] != null)|tostring) ] | @tsv
+' <<<"$versions_json")
+
+# --- Go transitive-dep patching: every source-built Go image must be registered
+# in patch-go-deps.yml (as a MODROOTS key — SKIP/TESTKEEP images keep their key
+# too). Catches silently-unpatched Go images (blackbox/node-exporter/pushgateway
+# shipped this way). ------------------------------------------------------------
+PGD=".github/workflows/patch-go-deps.yml"
+for img in "${prod[@]}"; do
+  [ -f "$img/melange.yaml" ] || continue
+  # Go image heuristic: a whitespace-anchored "go build" (so Rust's
+  # "cargo build" — which contains the substring "go build" — doesn't match).
+  grep -qE '(^|[[:space:]])go build' "$img/melange.yaml" || continue
+  grep -qE "^[[:space:]]*\[$img\]=" "$PGD" \
+    || err "$img: source-built Go image not registered in patch-go-deps.yml (add to the 3 dicts, or SKIP/TESTKEEP it)"
+done
+
 if [ "$fail" -ne 0 ]; then
   echo
   echo "✗ auto-update coverage FAILED — every prod image must have exactly one live auto-update mechanism."
   exit 1
 fi
-echo "✓ auto-update coverage: all ${#prod[@]} prod images configured"
+echo "✓ auto-update coverage: all ${#prod[@]} prod images configured + VEX + pin-alignment + Go-patch registration"
