@@ -121,6 +121,9 @@ jobs:
             [cosign]="/home/build/cosign-${D}{{package.version}}"
             [syft]="/home/build/syft-${D}{{package.version}}"
             [grype]="/home/build/grype-${D}{{package.version}}"
+            [node-exporter]="/home/build/node_exporter-${D}{{package.version}}"
+            [blackbox-exporter]="/home/build/blackbox_exporter-${D}{{package.version}}"
+            [pushgateway]="/home/build/pushgateway-${D}{{package.version}}"
             [oras]="/home/build/oras-${D}{{package.version}}"
             [gitleaks]="/home/build/gitleaks-${D}{{package.version}}"
             [step-cli]="/home/build/step-cli-${D}{{package.version}}"
@@ -182,6 +185,9 @@ jobs:
             [cosign]="github.com/sigstore/cosign/v3"
             [syft]="github.com/anchore/syft"
             [grype]="github.com/anchore/grype"
+            [node-exporter]="github.com/prometheus/node_exporter"
+            [blackbox-exporter]="github.com/prometheus/blackbox_exporter"
+            [pushgateway]="github.com/prometheus/pushgateway"
             [oras]="oras.land/oras"
             [gitleaks]="github.com/zricethezav/gitleaks/v8"
             [step-cli]="github.com/smallstep/cli"
@@ -242,6 +248,9 @@ jobs:
             [cosign]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [syft]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [grype]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [node-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [blackbox-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [pushgateway]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [oras]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [gitleaks]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [step-cli]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
