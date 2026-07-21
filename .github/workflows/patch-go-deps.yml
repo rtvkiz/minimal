@@ -277,6 +277,16 @@ jobs:
             [stern]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
           )
 
+          # Probe build command per test-and-keep image (see TESTKEEP_IMAGES
+          # below). Must match the image's REAL build (same tags/GOEXPERIMENT/
+          # target) or the compile-check makes wrong keep/drop calls. `-mod=mod`
+          # skips vendoring during probing; `-o /dev/null` discards the binary.
+          declare -A TESTKEEP_BUILD=(
+            [kaniko]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/executor'
+            [skopeo]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -tags containers_image_openpgp -o /dev/null ./cmd/skopeo'
+            [trivy]='GOTOOLCHAIN=local CGO_ENABLED=0 GOEXPERIMENT=jsonv2 go build -mod=mod -o /dev/null ./cmd/trivy'
+          )
+
           HAS_PATCHES=false
           PATCHED_LIST=""
           SUMMARY=""
@@ -293,20 +303,25 @@ jobs:
           # upstream app-version bump (update-versions.yml — the vendor bumps
           # their own go.mod) plus the 6-hourly base rebuild; a genuinely
           # reachable gap gets a manual targeted bump or a VEX not_affected.
-          # kaniko and skopeo joined trivy here (2026-07-19, PR #426 fallout):
-          # both vendor the docker/moby/buildkit/containers stack, so grype's
-          # bumps break them the same way — kaniko: docker/docker bump →
-          # "undefined: archive.Compression" in vendored archive_deprecated.go;
-          # skopeo: buildkit needs docker/cli v29.2.1 + fulcio needs v29.4.0 vs
-          # grype's v29.2.0 → `go get` aborts on the version conflict. Pure
-          # upstream + version-bump + VEX, same as trivy.
-          SKIP_IMAGES=" trivy kaniko skopeo "
+          # trivy/kaniko/skopeo vendor the docker/moby/buildkit/containers stack,
+          # so grype's fixes can't be force-bumped wholesale (docker/docker breaks
+          # kaniko's vendored archive API; docker/cli conflicts with buildkit/
+          # fulcio in skopeo → `go get` aborts). Rather than skip them, they use
+          # TEST-AND-KEEP: the generated block probes each candidate fix against
+          # the real build command and keeps only those that still compile, so
+          # every safely-patchable CVE lands now and only genuinely-incompatible
+          # ones wait for the upstream release (logged per-dep, not silent).
+          # SKIP_IMAGES stays for images we never auto-patch at all (none now).
+          SKIP_IMAGES=" "
+          TESTKEEP_IMAGES=" trivy kaniko skopeo "
           for IMAGE in "${!MODROOTS[@]}"; do
             if [[ "$SKIP_IMAGES" == *" $IMAGE "* ]]; then
               echo "=== Skipping $IMAGE (excluded from auto transitive dep-patching; tracked via update-versions + base rebuild) ==="
               continue
             fi
-            echo "=== Scanning $IMAGE ==="
+            IS_TESTKEEP=false
+            [[ "$TESTKEEP_IMAGES" == *" $IMAGE "* ]] && IS_TESTKEEP=true
+            echo "=== Scanning $IMAGE (test-and-keep=$IS_TESTKEEP) ==="
             FULL_IMAGE="${REGISTRY}/${OWNER}/minimal-${IMAGE}:latest"
             MELANGE_FILE="${IMAGE}/melange.yaml"
             BEFORE_HASH=$(sha256sum "$MELANGE_FILE" | awk '{print $1}')
@@ -618,7 +633,13 @@ jobs:
             # 502s (kubectl x86_64 hit this in run #27361909125). go's own
             # retry doesn't survive mid-stream INTERNAL_ERROR, and a failed
             # `go get` aborts the whole melange build.
+            if [ "$IS_TESTKEEP" = true ]; then
+            # Test-and-keep block: probe each candidate fix against the image's
+            # real build command; keep only those that still compile.
+            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually (test-and-keep)\n  - runs: |\n      export GOWORK=off\n      _retry() { local i; for i in 5 15 30; do \"\$@\" && return 0; echo \"retry: \$* failed, sleeping \${i}s\"; sleep \$i; done; \"\$@\"; }\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        ( set -e\n          cd \"\$root\"\n          cp go.mod .pgd-base.mod\n          [ -f go.sum ] && cp go.sum .pgd-base.sum || true\n          # Probe each candidate CVE fix against the real build; keep the ones\n          # that still compile, drop those that need upstream to update its\n          # vendored code first (logged, not silent). Patches everything safely\n          # patchable now instead of skipping the image wholesale.\n          KEPT=\"\"\n          for fix in ${GO_GETS}; do\n            cp .pgd-base.mod go.mod\n            [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true\n            if go get \$KEPT \"\$fix\" >/dev/null 2>&1 && ${TESTKEEP_BUILD[$IMAGE]} >/dev/null 2>&1; then\n              KEPT=\"\$KEPT \$fix\"; echo \"pgd-testkeep KEPT: \$fix\"\n            else\n              echo \"pgd-testkeep dropped (needs upstream): \$fix\"\n            fi\n          done\n          cp .pgd-base.mod go.mod\n          [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true\n          if [ -n \"\$KEPT\" ]; then _retry go get \$KEPT; fi\n          go mod tidy -e\n          rm -f .pgd-base.mod .pgd-base.sum\n          [ ! -d vendor ] || go mod vendor\n        )\n      done\n  # end-patch-go-deps\n"
+            else
             PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      export GOWORK=off\n      _retry() { local i; for i in 5 15 30; do \"\$@\" && return 0; echo \"retry: \$* failed, sleeping \${i}s\"; sleep \$i; done; \"\$@\"; }\n      _pgd_reqs() { awk '\$1==\"require\" && \$2==\"(\" {b=1;next} b && \$1==\")\" {b=0;next} b && index(\$1,\"/\")>0 && substr(\$2,1,1)==\"v\" {print \$1,\$2;next} \$1==\"require\" && NF>=3 && index(\$2,\"/\")>0 && substr(\$3,1,1)==\"v\" {print \$2,\$3}' \"\$1\"; }\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        ( set -e\n          cd \"\$root\"\n          cp go.mod .pgd-orig.mod\n          _retry go get${GO_GETS}\n          go mod tidy -e\n          # go mod tidy can downgrade a source-pinned require below what the\n          # source shipped (e.g. a lockstep family like openbao's\n          # go-kms-wrapping transit v2.8.0 -> v2.1.0, which then fails to build\n          # against its core sibling still at v2.8.0). Re-raise any require tidy\n          # dropped below its pre-tidy version. Corrects only upward, so CVE\n          # bumps (>= source) are never undone.\n          _pgd_reqs .pgd-orig.mod > .pgd-o.txt\n          _pgd_reqs go.mod > .pgd-n.txt\n          awk 'NR==FNR{o[\$1]=\$2;next} (\$1 in o) && o[\$1]!=\$2 {print \$1,o[\$1],\$2}' .pgd-o.txt .pgd-n.txt | while read -r p ov cv; do\n            hi=\$( { echo \"\$ov\"; echo \"\$cv\"; } | sort -V | tail -1 )\n            if [ \"\$hi\" = \"\$ov\" ]; then\n              echo \"pgd-guard: restoring \$p: \$cv -> \$ov (tidy downgraded below source pin)\"\n              _retry go get \"\$p@\$ov\"\n            fi\n          done\n          rm -f .pgd-orig.mod .pgd-o.txt .pgd-n.txt\n          [ ! -d vendor ] || go mod vendor\n        )\n      done\n  # end-patch-go-deps\n"
+            fi
 
             # Find the marker line and insert before it
             MARKER_LINE=$(grep -n "$MARKER" "$MELANGE_FILE" | head -1 | cut -d: -f1)
