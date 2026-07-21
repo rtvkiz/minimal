@@ -739,7 +739,7 @@
     urls:
       - "https://dlcdn.apache.org/kafka/"
       - "https://downloads.apache.org/kafka/"
-    pattern: 'href="4\.[0-9]+\.[0-9]+/"'
+    pattern: 'href="[0-9]+\.[0-9]+\.[0-9]+/"'
     pin-major: 4
   tarball:
     urls:
@@ -760,7 +760,7 @@
     urls:
       - "https://downloads.apache.org/zookeeper/"
       - "https://dlcdn.apache.org/zookeeper/"
-    pattern: 'href="zookeeper-(3\.[0-9]+\.[0-9]+)/"'
+    pattern: 'href="zookeeper-([0-9]+\.[0-9]+\.[0-9]+)/"'
     pin-major: 3
   tarball:
     urls:
@@ -774,6 +774,10 @@
     notes: "https://archive.apache.org/dist/zookeeper/zookeeper-{version}/"
 
 - name: tomcat
+  # Deliberately pinned to the Tomcat 11 line: the scrape URL points at the
+  # tomcat-11/ subdirectory. Detecting a new major (12) would need a two-level
+  # scrape of the parent dist listing (major dirs → version dirs) — a source
+  # redesign, tracked as a follow-up rather than done blindly.
   cron-enabled: true   # batch A JVM (validated 2026-07-13)
   files: [tomcat/melange.yaml]
   source:
@@ -831,6 +835,8 @@
 # ============================================================================
 
 - name: mariadb
+  # Deliberately pinned to the 11.4 LTS series (URL is series-scoped). New
+  # majors/LTS lines are a human decision (like mysql 8.4) — not auto-detected.
   cron-enabled: true   # wave 6
   files: [mariadb/melange.yaml]
   source:
