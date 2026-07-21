@@ -182,7 +182,7 @@ jobs:
         run: |
           OLD="${{ steps.check.outputs.python_current }}"
           NEW="${{ steps.check.outputs.python_latest }}"
-          sed -i "s/$OLD/$NEW/g" python/apko/python.yaml
+          sed -i "s/$OLD/$NEW/g" python/apko/*.yaml
           BRANCH="update-python-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -209,7 +209,7 @@ jobs:
         run: |
           OLD="${{ steps.check.outputs.go_current }}"
           NEW="${{ steps.check.outputs.go_latest }}"
-          sed -i "s/$OLD/$NEW/g" go/apko/go.yaml
+          sed -i "s/$OLD/$NEW/g" go/apko/*.yaml
           BRANCH="update-go-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -236,7 +236,7 @@ jobs:
         run: |
           OLD="${{ steps.check.outputs.node_current }}"
           NEW="${{ steps.check.outputs.node_latest }}"
-          sed -i "s/$OLD/$NEW/g" node-slim/apko/node.yaml
+          sed -i "s/$OLD/$NEW/g" node-slim/apko/*.yaml
           BRANCH="update-node-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -263,7 +263,7 @@ jobs:
         run: |
           OLD="${{ steps.check.outputs.dotnet_current }}"
           NEW="${{ steps.check.outputs.dotnet_latest }}"
-          sed -i "s/$OLD/$NEW/g" dotnet/apko/dotnet.yaml
+          sed -i "s/$OLD/$NEW/g" dotnet/apko/*.yaml
           BRANCH="update-dotnet-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -292,9 +292,9 @@ jobs:
           NEW="${{ steps.check.outputs.jdk_latest }}"
           OLD_VER=$(echo "$OLD" | grep -oP '\d+')
           NEW_VER=$(echo "$NEW" | grep -oP '\d+')
-          sed -i "s/openjdk-${OLD_VER}-jre/openjdk-${NEW_VER}-jre/g" java/apko/java.yaml
-          sed -i "s/openjdk-${OLD_VER}-default-jvm/openjdk-${NEW_VER}-default-jvm/g" java/apko/java.yaml
-          sed -i "s/java-${OLD_VER}-openjdk/java-${NEW_VER}-openjdk/g" java/apko/java.yaml
+          sed -i "s/openjdk-${OLD_VER}-jre/openjdk-${NEW_VER}-jre/g" java/apko/*.yaml
+          sed -i "s/openjdk-${OLD_VER}-default-jvm/openjdk-${NEW_VER}-default-jvm/g" java/apko/*.yaml
+          sed -i "s/java-${OLD_VER}-openjdk/java-${NEW_VER}-openjdk/g" java/apko/*.yaml
           BRANCH="update-java-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -321,7 +321,7 @@ jobs:
         run: |
           OLD="${{ steps.check.outputs.pg_current }}"
           NEW="${{ steps.check.outputs.pg_latest }}"
-          sed -i "s/$OLD/$NEW/g" postgres-slim/apko/postgres.yaml
+          sed -i "s/$OLD/$NEW/g" postgres-slim/apko/*.yaml
           BRANCH="update-postgres-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
