@@ -351,7 +351,7 @@
 - name: helmfile
   cron-enabled: true   # tier 2 (validated 2026-07-12)
   files: [helmfile/melange.yaml]
-  source: { type: github-releases-latest, repo: helmfile/helmfile, strip-v: true, pin-major: 7 }
+  source: { type: github-releases-latest, repo: helmfile/helmfile, strip-v: true, pin-major: 1 }
   tarball: { url: "https://github.com/helmfile/helmfile/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   major-issue: true
   links:

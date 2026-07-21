@@ -48,6 +48,20 @@ else
 fi
 [ -n "$current" ] || { echo "::error::could not read current version for $name"; exit 1; }
 
+# --- pin-alignment guard ---
+# The configured pin-major MUST match the current recipe's major. If it doesn't,
+# the row is misconfigured: the pin-major guard below treats every same-major
+# release as an un-adopted "new major" and silently freezes the image (helmfile
+# 1.7.0 pinned to `7` did exactly this — zero updates since onboarding). Fail
+# loudly here so the mistake is visible instead of a quiet freeze.
+if [ -n "$pin_major" ]; then
+  current_major="${current%%.*}"
+  if [ "$current_major" != "$pin_major" ]; then
+    echo "::error::$name: pin-major=$pin_major does not match current version $current (major $current_major) — fix the row's pin-major"
+    exit 1
+  fi
+fi
+
 # --- fetch LATEST per source type ---
 gh_curl() {
   # --max-time bounds each attempt so a stalled endpoint (server accepts the
@@ -208,7 +222,15 @@ if [ -n "$pin_major" ]; then
   fi
 fi
 
-if [ "$latest" = "$current" ]; then
+# --- no-downgrade guard ---
+# Only advance forward. `latest != current` alone would let a stale endpoint,
+# an incomplete tag window, or a misconfigured source emit a DOWNGRADE PR.
+# Require latest > current (semver) before proposing an update.
+highest=$(printf '%s\n%s\n' "$current" "$latest" | sort -V | tail -1)
+if [ "$latest" = "$current" ] || [ "$highest" != "$latest" ]; then
+  if [ "$latest" != "$current" ]; then
+    echo "::warning::$name: upstream latest ($latest) is not newer than current ($current) — not downgrading"
+  fi
   echo "update=false" >> "$out"
   echo "current_version=$current" >> "$out"
   exit 0
