@@ -5,7 +5,7 @@
 
 package:
   name: telegraf-minimal
-  version: 1.39.1
+  version: 1.39.2
   epoch: 0
   description: "Minimal Telegraf metrics agent built from source"
   copyright:
@@ -13,7 +13,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: 687fdef018d85a275015d621653061251d6566f53b9b41dd5c93c21019cd92f2
+  sha256: bfd06e36ae049464c71a936e758aa15d7de007221682bab335ba1fa7c351c0b1
 
 environment:
   contents:
