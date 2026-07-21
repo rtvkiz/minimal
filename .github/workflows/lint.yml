@@ -11,12 +11,14 @@ on:
   pull_request:
     paths:
       - '.github/workflows/**'
-      - 'scripts/lint-workflows.sh'
+      - '.github/scripts/**'
+      - 'scripts/**.sh'
   push:
     branches: [main]
     paths:
       - '.github/workflows/**'
-      - 'scripts/lint-workflows.sh'
+      - '.github/scripts/**'
+      - 'scripts/**.sh'
 
 permissions:
   contents: read

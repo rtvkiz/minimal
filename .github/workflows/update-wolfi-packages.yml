@@ -85,8 +85,10 @@ jobs:
           echo "Current Node.js package: $CURRENT_NODE"
 
           # Find all nodejs-XX packages (LTS versions are even numbers)
+          # Node LTS lines are EVEN majors (20/22/24…); odd majors are
+          # short-lived non-LTS. Filter to even before picking the highest.
           LATEST_NODE=$(grep -E "^nodejs-[0-9]+ " /tmp/packages.txt | \
-            awk '{print $1}' | sort -t- -k2 -n | tail -1)
+            awk '{n=$1; sub(/nodejs-/,"",n); if (n%2==0) print $1}' | sort -t- -k2 -n | tail -1)
           echo "Latest Node.js package: $LATEST_NODE"
 
           if [ -n "$LATEST_NODE" ] && [ "$LATEST_NODE" != "$CURRENT_NODE" ]; then

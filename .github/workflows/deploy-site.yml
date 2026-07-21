@@ -57,7 +57,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          MIN=50   # catalog has 57 images; allow a few flaky scans
+          # Require a nearly-complete scan: catalog size minus a small
+          # tolerance for flaky per-image scans (was hardcoded 50 while the
+          # catalog grew to 88, letting a ~57%% scan qualify).
+          MIN=$(( $(jq '.images|length' catalog.json) - 3 ))
           RID=""
           for id in $(gh api "repos/${{ github.repository }}/actions/workflows/build.yml/runs?status=success&branch=main&per_page=20" \
                         --jq '.workflow_runs[].id'); do
