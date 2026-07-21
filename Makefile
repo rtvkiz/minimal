@@ -51,6 +51,7 @@ MIMIR_VERSION ?= $(call melange_version,mimir/melange.yaml)
 
 # --- DNS/Secrets/IAM ---
 COREDNS_VERSION ?= $(call melange_version,coredns/melange.yaml)
+GITEA_VERSION ?= $(call melange_version,gitea/melange.yaml)
 OPENBAO_VERSION ?= $(call melange_version,openbao/melange.yaml)
 KEYCLOAK_VERSION ?= $(call melange_version,keycloak/melange.yaml)
 
@@ -175,7 +176,7 @@ endef
 .PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno deno-melange
 .PHONY: cuda-python cuda-python-melange
 .PHONY: coredns coredns-melange openbao openbao-melange loki loki-melange fluent-bit fluent-bit-melange keycloak keycloak-melange
-.PHONY: gitea gitea-melange
+.PHONY: gitea gitea-melange gitea-melange test-gitea
 .PHONY: telegraf telegraf-melange telegraf-dev test-telegraf test-telegraf-dev scan-telegraf
 .PHONY: mimir mimir-melange mimir-dev test-mimir test-mimir-dev scan-mimir
 .PHONY: registry registry-melange registry-dev test-registry test-registry-dev
@@ -211,13 +212,13 @@ endef
 .PHONY: blackbox-exporter blackbox-exporter-melange test-blackbox-exporter
 .PHONY: pushgateway pushgateway-melange test-pushgateway
 .PHONY: mosquitto mosquitto-melange mosquitto-dev test-mosquitto test-mosquitto-dev
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
-.PHONY: test-python test-python-dev test-jenkins test-go test-go-dev test-node-slim test-node-slim-dev test-nginx test-httpd test-redis-slim test-redis-slim-dev test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-postgres-slim-dev test-bun test-bun-dev test-sqlite test-dotnet test-dotnet-dev test-java test-java-dev test-ruby test-ruby-dev test-php test-php-dev test-rails test-rails-dev test-deno test-deno-dev test-mariadb test-mariadb-dev test-valkey test-valkey-dev test-memcached-dev test-sqlite-dev test-opensearch-dev test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-cuda-python test-coredns test-openbao test-loki test-fluent-bit test-keycloak
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
+.PHONY: test-python test-python-dev test-jenkins test-go test-go-dev test-node-slim test-node-slim-dev test-nginx test-httpd test-redis-slim test-redis-slim-dev test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-postgres-slim-dev test-bun test-bun-dev test-sqlite test-dotnet test-dotnet-dev test-java test-java-dev test-ruby test-ruby-dev test-php test-php-dev test-rails test-rails-dev test-deno test-deno-dev test-mariadb test-mariadb-dev test-valkey test-valkey-dev test-memcached-dev test-sqlite-dev test-opensearch-dev test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-coredns test-openbao test-loki test-fluent-bit test-keycloak
 
 all: build scan
 
 # Build all images
-build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java ruby php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus mariadb etcd victoria-metrics jaeger otelcol qdrant deno cuda-python coredns openbao loki fluent-bit keycloak telegraf mimir
+build: python jenkins go node-slim nginx httpd redis-slim mysql memcached caddy haproxy postgres-slim bun sqlite dotnet java ruby php rails kafka valkey nats traefik envoy rabbitmq minio opensearch prometheus mariadb etcd victoria-metrics jaeger otelcol qdrant deno coredns openbao loki fluent-bit keycloak telegraf mimir gitea
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -1312,6 +1313,29 @@ coredns: coredns-melange
 		$(REGISTRY)/$(OWNER)/minimal-coredns:latest
 	@rm -f coredns.tar sbom-*.spdx.json
 	@echo "✓ minimal-coredns built (source build)"
+
+gitea-melange: keygen
+	@echo "Building Gitea $(GITEA_VERSION) from source via melange..."
+	melange build gitea/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Gitea package built from source"
+
+gitea: gitea-melange
+	@echo "Assembling minimal-gitea image with apko..."
+	apko build gitea/apko/gitea.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-gitea:$(VERSION) \
+		gitea.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < gitea.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-gitea:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-gitea:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-gitea:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-gitea:latest
+	@rm -f gitea.tar sbom-*.spdx.json
+	@echo "✓ minimal-gitea built (source build)"
 
 #------------------------------------------------------------------------------
 # OPENBAO IMAGE (melange source build + apko)
@@ -2415,7 +2439,7 @@ kubectl: kubectl-melange
 #------------------------------------------------------------------------------
 # CVE SCANNING
 #------------------------------------------------------------------------------
-scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-cuda-python scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
+scan: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-envoy scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -2719,7 +2743,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-ruby test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-cuda-python
+test: test-python test-jenkins test-go test-node-slim test-nginx test-httpd test-redis-slim test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-bun test-sqlite test-dotnet test-java test-ruby test-php test-rails test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-coredns test-fluent-bit test-keycloak test-loki test-openbao test-gitea
 
 $(eval $(call DEV_TEST_RULE,python))
 $(eval $(call DEV_TEST_RULE,node-slim))
@@ -3357,6 +3381,49 @@ test-mimir:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-mimir:latest" && \
 		mimir/test.sh
 	@echo "✓ Mimir tests passed"
+
+test-coredns:
+	@echo "Testing CoreDNS image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-coredns:latest" && \
+		coredns/test.sh
+	@echo "✓ coredns tests passed"
+
+test-fluent-bit:
+	@echo "Testing Fluent Bit image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-fluent-bit:latest" && \
+		fluent-bit/test.sh
+	@echo "✓ fluent-bit tests passed"
+
+test-keycloak:
+	@echo "Testing Keycloak image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-keycloak:latest" && \
+		keycloak/test.sh
+	@echo "✓ keycloak tests passed"
+
+test-loki:
+	@echo "Testing Loki image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-loki:latest" && \
+		loki/test.sh
+	@echo "✓ loki tests passed"
+
+test-openbao:
+	@echo "Testing OpenBao image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-openbao:latest" && \
+		openbao/test.sh
+	@echo "✓ openbao tests passed"
+
+test-php:
+	@echo "Testing PHP image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-php:latest" && \
+		php/test.sh
+	@echo "✓ php tests passed"
+
+test-gitea:
+	@echo "Testing Gitea image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-gitea:latest" && \
+		gitea/test.sh
+	@echo "✓ gitea tests passed"
+
 
 test-jaeger:
 	@echo "Testing Jaeger image..."
