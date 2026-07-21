@@ -58,3 +58,15 @@ echo "actionlint $("$actionlint_bin" --version | head -1) + shellcheck $("$shell
 cd "$repo_root"
 "$actionlint_bin" -color .github/workflows/*.yml
 echo "✓ workflow lint clean"
+
+# --- standalone shell scripts ---
+# The workflows shell out to these (check-upstream.sh, apply-update.sh, the
+# coverage gate, …); actionlint only sees run: blocks, so a syntax/quoting bug
+# here would break update-versions / the gate the same way an unlinted run:
+# block would. Lint them at the same error-severity bar (shebang picks dialect).
+echo "shellchecking standalone scripts…"
+mapfile -t script_files < <(ls .github/scripts/*.sh scripts/*.sh 2>/dev/null || true)
+if [ "${#script_files[@]}" -gt 0 ]; then
+  "$shellcheck_bin" --severity=error "${script_files[@]}"
+fi
+echo "✓ scripts lint clean"
