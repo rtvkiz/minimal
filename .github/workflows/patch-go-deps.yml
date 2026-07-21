@@ -285,6 +285,7 @@ jobs:
             [kaniko]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/executor'
             [skopeo]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -tags containers_image_openpgp -o /dev/null ./cmd/skopeo'
             [trivy]='GOTOOLCHAIN=local CGO_ENABLED=0 GOEXPERIMENT=jsonv2 go build -mod=mod -o /dev/null ./cmd/trivy'
+            [opentofu]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/tofu'
           )
 
           HAS_PATCHES=false
@@ -313,7 +314,7 @@ jobs:
           # ones wait for the upstream release (logged per-dep, not silent).
           # SKIP_IMAGES stays for images we never auto-patch at all (none now).
           SKIP_IMAGES=" "
-          TESTKEEP_IMAGES=" trivy kaniko skopeo "
+          TESTKEEP_IMAGES=" trivy kaniko skopeo opentofu "
           for IMAGE in "${!MODROOTS[@]}"; do
             if [[ "$SKIP_IMAGES" == *" $IMAGE "* ]]; then
               echo "=== Skipping $IMAGE (excluded from auto transitive dep-patching; tracked via update-versions + base rebuild) ==="
