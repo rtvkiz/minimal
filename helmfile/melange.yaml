@@ -3,7 +3,7 @@
 
 package:
   name: helmfile-minimal
-  version: 1.7.0
+  version: 1.7.1
   epoch: 0
   description: "Minimal Helmfile declarative Helm manager built from source"
   copyright:
@@ -11,7 +11,7 @@ package:
 
 vars:
   # SHA256 of helmfile source tarball - updated by update-versions.yml workflow
-  sha256: dc9b62c842068ab7aad6fa82ddfa034b6973bda71322a283cf0a8a5151f149d3
+  sha256: d300b6329f750838923a80f89cb65afe8e4318ff796a71d1163baf9847f92c89
 
 environment:
   contents:
