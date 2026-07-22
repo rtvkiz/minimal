@@ -826,6 +826,7 @@
   tarball:
     url: "https://memcached.org/files/memcached-{version}.tar.gz"
     field: sha256
+  major-issue: true
   links:
     releases: "https://github.com/memcached/memcached/releases"
     notes: "https://github.com/memcached/memcached/releases/tag/{version}"
@@ -889,6 +890,7 @@
     jq: '.version'
     current-field: rails_version
     pin-major: 8
+  major-issue: true
   links:
     releases: "https://rubygems.org/gems/rails"
     notes: "https://github.com/rails/rails/releases/tag/v{version}"

@@ -265,7 +265,13 @@ jobs:
         run: |
           OLD="${{ steps.check.outputs.dotnet_current }}"
           NEW="${{ steps.check.outputs.dotnet_latest }}"
-          sed -i "s/$OLD/$NEW/g" dotnet/apko/*.yaml
+          # $OLD/$NEW are the versioned runtime pkg (e.g. dotnet-10-runtime), but
+          # the dev image also pins dotnet-N-sdk / -targeting-pack / a bare
+          # dotnet-N. Rewrite the whole dotnet-<major> family (\b stops at
+          # dotnet-100), else dev drifts to a mismatched major.
+          OLD_MAJOR=$(echo "$OLD" | grep -oE '[0-9]+' | head -1)
+          NEW_MAJOR=$(echo "$NEW" | grep -oE '[0-9]+' | head -1)
+          sed -i -E "s/dotnet-${OLD_MAJOR}\b/dotnet-${NEW_MAJOR}/g" dotnet/apko/*.yaml
           BRANCH="update-dotnet-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -294,8 +300,10 @@ jobs:
           NEW="${{ steps.check.outputs.jdk_latest }}"
           OLD_VER=$(echo "$OLD" | grep -oP '\d+')
           NEW_VER=$(echo "$NEW" | grep -oP '\d+')
-          sed -i "s/openjdk-${OLD_VER}-jre/openjdk-${NEW_VER}-jre/g" java/apko/*.yaml
-          sed -i "s/openjdk-${OLD_VER}-default-jvm/openjdk-${NEW_VER}-default-jvm/g" java/apko/*.yaml
+          # Rewrite the whole openjdk-<major> family — jre, default-jvm, AND the
+          # dev-only default-jdk + a bare openjdk-N — plus the java-<major>-openjdk
+          # JAVA_HOME token. The old per-suffix seds missed dev's default-jdk.
+          sed -i -E "s/openjdk-${OLD_VER}\b/openjdk-${NEW_VER}/g" java/apko/*.yaml
           sed -i "s/java-${OLD_VER}-openjdk/java-${NEW_VER}-openjdk/g" java/apko/*.yaml
           BRANCH="update-java-${NEW}"
           git config user.name "github-actions[bot]"

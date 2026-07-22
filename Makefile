@@ -51,6 +51,7 @@ MIMIR_VERSION ?= $(call melange_version,mimir/melange.yaml)
 
 # --- DNS/Secrets/IAM ---
 COREDNS_VERSION ?= $(call melange_version,coredns/melange.yaml)
+PHP_VERSION ?= $(call melange_version,php/melange.yaml)
 GITEA_VERSION ?= $(call melange_version,gitea/melange.yaml)
 OPENBAO_VERSION ?= $(call melange_version,openbao/melange.yaml)
 KEYCLOAK_VERSION ?= $(call melange_version,keycloak/melange.yaml)
@@ -302,6 +303,40 @@ $(eval $(call DEV_IMAGE_RULE,step-ca,step-ca-melange,--repository-append ./packa
 $(eval $(call DEV_IMAGE_RULE,skopeo,skopeo-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,telegraf,telegraf-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,mimir,mimir-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+# --- dev variants: CLI / exporter / static-Go images. Each ships an
+#     apko/<name>-dev.yaml and test-dev.sh; wire their Make rules here.
+$(eval $(call DEV_IMAGE_RULE,zookeeper,zookeeper-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,tomcat,tomcat-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,oauth2-proxy,oauth2-proxy-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,thanos,thanos-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,node-exporter,node-exporter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,blackbox-exporter,blackbox-exporter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,pushgateway,pushgateway-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,helm,helm-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,kubectl,kubectl-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,opentofu,opentofu-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,trivy,trivy-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,cosign,cosign-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,syft,syft-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,grype,grype-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,osv-scanner,osv-scanner-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,oras,oras-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,notation,notation-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,conftest,conftest-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,kubeconform,kubeconform-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,kube-bench,kube-bench-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,trufflehog,trufflehog-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,flux,flux-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,kustomize,kustomize-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,sops,sops-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,crane,crane-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,kubeseal,kubeseal-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,helmfile,helmfile-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,regctl,regctl-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,stern,stern-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,gitleaks,gitleaks-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,step-cli,step-cli-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,opa,opa-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # JENKINS IMAGE (melange jlink JRE + WAR + apko, shell-less)
@@ -2782,6 +2817,7 @@ $(eval $(call DEV_TEST_RULE,caddy))
 $(eval $(call DEV_TEST_RULE,traefik))
 $(eval $(call DEV_TEST_RULE,envoy))
 $(eval $(call DEV_TEST_RULE,prometheus))
+$(eval $(call DEV_TEST_RULE,alertmanager))
 $(eval $(call DEV_TEST_RULE,victoria-metrics))
 $(eval $(call DEV_TEST_RULE,jaeger))
 $(eval $(call DEV_TEST_RULE,otelcol))
@@ -2808,6 +2844,39 @@ $(eval $(call DEV_TEST_RULE,step-ca))
 $(eval $(call DEV_TEST_RULE,skopeo))
 $(eval $(call DEV_TEST_RULE,telegraf))
 $(eval $(call DEV_TEST_RULE,mimir))
+# --- dev smoke tests for the CLI / exporter / static-Go dev variants.
+$(eval $(call DEV_TEST_RULE,zookeeper))
+$(eval $(call DEV_TEST_RULE,tomcat))
+$(eval $(call DEV_TEST_RULE,oauth2-proxy))
+$(eval $(call DEV_TEST_RULE,thanos))
+$(eval $(call DEV_TEST_RULE,node-exporter))
+$(eval $(call DEV_TEST_RULE,blackbox-exporter))
+$(eval $(call DEV_TEST_RULE,pushgateway))
+$(eval $(call DEV_TEST_RULE,helm))
+$(eval $(call DEV_TEST_RULE,kubectl))
+$(eval $(call DEV_TEST_RULE,opentofu))
+$(eval $(call DEV_TEST_RULE,trivy))
+$(eval $(call DEV_TEST_RULE,cosign))
+$(eval $(call DEV_TEST_RULE,syft))
+$(eval $(call DEV_TEST_RULE,grype))
+$(eval $(call DEV_TEST_RULE,osv-scanner))
+$(eval $(call DEV_TEST_RULE,oras))
+$(eval $(call DEV_TEST_RULE,notation))
+$(eval $(call DEV_TEST_RULE,conftest))
+$(eval $(call DEV_TEST_RULE,kubeconform))
+$(eval $(call DEV_TEST_RULE,kube-bench))
+$(eval $(call DEV_TEST_RULE,trufflehog))
+$(eval $(call DEV_TEST_RULE,flux))
+$(eval $(call DEV_TEST_RULE,kustomize))
+$(eval $(call DEV_TEST_RULE,sops))
+$(eval $(call DEV_TEST_RULE,crane))
+$(eval $(call DEV_TEST_RULE,kubeseal))
+$(eval $(call DEV_TEST_RULE,helmfile))
+$(eval $(call DEV_TEST_RULE,regctl))
+$(eval $(call DEV_TEST_RULE,stern))
+$(eval $(call DEV_TEST_RULE,gitleaks))
+$(eval $(call DEV_TEST_RULE,step-cli))
+$(eval $(call DEV_TEST_RULE,opa))
 
 test-python:
 	@echo "Testing Python image..."
@@ -3467,61 +3536,20 @@ test-cuda-python:
 #------------------------------------------------------------------------------
 # PUSH TO REGISTRY
 #------------------------------------------------------------------------------
-push:
-	docker push $(REGISTRY)/$(OWNER)/minimal-python:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-python:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-jenkins:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-jenkins:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-go:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-go:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-node-slim:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-node-slim:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-nginx:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-httpd:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-redis-slim:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-mysql:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-memcached:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-caddy:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-caddy:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-haproxy:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-haproxy:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-bun:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-sqlite:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-sqlite:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-dotnet:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-java:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-java:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-ruby:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-rails:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-kafka:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-valkey:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-valkey:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-nats:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-nats:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-traefik:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-envoy:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-envoy:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-minio:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-opensearch:latest
-	docker push $(REGISTRY)/$(OWNER)/minimal-cuda-python:$(VERSION)
-	docker push $(REGISTRY)/$(OWNER)/minimal-cuda-python:latest
+# Every image's build rule tags both a version tag and :latest, so one push-%
+# pattern rule covers all 88 uniformly — mirroring build:/test:/scan:. The 4
+# images that don't ride the global VERSION get a per-image tag override here
+# (empty override falls back to $(VERSION) via $(or …)).
+PUSH_VER_kafka     = $(KAFKA_VERSION)
+PUSH_VER_zookeeper = $(ZOOKEEPER_VERSION)
+PUSH_VER_tomcat    = $(TOMCAT_VERSION)
+PUSH_VER_rabbitmq  = $(RABBITMQ_VERSION)
+
+push-%:
+	docker push $(REGISTRY)/$(OWNER)/minimal-$*:$(or $(PUSH_VER_$*),$(VERSION))
+	docker push $(REGISTRY)/$(OWNER)/minimal-$*:latest
+
+push: push-python push-node-slim push-bun push-go push-java push-ruby push-php push-dotnet push-deno push-mysql push-mariadb push-postgres-slim push-pgbouncer push-unbound push-external-dns push-velero push-kaniko push-step-ca push-skopeo push-sqlite push-opensearch push-redis-slim push-valkey push-memcached push-kafka push-zookeeper push-tomcat push-rabbitmq push-nats push-mosquitto push-nginx push-httpd push-caddy push-haproxy push-traefik push-envoy push-oauth2-proxy push-prometheus push-alertmanager push-victoria-metrics push-thanos push-mimir push-jaeger push-loki push-tempo push-otelcol push-fluent-bit push-telegraf push-node-exporter push-blackbox-exporter push-pushgateway push-coredns push-etcd push-openbao push-keycloak push-qdrant push-registry push-consul push-helm push-kubectl push-opentofu push-trivy push-cosign push-syft push-grype push-osv-scanner push-oras push-notation push-conftest push-kubeconform push-kube-bench push-trufflehog push-flux push-kustomize push-sops push-crane push-kubeseal push-helmfile push-regctl push-stern push-gitleaks push-step-cli push-opa push-jenkins push-gitea push-minio push-rails push-mailpit
 
 #------------------------------------------------------------------------------
 # CLEANUP
