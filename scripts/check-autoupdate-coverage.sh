@@ -174,8 +174,13 @@ for img in "${prod[@]}"; do
   # Go image heuristic: a whitespace-anchored "go build" (so Rust's
   # "cargo build" — which contains the substring "go build" — doesn't match).
   grep -qE '(^|[[:space:]])go build' "$img/melange.yaml" || continue
-  grep -qE "^[[:space:]]*\[$img\]=" "$PGD" \
-    || err "$img: source-built Go image not registered in patch-go-deps.yml (add to the 3 dicts, or SKIP/TESTKEEP it)"
+  # Must be a key in ALL 3 dicts (MODROOTS/MAIN_MODULES/BUILD_MARKERS) — a
+  # partial registration (in 1 or 2) silently under-patches. Each `[img]=` key
+  # appears once per dict, so a fully-registered image has >= 3 (TESTKEEP images
+  # get a 4th in TESTKEEP_BUILD). A count < 3 means an incomplete registration.
+  n=$(grep -cE "^[[:space:]]*\[$img\]=" "$PGD")
+  [ "$n" -ge 3 ] \
+    || err "$img: incompletely registered in patch-go-deps.yml (found $n/3 dict entries — needs MODROOTS + MAIN_MODULES + BUILD_MARKERS, or SKIP/TESTKEEP)"
 done
 
 if [ "$fail" -ne 0 ]; then
