@@ -57,7 +57,7 @@ pipeline:
         ( set -e
           cd "$root"
           cp go.mod .pgd-orig.mod
-          _retry go get google.golang.org/grpc@v1.82.1 github.com/Azure/go-ntlmssp@v0.1.1 github.com/go-git/go-git/v5@v5.19.1 golang.org/x/image@v0.43.0 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.48.0
+          _retry go get github.com/Azure/go-ntlmssp@v0.1.1 github.com/go-git/go-git/v5@v5.19.1 golang.org/x/image@v0.43.0 google.golang.org/grpc@v1.82.1 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.48.0
           go mod tidy -e
           # go mod tidy can downgrade a source-pinned require below what the
           # source shipped (e.g. a lockstep family like openbao's
