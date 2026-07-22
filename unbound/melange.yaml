@@ -4,7 +4,7 @@
 
 package:
   name: unbound-minimal
-  version: 1.25.1
+  version: 1.25.2
   epoch: 0
   description: "Minimal Unbound validating recursive DNS resolver built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of unbound-{version}.tar.gz - updated by update-versions.yml
-  sha256: 0fe8b6277b0959cfd17562debac0aa5f71e0b02dc4ffa9c60271c583edab586f
+  sha256: 0d92275c703d5f5f8baba3dab22117dd8c29b495588a5c229768ed6581566600
 
 environment:
   contents:
