@@ -37,6 +37,20 @@ pipeline:
       tar xzf /home/build/kustomize.tar.gz -C /home/build/kustomize-${{package.version}} --strip-components=1
       rm /home/build/kustomize.tar.gz
 
+  - runs: |
+      # kustomize ships a go.work (a ~45-module workspace) whose `go` directive
+      # trails the toolchain. patch-go-deps bumps the golang.org/x/* family to
+      # @latest, which now requires go >= 1.25; go1.26 then HARD-FAILS the whole
+      # workspace ("go.work lists go 1.24.0, but a member requires >= 1.25.0")
+      # during `go mod tidy` — even under GOWORK=off — before the build is
+      # reached. Raise the workspace directive to the build toolchain so it can
+      # never sit below a bumped member's requirement (self-heals on the next
+      # bump too). Harmless when there are no bumps. See patch-go-deps x/* pin.
+      if [ -f /home/build/kustomize-${{package.version}}/go.work ]; then
+        ( cd /home/build/kustomize-${{package.version}} \
+          && go work edit -go="$(go env GOVERSION | sed 's/^go//')" )
+      fi
+
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off
