@@ -61,7 +61,7 @@ pipeline:
           # vendored code first (logged, not silent). Patches everything safely
           # patchable now instead of skipping the image wholesale.
           KEPT=""
-          for fix in  github.com/Azure/go-ntlmssp@v0.1.1 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8 github.com/aws/aws-sdk-go-v2/service/s3@v1.97.3 oras.land/oras-go/v2@v2.6.1 go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v1.44.0 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.44.0 go.opentelemetry.io/otel/sdk@v1.44.0 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.48.0; do
+          for fix in  google.golang.org/grpc@v1.82.1 github.com/Azure/go-ntlmssp@v0.1.1 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8 github.com/aws/aws-sdk-go-v2/service/s3@v1.97.3 oras.land/oras-go/v2@v2.6.1 go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v1.44.0 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.44.0 go.opentelemetry.io/otel/sdk@v1.44.0 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.48.0; do
             cp .pgd-base.mod go.mod
             [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true
             if go get $KEPT "$fix" >/dev/null 2>&1 && GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/tofu >/dev/null 2>&1; then
