@@ -3,7 +3,7 @@
 
 package:
   name: sops-minimal
-  version: 3.13.2
+  version: 3.13.3
   epoch: 0
   description: "Minimal SOPS secrets OPerationS editor built from source"
   copyright:
@@ -11,7 +11,7 @@ package:
 
 vars:
   # SHA256 of sops source tarball - updated by update-versions.yml workflow
-  sha256: 79560b53814e20031d094a293d6c169314eaaf97efd6e95a6d765e61e881db2c
+  sha256: 49811c5ed80f6b4d4e98cef98e3f7378406aa692fd773dfb72ad1b4dfb940448
 
 environment:
   contents:
