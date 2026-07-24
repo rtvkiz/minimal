@@ -1,0 +1,147 @@
+# Melange build configuration for minimal Apache Cassandra
+# Official binary release + custom JRE via jlink (kafka/zookeeper JVM pattern).
+# Cassandra 5.0 runs on Java 17; jamm javaagent needs java.instrument + jdk.attach.
+# License: Apache-2.0.
+
+package:
+  name: cassandra-minimal
+  version: 5.0.8
+  epoch: 0
+  description: "Minimal Apache Cassandra wide-column database with custom JRE (jlink)"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA512 of apache-cassandra-{version}-bin.tar.gz - updated by update-versions.yml
+  sha512: 06b7af18c8f41dc13dbfdae186d565a5f91e71ea413c3c5373aec8a4e5074c6dee5632a0e5e98c21665f08f7291d7ca384f61a323c02610c6bca51e074b5a0c4
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      # Full JDK 17 needed for jlink (build-time only); Cassandra 5.0 targets Java 17.
+      - openjdk-17-default-jdk
+      - openjdk-17-jmods
+      # binutils provides objcopy required by jlink --strip-debug
+      - binutils
+
+pipeline:
+  # Download and verify the official Cassandra binary release
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://dlcdn.apache.org/cassandra/${{package.version}}/apache-cassandra-${{package.version}}-bin.tar.gz" \
+        -o /home/build/cass.tar.gz || \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://downloads.apache.org/cassandra/${{package.version}}/apache-cassandra-${{package.version}}-bin.tar.gz" \
+        -o /home/build/cass.tar.gz || \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://archive.apache.org/dist/cassandra/${{package.version}}/apache-cassandra-${{package.version}}-bin.tar.gz" \
+        -o /home/build/cass.tar.gz
+
+      echo "${{vars.sha512}}  /home/build/cass.tar.gz" | sha512sum -c -
+
+      cd /home/build
+      tar xzf cass.tar.gz
+      rm cass.tar.gz
+
+  # Custom minimal JRE (Java 17). Cassandra reflects broadly and runs a
+  # javaagent (jamm), so the module set is generous: java.instrument + jdk.attach
+  # for the agent, java.compiler/jdk.compiler + java.scripting for UDFs/reflection,
+  # jdk.management.agent for JMX.
+  - runs: |
+      JAVA_HOME=/usr/lib/jvm/java-17-openjdk
+      $JAVA_HOME/bin/jlink \
+        --module-path $JAVA_HOME/jmods \
+        --add-modules java.base,java.compiler,java.desktop,java.instrument,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.xml,jdk.attach,jdk.compiler,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.jfr,jdk.management,jdk.management.agent,jdk.naming.rmi,jdk.net,jdk.unsupported,jdk.zipfs \
+        --strip-debug \
+        --no-man-pages \
+        --no-header-files \
+        --compress=2 \
+        --output /home/build/custom-jre
+
+  - runs: |
+      CASS_SRC="/home/build/apache-cassandra-${{package.version}}"
+
+      # Custom JRE
+      mkdir -p "${{targets.destdir}}/usr/lib/jvm/java-17-minimal"
+      cp -a /home/build/custom-jre/* "${{targets.destdir}}/usr/lib/jvm/java-17-minimal/"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf ../lib/jvm/java-17-minimal/bin/java "${{targets.destdir}}/usr/bin/java"
+
+      # Cassandra install
+      mkdir -p "${{targets.destdir}}/opt/cassandra"
+      cp -a "$CASS_SRC"/bin "$CASS_SRC"/conf "$CASS_SRC"/lib "$CASS_SRC"/tools \
+        "${{targets.destdir}}/opt/cassandra/"
+
+      # Cassandra bundles Hyperic SIGAR native libs for ~12 architectures (an
+      # optional system-metrics helper). melange's SBOM scanner reads their
+      # foreign-arch ELF sonames — e.g. ia64's libc.so.6.1 — which Wolfi (x86_64/
+      # aarch64 only) can't provide, breaking apko resolution. Keep only the
+      # linux/amd64 native lib; SIGAR ships none for aarch64, where Cassandra
+      # already degrades gracefully (same as upstream on ARM).
+      find "${{targets.destdir}}/opt/cassandra/lib/sigar-bin" -type f \
+        ! -name 'libsigar-amd64-linux.so' -delete 2>/dev/null || true
+
+      # bin/cassandra.in.sh hardcodes cassandra_storagedir=$CASSANDRA_HOME/data,
+      # i.e. /opt/cassandra/data (read-only). All the yaml's default data dirs
+      # (data/commitlog/saved_caches/hints) hang off this base, so startup dies with
+      # AccessDenied. Redirect the base to the writable /var/lib/cassandra (provisioned
+      # by apko), still honouring an externally-set $cassandra_storagedir.
+      sed -i 's|^cassandra_storagedir="\$CASSANDRA_HOME/data"|cassandra_storagedir="${cassandra_storagedir:-/var/lib/cassandra}"|' \
+        "${{targets.destdir}}/opt/cassandra/bin/cassandra.in.sh"
+      grep -q 'cassandra_storagedir:-/var/lib/cassandra' \
+        "${{targets.destdir}}/opt/cassandra/bin/cassandra.in.sh"
+
+      # Container-friendly config: bind CQL/native transport on all interfaces,
+      # single-node seed, auto-detect listen address. Data dirs live under
+      # /var/lib/cassandra (created world-writable at assemble time via apko paths).
+      CONF="${{targets.destdir}}/opt/cassandra/conf/cassandra.yaml"
+      sed -i \
+        -e 's/^listen_address:.*/listen_address: 127.0.0.1/' \
+        -e 's/^rpc_address:.*/rpc_address: 0.0.0.0/' \
+        -e 's/^# broadcast_rpc_address:.*/broadcast_rpc_address: 127.0.0.1/' \
+        "$CONF"
+
+      # Entrypoint: run Cassandra in the foreground via the upstream launcher
+      # (-R permits running as a non-dedicated user). CASSANDRA_LOG_DIR points at
+      # a writable location.
+      cat > "${{targets.destdir}}/usr/bin/cassandra-entrypoint.sh" << 'ENTRY'
+      #!/bin/sh
+      set -e
+      export CASSANDRA_HOME=/opt/cassandra
+      export CASSANDRA_CONF=/opt/cassandra/conf
+      export CASSANDRA_LOG_DIR="${CASSANDRA_LOG_DIR:-/var/lib/cassandra/logs}"
+      export JAVA_HOME=/usr/lib/jvm/java-17-minimal
+      exec /opt/cassandra/bin/cassandra -f -R "$@"
+      ENTRY
+      chmod +x "${{targets.destdir}}/usr/bin/cassandra-entrypoint.sh"
+
+      # Cassandra's tarball ships bin/ as 0755 but make the whole static install
+      # world-readable/traversable (we run as nonroot 65532).
+      chmod -R a+rX "${{targets.destdir}}/opt/cassandra"
+
+      find "${{targets.destdir}}/usr/lib/jvm/java-17-minimal" -name '*.so' \
+        -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  - runs: |
+      echo "Verifying JRE..."
+      "${{targets.destdir}}/usr/lib/jvm/java-17-minimal/bin/java" -version
+      echo "Checking Cassandra jars..."
+      # jamm (the memory-measurement javaagent) must ship; glob the version so a
+      # future patch bump (jamm-0.4.x) doesn't break this guard.
+      ls "${{targets.destdir}}"/opt/cassandra/lib/jamm-*.jar
+      ls "${{targets.destdir}}/opt/cassandra/bin/cassandra"
+
+update:
+  enabled: true
+  github:
+    identifier: apache/cassandra
+    use-tag: true
+    tag-filter: "cassandra-5."

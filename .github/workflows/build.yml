@@ -64,7 +64,7 @@ jobs:
             {"name":"redis-slim","apko":"redis-slim/apko/redis.yaml","variants":["prod","dev"]},
             {"name":"mysql","variants":["prod","dev"]},{"name":"memcached","variants":["prod","dev"]},{"name":"caddy","variants":["prod","dev"]},
             {"name":"haproxy","variants":["prod","dev"]},{"name":"ruby","variants":["prod","dev"]},{"name":"php","variants":["prod","dev"]},{"name":"rails","variants":["prod","dev"]},
-            {"name":"kafka","variants":["prod","dev"]},{"name":"zookeeper","variants":["prod","dev"]},{"name":"tomcat","variants":["prod","dev"]},{"name":"valkey","variants":["prod","dev"]},{"name":"nats","variants":["prod","dev"]},
+            {"name":"kafka","variants":["prod","dev"]},{"name":"zookeeper","variants":["prod","dev"]},{"name":"cassandra","variants":["prod","dev"]},{"name":"solr","variants":["prod","dev"]},{"name":"pulsar","variants":["prod","dev"]},{"name":"tomcat","variants":["prod","dev"]},{"name":"valkey","variants":["prod","dev"]},{"name":"nats","variants":["prod","dev"]},
             {"name":"traefik","variants":["prod","dev"]},{"name":"rabbitmq","variants":["prod","dev"]},{"name":"minio","variants":["prod","dev"]},
             {"name":"prometheus","variants":["prod","dev"]},{"name":"alertmanager","variants":["prod","dev"]},{"name":"mariadb","variants":["prod","dev"]},{"name":"etcd","variants":["prod","dev"]},
             {"name":"victoria-metrics","variants":["prod","dev"]},{"name":"jaeger","variants":["prod","dev"]},{"name":"otelcol","variants":["prod","dev"]},

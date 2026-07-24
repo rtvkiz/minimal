@@ -1,0 +1,121 @@
+# Melange build configuration for minimal Apache Solr
+# Official binary release + custom JRE via jlink (kafka/zookeeper JVM pattern).
+# Solr 10 runs on Java 21. bin/solr is a bash launcher (prod image ships bash).
+# License: Apache-2.0.
+
+package:
+  name: solr-minimal
+  version: 10.0.0
+  epoch: 0
+  description: "Minimal Apache Solr search server with custom JRE (jlink)"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA512 of solr-{version}.tgz - updated by update-versions.yml
+  sha512: 825ab4e92a839802d9f5d570600b622881ddfe4f700cab569afb7d8220590a59d11088f4e10d4dcf9395073c35d73a420cc275a9ed7b18e2f84178bfcb49ae82
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      # Full JDK 21 needed for jlink (build-time only); Solr 10 targets Java 21.
+      - openjdk-21-default-jdk
+      - openjdk-21-jmods
+      # binutils provides objcopy required by jlink --strip-debug
+      - binutils
+
+pipeline:
+  # Download and verify the official Solr binary release
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://dlcdn.apache.org/solr/solr/${{package.version}}/solr-${{package.version}}.tgz" \
+        -o /home/build/solr.tgz || \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://downloads.apache.org/solr/solr/${{package.version}}/solr-${{package.version}}.tgz" \
+        -o /home/build/solr.tgz || \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://archive.apache.org/dist/solr/solr/${{package.version}}/solr-${{package.version}}.tgz" \
+        -o /home/build/solr.tgz
+
+      echo "${{vars.sha512}}  /home/build/solr.tgz" | sha512sum -c -
+
+      cd /home/build
+      tar xzf solr.tgz
+      rm solr.tgz
+
+  # Custom minimal JRE (Java 21). Solr embeds Jetty and reflects broadly, so the
+  # module set is generous: httpserver/net/naming for the servlet stack, crypto +
+  # jgss/sasl for TLS/auth, management(.agent)/jfr for JMX/observability,
+  # jdk.unsupported for Lucene's sun.misc.Unsafe usage.
+  - runs: |
+      JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      $JAVA_HOME/bin/jlink \
+        --module-path $JAVA_HOME/jmods \
+        --add-modules java.base,java.compiler,java.desktop,java.instrument,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.xml,java.xml.crypto,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.httpserver,jdk.incubator.vector,jdk.jfr,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.net,jdk.security.auth,jdk.unsupported,jdk.zipfs \
+        --strip-debug \
+        --no-man-pages \
+        --no-header-files \
+        --compress=zip-6 \
+        --output /home/build/custom-jre
+
+  - runs: |
+      SOLR_SRC="/home/build/solr-${{package.version}}"
+
+      # Custom JRE
+      mkdir -p "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+      cp -a /home/build/custom-jre/* "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf ../lib/jvm/java-21-minimal/bin/java "${{targets.destdir}}/usr/bin/java"
+
+      # Solr install — ship the runtime bits only (bin/server/modules/lib/licenses);
+      # drop docs/, docker/, example/, cross-dc-manager/ to slim the image.
+      mkdir -p "${{targets.destdir}}/opt/solr"
+      cp -a "$SOLR_SRC"/bin "$SOLR_SRC"/server "$SOLR_SRC"/modules "$SOLR_SRC"/lib "$SOLR_SRC"/licenses \
+        "${{targets.destdir}}/opt/solr/"
+
+      # Entrypoint: seed SOLR_HOME with the bundled solr.xml (Solr writes cores under
+      # SOLR_HOME, which must be writable — /opt/solr is read-only), then run in the
+      # foreground bound on all interfaces.
+      cat > "${{targets.destdir}}/usr/bin/solr-entrypoint.sh" << 'ENTRY'
+      #!/bin/sh
+      set -e
+      export SOLR_HOME="${SOLR_HOME:-/var/solr/data}"
+      export SOLR_LOGS_DIR="${SOLR_LOGS_DIR:-/var/solr/logs}"
+      export JAVA_HOME=/usr/lib/jvm/java-21-minimal
+      mkdir -p "$SOLR_HOME" "$SOLR_LOGS_DIR"
+      if [ ! -f "$SOLR_HOME/solr.xml" ]; then
+        cp /opt/solr/server/solr/solr.xml "$SOLR_HOME/solr.xml"
+      fi
+      exec /opt/solr/bin/solr start -f "$@"
+      ENTRY
+      chmod +x "${{targets.destdir}}/usr/bin/solr-entrypoint.sh"
+
+      # Whole static install world-readable/traversable (we run as nonroot 65532).
+      chmod -R a+rX "${{targets.destdir}}/opt/solr"
+
+      find "${{targets.destdir}}/usr/lib/jvm/java-21-minimal" -name '*.so' \
+        -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  - runs: |
+      echo "Verifying JRE..."
+      "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/bin/java" -version
+      echo "Checking Solr install..."
+      test -x "${{targets.destdir}}/opt/solr/bin/solr"
+      ls "${{targets.destdir}}"/opt/solr/server/solr/solr.xml
+      ls "${{targets.destdir}}"/opt/solr/server/solr-webapp/webapp/WEB-INF/lib/solr-core-*.jar
+
+update:
+  enabled: true
+  github:
+    identifier: apache/solr
+    use-tag: true
+    tag-filter: "releases/solr/10."
+    strip-prefix: "releases/solr/"

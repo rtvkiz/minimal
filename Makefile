@@ -33,6 +33,9 @@ TOMCAT_VERSION ?= $(call melange_version,tomcat/melange.yaml)
 VALKEY_VERSION ?= $(call melange_version,valkey/melange.yaml)
 NATS_VERSION ?= $(call melange_version,nats/melange.yaml)
 RABBITMQ_VERSION ?= $(call melange_version,rabbitmq/melange.yaml)
+CASSANDRA_VERSION ?= $(call melange_version,cassandra/melange.yaml)
+SOLR_VERSION ?= $(call melange_version,solr/melange.yaml)
+PULSAR_VERSION ?= $(call melange_version,pulsar/melange.yaml)
 
 # --- Ingress/Proxies ---
 CADDY_VERSION ?= $(call melange_version,caddy/melange.yaml)
@@ -171,7 +174,7 @@ endef
 .PHONY: kaniko kaniko-melange kaniko-dev test-kaniko test-kaniko-dev
 .PHONY: step-ca step-ca-melange step-ca-dev test-step-ca test-step-ca-dev
 .PHONY: skopeo skopeo-melange skopeo-dev test-skopeo test-skopeo-dev
-.PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange memcached-dev caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite sqlite-dev dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange keygen opensearch opensearch-melange opensearch-dev mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
+.PHONY: python python-dev jenkins jenkins-melange go go-dev node-slim node-slim-dev nginx httpd redis-slim redis-slim-melange redis-slim-dev mysql mysql-melange mysql-local memcached memcached-melange memcached-dev caddy caddy-melange haproxy haproxy-melange postgres-slim postgres-slim-dev bun bun-dev sqlite sqlite-dev dotnet dotnet-dev java java-dev ruby ruby-melange ruby-dev php php-melange php-dev rails rails-melange rails-dev deno deno-dev kafka kafka-melange cassandra cassandra-melange solr solr-melange pulsar pulsar-melange keygen opensearch opensearch-melange opensearch-dev mariadb mariadb-melange mariadb-dev valkey valkey-melange valkey-dev
 .PHONY: valkey valkey-melange nats nats-melange traefik traefik-melange envoy envoy-melange rabbitmq rabbitmq-melange minio minio-melange
 .PHONY: prometheus prometheus-melange alertmanager alertmanager-melange mariadb mariadb-melange
 .PHONY: etcd etcd-melange victoria-metrics victoria-metrics-melange jaeger jaeger-melange otelcol otelcol-melange qdrant qdrant-melange deno deno-melange
@@ -213,13 +216,13 @@ endef
 .PHONY: blackbox-exporter blackbox-exporter-melange test-blackbox-exporter
 .PHONY: pushgateway pushgateway-melange test-pushgateway
 .PHONY: mosquitto mosquitto-melange mosquitto-dev test-mosquitto test-mosquitto-dev
-.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
-.PHONY: test-python test-python-dev test-jenkins test-go test-go-dev test-node-slim test-node-slim-dev test-nginx test-httpd test-redis-slim test-redis-slim-dev test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-postgres-slim-dev test-bun test-bun-dev test-sqlite test-dotnet test-dotnet-dev test-java test-java-dev test-ruby test-ruby-dev test-php test-php-dev test-rails test-rails-dev test-deno test-deno-dev test-mariadb test-mariadb-dev test-valkey test-valkey-dev test-memcached-dev test-sqlite-dev test-opensearch-dev test-kafka test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-coredns test-openbao test-loki test-fluent-bit test-keycloak
+.PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-cassandra scan-solr scan-pulsar scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
+.PHONY: test-python test-python-dev test-jenkins test-go test-go-dev test-node-slim test-node-slim-dev test-nginx test-httpd test-redis-slim test-redis-slim-dev test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-postgres-slim-dev test-bun test-bun-dev test-sqlite test-dotnet test-dotnet-dev test-java test-java-dev test-ruby test-ruby-dev test-php test-php-dev test-rails test-rails-dev test-deno test-deno-dev test-mariadb test-mariadb-dev test-valkey test-valkey-dev test-memcached-dev test-sqlite-dev test-opensearch-dev test-kafka test-cassandra test-solr test-pulsar test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-coredns test-openbao test-loki test-fluent-bit test-keycloak
 
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound external-dns velero kaniko step-ca skopeo sqlite opensearch redis-slim valkey memcached kafka zookeeper tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter pushgateway coredns etcd openbao keycloak qdrant registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound external-dns velero kaniko step-ca skopeo sqlite opensearch redis-slim valkey memcached kafka zookeeper cassandra solr pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter pushgateway coredns etcd openbao keycloak qdrant registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -265,6 +268,9 @@ $(eval $(call DEV_IMAGE_RULE,memcached,memcached-melange,--repository-append ./p
 $(eval $(call DEV_IMAGE_RULE,sqlite))
 $(eval $(call DEV_IMAGE_RULE,opensearch))
 $(eval $(call DEV_IMAGE_RULE,kafka,kafka-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,cassandra,cassandra-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,solr,solr-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,pulsar,pulsar-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,rabbitmq,rabbitmq-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,nats,nats-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,etcd,etcd-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -1273,6 +1279,86 @@ kafka: kafka-melange
 		$(REGISTRY)/$(OWNER)/minimal-kafka:latest
 	@rm -f kafka.tar sbom-*.spdx.json
 	@echo "✓ minimal-kafka built (official binary + jlink JRE)"
+
+#------------------------------------------------------------------------------
+# CASSANDRA IMAGE (official binary release + jlink JRE, Java 17)
+#------------------------------------------------------------------------------
+cassandra-melange: keygen
+	@echo "Building Cassandra $(CASSANDRA_VERSION) package via melange..."
+	# x86_64 only locally: jlink runs inside the melange sandbox so aarch64
+	# cross-builds fail on x86_64 hosts without QEMU binfmt. CI uses native ARM runners.
+	melange build cassandra/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Cassandra package built"
+
+cassandra: cassandra-melange
+	@echo "Assembling minimal-cassandra image with apko..."
+	apko build cassandra/apko/cassandra.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-cassandra:$(CASSANDRA_VERSION) \
+		cassandra.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < cassandra.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-cassandra:$(CASSANDRA_VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-cassandra:$(CASSANDRA_VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-cassandra:$(CASSANDRA_VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-cassandra:latest
+	@rm -f cassandra.tar sbom-*.spdx.json
+	@echo "✓ minimal-cassandra built (official binary + jlink JRE)"
+
+#------------------------------------------------------------------------------
+# SOLR IMAGE (official binary release + jlink JRE, Java 21)
+#------------------------------------------------------------------------------
+solr-melange: keygen
+	@echo "Building Solr $(SOLR_VERSION) package via melange..."
+	melange build solr/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Solr package built"
+
+solr: solr-melange
+	@echo "Assembling minimal-solr image with apko..."
+	apko build solr/apko/solr.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-solr:$(SOLR_VERSION) \
+		solr.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < solr.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-solr:$(SOLR_VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-solr:$(SOLR_VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-solr:$(SOLR_VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-solr:latest
+	@rm -f solr.tar sbom-*.spdx.json
+	@echo "✓ minimal-solr built (official binary + jlink JRE)"
+
+#------------------------------------------------------------------------------
+# PULSAR IMAGE (official binary release + jlink JRE, Java 21)
+#------------------------------------------------------------------------------
+pulsar-melange: keygen
+	@echo "Building Pulsar $(PULSAR_VERSION) package via melange..."
+	melange build pulsar/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Pulsar package built"
+
+pulsar: pulsar-melange
+	@echo "Assembling minimal-pulsar image with apko..."
+	apko build pulsar/apko/pulsar.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-pulsar:$(PULSAR_VERSION) \
+		pulsar.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < pulsar.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-pulsar:$(PULSAR_VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-pulsar:$(PULSAR_VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-pulsar:$(PULSAR_VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-pulsar:latest
+	@rm -f pulsar.tar sbom-*.spdx.json
+	@echo "✓ minimal-pulsar built (official binary + jlink JRE)"
 
 zookeeper-melange: keygen
 	@echo "Building ZooKeeper $(ZOOKEEPER_VERSION) package via melange..."
@@ -2483,7 +2569,7 @@ scan-%:
 		$(REGISTRY)/$(OWNER)/minimal-$*:latest
 	@echo "✓ minimal-$*: scan passed"
 
-scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit
+scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -2604,6 +2690,24 @@ scan-kafka:
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-kafka:latest
 	@echo "✓ minimal-kafka: scan passed"
+
+scan-cassandra:
+	@echo "Scanning minimal-cassandra..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-cassandra:latest
+	@echo "✓ minimal-cassandra: scan passed"
+
+scan-solr:
+	@echo "Scanning minimal-solr..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-solr:latest
+	@echo "✓ minimal-solr: scan passed"
+
+scan-pulsar:
+	@echo "Scanning minimal-pulsar..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-pulsar:latest
+	@echo "✓ minimal-pulsar: scan passed"
 
 scan-valkey:
 	@echo "Scanning minimal-valkey..."
@@ -2787,7 +2891,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit
+test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit
 
 $(eval $(call DEV_TEST_RULE,python))
 $(eval $(call DEV_TEST_RULE,node-slim))
@@ -2806,6 +2910,9 @@ $(eval $(call DEV_TEST_RULE,memcached))
 $(eval $(call DEV_TEST_RULE,sqlite))
 $(eval $(call DEV_TEST_RULE,opensearch))
 $(eval $(call DEV_TEST_RULE,kafka))
+$(eval $(call DEV_TEST_RULE,cassandra))
+$(eval $(call DEV_TEST_RULE,solr))
+$(eval $(call DEV_TEST_RULE,pulsar))
 $(eval $(call DEV_TEST_RULE,rabbitmq))
 $(eval $(call DEV_TEST_RULE,nats))
 $(eval $(call DEV_TEST_RULE,etcd))
@@ -3114,6 +3221,24 @@ test-kafka:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kafka:latest" && \
 		kafka/test.sh
 	@echo "✓ Kafka tests passed"
+
+test-cassandra:
+	@echo "Testing Cassandra image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-cassandra:latest" && \
+		cassandra/test.sh
+	@echo "✓ Cassandra tests passed"
+
+test-solr:
+	@echo "Testing Solr image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-solr:latest" && \
+		solr/test.sh
+	@echo "✓ Solr tests passed"
+
+test-pulsar:
+	@echo "Testing Pulsar image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-pulsar:latest" && \
+		pulsar/test.sh
+	@echo "✓ Pulsar tests passed"
 
 test-zookeeper:
 	@echo "Testing zookeeper image..."
@@ -3542,6 +3667,9 @@ test-cuda-python:
 # (empty override falls back to $(VERSION) via $(or …)).
 PUSH_VER_kafka     = $(KAFKA_VERSION)
 PUSH_VER_zookeeper = $(ZOOKEEPER_VERSION)
+PUSH_VER_cassandra = $(CASSANDRA_VERSION)
+PUSH_VER_solr      = $(SOLR_VERSION)
+PUSH_VER_pulsar    = $(PULSAR_VERSION)
 PUSH_VER_tomcat    = $(TOMCAT_VERSION)
 PUSH_VER_rabbitmq  = $(RABBITMQ_VERSION)
 
@@ -3549,7 +3677,7 @@ push-%:
 	docker push $(REGISTRY)/$(OWNER)/minimal-$*:$(or $(PUSH_VER_$*),$(VERSION))
 	docker push $(REGISTRY)/$(OWNER)/minimal-$*:latest
 
-push: push-python push-node-slim push-bun push-go push-java push-ruby push-php push-dotnet push-deno push-mysql push-mariadb push-postgres-slim push-pgbouncer push-unbound push-external-dns push-velero push-kaniko push-step-ca push-skopeo push-sqlite push-opensearch push-redis-slim push-valkey push-memcached push-kafka push-zookeeper push-tomcat push-rabbitmq push-nats push-mosquitto push-nginx push-httpd push-caddy push-haproxy push-traefik push-envoy push-oauth2-proxy push-prometheus push-alertmanager push-victoria-metrics push-thanos push-mimir push-jaeger push-loki push-tempo push-otelcol push-fluent-bit push-telegraf push-node-exporter push-blackbox-exporter push-pushgateway push-coredns push-etcd push-openbao push-keycloak push-qdrant push-registry push-consul push-helm push-kubectl push-opentofu push-trivy push-cosign push-syft push-grype push-osv-scanner push-oras push-notation push-conftest push-kubeconform push-kube-bench push-trufflehog push-flux push-kustomize push-sops push-crane push-kubeseal push-helmfile push-regctl push-stern push-gitleaks push-step-cli push-opa push-jenkins push-gitea push-minio push-rails push-mailpit
+push: push-python push-node-slim push-bun push-go push-java push-ruby push-php push-dotnet push-deno push-mysql push-mariadb push-postgres-slim push-pgbouncer push-unbound push-external-dns push-velero push-kaniko push-step-ca push-skopeo push-sqlite push-opensearch push-redis-slim push-valkey push-memcached push-kafka push-zookeeper push-cassandra push-solr push-pulsar push-tomcat push-rabbitmq push-nats push-mosquitto push-nginx push-httpd push-caddy push-haproxy push-traefik push-envoy push-oauth2-proxy push-prometheus push-alertmanager push-victoria-metrics push-thanos push-mimir push-jaeger push-loki push-tempo push-otelcol push-fluent-bit push-telegraf push-node-exporter push-blackbox-exporter push-pushgateway push-coredns push-etcd push-openbao push-keycloak push-qdrant push-registry push-consul push-helm push-kubectl push-opentofu push-trivy push-cosign push-syft push-grype push-osv-scanner push-oras push-notation push-conftest push-kubeconform push-kube-bench push-trufflehog push-flux push-kustomize push-sops push-crane push-kubeseal push-helmfile push-regctl push-stern push-gitleaks push-step-cli push-opa push-jenkins push-gitea push-minio push-rails push-mailpit
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -3613,6 +3741,15 @@ clean:
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-kafka:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-cassandra:$(CASSANDRA_VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-cassandra:$(CASSANDRA_VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-cassandra:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-solr:$(SOLR_VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-solr:$(SOLR_VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-solr:latest 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-pulsar:$(PULSAR_VERSION) 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-pulsar:$(PULSAR_VERSION)-amd64 2>/dev/null || true
+	docker rmi $(REGISTRY)/$(OWNER)/minimal-pulsar:latest 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-valkey:$(VERSION) 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-valkey:$(VERSION)-amd64 2>/dev/null || true
 	docker rmi $(REGISTRY)/$(OWNER)/minimal-valkey:latest 2>/dev/null || true
@@ -3688,6 +3825,9 @@ help:
 	@echo "  make php             Build PHP (melange source build)"
 	@echo "  make rails           Build Rails (Ruby $(RUBY_VERSION) + Rails $(RAILS_VERSION), source build)"
 	@echo "  make kafka           Build Kafka $(KAFKA_VERSION) (official binary + jlink JRE, KRaft)"
+	@echo "  make cassandra       Build Cassandra $(CASSANDRA_VERSION) (official binary + jlink JRE)"
+	@echo "  make solr            Build Solr $(SOLR_VERSION) (official binary + jlink JRE)"
+	@echo "  make pulsar          Build Pulsar $(PULSAR_VERSION) (official binary + jlink JRE)"
 	@echo "  make kafka-melange   Build Kafka package only (no image)"
 	@echo "  make valkey          Build Valkey $(VALKEY_VERSION) (source build)"
 	@echo "  make nats            Build NATS $(NATS_VERSION) (source build)"

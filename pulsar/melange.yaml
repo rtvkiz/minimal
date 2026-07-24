@@ -1,0 +1,119 @@
+# Melange build configuration for minimal Apache Pulsar
+# Official binary release + custom JRE via jlink (kafka/zookeeper JVM pattern).
+# Pulsar 4.x requires Java 21. bin/pulsar is a bash launcher (prod image ships bash).
+# License: Apache-2.0.
+
+package:
+  name: pulsar-minimal
+  version: 4.2.3
+  epoch: 0
+  description: "Minimal Apache Pulsar messaging/streaming server with custom JRE (jlink)"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA512 of apache-pulsar-{version}-bin.tar.gz - updated by update-versions.yml
+  sha512: 18805f38e0e8cbd8870bdccb6832505b2c2d42b541d877074aaeacd6ed563b7f06bd1392fda639db52bf2a4ca0f9e6e2b0ddf65026875e337342998c56b7b61a
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      # Full JDK 21 needed for jlink (build-time only); Pulsar 4.x targets Java 21.
+      - openjdk-21-default-jdk
+      - openjdk-21-jmods
+      # binutils provides objcopy required by jlink --strip-debug
+      - binutils
+
+pipeline:
+  # Download and verify the official Pulsar binary release
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://dlcdn.apache.org/pulsar/pulsar-${{package.version}}/apache-pulsar-${{package.version}}-bin.tar.gz" \
+        -o /home/build/pulsar.tar.gz || \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://downloads.apache.org/pulsar/pulsar-${{package.version}}/apache-pulsar-${{package.version}}-bin.tar.gz" \
+        -o /home/build/pulsar.tar.gz || \
+      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+        "https://archive.apache.org/dist/pulsar/pulsar-${{package.version}}/apache-pulsar-${{package.version}}-bin.tar.gz" \
+        -o /home/build/pulsar.tar.gz
+
+      echo "${{vars.sha512}}  /home/build/pulsar.tar.gz" | sha512sum -c -
+
+      cd /home/build
+      tar xzf pulsar.tar.gz
+      rm pulsar.tar.gz
+
+  # Custom minimal JRE (Java 21). Pulsar bundles Netty, BookKeeper (RocksDB JNI) and
+  # ZooKeeper, so the module set is generous: crypto + jgss/sasl for TLS/auth,
+  # management(.agent)/jfr for JMX, jdk.sctp/jdk.net for Netty transports,
+  # jdk.unsupported for Netty/RocksDB sun.misc.Unsafe usage.
+  - runs: |
+      JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      $JAVA_HOME/bin/jlink \
+        --module-path $JAVA_HOME/jmods \
+        --add-modules java.base,java.compiler,java.desktop,java.instrument,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.xml,java.xml.crypto,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.httpserver,jdk.jfr,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.net,jdk.sctp,jdk.security.auth,jdk.unsupported,jdk.zipfs \
+        --strip-debug \
+        --no-man-pages \
+        --no-header-files \
+        --compress=zip-6 \
+        --output /home/build/custom-jre
+
+  - runs: |
+      PULSAR_SRC="/home/build/apache-pulsar-${{package.version}}"
+
+      # Custom JRE
+      mkdir -p "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+      cp -a /home/build/custom-jre/* "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf ../lib/jvm/java-21-minimal/bin/java "${{targets.destdir}}/usr/bin/java"
+
+      # Pulsar install — ship the runtime bits (bin/conf/lib). Drop examples/ and the
+      # functions runtime (instances/) to slim; standalone messaging doesn't need them.
+      mkdir -p "${{targets.destdir}}/opt/pulsar"
+      cp -a "$PULSAR_SRC"/bin "$PULSAR_SRC"/conf "$PULSAR_SRC"/lib \
+        "${{targets.destdir}}/opt/pulsar/"
+
+      # Entrypoint: run a single-node standalone cluster in the foreground with data
+      # and logs under /var/lib/pulsar (writable) — /opt/pulsar is read-only.
+      cat > "${{targets.destdir}}/usr/bin/pulsar-entrypoint.sh" << 'ENTRY'
+      #!/bin/sh
+      set -e
+      export PULSAR_HOME=/opt/pulsar
+      export JAVA_HOME=/usr/lib/jvm/java-21-minimal
+      export PULSAR_LOG_DIR="${PULSAR_LOG_DIR:-/var/lib/pulsar/logs}"
+      mkdir -p "$PULSAR_LOG_DIR" /var/lib/pulsar/zookeeper /var/lib/pulsar/bookkeeper
+      exec /opt/pulsar/bin/pulsar standalone \
+        --zookeeper-dir /var/lib/pulsar/zookeeper \
+        --bookkeeper-dir /var/lib/pulsar/bookkeeper "$@"
+      ENTRY
+      chmod +x "${{targets.destdir}}/usr/bin/pulsar-entrypoint.sh"
+
+      # Whole static install world-readable/traversable (we run as nonroot 65532).
+      chmod -R a+rX "${{targets.destdir}}/opt/pulsar"
+
+      find "${{targets.destdir}}/usr/lib/jvm/java-21-minimal" -name '*.so' \
+        -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  - runs: |
+      echo "Verifying JRE..."
+      "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/bin/java" -version
+      echo "Checking Pulsar install..."
+      test -x "${{targets.destdir}}/opt/pulsar/bin/pulsar"
+      ls "${{targets.destdir}}"/opt/pulsar/lib/org.apache.pulsar-pulsar-broker-*.jar
+      test -f "${{targets.destdir}}/opt/pulsar/conf/standalone.conf"
+
+update:
+  enabled: true
+  github:
+    identifier: apache/pulsar
+    use-tag: true
+    tag-filter: "v4."
+    strip-prefix: "v"

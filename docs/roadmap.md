@@ -1,6 +1,6 @@
 # Image Roadmap — the road to 100 (demand-ranked)
 
-**Status: 83 / 100 images.** This is the source-of-truth plan for growing the catalog.
+**Status: 91 / 100 images.** This is the source-of-truth plan for growing the catalog.
 It supersedes the batch order from earlier sessions, which was ordered by *build ease* and
 *GitHub popularity*. This version is ordered by **actual container demand first**, then
 build effort.
@@ -111,9 +111,9 @@ Policy filter = buildable under the shell-less/minimal thesis: ✅ static-Go bin
 C daemon (no *runtime* compiler — the varnish lesson) · JVM-jlink · interpreter ·
 binary-repackage. Excluded from the 100-path: frontend-in-bwrap (grafana/argocd/uptime-kuma),
 runtime-compiler (varnish), tangled force-bump graphs, huge-disk C++ (clickhouse), and
-🔴 SSPL/BUSL/EULA. 83 → 100 = 17 images.
+🔴 SSPL/BUSL/EULA. At the current 91-image catalog, 9 images remain to reach 100.
 
-### Batch F — static Go (the crank) → 88   [IN PROGRESS]
+### Batch F — static Go (the crank) → 88   [DONE]
 | Image | Upstream | License | Build notes |
 |---|---|---|---|
 | external-dns | kubernetes-sigs/external-dns v0.21.0 | 🟢 Apache | main `.`, CGO=0, `-X …/pkg/apis/externaldns.Version` |
@@ -125,9 +125,10 @@ runtime-compiler (varnish), tangled force-bump graphs, huge-disk C++ (clickhouse
 ### Batch G — clean C daemon (pgbouncer/unbound template) → 90
 dnsmasq (🟡 GPL-2.0, DNS/DHCP/TFTP) · keepalived (🟡 GPL-2.0, VRRP/LVS HA). Fills thin **Infrastructure**.
 
-### Batch H — JVM-jlink (kafka/zookeeper template) → 94
-solr (🟢 search) · cassandra (🟢 wide-column DB, needs Java-17 + jamm agent) · pulsar (🟢 messaging) ·
-flink (🟢 stream processing). All Apache. Fills thin DB/search/messaging.
+### Batch H — JVM-jlink (kafka/zookeeper template) → 91 done, → 92 remaining
+cassandra (🟢 wide-column DB, Java-17 + jamm agent) · solr (🟢 search, Java-21) ·
+pulsar (🟢 messaging, Java-21) — **DONE → 91**. flink (🟢 stream processing, Java-21) remaining.
+All Apache. Fills thin DB/search/messaging.
 
 ### Batch I — Rust (qdrant/vector precedent, own effort each) → 96
 vector (🟢 MPL-2.0, observability pipeline) · vaultwarden (🟡 AGPL-3.0, Bitwarden server; ~304M pulls).

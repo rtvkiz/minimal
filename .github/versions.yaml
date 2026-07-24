@@ -773,6 +773,69 @@
     releases: "https://zookeeper.apache.org/releases.html"
     notes: "https://archive.apache.org/dist/zookeeper/zookeeper-{version}/"
 
+- name: cassandra
+  cron-enabled: true   # batch H JVM (validated 2026-07-23)
+  files: [cassandra/melange.yaml]
+  source:
+    type: scrape
+    urls:
+      - "https://downloads.apache.org/cassandra/"
+      - "https://dlcdn.apache.org/cassandra/"
+    pattern: 'href="([0-9]+\.[0-9]+\.[0-9]+)/"'
+    pin-major: 5
+  tarball:
+    urls:
+      - "https://downloads.apache.org/cassandra/{version}/apache-cassandra-{version}-bin.tar.gz"
+      - "https://dlcdn.apache.org/cassandra/{version}/apache-cassandra-{version}-bin.tar.gz"
+      - "https://archive.apache.org/dist/cassandra/{version}/apache-cassandra-{version}-bin.tar.gz"
+    field: sha512
+  major-issue: true
+  links:
+    releases: "https://cassandra.apache.org/download/"
+    notes: "https://github.com/apache/cassandra/blob/cassandra-{version}/CHANGES.txt"
+
+- name: solr
+  cron-enabled: true   # batch H JVM (validated 2026-07-23)
+  files: [solr/melange.yaml]
+  source:
+    type: scrape
+    urls:
+      - "https://downloads.apache.org/solr/solr/"
+      - "https://dlcdn.apache.org/solr/solr/"
+    pattern: 'href="([0-9]+\.[0-9]+\.[0-9]+)/"'
+    pin-major: 10
+  tarball:
+    urls:
+      - "https://downloads.apache.org/solr/solr/{version}/solr-{version}.tgz"
+      - "https://dlcdn.apache.org/solr/solr/{version}/solr-{version}.tgz"
+      - "https://archive.apache.org/dist/solr/solr/{version}/solr-{version}.tgz"
+    field: sha512
+  major-issue: true
+  links:
+    releases: "https://solr.apache.org/downloads.html"
+    notes: "https://solr.apache.org/guide/solr/latest/index.html"
+
+- name: pulsar
+  cron-enabled: true   # batch H JVM (validated 2026-07-23)
+  files: [pulsar/melange.yaml]
+  source:
+    type: scrape
+    urls:
+      - "https://downloads.apache.org/pulsar/"
+      - "https://dlcdn.apache.org/pulsar/"
+    pattern: 'href="pulsar-([0-9]+\.[0-9]+\.[0-9]+)/"'
+    pin-major: 4
+  tarball:
+    urls:
+      - "https://downloads.apache.org/pulsar/pulsar-{version}/apache-pulsar-{version}-bin.tar.gz"
+      - "https://dlcdn.apache.org/pulsar/pulsar-{version}/apache-pulsar-{version}-bin.tar.gz"
+      - "https://archive.apache.org/dist/pulsar/pulsar-{version}/apache-pulsar-{version}-bin.tar.gz"
+    field: sha512
+  major-issue: true
+  links:
+    releases: "https://pulsar.apache.org/download/"
+    notes: "https://pulsar.apache.org/release-notes/"
+
 - name: tomcat
   # Deliberately pinned to the Tomcat 11 line: the scrape URL points at the
   # tomcat-11/ subdirectory. Detecting a new major (12) would need a two-level

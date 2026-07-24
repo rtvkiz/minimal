@@ -98,6 +98,8 @@
 #
 # Per-image fields:
 #   jar-root       directory under the image root to search for jars
+#   policy         auto (default) — apply coord-map matches using strategy
+#                  report-only    — report fixable jars but never modify files
 #   strategy       rename        — install <artifact>-<newver>.jar, drop old
 #                                   (directory classpaths, e.g. opensearch)
 #                  keep-filename — overwrite jar contents, keep the old name so
@@ -123,4 +125,22 @@
     - name: keycloak
       jar-root: opt/keycloak
       strategy: keep-filename
+      splice-before: "update:"
+    # These upstream binary distributions contain tightly coupled jar families
+    # (Netty/Jackson, Lucene/Solr, BookKeeper/Pulsar). Scan them now, but require
+    # an explicit compatibility review before promoting an artifact to auto.
+    - name: cassandra
+      jar-root: opt/cassandra
+      policy: report-only
+      strategy: rename
+      splice-before: "update:"
+    - name: solr
+      jar-root: opt/solr
+      policy: report-only
+      strategy: rename
+      splice-before: "update:"
+    - name: pulsar
+      jar-root: opt/pulsar
+      policy: report-only
+      strategy: rename
       splice-before: "update:"

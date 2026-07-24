@@ -19,6 +19,7 @@
 #   images:
 #     - name: opensearch
 #       jar-root: usr/share/opensearch        # where to search for jars
+#       policy: auto                           # default; report-only never patches
 #       strategy: rename                       # rename jar to the new version
 #       splice-before: "  # Verify"            # melange line to insert before
 #     - name: keycloak
@@ -57,12 +58,15 @@ ver_gt() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail
 HAS_PATCHES=false
 PATCHED_LIST=""
 SUMMARY=""
+HAS_REPORTS=false
+REPORT_SUMMARY=""
 
 image_count=$(jq '.images | length' <<<"$row")
 for i in $(seq 0 $((image_count - 1))); do
   img_json=$(jq -c ".images[$i]" <<<"$row")
   image=$(jq -r '.name' <<<"$img_json")
   jar_root=$(jq -r '.["jar-root"]' <<<"$img_json")
+  policy=$(jq -r '.policy // "auto"' <<<"$img_json")
   strategy=$(jq -r '.strategy' <<<"$img_json")
   splice_before=$(jq -r '.["splice-before"]' <<<"$img_json")
   melange="${image}/melange.yaml"
@@ -71,16 +75,53 @@ for i in $(seq 0 $((image_count - 1))); do
   echo "=== Scanning $image (bundled jars) ==="
   [ -f "$melange" ] || { echo "  WARN: $melange not found"; continue; }
 
+  case "$policy" in
+    auto|report-only) ;;
+    *) echo "  WARN: unknown policy '$policy' (refusing to patch)"; continue ;;
+  esac
+
+  scan_json=$(mktemp)
+  if ! grype "$full_image" -o json >"$scan_json" 2>/dev/null; then
+    echo "  WARN: grype scan failed"
+    rm -f "$scan_json"
+    continue
+  fi
+
+  # Report-only is the safe onboarding state for API-coupled distributions.
+  # Surface every fixable Java archive, including artifacts not yet present in
+  # coord-map, but never rewrite melange.yaml or create a patch PR for them.
+  if [ "$policy" = "report-only" ]; then
+    report_count=$(jq '[.matches[]
+        | select(.artifact.type == "java-archive")
+        | select((.vulnerability.fix.versions | length) > 0)
+        | {name: .artifact.name, installed: .artifact.version, fix: .vulnerability.fix.versions[0]}]
+        | unique_by(.name + .installed + .fix) | length' "$scan_json")
+    if [ "$report_count" -gt 0 ]; then
+      report_names=$(jq -r '[.matches[]
+          | select(.artifact.type == "java-archive")
+          | select((.vulnerability.fix.versions | length) > 0)
+          | .artifact.name] | unique | sort | join(", ")' "$scan_json")
+      echo "  REPORT ONLY: $report_count fixable finding(s): $report_names"
+      HAS_REPORTS=true
+      REPORT_SUMMARY="${REPORT_SUMMARY}- **${image}** (${report_count} fixable finding(s)): ${report_names}"$'\n'
+    else
+      echo "  No fixable bundled-jar CVEs"
+    fi
+    rm -f "$scan_json"
+    continue
+  fi
+
   # grype → "artifact<TAB>installed<TAB>fix" for java-archive matches whose
   # artifact is in coord-map and that actually have a fix version.
-  fixes=$(grype "$full_image" -o json 2>/dev/null | jq -r --argjson cm "$(jq -c '.["coord-map"]' <<<"$row")" '
+  fixes=$(jq -r --argjson cm "$(jq -c '.["coord-map"]' <<<"$row")" '
       [ .matches[]
         | select(.artifact.type == "java-archive")
         | select(.artifact.name as $n | $cm | has($n))
         | select((.vulnerability.fix.versions | length) > 0)
         | { name: .artifact.name, installed: .artifact.version, fix: .vulnerability.fix.versions[0] }
       ] | unique_by(.name + .installed + .fix) | .[] | "\(.name)\t\(.installed)\t\(.fix)"
-    ' 2>/dev/null | sort -t"$(printf '\t')" -k1,1 -k3,3rV || true)
+    ' "$scan_json" 2>/dev/null | sort -t"$(printf '\t')" -k1,1 -k3,3rV || true)
+  rm -f "$scan_json"
   # Highest fix version per artifact is tried first; the loop takes the first
   # one that is actually published, so we land on the newest available fix.
 
@@ -192,4 +233,15 @@ if [ "$HAS_PATCHES" = true ]; then
 else
   echo "has_patches=false" >> "$out"
   echo "No bundled-jar patches needed"
+fi
+
+if [ "$HAS_REPORTS" = true ]; then
+  {
+    echo "has_reports=true"
+    echo "report_summary<<EOF"
+    printf '%s' "$REPORT_SUMMARY"
+    echo "EOF"
+  } >> "$out"
+else
+  echo "has_reports=false" >> "$out"
 fi

@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       only:
-        description: "Comma-separated row names (bundler,rust,maven). Blank = all."
+        description: "Comma-separated row names (bundler,rust,maven,bundled-jars). Blank = all."
         required: false
         default: ""
 
@@ -127,6 +127,19 @@ jobs:
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
           ROW: ${{ toJson(matrix) }}
         run: ./.github/scripts/patch-deps.sh "$ROW"
+
+      - name: Summarize report-only findings
+        if: steps.scan.outputs.has_reports == 'true'
+        env:
+          REPORT_SUMMARY: ${{ steps.scan.outputs.report_summary }}
+        run: |
+          {
+            echo "## Bundled JARs requiring compatibility review"
+            echo
+            printf '%s\n' "$REPORT_SUMMARY"
+            echo
+            echo "Report-only images are never rewritten or published by this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Close stale PR
         if: steps.scan.outputs.has_patches != 'true' && steps.existing-pr.outputs.pr_url != ''
