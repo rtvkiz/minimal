@@ -42,34 +42,55 @@ pipeline:
       tar xzf caddy.tar.gz
       rm caddy.tar.gz
 
-  # patch-go-deps: auto-generated — do not edit manually
+  # Caddy v2.11.4 predates cel-go v0.29's InterpretableV2 API. Backport the
+  # exact upstream compatibility change from caddyserver/caddy@b2693fb so the
+  # patched dependency can be used without building an unreleased Caddy tree.
+  # The assertions make this self-expiring: a future Caddy release containing
+  # the change passes unchanged, while an unexpected source layout fails closed.
+  - runs: |
+      celmatcher="/home/build/caddy-${{package.version}}/modules/caddyhttp/celmatcher.go"
+      old_count=$(grep -cF '[]interpreter.Interpretable{reqAttr}' "$celmatcher" || true)
+      new_count=$(grep -cF '[]interpreter.InterpretableV2{reqAttr}' "$celmatcher" || true)
+      if [ "$old_count" -eq 2 ] && [ "$new_count" -eq 0 ]; then
+        sed -i 's/\[\]interpreter\.Interpretable{reqAttr}/[]interpreter.InterpretableV2{reqAttr}/g' "$celmatcher"
+      elif [ "$old_count" -eq 0 ] && [ "$new_count" -eq 2 ]; then
+        echo "Caddy source already contains the cel-go v0.29 compatibility change"
+      else
+        echo "Unexpected Caddy CEL matcher API shape (old=$old_count, new=$new_count)" >&2
+        exit 1
+      fi
+      test "$(grep -cF '[]interpreter.InterpretableV2{reqAttr}' "$celmatcher")" -eq 2
+
+  # patch-go-deps: auto-generated — do not edit manually (test-and-keep)
   - runs: |
       export GOWORK=off
       _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
-      _pgd_reqs() { awk '$1=="require" && $2=="(" {b=1;next} b && $1==")" {b=0;next} b && index($1,"/")>0 && substr($2,1,1)=="v" {print $1,$2;next} $1=="require" && NF>=3 && index($2,"/")>0 && substr($3,1,1)=="v" {print $2,$3}' "$1"; }
       for root in /home/build/caddy-${{package.version}}; do
         [ -f "$root/go.mod" ] || continue
         ( set -e
           cd "$root"
-          cp go.mod .pgd-orig.mod
-          _retry go get github.com/go-chi/chi/v5@v5.3.0 github.com/google/cel-go@v0.29.0 google.golang.org/grpc@v1.82.1 go.opentelemetry.io/otel@v1.44.0 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.48.0
-          go mod tidy -e
-          # go mod tidy can downgrade a source-pinned require below what the
-          # source shipped (e.g. a lockstep family like openbao's
-          # go-kms-wrapping transit v2.8.0 -> v2.1.0, which then fails to build
-          # against its core sibling still at v2.8.0). Re-raise any require tidy
-          # dropped below its pre-tidy version. Corrects only upward, so CVE
-          # bumps (>= source) are never undone.
-          _pgd_reqs .pgd-orig.mod > .pgd-o.txt
-          _pgd_reqs go.mod > .pgd-n.txt
-          awk 'NR==FNR{o[$1]=$2;next} ($1 in o) && o[$1]!=$2 {print $1,o[$1],$2}' .pgd-o.txt .pgd-n.txt | while read -r p ov cv; do
-            hi=$( { echo "$ov"; echo "$cv"; } | sort -V | tail -1 )
-            if [ "$hi" = "$ov" ]; then
-              echo "pgd-guard: restoring $p: $cv -> $ov (tidy downgraded below source pin)"
-              _retry go get "$p@$ov"
+          cp go.mod .pgd-base.mod
+          [ -f go.sum ] && cp go.sum .pgd-base.sum || true
+          # Keep each CVE fix only if Caddy still compiles with it and all
+          # previously accepted fixes.
+          # The compatibility backport uses CEL's InterpretableV2 API, so CEL
+          # is the minimum compile baseline while the remaining pins are probed.
+          KEPT="github.com/google/cel-go@v0.29.2"
+          for fix in github.com/go-chi/chi/v5@v5.3.0 google.golang.org/grpc@v1.82.1 go.opentelemetry.io/otel@v1.44.0 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.48.0; do
+            cp .pgd-base.mod go.mod
+            [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true
+            if go get $KEPT "$fix" >/dev/null 2>&1 && GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/caddy >/dev/null 2>&1; then
+              KEPT="$KEPT $fix"
+              echo "pgd-testkeep KEPT: $fix"
+            else
+              echo "pgd-testkeep dropped (needs upstream): $fix"
             fi
           done
-          rm -f .pgd-orig.mod .pgd-o.txt .pgd-n.txt
+          cp .pgd-base.mod go.mod
+          [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true
+          if [ -n "$KEPT" ]; then _retry go get $KEPT; fi
+          go mod tidy -e
+          rm -f .pgd-base.mod .pgd-base.sum
           [ ! -d vendor ] || go mod vendor
         )
       done
