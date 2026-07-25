@@ -282,10 +282,17 @@ jobs:
           # target) or the compile-check makes wrong keep/drop calls. `-mod=mod`
           # skips vendoring during probing; `-o /dev/null` discards the binary.
           declare -A TESTKEEP_BUILD=(
+            [caddy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/caddy'
             [kaniko]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/executor'
             [skopeo]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -tags containers_image_openpgp -o /dev/null ./cmd/skopeo'
             [trivy]='GOTOOLCHAIN=local CGO_ENABLED=0 GOEXPERIMENT=jsonv2 go build -mod=mod -o /dev/null ./cmd/trivy'
             [opentofu]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/tofu'
+          )
+          # Minimum dependency floor needed by a source compatibility backport
+          # before independently probing the generated candidates. This is a
+          # floor, not a cap: MVS and later candidates can still move it forward.
+          declare -A TESTKEEP_SEED=(
+            [caddy]='github.com/google/cel-go@v0.29.2'
           )
 
           HAS_PATCHES=false
@@ -314,7 +321,7 @@ jobs:
           # ones wait for the upstream release (logged per-dep, not silent).
           # SKIP_IMAGES stays for images we never auto-patch at all (none now).
           SKIP_IMAGES=" "
-          TESTKEEP_IMAGES=" trivy kaniko skopeo opentofu "
+          TESTKEEP_IMAGES=" caddy trivy kaniko skopeo opentofu "
           for IMAGE in "${!MODROOTS[@]}"; do
             if [[ "$SKIP_IMAGES" == *" $IMAGE "* ]]; then
               echo "=== Skipping $IMAGE (excluded from auto transitive dep-patching; tracked via update-versions + base rebuild) ==="
@@ -361,11 +368,25 @@ jobs:
               while IFS= read -r ep; do
                 [ -z "$ep" ] && continue
                 pkg="${ep%@*}"
-                # Skip if grype already reported this pkg (grype's fix version wins)
-                if echo "$FIXES" | grep -q "^${pkg}@"; then continue; fi
-                FIXES=$(printf '%s\n%s' "$FIXES" "$ep")
-                echo "  preserving existing pin: $ep"
+                existing_ver="${ep##*@}"
+                reported=$(echo "$FIXES" | awk -F@ -v pkg="$pkg" '$1 == pkg { print; exit }')
+                if [ -n "$reported" ]; then
+                  reported_ver="${reported##*@}"
+                  highest=$(printf '%s\n%s\n' "$existing_ver" "$reported_ver" | sort -V | tail -1)
+                  if [ "$highest" = "$existing_ver" ] && [ "$existing_ver" != "$reported_ver" ]; then
+                    # Grype reports the first fixed version, which can be older
+                    # than a pin we already tested. Never move a maintained pin
+                    # backwards when regenerating the block.
+                    FIXES=$(echo "$FIXES" | awk -F@ -v pkg="$pkg" '$1 != pkg')
+                    FIXES=$(printf '%s\n%s' "$FIXES" "$ep")
+                    echo "  preserving newer existing pin: $reported -> $ep"
+                  fi
+                else
+                  FIXES=$(printf '%s\n%s' "$FIXES" "$ep")
+                  echo "  preserving existing pin: $ep"
+                fi
               done <<< "$EXISTING"
+              FIXES=$(echo "$FIXES" | grep -v '^$' | sort -u)
             fi
 
             if [ -z "$FIXES" ]; then
@@ -635,6 +656,17 @@ jobs:
             # retry doesn't survive mid-stream INTERNAL_ERROR, and a failed
             # `go get` aborts the whole melange build.
             if [ "$IS_TESTKEEP" = true ]; then
+            # Some source compatibility backports need one dependency bump in
+            # place before any other candidate can compile. Probe that floor
+            # first; a later candidate for the same module can still raise it.
+            TESTKEEP_FIRST="${TESTKEEP_SEED[$IMAGE]:-}"
+            if [ -n "$TESTKEEP_FIRST" ]; then
+              # Avoid compiling the same exact floor twice when it is also in
+              # the preserved/generated candidate set. A newer version remains.
+              GO_GETS=" ${GO_GETS} "
+              GO_GETS="${GO_GETS// $TESTKEEP_FIRST / }"
+              GO_GETS="$TESTKEEP_FIRST $GO_GETS"
+            fi
             # Test-and-keep block: probe each candidate fix against the image's
             # real build command; keep only those that still compile.
             PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually (test-and-keep)\n  - runs: |\n      export GOWORK=off\n      _retry() { local i; for i in 5 15 30; do \"\$@\" && return 0; echo \"retry: \$* failed, sleeping \${i}s\"; sleep \$i; done; \"\$@\"; }\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        ( set -e\n          cd \"\$root\"\n          cp go.mod .pgd-base.mod\n          [ -f go.sum ] && cp go.sum .pgd-base.sum || true\n          # Probe each candidate CVE fix against the real build; keep the ones\n          # that still compile, drop those that need upstream to update its\n          # vendored code first (logged, not silent). Patches everything safely\n          # patchable now instead of skipping the image wholesale.\n          KEPT=\"\"\n          for fix in ${GO_GETS}; do\n            cp .pgd-base.mod go.mod\n            [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true\n            if go get \$KEPT \"\$fix\" >/dev/null 2>&1 && ${TESTKEEP_BUILD[$IMAGE]} >/dev/null 2>&1; then\n              KEPT=\"\$KEPT \$fix\"; echo \"pgd-testkeep KEPT: \$fix\"\n            else\n              echo \"pgd-testkeep dropped (needs upstream): \$fix\"\n            fi\n          done\n          cp .pgd-base.mod go.mod\n          [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true\n          if [ -n \"\$KEPT\" ]; then _retry go get \$KEPT; fi\n          go mod tidy -e\n          rm -f .pgd-base.mod .pgd-base.sum\n          [ ! -d vendor ] || go mod vendor\n        )\n      done\n  # end-patch-go-deps\n"
