@@ -116,6 +116,7 @@ TRUFFLEHOG_VERSION ?= $(call melange_version,trufflehog/melange.yaml)
 MOSQUITTO_VERSION ?= $(call melange_version,mosquitto/melange.yaml)
 PGBOUNCER_VERSION ?= $(call melange_version,pgbouncer/melange.yaml)
 UNBOUND_VERSION ?= $(call melange_version,unbound/melange.yaml)
+KEEPALIVED_VERSION ?= $(call melange_version,keepalived/melange.yaml)
 EXTERNAL_DNS_VERSION ?= $(call melange_version,external-dns/melange.yaml)
 VELERO_VERSION ?= $(call melange_version,velero/melange.yaml)
 KANIKO_VERSION ?= $(call melange_version,kaniko/melange.yaml)
@@ -169,6 +170,8 @@ endef
 .PHONY: tomcat tomcat-melange test-tomcat
 .PHONY: pgbouncer pgbouncer-melange pgbouncer-dev test-pgbouncer test-pgbouncer-dev
 .PHONY: unbound unbound-melange unbound-dev test-unbound test-unbound-dev
+.PHONY: dnsmasq dnsmasq-dev test-dnsmasq test-dnsmasq-dev
+.PHONY: keepalived keepalived-melange keepalived-dev test-keepalived test-keepalived-dev
 .PHONY: external-dns external-dns-melange external-dns-dev test-external-dns test-external-dns-dev
 .PHONY: velero velero-melange velero-dev test-velero test-velero-dev
 .PHONY: kaniko kaniko-melange kaniko-dev test-kaniko test-kaniko-dev
@@ -222,7 +225,7 @@ endef
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound external-dns velero kaniko step-ca skopeo sqlite opensearch redis-slim valkey memcached kafka zookeeper cassandra solr pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter pushgateway coredns etcd openbao keycloak qdrant registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived external-dns velero kaniko step-ca skopeo sqlite opensearch redis-slim valkey memcached kafka zookeeper cassandra solr pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter pushgateway coredns etcd openbao keycloak qdrant registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -302,6 +305,8 @@ $(eval $(call DEV_IMAGE_RULE,tempo,tempo-melange,--repository-append ./packages 
 $(eval $(call DEV_IMAGE_RULE,mosquitto,mosquitto-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,pgbouncer,pgbouncer-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,unbound,unbound-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,dnsmasq))
+$(eval $(call DEV_IMAGE_RULE,keepalived,keepalived-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,external-dns,external-dns-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,velero,velero-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,kaniko,kaniko-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -1094,6 +1099,23 @@ bun:
 		$(REGISTRY)/$(OWNER)/minimal-bun:latest
 	@rm -f bun.tar sbom-*.spdx.json
 	@echo "✓ minimal-bun built (Wolfi package, shell-less)"
+
+#------------------------------------------------------------------------------
+# DNSMASQ IMAGE (Wolfi pre-built package, shell-less)
+#------------------------------------------------------------------------------
+dnsmasq:
+	@echo "Assembling minimal-dnsmasq image with apko..."
+	apko build dnsmasq/apko/dnsmasq.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-dnsmasq:$(VERSION) \
+		dnsmasq.tar \
+		--arch x86_64
+	docker load < dnsmasq.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-dnsmasq:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-dnsmasq:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-dnsmasq:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-dnsmasq:latest
+	@rm -f dnsmasq.tar sbom-*.spdx.json
+	@echo "✓ minimal-dnsmasq built (Wolfi package, shell-less)"
 
 #------------------------------------------------------------------------------
 # SQLITE IMAGE (Wolfi pre-built package, shell-less)
@@ -2373,6 +2395,32 @@ pgbouncer: pgbouncer-melange
 	@rm -f pgbouncer.tar sbom-*.spdx.json
 	@echo "✓ minimal-pgbouncer built (source build)"
 
+#------------------------------------------------------------------------------
+# KEEPALIVED IMAGE (source build via melange, shell-less)
+#------------------------------------------------------------------------------
+keepalived-melange: keygen
+	@echo "Building Keepalived package from source with melange..."
+	melange build keepalived/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Keepalived package built from source"
+
+keepalived: keepalived-melange
+	@echo "Assembling minimal-keepalived image with apko..."
+	apko build keepalived/apko/keepalived.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-keepalived:$(VERSION) \
+		keepalived.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < keepalived.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-keepalived:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-keepalived:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-keepalived:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-keepalived:latest
+	@rm -f keepalived.tar sbom-*.spdx.json
+	@echo "✓ minimal-keepalived built (source build)"
+
 unbound-melange: keygen
 	@echo "Building Unbound $(UNBOUND_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build unbound/melange.yaml \
@@ -2569,7 +2617,7 @@ scan-%:
 		$(REGISTRY)/$(OWNER)/minimal-$*:latest
 	@echo "✓ minimal-$*: scan passed"
 
-scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit
+scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -2648,6 +2696,18 @@ scan-bun:
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-bun:latest
 	@echo "✓ minimal-bun: scan passed"
+
+scan-keepalived:
+	@echo "Scanning minimal-keepalived..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-keepalived:latest
+	@echo "✓ minimal-keepalived: scan passed"
+
+scan-dnsmasq:
+	@echo "Scanning minimal-dnsmasq..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-dnsmasq:latest
+	@echo "✓ minimal-dnsmasq: scan passed"
 
 scan-sqlite:
 	@echo "Scanning minimal-sqlite..."
@@ -2891,7 +2951,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit
+test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit
 
 $(eval $(call DEV_TEST_RULE,python))
 $(eval $(call DEV_TEST_RULE,node-slim))
@@ -2944,6 +3004,8 @@ $(eval $(call DEV_TEST_RULE,tempo))
 $(eval $(call DEV_TEST_RULE,mosquitto))
 $(eval $(call DEV_TEST_RULE,pgbouncer))
 $(eval $(call DEV_TEST_RULE,unbound))
+$(eval $(call DEV_TEST_RULE,dnsmasq))
+$(eval $(call DEV_TEST_RULE,keepalived))
 $(eval $(call DEV_TEST_RULE,external-dns))
 $(eval $(call DEV_TEST_RULE,velero))
 $(eval $(call DEV_TEST_RULE,kaniko))
@@ -3488,6 +3550,18 @@ test-pgbouncer:
 		pgbouncer/test.sh
 	@echo "✓ pgbouncer tests passed"
 
+test-keepalived:
+	@echo "Testing keepalived image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-keepalived:latest" && \
+		keepalived/test.sh
+	@echo "✓ keepalived tests passed"
+
+test-dnsmasq:
+	@echo "Testing dnsmasq image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-dnsmasq:latest" && \
+		dnsmasq/test.sh
+	@echo "✓ dnsmasq tests passed"
+
 test-unbound:
 	@echo "Testing unbound image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-unbound:latest" && \
@@ -3677,7 +3751,7 @@ push-%:
 	docker push $(REGISTRY)/$(OWNER)/minimal-$*:$(or $(PUSH_VER_$*),$(VERSION))
 	docker push $(REGISTRY)/$(OWNER)/minimal-$*:latest
 
-push: push-python push-node-slim push-bun push-go push-java push-ruby push-php push-dotnet push-deno push-mysql push-mariadb push-postgres-slim push-pgbouncer push-unbound push-external-dns push-velero push-kaniko push-step-ca push-skopeo push-sqlite push-opensearch push-redis-slim push-valkey push-memcached push-kafka push-zookeeper push-cassandra push-solr push-pulsar push-tomcat push-rabbitmq push-nats push-mosquitto push-nginx push-httpd push-caddy push-haproxy push-traefik push-envoy push-oauth2-proxy push-prometheus push-alertmanager push-victoria-metrics push-thanos push-mimir push-jaeger push-loki push-tempo push-otelcol push-fluent-bit push-telegraf push-node-exporter push-blackbox-exporter push-pushgateway push-coredns push-etcd push-openbao push-keycloak push-qdrant push-registry push-consul push-helm push-kubectl push-opentofu push-trivy push-cosign push-syft push-grype push-osv-scanner push-oras push-notation push-conftest push-kubeconform push-kube-bench push-trufflehog push-flux push-kustomize push-sops push-crane push-kubeseal push-helmfile push-regctl push-stern push-gitleaks push-step-cli push-opa push-jenkins push-gitea push-minio push-rails push-mailpit
+push: push-python push-node-slim push-bun push-go push-java push-ruby push-php push-dotnet push-deno push-mysql push-mariadb push-postgres-slim push-pgbouncer push-unbound push-dnsmasq push-keepalived push-external-dns push-velero push-kaniko push-step-ca push-skopeo push-sqlite push-opensearch push-redis-slim push-valkey push-memcached push-kafka push-zookeeper push-cassandra push-solr push-pulsar push-tomcat push-rabbitmq push-nats push-mosquitto push-nginx push-httpd push-caddy push-haproxy push-traefik push-envoy push-oauth2-proxy push-prometheus push-alertmanager push-victoria-metrics push-thanos push-mimir push-jaeger push-loki push-tempo push-otelcol push-fluent-bit push-telegraf push-node-exporter push-blackbox-exporter push-pushgateway push-coredns push-etcd push-openbao push-keycloak push-qdrant push-registry push-consul push-helm push-kubectl push-opentofu push-trivy push-cosign push-syft push-grype push-osv-scanner push-oras push-notation push-conftest push-kubeconform push-kube-bench push-trufflehog push-flux push-kustomize push-sops push-crane push-kubeseal push-helmfile push-regctl push-stern push-gitleaks push-step-cli push-opa push-jenkins push-gitea push-minio push-rails push-mailpit
 
 #------------------------------------------------------------------------------
 # CLEANUP

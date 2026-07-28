@@ -28,6 +28,7 @@ wolfi-rolling:
   - httpd           # apache2 (unversioned)
   - sqlite          # sqlite (unversioned)
   - bun             # bun (unversioned)
+  - dnsmasq         # dnsmasq (unversioned)
 
 # bespoke: SOURCE-BUILT images auto-updated by a dedicated workflow instead of
 # the shared .github/versions.yaml pipeline. Each MUST name the workflow and a

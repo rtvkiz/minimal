@@ -656,6 +656,16 @@
     releases: "https://github.com/NLnetLabs/unbound/releases"
     notes: "https://github.com/NLnetLabs/unbound/releases/tag/release-{version}"
 
+- name: keepalived
+  cron-enabled: true   # wave 12 (check-upstream validated 2026-07-27: current=2.4.3 latest=2.4.3)
+  files: [keepalived/melange.yaml]
+  source: { type: github-tags, repo: acassen/keepalived, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  tarball: { url: "https://www.keepalived.org/software/keepalived-{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/acassen/keepalived/releases"
+    notes: "https://github.com/acassen/keepalived/releases/tag/v{version}"
+
 - name: external-dns
   cron-enabled: true   # wave 11 (dispatch-validated 2026-07-18)
   files: [external-dns/melange.yaml]

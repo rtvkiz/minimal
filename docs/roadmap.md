@@ -1,6 +1,6 @@
 # Image Roadmap — the road to 100 (demand-ranked)
 
-**Status: 91 / 100 images.** This is the source-of-truth plan for growing the catalog.
+**Status: 93 / 100 images.** This is the source-of-truth plan for growing the catalog.
 It supersedes the batch order from earlier sessions, which was ordered by *build ease* and
 *GitHub popularity*. This version is ordered by **actual container demand first**, then
 build effort.
@@ -111,7 +111,7 @@ Policy filter = buildable under the shell-less/minimal thesis: ✅ static-Go bin
 C daemon (no *runtime* compiler — the varnish lesson) · JVM-jlink · interpreter ·
 binary-repackage. Excluded from the 100-path: frontend-in-bwrap (grafana/argocd/uptime-kuma),
 runtime-compiler (varnish), tangled force-bump graphs, huge-disk C++ (clickhouse), and
-🔴 SSPL/BUSL/EULA. At the current 91-image catalog, 9 images remain to reach 100.
+🔴 SSPL/BUSL/EULA. At the current 93-image catalog, 7 images remain to reach 100.
 
 ### Batch F — static Go (the crank) → 88   [DONE]
 | Image | Upstream | License | Build notes |
@@ -122,12 +122,17 @@ runtime-compiler (varnish), tangled force-bump graphs, huge-disk C++ (clickhouse
 | step-ca | smallstep/certificates v0.30.2 | 🟢 Apache | main `./cmd/step-ca`, CGO=0 (drops pkcs11 KMS), `-X main.Version`; server |
 | skopeo | containers/skopeo v1.23.0 | 🟢 Apache | module `go.podman.io/skopeo`; CGO=0 + `-tags containers_image_openpgp` drops libgpgme/btrfs |
 
-### Batch G — clean C daemon (pgbouncer/unbound template) → 90
-dnsmasq (🟡 GPL-2.0, DNS/DHCP/TFTP) · keepalived (🟡 GPL-2.0, VRRP/LVS HA). Fills thin **Infrastructure**.
+### Batch G — clean C daemon (pgbouncer/unbound template) → 93   [DONE]
+| Image | Upstream | License | Build notes |
+|---|---|---|---|
+| dnsmasq | Wolfi `dnsmasq` 2.93 | 🟡 GPL-2.0-or-later | **apko-only** — Wolfi packages it, so no melange recipe and no `versions.yaml` row (classified `wolfi-rolling`). Flag-driven: the package ships no config and apko cannot author file contents, so `--conf-file=` disables config lookup and `--log-facility=-` moves logs off syslog. |
+| keepalived | acassen/keepalived 2.4.3 | 🟡 GPL-2.0-or-later | source-built; `--disable-dbus --disable-snmp --with-init=none`, `--sbindir=/usr/bin` (usrmerge). Needs CAP_NET_ADMIN/NET_RAW/NET_BROADCAST at runtime — still runs as nonroot 65532. `github-tags` needs `strip-prefix: 'v'`, **not** `strip-v` (that key is only read by other source types). |
+
+Fills thin **Infrastructure**.
 
 ### Batch H — JVM-jlink (kafka/zookeeper template) → 91 done, → 92 remaining
 cassandra (🟢 wide-column DB, Java-17 + jamm agent) · solr (🟢 search, Java-21) ·
-pulsar (🟢 messaging, Java-21) — **DONE → 91**. flink (🟢 stream processing, Java-21) remaining.
+pulsar (🟢 messaging, Java-21) — **DONE → 91**. flink (🟢 stream processing, Java-21) remaining → 94.
 All Apache. Fills thin DB/search/messaging.
 
 ### Batch I — Rust (qdrant/vector precedent, own effort each) → 96
