@@ -4,7 +4,7 @@
 
 package:
   name: mailpit-minimal
-  version: 1.30.5
+  version: 1.30.6
   epoch: 0
   description: "Minimal Mailpit — email & SMTP testing tool built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of mailpit source tarball - updated by update-mailpit.yml workflow
-  sha256: 0a115f7b378f73cf6bc1af14f5c4afd4510eda31aac531f15a4fec26d11a6bb9
+  sha256: 0878c5880964e6130f9416063cd96f50ed4629f6737f364cf3bcc6dbd90d4671
 
 environment:
   contents:
