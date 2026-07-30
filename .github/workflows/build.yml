@@ -813,6 +813,8 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 3
+          # Same Sigstore flakiness as the SBOM attest step below.
+          retry_wait_seconds: 60
           command: |
             cosign sign --yes "${{ steps.publish.outputs.image }}"
 
@@ -822,6 +824,10 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 3
+          # Sigstore (fulcio/timestamp/rekor) resets connections under load;
+          # the default 10s gap burned all 3 attempts in ~30s and failed the
+          # whole scheduled build (conftest-dev, 2026-07-29). Back off properly.
+          retry_wait_seconds: 60
           command: |
             # apko --sbom-path . writes per-arch + index SBOMs to the working directory during publish
             FOUND=0
@@ -1304,6 +1310,8 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 3
+          # Same Sigstore flakiness as the SBOM attest step below.
+          retry_wait_seconds: 60
           command: |
             cosign sign --yes "${{ steps.publish.outputs.image }}"
 
@@ -1313,6 +1321,10 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 3
+          # Sigstore (fulcio/timestamp/rekor) resets connections under load;
+          # the default 10s gap burned all 3 attempts in ~30s and failed the
+          # whole scheduled build (conftest-dev, 2026-07-29). Back off properly.
+          retry_wait_seconds: 60
           command: |
             for SBOM in sbom-x86_64.spdx.json sbom-aarch64.spdx.json sbom-index.spdx.json; do
               [ -f "$SBOM" ] || continue
