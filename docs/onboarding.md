@@ -129,6 +129,15 @@ archs: [x86_64, aarch64]
 **Rules**
 - Minimum packages. Fewer packages = fewer CVEs.
 - No shell in prod (no `busybox`/`bash`) unless the service genuinely needs it.
+  **Known exception — the postgres family (`postgres-slim`, `patroni`):** PostgreSQL's
+  `initdb` runs `"postgres" -V` through `popen()`, which execs `/bin/sh`. With no
+  shell it dies with `initdb: error: program "postgres" is needed by initdb but was
+  not found`, so the image cannot initialise a fresh `PGDATA` and will not start
+  against an empty volume. These images carry **`busybox` only** — never `bash` or
+  `apk-tools` — and their `test.sh` asserts both that `/bin/sh` exists (regression
+  guard) and that bash/apk are absent (restraint guard). If you add another image
+  that wraps postgres, it inherits this. Verify with a real `initdb` in the smoke
+  test; a version-string check will not catch it.
 - `run-as: 65532` (nonroot) unless upstream mandates a fixed UID.
 - Create `/var/*` runtime dirs here with `paths:`, **not** in the melange pipeline
   (the SBOM step runs as the host user after the sandbox exits and can't mkdir into

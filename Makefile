@@ -3208,10 +3208,8 @@ test-haproxy:
 
 test-postgres-slim:
 	@echo "Testing Postgres Slim image..."
-	docker run --rm --entrypoint /usr/bin/postgres \
-		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest --version
-	docker run --rm --entrypoint /usr/bin/psql \
-		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest --version
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest" && \
+		postgres-slim/test.sh
 	@echo "✓ Postgres Slim tests passed"
 
 test-bun:

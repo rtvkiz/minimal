@@ -10,6 +10,15 @@ contents:
     # Base filesystem
     - wolfi-baselayout
 
+    # Shell — REQUIRED, not a convenience. initdb runs `"postgres" -V` through
+    # popen(), which execs /bin/sh. Without a shell initdb fails with
+    #   initdb: error: program "postgres" is needed by initdb but was not found
+    # so the image cannot initialise a fresh PGDATA and will not start against
+    # an empty volume — the normal first-run path. This is the "unless the
+    # service genuinely needs it" exception in docs/onboarding.md, scoped to the
+    # postgres family. busybox only — no bash, no apk-tools (those are -dev).
+    - busybox
+
     # PostgreSQL from Wolfi (CVE-patched)
     - postgresql-18
     - postgresql-18-base
