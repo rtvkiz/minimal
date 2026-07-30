@@ -137,6 +137,7 @@ jobs:
             [oauth2-proxy]="/home/build/oauth2-proxy-${D}{{package.version}}"
             [flux]="/home/build/flux-${D}{{package.version}}"
             [external-dns]="/home/build/external-dns-${D}{{package.version}}"
+            [metrics-server]="/home/build/metrics-server-${D}{{package.version}}"
             [velero]="/home/build/velero-${D}{{package.version}}"
             [kaniko]="/home/build/kaniko-${D}{{package.version}}"
             [step-ca]="/home/build/step-ca-${D}{{package.version}}"
@@ -201,6 +202,7 @@ jobs:
             [oauth2-proxy]="github.com/oauth2-proxy/oauth2-proxy/v7"
             [flux]="github.com/fluxcd/flux2/v2"
             [external-dns]="sigs.k8s.io/external-dns"
+            [metrics-server]="sigs.k8s.io/metrics-server"
             [velero]="github.com/vmware-tanzu/velero"
             [kaniko]="github.com/GoogleContainerTools/kaniko"
             [step-ca]="github.com/smallstep/certificates"
@@ -264,6 +266,7 @@ jobs:
             [oauth2-proxy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [flux]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [external-dns]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [metrics-server]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [velero]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [kaniko]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [step-ca]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

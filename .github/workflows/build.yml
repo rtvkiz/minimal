@@ -73,7 +73,7 @@ jobs:
             {"name":"fluent-bit","variants":["prod","dev"]},{"name":"keycloak","variants":["prod","dev"]},
             {"name":"registry","variants":["prod","dev"]},{"name":"mailpit","variants":["prod","dev"]},
             {"name":"consul","variants":["prod","dev"]},{"name":"tempo","variants":["prod","dev"]},
-            {"name":"mosquitto","variants":["prod","dev"]},{"name":"pgbouncer","variants":["prod","dev"]},{"name":"unbound","variants":["prod","dev"]},{"name":"keepalived","variants":["prod","dev"]},{"name":"external-dns","variants":["prod","dev"]},{"name":"velero","variants":["prod","dev"]},{"name":"kaniko","variants":["prod","dev"]},{"name":"step-ca","variants":["prod","dev"]},{"name":"skopeo","variants":["prod","dev"]},
+            {"name":"mosquitto","variants":["prod","dev"]},{"name":"pgbouncer","variants":["prod","dev"]},{"name":"unbound","variants":["prod","dev"]},{"name":"keepalived","variants":["prod","dev"]},{"name":"metrics-server","variants":["prod","dev"]},{"name":"external-dns","variants":["prod","dev"]},{"name":"velero","variants":["prod","dev"]},{"name":"kaniko","variants":["prod","dev"]},{"name":"step-ca","variants":["prod","dev"]},{"name":"skopeo","variants":["prod","dev"]},
             {"name":"helm","variants":["prod","dev"]},
             {"name":"kubectl","variants":["prod","dev"]},
             {"name":"telegraf","variants":["prod","dev"]},
@@ -120,7 +120,9 @@ jobs:
             {"name":"sqlite","grep":"sqlite","variants":["prod","dev"]},
             {"name":"dotnet","grep":"dotnet-[0-9].*-runtime","variants":["prod","dev"]},
             {"name":"java","grep":"openjdk-[0-9]+","variants":["prod","dev"]},
-            {"name":"dnsmasq","grep":"dnsmasq","variants":["prod","dev"]}
+            {"name":"dnsmasq","grep":"dnsmasq","variants":["prod","dev"]},
+            {"name":"vector","grep":"vector","variants":["prod","dev"]},
+            {"name":"patroni","grep":"patroni","variants":["prod","dev"]}
           ]'
 
           # Determine if full rebuild is needed

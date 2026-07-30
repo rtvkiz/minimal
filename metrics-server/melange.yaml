@@ -1,0 +1,75 @@
+# Melange build configuration for minimal metrics-server
+# Pure Go from source. Single static `metrics-server` binary — the Kubernetes
+# resource-metrics API server behind `kubectl top` and the HPA.
+# License: Apache-2.0.
+
+package:
+  name: metrics-server-minimal
+  version: 0.9.0
+  epoch: 0
+  description: "Minimal Kubernetes metrics-server built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of metrics-server source tarball - updated by update-versions.yml
+  sha256: a7dec9bb2f58a32ec2ce4e25a838aca18978546f28d58c4bc5c3f62c8c3dfcfa
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify metrics-server source
+  - runs: |
+      mkdir -p /home/build/metrics-server-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/kubernetes-sigs/metrics-server/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/metrics-server.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/metrics-server.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/metrics-server.tar.gz -C /home/build/metrics-server-${{package.version}} --strip-components=1
+      rm /home/build/metrics-server.tar.gz
+
+  # Version is reported through client-go's version package, not a local one:
+  # upstream's Makefile sets PKG:=k8s.io/client-go/pkg and injects
+  # $(PKG)/version.gitVersion. `kubectl top`/the apiserver surface this as the
+  # server version, and it must carry the leading "v" to parse as a semver.
+  - runs: |
+      cd /home/build/metrics-server-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -mod=readonly \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X k8s.io/client-go/pkg/version.gitVersion=v${{package.version}}" \
+        -o /home/build/metrics-server-bin \
+        sigs.k8s.io/metrics-server/cmd/metrics-server
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/metrics-server-bin "${{targets.destdir}}/usr/bin/metrics-server"
+      chmod 0755 "${{targets.destdir}}/usr/bin/metrics-server"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying metrics-server binary..."
+      "${{targets.destdir}}/usr/bin/metrics-server" --version
+
+update:
+  enabled: true
+  github:
+    identifier: kubernetes-sigs/metrics-server
+    use-tag: true
+    tag-filter: "v0."
