@@ -4,7 +4,7 @@
 
 package:
   name: opa-minimal
-  version: 1.18.2
+  version: 1.19.0
   epoch: 0
   description: "Minimal Open Policy Agent (OPA) built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of opa source tarball - updated by update-versions.yml workflow
-  sha256: 4bec39f66682a370cac357c76303e4517cb35e236c04a221e315350550280c50
+  sha256: eab3adb9c1ffafade0167b4eece7a643eac2270da6abeda0772896034d174abe
 
 environment:
   contents:
