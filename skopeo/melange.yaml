@@ -7,7 +7,7 @@
 
 package:
   name: skopeo-minimal
-  version: 1.23.0
+  version: 1.24.0
   epoch: 0
   description: "Minimal Skopeo container image inspection/copy tool built from source"
   copyright:
@@ -15,7 +15,7 @@ package:
 
 vars:
   # SHA256 of skopeo source tarball - updated by update-versions.yml
-  sha256: de96bfc2bb523c852af675ffdadd934484812ce190aa8620e1d5fd6c51442e25
+  sha256: 1eea9364e344c4d6cb398fac53bc387663d19690552003b43c75819e8bb55527
 
 environment:
   contents:
