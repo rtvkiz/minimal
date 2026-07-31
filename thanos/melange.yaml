@@ -4,7 +4,7 @@
 
 package:
   name: thanos-minimal
-  version: 0.42.3
+  version: 0.42.4
   epoch: 0
   description: "Minimal Thanos (highly-available Prometheus long-term storage) built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of thanos source tarball - updated by update-versions.yml workflow
-  sha256: cdb2b17c9a6423a5bea2c44ce7d8bd6b71bbe385c5812027e6dd2db6f61beb1b
+  sha256: 0f078dcb6d47bde6b3de0e962355d977f6fc017975d882531c4bd70f81f61fae
 
 environment:
   contents:
