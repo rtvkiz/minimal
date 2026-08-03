@@ -4,7 +4,7 @@
 
 package:
   name: conftest-minimal
-  version: 0.68.2
+  version: 0.69.0
   epoch: 0
   description: "Conftest (OPA policy testing for structured config) CLI built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of conftest source tarball - updated by update-versions.yml workflow
-  sha256: 952ebb9e9eccc75521d0f618ab1a934c379f13ffdb000f0fa8b698f00eaf4601
+  sha256: 91bba4a58039c8da1e318f927b42a6c227554623268e49b5c955078a3eb64d82
 
 environment:
   contents:
