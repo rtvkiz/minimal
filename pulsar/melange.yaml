@@ -5,7 +5,7 @@
 
 package:
   name: pulsar-minimal
-  version: 4.2.3
+  version: 4.2.4
   epoch: 0
   description: "Minimal Apache Pulsar messaging/streaming server with custom JRE (jlink)"
   copyright:
@@ -13,7 +13,7 @@ package:
 
 vars:
   # SHA512 of apache-pulsar-{version}-bin.tar.gz - updated by update-versions.yml
-  sha512: 18805f38e0e8cbd8870bdccb6832505b2c2d42b541d877074aaeacd6ed563b7f06bd1392fda639db52bf2a4ca0f9e6e2b0ddf65026875e337342998c56b7b61a
+  sha512: 8c0a63cc6421c8eb3c4a55b8895ca08a38a1c6771758251fc7a82edbc4c6a42bb8ba5c956066b637ec7e049149d467c034e854b571a4cb000f42a47ae6105971
 
 environment:
   contents:
