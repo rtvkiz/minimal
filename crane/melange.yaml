@@ -3,7 +3,7 @@
 
 package:
   name: crane-minimal
-  version: 0.21.8
+  version: 0.21.9
   epoch: 0
   description: "Minimal crane OCI registry tool built from source"
   copyright:
@@ -11,7 +11,7 @@ package:
 
 vars:
   # SHA256 of crane source tarball - updated by update-versions.yml workflow
-  sha256: 29a1b525881f89bf07c50537e40ea3609e2fe5d6851b9f62cf7452ab1104445d
+  sha256: 6d8bce869afcc485b518cc0d59ea0ffe1090026db965806bc3be8793182528cc
 
 environment:
   contents:
