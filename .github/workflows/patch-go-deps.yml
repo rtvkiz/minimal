@@ -290,6 +290,7 @@ jobs:
             [skopeo]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -tags containers_image_openpgp -o /dev/null ./cmd/skopeo'
             [trivy]='GOTOOLCHAIN=local CGO_ENABLED=0 GOEXPERIMENT=jsonv2 go build -mod=mod -o /dev/null ./cmd/trivy'
             [opentofu]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/tofu'
+            [thanos]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -tags netgo,slicelabels -o /dev/null ./cmd/thanos'
           )
           # Minimum dependency floor needed by a source compatibility backport
           # before independently probing the generated candidates. This is a
@@ -323,8 +324,19 @@ jobs:
           # every safely-patchable CVE lands now and only genuinely-incompatible
           # ones wait for the upstream release (logged per-dep, not silent).
           # SKIP_IMAGES stays for images we never auto-patch at all (none now).
+          # thanos joined this class in 2026-08: grype reports a mongo-driver CVE
+          # fixed in v1.17.7, but thanos's full module graph pulls rclone v1.74.3,
+          # which requires mongo-driver v1.17.9. Because the whole candidate set
+          # goes in as one batched `go get`, that single below-graph pin aborts
+          # the batch ("rclone@v1.74.3 requires mongo-driver@v1.17.9, not
+          # v1.17.7") and drags docker/cli down with it, failing every thanos
+          # build on the patch-go-deps PR. Harmonization (above) can't catch it:
+          # it only reads the go.mod of modules that are themselves in the fix
+          # set, and rclone isn't one of them. Test-and-keep probes each
+          # candidate independently, so the unsatisfiable pin is dropped and the
+          # other ~14 CVE fixes still land.
           SKIP_IMAGES=" "
-          TESTKEEP_IMAGES=" caddy trivy kaniko skopeo opentofu "
+          TESTKEEP_IMAGES=" caddy trivy kaniko skopeo opentofu thanos "
           for IMAGE in "${!MODROOTS[@]}"; do
             if [[ "$SKIP_IMAGES" == *" $IMAGE "* ]]; then
               echo "=== Skipping $IMAGE (excluded from auto transitive dep-patching; tracked via update-versions + base rebuild) ==="
