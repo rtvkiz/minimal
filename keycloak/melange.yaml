@@ -4,14 +4,14 @@
 
 package:
   name: keycloak-minimal
-  version: 26.7.0
+  version: 26.7.1
   epoch: 0
   description: "Minimal Keycloak identity and access management server"
   copyright:
     - license: Apache-2.0
 
 vars:
-  sha256: f771df0aa1e4820f57d56f7d6d015beb6415487b43f8de7e5a6d48f8a7fe118a
+  sha256: d3bb3da0e4bf574db0c857f92b272da90575dc97aa26c41329c9d4399200974c
 
 environment:
   contents:
