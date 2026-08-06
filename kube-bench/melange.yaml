@@ -4,7 +4,7 @@
 
 package:
   name: kube-bench-minimal
-  version: 0.15.6
+  version: 0.16.0
   epoch: 0
   description: "kube-bench CIS Kubernetes benchmark checker built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of kube-bench source tarball - updated by update-versions.yml workflow
-  sha256: ba68fa0541902dd8be430ef05a1a39a978d6051e99386dd64c5babc50ec1dd58
+  sha256: 41fb9a5db1030439270a6a969da49cccb5149bd760fa478c0ca8757d0ef7bcce
 
 environment:
   contents:
