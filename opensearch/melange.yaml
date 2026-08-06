@@ -9,7 +9,7 @@
 
 package:
   name: opensearch-minimal
-  version: 3.7.0
+  version: 3.8.0
   epoch: 0
   description: "Minimal OpenSearch from the official upstream min distribution"
   copyright:
@@ -18,8 +18,8 @@ package:
 vars:
   # SHA512 of the official opensearch-min-<ver>-linux-<arch>.tar.gz, from the
   # upstream .sha512 files. Updated by update-versions.yml.
-  sha512_x86: e4a8a4129a8c4482b5c4fafd5fc5c05044dcc538fbb51700aba4c64c7c5af2c50f87f408043661b945b14575b279ee00a0899e3b9029a987805582f0647ac7cd
-  sha512_arm: 5adb892ef633e068409cf9e295d0c8af02b0b614f9387d2ac797fc1a1f9d36187b89d1d656b5eb750fdd0ef13894f5c96f8758c1962819afb9bc919d9dffbf13
+  sha512_x86: d29783b45a3ce99b47cab6b0bf1209fc856be6e530b3b95d247af48cd4ccc18b70c5e9cb4cde332bd65b615ac51047ea97ac96249178b47fea618ad3fa416f24
+  sha512_arm: 244b0c4ff07079636c48f75788814937516f8a8dfb94c04d3dd149da7f23476503e9801f4a20fe62e0c701f6c74adb2dd50ec0c9e8d97b5e5a9774f5a1089755
 
 environment:
   contents:
