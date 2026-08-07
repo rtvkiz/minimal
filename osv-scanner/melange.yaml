@@ -4,7 +4,7 @@
 
 package:
   name: osv-scanner-minimal
-  version: 2.4.0
+  version: 2.5.0
   epoch: 0
   description: "Minimal OSV-Scanner (dependency vulnerability scanner) built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of osv-scanner source tarball - updated by update-versions.yml workflow
-  sha256: 407ceeb62b2a1f3fb8260bf527f2d61d1079f440e23c8c94a9796791d7edd565
+  sha256: 466d25bf7ab38a9f12d3d15ab0b94432c45849ac91580caa8475bb2ae41faa93
 
 environment:
   contents:
