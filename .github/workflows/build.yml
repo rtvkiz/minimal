@@ -495,15 +495,22 @@ jobs:
           max_attempts: 3
           command: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
+      # See the matching comment in build-melange: packages.wolfi.dev returns
+      # intermittent 403s on APKINDEX.tar.gz and apko does not retry them.
       - name: Build image with apko
-        run: |
-          apko build ${{ matrix.apko_config }} \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }} \
-            ${{ matrix.name }}${{ matrix.tag_suffix }}.tar \
-            --arch x86_64
-          docker load < ${{ matrix.name }}${{ matrix.tag_suffix }}.tar
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "minimal-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          timeout_minutes: 20
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: |
+            apko build ${{ matrix.apko_config }} \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }} \
+              ${{ matrix.name }}${{ matrix.tag_suffix }}.tar \
+              --arch x86_64
+            docker load < ${{ matrix.name }}${{ matrix.tag_suffix }}.tar
+            LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "minimal-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" | head -1)
+            docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}
 
       - name: Report image size
         run: |
@@ -761,7 +768,9 @@ jobs:
           fi
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
           echo "Primary package: $PRIMARY_PKG, version: $VERSION"
-          rm -f sbom-*.spdx.json
+          # Also clear any attestation markers so the attest step's
+          # idempotence guard starts from a clean slate for this publish.
+          rm -f sbom-*.spdx.json .attested-sbom-*.spdx.json
 
       - name: Test image
         run: |
@@ -818,7 +827,20 @@ jobs:
           # Same Sigstore flakiness as the SBOM attest step below.
           retry_wait_seconds: 60
           command: |
-            cosign sign --yes "${{ steps.publish.outputs.image }}"
+            # Rekor answers a re-POST of an identical entry with HTTP 409
+            # createLogEntryConflict, and cosign surfaces that as exit 1. But 409
+            # means the signature IS in the transparency log — the desired end
+            # state. Left untreated it makes this step non-idempotent: any blip
+            # that lands the entry then drops the connection guarantees every
+            # remaining attempt "fails" on the conflict (jenkins, main
+            # 2026-08-06). Treat it as success so the retry can converge.
+            OUT=$(cosign sign --yes "${{ steps.publish.outputs.image }}" 2>&1); RC=$?
+            echo "$OUT"
+            if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q 'createLogEntryConflict'; then
+              echo "note: rekor already holds an equivalent entry — signature is recorded, treating as success"
+              RC=0
+            fi
+            exit "$RC"
 
       - name: Attach SBOM attestation
         if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
@@ -832,19 +854,44 @@ jobs:
           retry_wait_seconds: 60
           command: |
             # apko --sbom-path . writes per-arch + index SBOMs to the working directory during publish
+            #
+            # This loop must be idempotent across attempts. It attests three
+            # SBOMs; if the third hits a transient rekor error, a naive retry
+            # re-attests all three and the first two now come back 409
+            # createLogEntryConflict — so the step could never go green again
+            # (deno, main 2026-08-06: 3 attempts, all lost to conflicts on
+            # SBOMs that had already succeeded). Two guards: skip SBOMs already
+            # attested in an earlier attempt, and treat 409 as success.
             FOUND=0
+            FAILED=0
             for SBOM in sbom-x86_64.spdx.json sbom-aarch64.spdx.json sbom-index.spdx.json; do
               [ -f "$SBOM" ] || continue
               FOUND=$((FOUND + 1))
-              cosign attest --yes --type spdxjson \
+              if [ -f ".attested-${SBOM}" ]; then
+                echo "skipping ${SBOM}: already attested in an earlier attempt"
+                continue
+              fi
+              OUT=$(cosign attest --yes --type spdxjson \
                 --predicate "$SBOM" \
-                "${{ steps.publish.outputs.image }}"
+                "${{ steps.publish.outputs.image }}" 2>&1); RC=$?
+              echo "$OUT"
+              if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q 'createLogEntryConflict'; then
+                echo "note: rekor already holds an equivalent entry for ${SBOM} — treating as success"
+                RC=0
+              fi
+              if [ "$RC" -eq 0 ]; then
+                touch ".attested-${SBOM}"
+              else
+                echo "::warning::attestation for ${SBOM} failed (will retry)"
+                FAILED=1
+              fi
             done
             if [ "$FOUND" -eq 0 ]; then
               echo "::error::No SBOM files found to attest"
               ls -la sbom-*.spdx.json 2>&1 || true
               exit 1
             fi
+            exit "$FAILED"
 
       - name: Generate SLSA build provenance
         if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
@@ -999,17 +1046,27 @@ jobs:
         run: |
           echo "${{ secrets.MELANGE_SIGNING_KEY_PUB }}" > melange.rsa.pub
 
+      # packages.wolfi.dev intermittently answers APKINDEX.tar.gz with 403 under
+      # load, and apko has no internal retry for index fetches — a single 403
+      # failed opa-dev outright on the scheduled main build (2026-08-06). Every
+      # other network-touching step here is already wrapped; this one was the
+      # gap.
       - name: Build image with apko
-        run: |
-          apko build ${{ matrix.apko_config }} \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }} \
-            ${{ matrix.name }}${{ matrix.tag_suffix }}.tar \
-            --arch x86_64 \
-            --repository-append ./packages \
-            --keyring-append ./melange.rsa.pub
-          docker load < ${{ matrix.name }}${{ matrix.tag_suffix }}.tar
-          LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "minimal-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" | head -1)
-          docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          timeout_minutes: 20
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: |
+            apko build ${{ matrix.apko_config }} \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }} \
+              ${{ matrix.name }}${{ matrix.tag_suffix }}.tar \
+              --arch x86_64 \
+              --repository-append ./packages \
+              --keyring-append ./melange.rsa.pub
+            docker load < ${{ matrix.name }}${{ matrix.tag_suffix }}.tar
+            LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "minimal-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" | head -1)
+            docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}
 
       - name: Report image size
         run: |
@@ -1315,7 +1372,15 @@ jobs:
           # Same Sigstore flakiness as the SBOM attest step below.
           retry_wait_seconds: 60
           command: |
-            cosign sign --yes "${{ steps.publish.outputs.image }}"
+            # Rekor 409 createLogEntryConflict == already recorded; see the
+            # matching comment in the build-apko job's sign step.
+            OUT=$(cosign sign --yes "${{ steps.publish.outputs.image }}" 2>&1); RC=$?
+            echo "$OUT"
+            if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q 'createLogEntryConflict'; then
+              echo "note: rekor already holds an equivalent entry — signature is recorded, treating as success"
+              RC=0
+            fi
+            exit "$RC"
 
       - name: Attach SBOM attestation
         if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
@@ -1328,12 +1393,31 @@ jobs:
           # whole scheduled build (conftest-dev, 2026-07-29). Back off properly.
           retry_wait_seconds: 60
           command: |
+            # Idempotent across attempts — see the matching comment in the
+            # build-apko job's attest step (deno, main 2026-08-06).
+            FAILED=0
             for SBOM in sbom-x86_64.spdx.json sbom-aarch64.spdx.json sbom-index.spdx.json; do
               [ -f "$SBOM" ] || continue
-              cosign attest --yes --type spdxjson \
+              if [ -f ".attested-${SBOM}" ]; then
+                echo "skipping ${SBOM}: already attested in an earlier attempt"
+                continue
+              fi
+              OUT=$(cosign attest --yes --type spdxjson \
                 --predicate "$SBOM" \
-                "${{ steps.publish.outputs.image }}"
+                "${{ steps.publish.outputs.image }}" 2>&1); RC=$?
+              echo "$OUT"
+              if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q 'createLogEntryConflict'; then
+                echo "note: rekor already holds an equivalent entry for ${SBOM} — treating as success"
+                RC=0
+              fi
+              if [ "$RC" -eq 0 ]; then
+                touch ".attested-${SBOM}"
+              else
+                echo "::warning::attestation for ${SBOM} failed (will retry)"
+                FAILED=1
+              fi
             done
+            exit "$FAILED"
 
       - name: Generate SLSA build provenance
         if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
