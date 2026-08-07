@@ -3,12 +3,33 @@
 # No modules, no Sentinel, minimal footprint
 
 package:
-  name: redis-minimal
+  # Named `redis` (not `redis-minimal`) so vulnerability scanners can identify
+  # it. Syft derives a package's CPE from its apk name, so a `-minimal` suffix
+  # produced cpe:2.3:a:redis-minimal:redis-minimal:* — which matches nothing in
+  # NVD (indexed as cpe:2.3:a:redis:redis:*) and nothing in the Wolfi secdb
+  # either. Both of grype's matchers therefore missed every Redis CVE: a
+  # controlled test on haproxy showed 0 matches suffixed vs 14 unsuffixed at an
+  # identical version. Redis is a C app with no second identity (Go images get
+  # a go-module entry as a fallback; this one has only the apk name), so the
+  # suffix made it entirely unscannable.
+  name: redis
   version: 8.10.0
   epoch: 0
   description: "Minimal Redis server and CLI built from source"
   copyright:
     - license: SSPL-1.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # `redis` package today, but if it ever adds one at a higher version, apk
+    # would silently install Wolfi's build instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently. Verified empirically: a local
+    # helm 3.21.3 with provider-priority beat Wolfi's helm-4 4.2.3; without it,
+    # Wolfi's won.
+    provider-priority: 100
 
 vars:
   # SHA256 checksum of source tarball - updated by update-redis.yml workflow

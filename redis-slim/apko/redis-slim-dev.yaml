@@ -2,10 +2,10 @@
 # Same redis-server (built from source via melange) as prod, plus
 # bash, apk-tools, redis-cli, curl/socat/jq for debugging.
 #
-# In-house composition (our redis-minimal is source-built, not Wolfi's
+# In-house composition (our redis package is source-built, not Wolfi's
 # redis-8.6 family). Same shape as Chainguard's redis-public/devConfigs.
 # redis-cli is part of the same upstream redis source build, so it's
-# already in our redis-minimal package.
+# already in our redis package.
 
 contents:
   repositories:
@@ -19,7 +19,7 @@ contents:
     - wolfi-baselayout
 
     # Redis server + CLI (built from source via melange — same as prod)
-    - redis-minimal
+    - redis
 
     # Core libs (same as prod)
     - glibc

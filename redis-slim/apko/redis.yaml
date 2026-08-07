@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our Redis (built from source via melange)
-    - redis-minimal
+    - redis
 
     # Core libraries
     - glibc
