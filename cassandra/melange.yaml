@@ -5,7 +5,7 @@
 
 package:
   name: cassandra-minimal
-  version: 5.0.8
+  version: 5.0.9
   epoch: 0
   description: "Minimal Apache Cassandra wide-column database with custom JRE (jlink)"
   copyright:
@@ -13,7 +13,7 @@ package:
 
 vars:
   # SHA512 of apache-cassandra-{version}-bin.tar.gz - updated by update-versions.yml
-  sha512: 06b7af18c8f41dc13dbfdae186d565a5f91e71ea413c3c5373aec8a4e5074c6dee5632a0e5e98c21665f08f7291d7ca384f61a323c02610c6bca51e074b5a0c4
+  sha512: beaf3df6342ef1a0ccc83fa80214f250b32c35cfbb1af591b00e3fd539eef0915bc3b89f0e7ae73f6d50cbb03f6075c4e4cf32d3c46ff9c33f745542fcc925df
 
 environment:
   contents:
