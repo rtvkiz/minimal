@@ -50,7 +50,7 @@ pipeline:
         ( set -e
           cd "$root"
           cp go.mod .pgd-orig.mod
-          _retry go get filippo.io/edwards25519@v1.1.1 github.com/Azure/go-ntlmssp@v0.1.1 github.com/go-git/go-billy/v5@v5.9.0 github.com/go-git/go-git/v5@v5.19.1 github.com/klauspost/compress@v1.18.7 github.com/yuin/goldmark@v1.7.17 go.mongodb.org/mongo-driver@v1.17.7 google.golang.org/grpc@v1.82.1 go.opentelemetry.io/otel@v1.44.0 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.48.0
+          _retry go get filippo.io/edwards25519@v1.1.1 github.com/Azure/go-ntlmssp@v0.1.1 github.com/go-git/go-billy/v5@v5.9.0 github.com/go-git/go-git/v5@v5.19.1 github.com/klauspost/compress@v1.18.7 github.com/yuin/goldmark@v1.7.17 go.mongodb.org/mongo-driver@v1.17.7 google.golang.org/grpc@v1.82.1 go.opentelemetry.io/otel@v1.45.0 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.48.0
           go mod tidy -e
           # go mod tidy can downgrade a source-pinned require below what the
           # source shipped (e.g. a lockstep family like openbao's

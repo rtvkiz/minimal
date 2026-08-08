@@ -45,34 +45,35 @@ pipeline:
   # Build the thanos binary (static).
   # Version is reported via github.com/prometheus/common/version; build tags
   # netgo,slicelabels match upstream's .promu.yml release build.
-  # patch-go-deps: auto-generated — do not edit manually
+  # patch-go-deps: auto-generated — do not edit manually (test-and-keep)
   - runs: |
       export GOWORK=off
       _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
-      _pgd_reqs() { awk '$1=="require" && $2=="(" {b=1;next} b && $1==")" {b=0;next} b && index($1,"/")>0 && substr($2,1,1)=="v" {print $1,$2;next} $1=="require" && NF>=3 && index($2,"/")>0 && substr($3,1,1)=="v" {print $2,$3}' "$1"; }
       for root in /home/build/thanos-${{package.version}}; do
         [ -f "$root/go.mod" ] || continue
         ( set -e
           cd "$root"
-          cp go.mod .pgd-orig.mod
-          _retry go get github.com/go-jose/go-jose/v4@v4.1.4 github.com/klauspost/compress@v1.18.7 go.mongodb.org/mongo-driver@v1.17.7 google.golang.org/grpc@v1.82.1 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.44.0 go.opentelemetry.io/otel/sdk@v1.44.0 go.opentelemetry.io/otel@v1.44.0 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.40.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.48.0
-          go mod tidy -e
-          # go mod tidy can downgrade a source-pinned require below what the
-          # source shipped (e.g. a lockstep family like openbao's
-          # go-kms-wrapping transit v2.8.0 -> v2.1.0, which then fails to build
-          # against its core sibling still at v2.8.0). Re-raise any require tidy
-          # dropped below its pre-tidy version. Corrects only upward, so CVE
-          # bumps (>= source) are never undone.
-          _pgd_reqs .pgd-orig.mod > .pgd-o.txt
-          _pgd_reqs go.mod > .pgd-n.txt
-          awk 'NR==FNR{o[$1]=$2;next} ($1 in o) && o[$1]!=$2 {print $1,o[$1],$2}' .pgd-o.txt .pgd-n.txt | while read -r p ov cv; do
-            hi=$( { echo "$ov"; echo "$cv"; } | sort -V | tail -1 )
-            if [ "$hi" = "$ov" ]; then
-              echo "pgd-guard: restoring $p: $cv -> $ov (tidy downgraded below source pin)"
-              _retry go get "$p@$ov"
+          cp go.mod .pgd-base.mod
+          [ -f go.sum ] && cp go.sum .pgd-base.sum || true
+          # Probe each candidate CVE fix against the real build; keep the ones
+          # that still compile, drop those that need upstream to update its
+          # vendored code first (logged, not silent). Patches everything safely
+          # patchable now instead of skipping the image wholesale.
+          KEPT=""
+          for fix in  github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8 github.com/aws/aws-sdk-go-v2/service/s3@v1.99.0 github.com/cloudflare/circl@v1.6.3 github.com/containerd/containerd/v2@v2.2.1 github.com/containerd/containerd@v1.7.33 github.com/docker/cli@v29.2.0+incompatible github.com/go-chi/chi/v5@v5.3.0 github.com/go-git/go-billy/v5@v5.9.0 github.com/go-git/go-git/v5@v5.19.1 github.com/go-jose/go-jose/v4@v4.1.4 github.com/klauspost/compress@v1.18.7 github.com/moby/buildkit@v0.28.1 github.com/nwaples/rardecode/v2@v2.2.2 github.com/opencontainers/selinux@v1.13.1 github.com/quic-go/quic-go@v0.59.1 github.com/rclone/rclone@v1.74.3 github.com/ulikunitz/xz@v0.5.15 go.mongodb.org/mongo-driver@v1.17.7 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.45.0 go.opentelemetry.io/otel/sdk@v1.45.0 go.opentelemetry.io/otel@v1.45.0 golang.org/x/crypto@v0.54.0 golang.org/x/net@v0.57.0 golang.org/x/sync@v0.22.0 golang.org/x/sys@v0.47.0 golang.org/x/term@v0.45.0 golang.org/x/text@v0.40.0 golang.org/x/time@v0.15.0 golang.org/x/tools@v0.48.0 google.golang.org/grpc@v1.83.0 oras.land/oras-go/v2@v2.6.1 software.sslmate.com/src/go-pkcs12@v0.7.2; do
+            cp .pgd-base.mod go.mod
+            [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true
+            if go get $KEPT "$fix" >/dev/null 2>&1 && GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -tags netgo,slicelabels -o /dev/null ./cmd/thanos >/dev/null 2>&1; then
+              KEPT="$KEPT $fix"; echo "pgd-testkeep KEPT: $fix"
+            else
+              echo "pgd-testkeep dropped (needs upstream): $fix"
             fi
           done
-          rm -f .pgd-orig.mod .pgd-o.txt .pgd-n.txt
+          cp .pgd-base.mod go.mod
+          [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true
+          if [ -n "$KEPT" ]; then _retry go get $KEPT; fi
+          go mod tidy -e
+          rm -f .pgd-base.mod .pgd-base.sum
           [ ! -d vendor ] || go mod vendor
         )
       done
