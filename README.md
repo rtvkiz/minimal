@@ -249,8 +249,19 @@ Published tags serve different purposes:
 | Digest | `minimal-python@sha256:…` | Immutable content identity; preferred for deployment pinning. |
 | Version | `minimal-caddy:2.11.4-r0` | Moves when that application version is rebuilt with newer packages. |
 | Dated version | `minimal-caddy:2.11.4-r0-20260725` | Build-history tag; may move if the image is rebuilt again on the same UTC date. |
-| Latest | `minimal-caddy:latest` | Tracks the newest published production build. |
+| Minor line | `minimal-caddy:2.11` | Tracks the newest patch within that minor line. |
+| Major line | `minimal-caddy:2` | Tracks the newest release within that major line; does not cross a major bump. |
+| Latest | `minimal-caddy:latest` | Tracks the newest published production build, **including across major versions**. |
 | Dev | `minimal-caddy:latest-dev` | Tracks the newest development/debug variant. |
+
+Pin a major line (`:2`) if you want ongoing patches without being moved across a
+breaking upstream release — `:latest` will cross a major bump, an exact version
+tag never moves forward at all. Every tag above has a `-dev` companion
+(`:2-dev`, `:2.11-dev`).
+
+Two exceptions, by design: images on a `0.x` version publish only the minor line
+(`:0.42`, not `:0`) because semver permits breaking changes between `0.x` minors;
+and calendar-versioned images (minio, `2025.10.15`) publish no line tags at all.
 
 The Melange epoch resets to `r0` on an upstream application-version bump. It increments when the recipe itself changes while the upstream version stays the same.
 
