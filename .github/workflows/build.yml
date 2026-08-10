@@ -789,11 +789,28 @@ jobs:
           # as version history — the plain :<version> tag moves on same-version
           # rebuilds. Daily granularity; retention is bounded by cleanup-packages.yml.
           DATE_TAG=$(date -u +%Y%m%d)
+          # Rolling major/minor tags (:3, :3.21) so consumers can track a line
+          # instead of choosing between :latest (breaks on a major bump) and an
+          # exact patch (frozen, including security fixes). Same digest.
+          # shellcheck source=.github/scripts/version-ladder.sh
+          . ./.github/scripts/version-ladder.sh
+          IMAGE_REF="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}"
+          VER="${{ steps.version.outputs.tag }}"
+          SUF="${{ matrix.tag_suffix }}"
+
+          TAGS=(
+            "${IMAGE_REF}:${VER}${SUF}"
+            "${IMAGE_REF}:${VER}-${DATE_TAG}${SUF}"
+            "${IMAGE_REF}:${{ matrix.latest_tag }}"
+          )
+          for L in $(derive_version_ladder "$VER"); do
+            TAGS+=("${IMAGE_REF}:${L}${SUF}")
+          done
+          echo "Publishing tags: ${TAGS[*]}"
+
           for attempt in 1 2 3; do
             if apko publish ${{ matrix.apko_config }} \
-                ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}${{ matrix.tag_suffix }} \
-                ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}-${DATE_TAG}${{ matrix.tag_suffix }} \
-                ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ matrix.latest_tag }} \
+                "${TAGS[@]}" \
                 --arch x86_64,aarch64 \
                 --sbom-path . \
                 > "$PUBLISH_OUT" 2>&1; then
@@ -1333,11 +1350,26 @@ jobs:
           # as version history — the plain :<version> tag moves on same-version
           # rebuilds. Daily granularity; retention is bounded by cleanup-packages.yml.
           DATE_TAG=$(date -u +%Y%m%d)
+          # Rolling major/minor tags — see the matching comment in build-apko.
+          # shellcheck source=.github/scripts/version-ladder.sh
+          . ./.github/scripts/version-ladder.sh
+          IMAGE_REF="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}"
+          VER="${{ steps.version.outputs.tag }}"
+          SUF="${{ matrix.tag_suffix }}"
+
+          TAGS=(
+            "${IMAGE_REF}:${VER}${SUF}"
+            "${IMAGE_REF}:${VER}-${DATE_TAG}${SUF}"
+            "${IMAGE_REF}:${{ matrix.latest_tag }}"
+          )
+          for L in $(derive_version_ladder "$VER"); do
+            TAGS+=("${IMAGE_REF}:${L}${SUF}")
+          done
+          echo "Publishing tags: ${TAGS[*]}"
+
           for attempt in 1 2 3; do
             if apko publish ${{ matrix.apko_config }} \
-                ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}${{ matrix.tag_suffix }} \
-                ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ steps.version.outputs.tag }}-${DATE_TAG}${{ matrix.tag_suffix }} \
-                ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ matrix.latest_tag }} \
+                "${TAGS[@]}" \
                 --arch ${{ matrix.arches }} \
                 --repository-append ./packages \
                 --keyring-append ./melange.rsa.pub \

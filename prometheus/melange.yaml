@@ -13,7 +13,7 @@ package:
     - license: Apache-2.0
 
 vars:
-  # SHA256 checksum of source tarball - updated by update-prometheus.yml workflow
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
   sha256: fb8eb45635c29b120cf54aa19a1b724348d49e385062ff519b8e0b4f457c26e1
 
 environment:

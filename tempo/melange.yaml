@@ -11,7 +11,7 @@ package:
     - license: AGPL-3.0-only
 
 vars:
-  # SHA256 of tempo source tarball - updated by update-tempo.yml workflow
+  # SHA256 of tempo source tarball - updated by update-versions.yml workflow
   sha256: 9da6e1c411694d1010bb7641ab55e365095bc85fd76d02e142ede0fa2162cf71
 
 environment:

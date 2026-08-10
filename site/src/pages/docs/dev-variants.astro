@@ -1,0 +1,46 @@
+---
+import Layout from '../../components/Layout.astro';
+import CopyButton from '../../components/CopyButton.astro';
+import { images } from '../../lib/catalog';
+const total = images.length;
+---
+<Layout title="Development variants — Minimal Containers" description="Every image ships a -dev companion with a shell and toolchain, for multi-stage builds and debugging.">
+  <section>
+    <div class="container-narrow">
+      <p class="eyebrow"><a href="/docs">Docs</a></p>
+      <h1 class="section-title">Development variants</h1>
+      <p class="section-sub">All {total} images publish a <code class="kv-mono">:latest-dev</code> companion. Production and dev consume the same primary package from the same build — dev adds a shell, a package manager, and image-appropriate build or debugging tools.</p>
+
+      <div class="notice" style="margin-top:24px">
+        Dev variants are intended for multi-stage builds and in-cluster debugging, not production workloads.
+      </div>
+
+      <h2 class="section-title" style="margin-top:44px">Multi-stage build</h2>
+      <p class="small muted">Build with the toolchain, ship without it.</p>
+      <CopyButton code={`FROM ghcr.io/rtvkiz/minimal-ruby:latest-dev AS build
+WORKDIR /work
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+FROM ghcr.io/rtvkiz/minimal-ruby:latest
+COPY --from=build /work /work`} />
+
+      <h2 class="section-title" style="margin-top:44px">Interactive shell</h2>
+      <p class="small muted">Dev images retain the production entrypoint. Override it to get a shell.</p>
+      <CopyButton code={`docker run -it --entrypoint /bin/sh \\
+  ghcr.io/rtvkiz/minimal-caddy:latest-dev`} />
+
+      <h2 class="section-title" style="margin-top:44px">Same pipeline, different scope</h2>
+      <p>
+        Dev images use the same signing, SBOM, provenance, and publish pipeline as production.
+        They are <b>excluded from the public CVE dashboard</b> — their intentionally larger toolchain
+        surface is not representative of the production image, so including them would misrepresent
+        both.
+      </p>
+      <p class="small muted">
+        Composition rules are documented in
+        <a href="https://github.com/rtvkiz/minimal/blob/main/docs/dev-variants/CONVENTIONS.md" rel="noopener">docs/dev-variants/CONVENTIONS.md</a>.
+      </p>
+    </div>
+  </section>
+</Layout>

@@ -1,0 +1,54 @@
+---
+import Layout from '../../components/Layout.astro';
+
+const sections = [
+  {
+    href: '/docs/tags',
+    cat: 'Using the images',
+    title: 'Tags & pinning',
+    desc: 'What each tag means, which one to pin, and how to track a major line without being moved across a breaking release.',
+  },
+  {
+    href: '/docs/dev-variants',
+    cat: 'Using the images',
+    title: 'Development variants',
+    desc: 'Every image ships a -dev companion with a shell and toolchain, for multi-stage builds and in-cluster debugging.',
+  },
+  {
+    href: '/docs/updates',
+    cat: 'How it works',
+    title: 'How images stay current',
+    desc: 'Two independent update loops plus transitive dependency patching — and the guardrails that stop an image going stale unnoticed.',
+  },
+  {
+    href: '/docs/vulnerabilities',
+    cat: 'How it works',
+    title: 'Reading scan results',
+    desc: 'Why a green build does not mean zero CVEs, what VEX changes, and how the raw and effective counts differ.',
+  },
+];
+---
+<Layout title="Docs — Minimal Containers" description="How to use Minimal Containers images, and how they are kept current.">
+  <section>
+    <div class="container-narrow">
+      <h1 class="section-title">Docs</h1>
+      <p class="section-sub">How to use the images, and how they are kept current. For the full inventory see <a href="/images">Images</a>; to check the claims yourself see <a href="/about">Verify</a>.</p>
+
+      <div class="grid" style="margin-top:28px">
+        {sections.map((s) => (
+          <article class="card">
+            <span class="cat">{s.cat}</span>
+            <a class="card-title" href={s.href}>{s.title}</a>
+            <p class="desc">{s.desc}</p>
+          </article>
+        ))}
+      </div>
+
+      <h2 class="section-title" style="margin-top:44px">Contributing</h2>
+      <p class="small muted">
+        Build recipes, the onboarding checklist, and local build instructions live in the
+        repository: <a href="https://github.com/rtvkiz/minimal" rel="noopener">github.com/rtvkiz/minimal</a>.
+      </p>
+    </div>
+  </section>
+</Layout>

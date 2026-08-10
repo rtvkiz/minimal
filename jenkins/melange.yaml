@@ -12,7 +12,7 @@ package:
     - license: MIT
 
 vars:
-  # SHA256 checksum of jenkins.war - updated by update-jenkins.yml workflow
+  # SHA256 checksum of jenkins.war - updated by update-versions.yml workflow
   sha256: 9bbb2b329e52730ba7decd1a7a1095987f6250ec761fb21157dbb2cbcd1ef590
 
 environment:

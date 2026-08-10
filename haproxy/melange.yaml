@@ -11,7 +11,7 @@ package:
     - license: GPL-2.0-or-later
 
 vars:
-  # SHA256 checksum of source tarball - updated by update-haproxy.yml workflow
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
   sha256: 9298f565c2a9ba8a4e7f89c54be2c5d3fd960b5b304eb5515e15d29d2c15d4f7
 
 environment:

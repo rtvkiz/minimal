@@ -1,0 +1,82 @@
+---
+import Layout from '../../components/Layout.astro';
+import { images } from '../../lib/catalog';
+const total = images.length;
+const repo = 'https://github.com/rtvkiz/minimal/blob/main';
+---
+<Layout title="How images stay current — Minimal Containers" description="Two independent update loops, transitive dependency patching, and the guardrails that stop an image going stale unnoticed.">
+  <section>
+    <div class="container-narrow">
+      <p class="eyebrow"><a href="/docs">Docs</a></p>
+      <h1 class="section-title">How images stay current</h1>
+      <p class="section-sub">Rebuilding an image and upgrading its application are different operations, so they run on separate loops. Neither waits on the other, and neither needs a human.</p>
+
+      <h2 class="section-title" style="margin-top:40px">1 · Six-hour rebuilds</h2>
+      <p>
+        <a href={`${repo}/.github/workflows/build.yml`} rel="noopener">build.yml</a> rebuilds the complete
+        catalog every six hours. It keeps the currently pinned application version but consumes current
+        Wolfi packages and toolchains — so an upstream glibc or OpenSSL fix reaches every image without
+        anyone changing a line of code.
+      </p>
+      <p class="small muted">For a source-built image the pipeline is:</p>
+      <pre class="codeblock"><code>verified source archive
+  → native x86_64 and ARM64 Melange packages
+  → production and dev Apko images
+  → smoke test and production-image Grype scan
+  → multi-architecture publish
+  → Cosign signature, SPDX SBOM, and SLSA provenance
+  → verification and catalog artifacts</code></pre>
+      <p class="small muted">Pull requests build and test but never publish. Only trusted non-PR runs push to GHCR.</p>
+
+      <h2 class="section-title" style="margin-top:44px">2 · Application-version updates</h2>
+      <p>
+        <a href={`${repo}/.github/workflows/update-versions.yml`} rel="noopener">update-versions.yml</a>
+        checks source-built applications daily against a declarative registry
+        (<a href={`${repo}/.github/versions.yaml`} rel="noopener">versions.yaml</a>). It updates the version,
+        verifies the upstream artifact checksum, resets the epoch, opens a pull request, and enables
+        auto-merge once required checks pass.
+      </p>
+      <p>
+        <b>Major-version pins stop unattended breaking upgrades.</b> When a new major appears the workflow
+        can open an issue for explicit review rather than bumping across it.
+      </p>
+      <p class="small muted">For package-based images:</p>
+      <ul class="small muted">
+        <li>Rolling Wolfi packages (<code class="kv-mono">nginx-mainline</code>, <code class="kv-mono">apache2</code>, <code class="kv-mono">sqlite</code>, <code class="kv-mono">bun</code>) advance through the six-hour rebuild.</li>
+        <li>Versioned families (Python, Go, Node.js, .NET, Java, PostgreSQL) get patch releases through rebuilds, while <a href={`${repo}/.github/workflows/update-wolfi-packages.yml`} rel="noopener">update-wolfi-packages.yml</a> opens PRs when the package family itself must change.</li>
+      </ul>
+
+      <h2 class="section-title" style="margin-top:44px">3 · Transitive dependency patches</h2>
+      <p>
+        <a href={`${repo}/.github/workflows/patch-go-deps.yml`} rel="noopener">patch-go-deps.yml</a> scans
+        published Go binaries every six hours and proposes targeted module updates for fixable
+        vulnerabilities. It preserves existing security pins, harmonizes related module families, and for
+        dependency-sensitive applications <b>probes each candidate fix against a real compile</b>, keeping
+        only those that still build.
+      </p>
+      <p>
+        <a href={`${repo}/.github/workflows/patch-deps.yml`} rel="noopener">patch-deps.yml</a> does the
+        same for Rails gems, Qdrant Rust crates, Keycloak Maven dependencies, and bundled Java archives in
+        OpenSearch and Keycloak.
+      </p>
+      <p class="small muted">
+        Generated changes land as automated pull requests — the normal image build is the integration gate
+        before auto-merge. Cassandra, Solr, and Pulsar bundled-JAR findings are report-only until their
+        tightly coupled dependency families get an explicit compatibility review.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">4 · Guardrails</h2>
+      <p class="small muted">Automation that fails silently is worse than none, so each of these turns an invisible problem into a failed build.</p>
+      <table class="data">
+        <thead><tr><th>Check</th><th>Runs</th><th>Enforces</th></tr></thead>
+        <tbody>
+          <tr><td><b>Auto-update coverage</b></td><td>Every build</td><td>All {total} images have exactly one live update mechanism — an image cannot be silently frozen.</td></tr>
+          <tr><td><b>Catalog validation</b></td><td>Every build</td><td>The published catalog and the build matrix can never drift apart.</td></tr>
+          <tr><td><b>Workflow lint</b></td><td>Workflow changes</td><td>Actionlint and ShellCheck, so a shell error cannot reach a scheduled run on main.</td></tr>
+          <tr><td><b>Branch auto-update</b></td><td>Push to main, every 30 min</td><td>Keeps auto-merge pull requests from stalling under strict branch protection.</td></tr>
+          <tr><td><b>Retention</b></td><td>Weekly</td><td>Prunes untagged and expired dated versions. Deletion is dry-run unless explicitly enabled.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</Layout>

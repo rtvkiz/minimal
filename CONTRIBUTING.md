@@ -4,12 +4,48 @@ This guide covers how to add a new hardened container image to the project.
 
 ## Prerequisites
 
-Install the following tools locally:
+Install the same major tool versions CI uses — a version mismatch is a common
+source of "works locally, fails in CI":
+
+```bash
+go install chainguard.dev/apko@v1.1.6
+go install chainguard.dev/melange@v0.41.1
+brew install anchore/grype/grype
+```
 
 - [apko](https://github.com/chainguard-dev/apko) — image assembly
 - [melange](https://github.com/chainguard-dev/melange) — package building (only if compiling from source)
 - [Docker](https://docs.docker.com/get-docker/)
-- [Trivy](https://aquasecurity.github.io/trivy/) — vulnerability scanning (optional, for local scans)
+- [Grype](https://github.com/anchore/grype) — vulnerability scanning; this is what CI scans with
+
+Note: `melange build` cross-architecture builds need QEMU. Without it, an
+`--arch x86_64,aarch64` build fails on the aarch64 leg with
+`bwrap: execvp /bin/sh: Exec format error`. Build `--arch x86_64` locally; CI
+builds ARM on native runners.
+
+## Project structure
+
+```text
+minimal/
+├── <image>/
+│   ├── apko/<name>.yaml          # production image assembly
+│   ├── apko/<name>-dev.yaml      # development/debug variant
+│   ├── melange.yaml              # source build, when applicable
+│   ├── test.sh                   # production smoke test
+│   └── test-dev.sh               # development-variant smoke test
+├── vex/<name>.openvex.json       # per-image vulnerability statements
+├── .github/
+│   ├── versions.yaml             # source-version update registry
+│   ├── patch-deps.yaml           # non-Go dependency patch registry
+│   ├── autoupdate-coverage.yaml  # package-based update classification
+│   ├── scripts/                  # shared updater implementation
+│   └── workflows/                # build, update, security, site, and cleanup automation
+├── catalog.json                  # canonical public image inventory
+├── docs/                         # onboarding, update, and variant standards
+├── site/                         # minimalcontainers.com Astro site
+├── Makefile
+└── README.md
+```
 
 ## Adding a New Image
 
@@ -297,7 +333,7 @@ IMAGE=ghcr.io/$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-')/
   ./<image-name>/test.sh
 
 # Scan
-trivy image --severity CRITICAL,HIGH ghcr.io/.../minimal-<image-name>:latest
+grype ghcr.io/.../minimal-<image-name>:latest
 ```
 
 ## Conventions

@@ -1,0 +1,52 @@
+---
+import Layout from '../../components/Layout.astro';
+import CopyButton from '../../components/CopyButton.astro';
+---
+<Layout title="Tags & pinning — Minimal Containers" description="What each published tag means and which one to pin for production.">
+  <section>
+    <div class="container-narrow">
+      <p class="eyebrow"><a href="/docs">Docs</a></p>
+      <h1 class="section-title">Tags &amp; pinning</h1>
+      <p class="section-sub">Every image publishes several tags pointing at the same build. Which one you pin decides what happens when the software changes underneath you.</p>
+
+      <h2 style="font-size:1.1rem;margin-top:32px">Pin by digest for immutability</h2>
+      <p class="small muted">A digest is content-addressed — it can never move. Preferred for production deployments.</p>
+      <CopyButton code={`FROM ghcr.io/rtvkiz/minimal-python@sha256:<digest>`} />
+
+      <h2 class="section-title" style="margin-top:44px">What each tag does</h2>
+      <table class="data">
+        <thead><tr><th>Reference</th><th>Example</th><th>Behavior</th></tr></thead>
+        <tbody>
+          <tr><td><b>Digest</b></td><td><code class="kv-mono">minimal-python@sha256:…</code></td><td>Immutable content identity. Never moves.</td></tr>
+          <tr><td><b>Version</b></td><td><code class="kv-mono">minimal-caddy:2.11.4-r0</code></td><td>Moves when that application version is rebuilt with newer packages.</td></tr>
+          <tr><td><b>Dated version</b></td><td><code class="kv-mono">minimal-caddy:2.11.4-r0-20260725</code></td><td>Build-history tag; may move if rebuilt again on the same UTC date.</td></tr>
+          <tr><td><b>Minor line</b></td><td><code class="kv-mono">minimal-caddy:2.11</code></td><td>Newest patch within that minor line.</td></tr>
+          <tr><td><b>Major line</b></td><td><code class="kv-mono">minimal-caddy:2</code></td><td>Newest release within that major line. Does not cross a major bump.</td></tr>
+          <tr><td><b>Latest</b></td><td><code class="kv-mono">minimal-caddy:latest</code></td><td>Newest production build, <b>including across major versions</b>.</td></tr>
+          <tr><td><b>Dev</b></td><td><code class="kv-mono">minimal-caddy:latest-dev</code></td><td>Newest development/debug variant.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title" style="margin-top:44px">Which should you pin?</h2>
+      <p>
+        <b>Pin a major line</b> (<code class="kv-mono">:2</code>) if you want ongoing patches without being
+        moved across a breaking upstream release. <code class="kv-mono">:latest</code> will cross a major
+        bump; an exact version tag never moves forward at all, so it stops receiving security fixes.
+        Pin a <b>digest</b> when you need a byte-identical artifact and will update it deliberately.
+      </p>
+      <p class="small muted">Every tag above has a <code class="kv-mono">-dev</code> companion — <code class="kv-mono">:2-dev</code>, <code class="kv-mono">:2.11-dev</code>.</p>
+
+      <h2 class="section-title" style="margin-top:44px">Two deliberate exceptions</h2>
+      <ul>
+        <li><b>Images on a <code class="kv-mono">0.x</code> version</b> publish only the minor line (<code class="kv-mono">:0.42</code>, never <code class="kv-mono">:0</code>). Semantic versioning permits breaking changes between <code class="kv-mono">0.x</code> minors, so a rolling <code class="kv-mono">:0</code> would promise a compatibility guarantee that does not exist.</li>
+        <li><b>Calendar-versioned images</b> (minio, <code class="kv-mono">2025.10.15</code>) publish no line tags — a <code class="kv-mono">:2025</code> tag would imply a support line that is not a real thing.</li>
+      </ul>
+
+      <h2 class="section-title" style="margin-top:44px">About the epoch</h2>
+      <p class="small muted">
+        The Melange epoch (<code class="kv-mono">-r0</code>) resets on an upstream application-version bump,
+        and increments when the build recipe changes while the upstream version stays the same.
+      </p>
+    </div>
+  </section>
+</Layout>

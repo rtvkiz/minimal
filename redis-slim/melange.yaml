@@ -32,7 +32,7 @@ package:
     provider-priority: 100
 
 vars:
-  # SHA256 checksum of source tarball - updated by update-redis.yml workflow
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
   sha256: b928cf47427b94bb0c6866c32df834bc8e5efc815b9ad2e2d24bf33f2c533e2a
 
 environment:

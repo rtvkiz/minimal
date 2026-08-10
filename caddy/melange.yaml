@@ -11,7 +11,7 @@ package:
     - license: Apache-2.0
 
 vars:
-  # SHA256 checksum of source tarball - updated by update-caddy.yml workflow
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
   sha256: 2c3d02078286a6282cdb4d1d8744077788d556659dac0b64d8ed5886a7e5aeb9
 
 environment:

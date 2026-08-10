@@ -14,7 +14,7 @@ package:
     - license: Apache-2.0
 
 vars:
-  # SHA256 of kubernetes source tarball - updated by update-kubectl.yml workflow
+  # SHA256 of kubernetes source tarball - updated by update-versions.yml workflow
   sha256: 950f7dd65b64b18ca065a08ae73dd5f61ff72b48c8778c5bfceacc84eaaf10ed
 
 environment:

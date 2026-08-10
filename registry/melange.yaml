@@ -11,7 +11,7 @@ package:
     - license: Apache-2.0
 
 vars:
-  # SHA256 of the distribution source tarball - updated by update-registry.yml workflow
+  # SHA256 of the distribution source tarball - updated by update-versions.yml workflow
   sha256: 419183e8c1426b5d625732cf6846a2d48ad8e898a1659d7bec7171b7d156673e
 
 environment:
