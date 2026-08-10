@@ -1,0 +1,52 @@
+---
+import Layout from '../../components/Layout.astro';
+const repo = 'https://github.com/rtvkiz/minimal/blob/main';
+---
+<Layout title="Reading scan results — Minimal Containers" description="Why a green build does not mean zero CVEs, and how raw and VEX-effective counts differ.">
+  <section>
+    <div class="container-narrow">
+      <p class="eyebrow"><a href="/docs">Docs</a></p>
+      <h1 class="section-title">Reading scan results</h1>
+      <p class="section-sub">A successful build does not mean an image has zero reported vulnerabilities. Here is exactly what the numbers mean.</p>
+
+      <h2 class="section-title" style="margin-top:40px">What gets published</h2>
+      <ul>
+        <li><b>Grype scans every production image</b> and publishes raw JSON and SARIF results. SARIF is uploaded to the repository's Security tab.</li>
+        <li><b>Findings are informational.</b> There is no global severity threshold that blocks publication — a CVE with no available fix should not stop a security update to everything else in the image.</li>
+        <li><b>Dev images are excluded</b> from the dashboard. Their larger toolchain surface is not representative of the production image.</li>
+      </ul>
+
+      <h2 class="section-title" style="margin-top:44px">Raw vs effective counts</h2>
+      <p>
+        The catalog shows two numbers. <b>Raw</b> is what the scanner reported. <b>Effective</b> is what
+        remains after applying <a href="https://openvex.dev/" rel="noopener">OpenVEX</a> statements, which
+        can mark a finding <code class="kv-mono">not_affected</code> or <code class="kv-mono">fixed</code>
+        with a stated justification.
+      </p>
+      <p class="small muted">
+        Both are shown deliberately. A single "0 CVEs" headline hides whether it was achieved by patching
+        or by suppression.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Suppressions cannot quietly rot</h2>
+      <p>
+        Anything can be suppressed once. The check that matters is whether a suppression is
+        <em>still true</em>, so every scan reconciles VEX statements against fresh results and flags two
+        kinds of drift:
+      </p>
+      <ul>
+        <li><b>Stale</b> — the suppressed CVE is no longer present at all, so the statement is dead weight.</li>
+        <li><b>Now fixable</b> — a real upstream fix exists, so the finding should be <em>patched, not hidden</em>.</li>
+      </ul>
+      <p class="small muted">
+        VEX documents are also schema-validated in CI. The workflow is documented in
+        <a href={`${repo}/tools/vex/README.md`} rel="noopener">tools/vex/README.md</a>.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Check it yourself</h2>
+      <p class="small muted">
+        Every claim here is verifiable from your terminal without an account — see <a href="/about">Verify</a>.
+      </p>
+    </div>
+  </section>
+</Layout>
