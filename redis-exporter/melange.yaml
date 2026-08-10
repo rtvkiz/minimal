@@ -1,0 +1,75 @@
+# Melange build configuration for minimal redis_exporter
+# Pure Go from source. Single static `redis_exporter` binary — scrapes Redis /
+# Valkey INFO and exposes it as Prometheus metrics.
+# License: MIT.
+
+package:
+  name: redis-exporter-minimal
+  version: 1.88.0
+  epoch: 0
+  description: "Minimal Redis exporter for Prometheus built from source"
+  copyright:
+    - license: MIT
+
+vars:
+  # SHA256 of redis_exporter source tarball - updated by update-versions.yml
+  sha256: 91288858a8c4465e545241d011cf2ecd0cf549004daef38e517f060d6389b9f6
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify redis_exporter source. Note the upstream repo is
+  # `redis_exporter` (underscore) while our image is `redis-exporter` (hyphen,
+  # matching the catalog's naming convention).
+  - runs: |
+      mkdir -p /home/build/redis-exporter-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/oliver006/redis_exporter/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/redis-exporter.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/redis-exporter.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/redis-exporter.tar.gz -C /home/build/redis-exporter-${{package.version}} --strip-components=1
+      rm /home/build/redis-exporter.tar.gz
+
+  # Version lives in package main (upstream: -X main.BuildVersion). The binary
+  # prints "<<< filled in by build >>>" if this is not injected, which the smoke
+  # test greps against.
+  - runs: |
+      cd /home/build/redis-exporter-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X main.BuildVersion=${{package.version}}" \
+        -o /home/build/redis-exporter-bin \
+        .
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/redis-exporter-bin "${{targets.destdir}}/usr/bin/redis_exporter"
+      chmod 0755 "${{targets.destdir}}/usr/bin/redis_exporter"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying redis_exporter binary..."
+      "${{targets.destdir}}/usr/bin/redis_exporter" --version 2>&1 | head -2
+
+update:
+  enabled: true
+  github:
+    identifier: oliver006/redis_exporter
+    use-tag: true
+    tag-filter: "v1."

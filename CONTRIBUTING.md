@@ -333,7 +333,7 @@ IMAGE=ghcr.io/$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-')/
   ./<image-name>/test.sh
 
 # Scan
-trivy image --severity CRITICAL,HIGH ghcr.io/.../minimal-<image-name>:latest
+grype ghcr.io/.../minimal-<image-name>:latest
 ```
 
 ## Conventions

@@ -12,7 +12,7 @@ package:
     - license: BSD-3-Clause
 
 vars:
-  # SHA256 checksum of source tarball - updated by update-valkey.yml workflow
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
   sha256: 7d7232acd1b8a49b4e05d07a00b3ca8c801ae06ab633ca6a3423bc5f385ab7ee
 
 environment:

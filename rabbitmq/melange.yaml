@@ -11,7 +11,7 @@ package:
     - license: MPL-2.0
 
 vars:
-  # SHA256 of rabbitmq-server-generic-unix-{version}.tar.xz - updated by update-rabbitmq.yml
+  # SHA256 of rabbitmq-server-generic-unix-{version}.tar.xz - updated by update-versions.yml
   sha256: 992b73ad65856f5e0006cfb04366207c13da325462a3798d8e5ec22506219d67
 
 environment:

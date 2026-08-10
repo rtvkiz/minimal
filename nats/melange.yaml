@@ -11,7 +11,7 @@ package:
     - license: Apache-2.0
 
 vars:
-  # SHA256 checksum of source tarball - updated by update-nats.yml workflow
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
   sha256: fb873897f826686dc4407112613e80c61fba10a1b381375458784995cd9f295d
 
 environment:

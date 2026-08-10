@@ -11,7 +11,7 @@ package:
     - license: GPL-2.0-only
 
 vars:
-  # SHA256 checksum of source tarball - updated by update-mariadb.yml workflow
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
   sha256: 5ab7883db519bfcebfdd2aac09bc5544a12ce328f39edd46d0bf01690615ef6c
 
 environment:

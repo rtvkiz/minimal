@@ -15,7 +15,7 @@ package:
     - license: BUSL-1.1
 
 vars:
-  # SHA256 of consul source tarball - updated by update-consul.yml workflow
+  # SHA256 of consul source tarball - updated by update-versions.yml workflow
   sha256: d91f6f99338216f9fbbe3035f67debb990f5fa49f8c554281ee5c4c352e69019
 
 environment:

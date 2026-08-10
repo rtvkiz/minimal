@@ -11,7 +11,7 @@ package:
     - license: MIT
 
 vars:
-  # SHA256 checksum of source tarball - updated by update-traefik.yml workflow
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
   sha256: 385efa2402785fc98634f23c300d91b9aa92e8153b617080613a081a646ae103
 
 environment:

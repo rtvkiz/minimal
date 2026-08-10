@@ -1,0 +1,75 @@
+# Melange build configuration for minimal kube-state-metrics
+# Pure Go from source. Single static `kube-state-metrics` binary — exposes
+# Kubernetes object state (Deployments, Pods, Nodes, ...) as Prometheus metrics.
+# License: Apache-2.0.
+
+package:
+  name: kube-state-metrics-minimal
+  version: 2.19.1
+  epoch: 0
+  description: "Minimal kube-state-metrics Kubernetes object-state exporter built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of kube-state-metrics source tarball - updated by update-versions.yml
+  sha256: d62da96bd2c0497aa866f396762f1c11f3f6a066bb4e86c8168d96ddcddb9025
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go
+      - git
+
+pipeline:
+  # Download and verify kube-state-metrics source
+  - runs: |
+      mkdir -p /home/build/kube-state-metrics-${{package.version}}
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/kubernetes/kube-state-metrics/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/kube-state-metrics.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/kube-state-metrics.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/kube-state-metrics.tar.gz -C /home/build/kube-state-metrics-${{package.version}} --strip-components=1
+      rm /home/build/kube-state-metrics.tar.gz
+
+  # Version is reported through the shared prometheus/common version package
+  # (upstream Makefile sets PKG = github.com/prometheus/common), NOT this
+  # project's own module path. `--version` prints an empty version if this is
+  # pointed at k8s.io/kube-state-metrics/v2 instead.
+  - runs: |
+      cd /home/build/kube-state-metrics-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/prometheus/common/version.Version=${{package.version}}" \
+        -o /home/build/kube-state-metrics-bin \
+        .
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/kube-state-metrics-bin "${{targets.destdir}}/usr/bin/kube-state-metrics"
+      chmod 0755 "${{targets.destdir}}/usr/bin/kube-state-metrics"
+
+  # Verify the build. Note: kube-state-metrics exposes a `version` SUBCOMMAND,
+  # not a --version flag (that errors with "unknown flag: --version").
+  - runs: |
+      echo "Verifying kube-state-metrics binary..."
+      "${{targets.destdir}}/usr/bin/kube-state-metrics" version
+
+update:
+  enabled: true
+  github:
+    identifier: kubernetes/kube-state-metrics
+    use-tag: true
+    tag-filter: "v2."

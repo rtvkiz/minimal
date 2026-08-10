@@ -11,7 +11,7 @@ package:
     - license: BSD-3-Clause
 
 vars:
-  # SHA256 checksum of source tarball - updated by update-memcached.yml workflow
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
   sha256: d362c64e6d8d5287153501eabf7c85b4a761432fbf53f5d7b085d0bb1653c1dd
 
 environment:

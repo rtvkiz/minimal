@@ -11,7 +11,7 @@ package:
     - license: MIT
 
 vars:
-  # SHA256 of mailpit source tarball - updated by update-mailpit.yml workflow
+  # SHA256 of mailpit source tarball - updated by update-versions.yml workflow
   sha256: 19366f9b6fb3c8dd8f9c97b2e894133c6fbac2c2fee9657975874a0deab71777
 
 environment:

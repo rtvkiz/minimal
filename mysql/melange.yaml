@@ -11,7 +11,7 @@ package:
     - license: GPL-2.0-only
 
 vars:
-  # SHA256 checksum of source tarball - updated by update-mysql.yml workflow
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
   sha256: eb3051164d625dd346a8203f76e0d5d5d9aec51dbe9d51788e39ec6b3f1394c2
 
 environment:
