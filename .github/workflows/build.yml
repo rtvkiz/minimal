@@ -483,8 +483,19 @@ jobs:
       - name: Add Go bin to PATH
         run: echo "$HOME/go/bin" >> $GITHUB_PATH
 
+      # cosign-installer curls the release binary from github.com with no
+      # --retry, so a single "Recv failure: Connection reset by peer" (curl 35)
+      # kills the job before any build work happens (rails, main 2026-08-11).
+      # It is a `uses:` step, so nick-fields/retry cannot wrap it — the retry
+      # has to be a repeat of the step itself.
       - name: Setup cosign
+        id: setup-cosign
         if: github.event_name != 'pull_request'
+        continue-on-error: true
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+
+      - name: Setup cosign (retry)
+        if: github.event_name != 'pull_request' && steps.setup-cosign.outcome == 'failure'
         uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
 
       - name: Log in to Container Registry
@@ -893,8 +904,24 @@ jobs:
                 "${{ steps.publish.outputs.image }}" 2>&1); RC=$?
               echo "$OUT"
               if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q 'createLogEntryConflict'; then
-                echo "note: rekor already holds an equivalent entry for ${SBOM} — treating as success"
-                RC=0
+                # Unlike `cosign sign`, a rekor 409 here does NOT imply the
+                # desired end state: cosign aborts at the tlog step *before*
+                # pushing the attestation to the registry. Blanket-treating it
+                # as success published a green build whose spdxjson attestation
+                # was absent from GHCR, and the verify step then burned all 5
+                # attempts on a condition no retry can fix (postgres-slim, main
+                # 2026-08-11). Probe the registry and only accept the conflict
+                # if the attestation is actually there; otherwise leave RC
+                # non-zero so the retry re-attests.
+                if cosign verify-attestation --type spdxjson \
+                     --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+                     --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+                     "${{ steps.publish.outputs.image }}" > /dev/null 2>&1; then
+                  echo "note: rekor conflict for ${SBOM}, attestation is present in the registry — treating as success"
+                  RC=0
+                else
+                  echo "::warning::rekor conflict for ${SBOM} but no spdxjson attestation in the registry — will retry"
+                fi
               fi
               if [ "$RC" -eq 0 ]; then
                 touch ".attested-${SBOM}"
@@ -910,8 +937,30 @@ jobs:
             fi
             exit "$FAILED"
 
+      # This action talks to both GHCR and rekor, and fails intermittently on
+      # each: "OCIError: Error uploading artifact to container registry"
+      # (mariadb, velero) and "InternalError: error fetching tlog entry"
+      # (osv-scanner, kubeconform) — all on main, 2026-08-10. Every other
+      # sigstore step here is already wrapped in nick-fields/retry; this one
+      # was the last bare `uses:` and was the single largest source of red
+      # scheduled builds. Same repeat-the-step pattern as Setup cosign, with a
+      # backoff in between since the failures are load-related.
       - name: Generate SLSA build provenance
+        id: slsa-provenance
         if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
+        continue-on-error: true
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
+      - name: Back off before provenance retry
+        if: github.event_name != 'pull_request' && steps.slsa-provenance.outcome == 'failure'
+        run: sleep 60
+
+      - name: Generate SLSA build provenance (retry)
+        if: github.event_name != 'pull_request' && steps.slsa-provenance.outcome == 'failure'
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
@@ -1019,8 +1068,19 @@ jobs:
       - name: Add Go bin to PATH
         run: echo "$HOME/go/bin" >> $GITHUB_PATH
 
+      # cosign-installer curls the release binary from github.com with no
+      # --retry, so a single "Recv failure: Connection reset by peer" (curl 35)
+      # kills the job before any build work happens (rails, main 2026-08-11).
+      # It is a `uses:` step, so nick-fields/retry cannot wrap it — the retry
+      # has to be a repeat of the step itself.
       - name: Setup cosign
+        id: setup-cosign
         if: github.event_name != 'pull_request'
+        continue-on-error: true
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+
+      - name: Setup cosign (retry)
+        if: github.event_name != 'pull_request' && steps.setup-cosign.outcome == 'failure'
         uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
 
       - name: Log in to Container Registry
@@ -1439,8 +1499,24 @@ jobs:
                 "${{ steps.publish.outputs.image }}" 2>&1); RC=$?
               echo "$OUT"
               if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q 'createLogEntryConflict'; then
-                echo "note: rekor already holds an equivalent entry for ${SBOM} — treating as success"
-                RC=0
+                # Unlike `cosign sign`, a rekor 409 here does NOT imply the
+                # desired end state: cosign aborts at the tlog step *before*
+                # pushing the attestation to the registry. Blanket-treating it
+                # as success published a green build whose spdxjson attestation
+                # was absent from GHCR, and the verify step then burned all 5
+                # attempts on a condition no retry can fix (postgres-slim, main
+                # 2026-08-11). Probe the registry and only accept the conflict
+                # if the attestation is actually there; otherwise leave RC
+                # non-zero so the retry re-attests.
+                if cosign verify-attestation --type spdxjson \
+                     --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+                     --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+                     "${{ steps.publish.outputs.image }}" > /dev/null 2>&1; then
+                  echo "note: rekor conflict for ${SBOM}, attestation is present in the registry — treating as success"
+                  RC=0
+                else
+                  echo "::warning::rekor conflict for ${SBOM} but no spdxjson attestation in the registry — will retry"
+                fi
               fi
               if [ "$RC" -eq 0 ]; then
                 touch ".attested-${SBOM}"
@@ -1451,8 +1527,30 @@ jobs:
             done
             exit "$FAILED"
 
+      # This action talks to both GHCR and rekor, and fails intermittently on
+      # each: "OCIError: Error uploading artifact to container registry"
+      # (mariadb, velero) and "InternalError: error fetching tlog entry"
+      # (osv-scanner, kubeconform) — all on main, 2026-08-10. Every other
+      # sigstore step here is already wrapped in nick-fields/retry; this one
+      # was the last bare `uses:` and was the single largest source of red
+      # scheduled builds. Same repeat-the-step pattern as Setup cosign, with a
+      # backoff in between since the failures are load-related.
       - name: Generate SLSA build provenance
+        id: slsa-provenance
         if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
+        continue-on-error: true
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
+      - name: Back off before provenance retry
+        if: github.event_name != 'pull_request' && steps.slsa-provenance.outcome == 'failure'
+        run: sleep 60
+
+      - name: Generate SLSA build provenance (retry)
+        if: github.event_name != 'pull_request' && steps.slsa-provenance.outcome == 'failure'
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
