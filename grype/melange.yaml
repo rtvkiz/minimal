@@ -4,7 +4,7 @@
 
 package:
   name: grype-minimal
-  version: 0.116.1
+  version: 0.117.0
   epoch: 0
   description: "Minimal Grype (vulnerability scanner for images & filesystems) built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of grype source tarball - updated by update-versions.yml workflow
-  sha256: e64bd796bc93092ac9af1955193903d37f33ffbd4667a64a6b97c8f0dc61a2a7
+  sha256: 314a955453e4f69b3cee1a1982eed8e779ff8ae70e017d37a211d734b9083a94
 
 environment:
   contents:

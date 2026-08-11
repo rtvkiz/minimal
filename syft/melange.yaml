@@ -4,7 +4,7 @@
 
 package:
   name: syft-minimal
-  version: 1.50.0
+  version: 1.51.0
   epoch: 0
   description: "Minimal Syft (SBOM generation from images & filesystems) built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of syft source tarball - updated by update-versions.yml workflow
-  sha256: 83a6c11669094a6514a620976f22d0a4006509b4e2925f53e43e7bf506f0a3ac
+  sha256: d48bca3091ec4862f5041af6cbdeedb3f2322ae7a059199a22d99e099cabd4ae
 
 environment:
   contents:
