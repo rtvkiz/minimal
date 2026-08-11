@@ -1,6 +1,6 @@
 # Image Roadmap — the road to 100 (demand-ranked)
 
-**Status: 93 / 100 images.** This is the source-of-truth plan for growing the catalog.
+**Status: 96 / 100 images.** This is the source-of-truth plan for growing the catalog.
 It supersedes the batch order from earlier sessions, which was ordered by *build ease* and
 *GitHub popularity*. This version is ordered by **actual container demand first**, then
 build effort.
@@ -70,7 +70,7 @@ by effort. Fills the catalog's thinnest categories (databases, proxies, apps).
 | [ ] | apisix | apache/apisix | 🟢 Apache-2.0 | C/Lua/OpenResty | 37M | 17k | API gateway (harder: OpenResty) |
 | [ ] | vaultwarden | dani-garcia/vaultwarden | 🟡 AGPL-3.0 | Rust | 304M | 64k | self-hosted Bitwarden |
 | [ ] | kvrocks | apache/kvrocks | 🟢 Apache-2.0 | C++ | 3.5M | 4k | Redis-on-RocksDB |
-| [ ] | patroni | patroni/patroni | 🟢 MIT | Python | — | 9k | Postgres HA (Python pattern — new) |
+| [x] | patroni | patroni/patroni | 🟢 MIT | Python | — | 9k | Postgres HA — shipped; first Python-daemon pattern |
 | [ ] | woodpecker | woodpecker-ci/woodpecker | 🟢 Apache-2.0 | Go+frontend | 2.7M | 7k | CI server (has web UI) |
 
 ## Deferred / heavier efforts (own project, not a batch)
@@ -111,7 +111,7 @@ Policy filter = buildable under the shell-less/minimal thesis: ✅ static-Go bin
 C daemon (no *runtime* compiler — the varnish lesson) · JVM-jlink · interpreter ·
 binary-repackage. Excluded from the 100-path: frontend-in-bwrap (grafana/argocd/uptime-kuma),
 runtime-compiler (varnish), tangled force-bump graphs, huge-disk C++ (clickhouse), and
-🔴 SSPL/BUSL/EULA. At the current 93-image catalog, 7 images remain to reach 100.
+🔴 SSPL/BUSL/EULA. At the current 96-image catalog, 4 images remain to reach 100.
 
 ### Batch F — static Go (the crank) → 88   [DONE]
 | Image | Upstream | License | Build notes |
@@ -130,19 +130,24 @@ runtime-compiler (varnish), tangled force-bump graphs, huge-disk C++ (clickhouse
 
 Fills thin **Infrastructure**.
 
-### Batch H — JVM-jlink (kafka/zookeeper template) → 91 done, → 92 remaining
+### Batch H — JVM-jlink (kafka/zookeeper template)
 cassandra (🟢 wide-column DB, Java-17 + jamm agent) · solr (🟢 search, Java-21) ·
-pulsar (🟢 messaging, Java-21) — **DONE → 91**. flink (🟢 stream processing, Java-21) remaining → 94.
+pulsar (🟢 messaging, Java-21) — **DONE**. flink (🟢 stream processing, Java-21) remaining.
 All Apache. Fills thin DB/search/messaging.
 
-### Batch I — Rust (qdrant/vector precedent, own effort each) → 96
-vector (🟢 MPL-2.0, observability pipeline) · vaultwarden (🟡 AGPL-3.0, Bitwarden server; ~304M pulls).
+### Batch I — Rust (qdrant/vector precedent, own effort each)
+vector (🟢 MPL-2.0, observability pipeline) — **DONE**. vaultwarden (🟡 AGPL-3.0, Bitwarden
+server; ~304M pulls) remaining.
 
-### Batch J — Erlang / Python → 98
-couchdb (🟢 Apache, Erlang — rabbitmq precedent) · patroni (🟢 MIT, Postgres HA — new Python-daemon pattern).
+### Batch J — Erlang / Python
+patroni (🟢 MIT, Postgres HA — new Python-daemon pattern) — **DONE**.
+couchdb (🟢 Apache, Erlang — rabbitmq precedent) remaining.
 
-### Batch K — own-effort revisit → 100
+### Batch K — own-effort revisit
 cmctl (🟢 Apache — revisit klone build) · + one of {cert-manager core (multi-image) / pomerium (Envoy fetch) / apisix (OpenResty)}.
+
+Batches H–K name more candidates than the 4 slots left to 100; the last slots go to
+whichever land first.
 
 **Beyond the 100-path (deliberate exceptions, not scheduled):** varnish (runtime cc), grafana/argocd/uptime-kuma
 (frontend-in-bwrap), clickhouse/kubescape (disk-cap). See the deferred table above.
