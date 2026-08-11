@@ -95,7 +95,7 @@ contents:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
   packages:
     - wolfi-baselayout
-    - <name>-minimal          # source-built: your melange package. apko-only: the Wolfi apk.
+    - <name>                  # source-built: your melange package. apko-only: the Wolfi apk.
     - ca-certificates-bundle  # always, for TLS
 
 accounts:
@@ -154,10 +154,22 @@ Model on `cosign/melange.yaml` (Go) or `mosquitto/melange.yaml` (C). Skeleton:
 
 ```yaml
 package:
-  name: <name>-minimal
+  # Name it exactly what the upstream project is called — the same string NVD and
+  # the Wolfi secdb index it under. NOT `<name>-minimal`: syft derives the CPE from
+  # the apk name, so a suffix produces cpe:2.3:a:foo-minimal:foo-minimal:* which
+  # matches nothing in NVD and nothing in the Wolfi secdb, and grype silently
+  # reports zero CVEs. Measured: `haproxy-minimal` 0 findings vs `haproxy` 14 at an
+  # identical version. See §"Package naming and scanner visibility" below.
+  name: <name>
   version: X.Y.Z
   epoch: 0
   copyright: [{ license: <SPDX id> }]
+  dependencies:
+    # Required whenever Wolfi also ships a package of this name: apko resolves a
+    # top-level name across ALL repositories and picks the highest version — it does
+    # not prefer our local repo. provider-priority is evaluated before version in
+    # apko's comparator, so this pins resolution to our build permanently.
+    provider-priority: 100
 
 vars:
   sha256: <tarball sha256>     # updated by update-versions.yml
@@ -204,6 +216,39 @@ GOTOOLCHAIN=local CGO_ENABLED=0 go build \
   across a minor bump often adds build deps. mosquitto 2.1 turned on `WITH_EDITLINE`
   (→ editline), `WITH_HTTP_API` (→ libmicrohttpd), `WITH_SQLITE` (→ sqlite3); all
   disabled with `=no` for a minimal broker. Read the new version's `config.mk`.
+
+### Package naming and scanner visibility
+
+The melange `package.name` is not cosmetic — it is the only identity a scanner has
+for a C/C++ image, and it decides whether that image is scanned at all.
+
+Grype matches through two paths, and a `-minimal` suffix breaks both:
+
+| Path | Keyed on | With `foo-minimal` |
+|---|---|---|
+| `wolfi:distro:wolfi:rolling` (secdb, fix-aware) | apk package name | no secdb entry → no matches |
+| `nvd:cpe` | CPE syft derives from the apk name | `cpe:2.3:a:foo-minimal:foo-minimal:*` → matches nothing in NVD |
+
+Syft's `apk-db-cataloger` reads `/usr/lib/apk/db/installed`, which carries no CPE
+field, and it ignores the embedded SBOM at `/var/lib/db/sbom/`. A melange `cpe:`
+block therefore does **not** reach `grype <image>` — renaming the package is the
+only fix. A controlled test at an identical version: `haproxy-minimal` reported
+**0** findings, `haproxy` reported **14**.
+
+Go images are partially covered by accident — syft's `go-module` cataloger reads
+the binary's build info and gives them a second identity. Non-Go images have no
+fallback and are fully blind.
+
+**Rules**
+- Name the package exactly what upstream calls it (`redis`, `haproxy`, `nginx`).
+- Add `dependencies.provider-priority: 100` whenever Wolfi ships a package of the
+  same name, so apk cannot substitute Wolfi's build for ours on a version bump.
+- The image name stays `minimal-<name>` — this is the *apk package* name only, and
+  it must match in `melange.yaml`, `apko/<name>.yaml`, and `apko/<name>-dev.yaml`.
+
+**Migration in progress.** 84 existing `melange.yaml` files still carry the suffix.
+`redis-slim` is the completed reference; the rollout plan is in
+`docs/package-rename-plan.md`. New images must not add to the backlog.
 
 ---
 
