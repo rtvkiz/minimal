@@ -413,13 +413,28 @@ jobs:
           # This ensures builds always use the latest patched Go, preventing
           # stale stdlib CVEs from Go's toolchain auto-download fetching .0 releases
           ARCH=${{ matrix.arch }}
-          curl -sfL --retry 5 --retry-all-errors \
+          # --retry alone backs off from ~1s, so 5 attempts collapse into a ~30s
+          # burst — a blip any longer than that takes the job down (flux x86_64,
+          # main 2026-08-12, curl 22, while the same fetch succeeded on aarch64
+          # in that very run). --retry-delay spreads the attempts over ~2min
+          # instead; --max-time bounds a hung connection. -S so the HTTP status
+          # reaches the log: -s alone swallowed it and left only the exit code.
+          curl -sSfL --connect-timeout 10 --max-time 120 \
+            --retry 5 --retry-delay 15 --retry-all-errors \
             "https://packages.wolfi.dev/os/${ARCH}/APKINDEX.tar.gz" -o /tmp/apkindex.tar.gz
           tar xzf /tmp/apkindex.tar.gz -C /tmp APKINDEX
           LATEST_GO=$(grep '^P:go-1\.' /tmp/APKINDEX \
             | grep -vE '(doc|asm|covdata|cover|nm|objdump|test2json)' \
             | sed 's/^P://' | sort -t. -k2 -n | tail -1)
           rm -f /tmp/apkindex.tar.gz /tmp/APKINDEX
+          # An empty result would make the sed below rewrite `- go` to a bare
+          # `- `, producing invalid YAML that fails much later with an opaque
+          # melange error. The pipeline above cannot report this itself: it ends
+          # in `tail`, which exits 0 on empty input, so set -e never trips.
+          if [ -z "$LATEST_GO" ]; then
+            echo "::error::no go-1.* package found in Wolfi's ${ARCH} APKINDEX"
+            exit 1
+          fi
           echo "Latest Go in Wolfi: $LATEST_GO"
           sed -i "s/- go$/- ${LATEST_GO}/" "${{ matrix.melange_config }}"
           echo "Go package in config:"
@@ -542,7 +557,10 @@ jobs:
       - name: Install Grype
         if: matrix.scan_for_cves && steps.grype-cache.outputs.cache-hit != 'true'
         run: |
-          curl -fL --retry 5 --retry-all-errors -o /tmp/grype.tar.gz \
+          # Same retry-burst problem as the Wolfi APKINDEX fetch above: spread
+          # the attempts out and bound a hung connection.
+          curl -fL --connect-timeout 10 --max-time 300 \
+            --retry 5 --retry-delay 15 --retry-all-errors -o /tmp/grype.tar.gz \
             "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
           tar -tzf /tmp/grype.tar.gz > /dev/null
           tar -xzf /tmp/grype.tar.gz -C /usr/local/bin grype
@@ -1164,7 +1182,10 @@ jobs:
       - name: Install Grype
         if: matrix.scan_for_cves && steps.grype-cache.outputs.cache-hit != 'true'
         run: |
-          curl -fL --retry 5 --retry-all-errors -o /tmp/grype.tar.gz \
+          # Same retry-burst problem as the Wolfi APKINDEX fetch above: spread
+          # the attempts out and bound a hung connection.
+          curl -fL --connect-timeout 10 --max-time 300 \
+            --retry 5 --retry-delay 15 --retry-all-errors -o /tmp/grype.tar.gz \
             "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
           tar -tzf /tmp/grype.tar.gz > /dev/null
           tar -xzf /tmp/grype.tar.gz -C /usr/local/bin grype
