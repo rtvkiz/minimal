@@ -15,7 +15,7 @@ contents:
   packages:
     # Base + haproxy (same as prod)
     - wolfi-baselayout
-    - haproxy-minimal
+    - haproxy
     - glibc
     - glibc-locale-posix
     - ld-linux

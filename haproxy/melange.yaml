@@ -3,12 +3,32 @@
 # Minimal footprint - single binary
 
 package:
-  name: haproxy-minimal
+  # Named `haproxy` (not `haproxy-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, so a
+  # `-minimal` suffix produced cpe:2.3:a:haproxy-minimal:haproxy-minimal:* —
+  # which matches nothing in NVD (indexed as cpe:2.3:a:haproxy:haproxy:*) and
+  # nothing in the Wolfi secdb either. Both of grype's matchers therefore
+  # missed every HAProxy CVE: a controlled test at this exact version reported
+  # 0 findings suffixed vs 14 unsuffixed, including 2 Criticals. HAProxy is a C
+  # app with no second identity (Go images get a go-module entry as a fallback;
+  # this one has only the apk name), so the suffix made it entirely unscannable.
+  name: haproxy
   version: 3.4.0
   epoch: 0
   description: "Minimal HAProxy built from source"
   copyright:
     - license: GPL-2.0-or-later
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `haproxy` package today (only versioned haproxy-3.2/haproxy-3.3),
+    # but if it ever adds one at a higher version, apk would silently install
+    # Wolfi's build instead of this source-built one. provider-priority is
+    # evaluated BEFORE version in that comparator, so this pins resolution to
+    # our package permanently.
+    provider-priority: 100
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow

@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our HAProxy (built from source via melange)
-    - haproxy-minimal
+    - haproxy
 
     # Core libraries
     - glibc
