@@ -9,7 +9,7 @@ docker run -d --name vm-test "$IMAGE"
 sleep 3
 
 if docker ps | grep -q vm-test; then
-  VM_IP=$(docker inspect -f '{{.NetworkSettings.IPAddress}}' vm-test)
+  VM_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vm-test)
   # Health check via metrics endpoint
   curl -sf "http://${VM_IP}:8428/health" | grep -q "OK"
   # Check Prometheus-compatible /api/v1/query endpoint

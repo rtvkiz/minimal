@@ -16,7 +16,7 @@ for i in $(seq 1 15); do
     docker rm jaeger-test 2>/dev/null || true
     exit 1
   fi
-  JAEGER_IP=$(docker inspect -f '{{.NetworkSettings.IPAddress}}' jaeger-test)
+  JAEGER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' jaeger-test)
   if curl -sf "http://${JAEGER_IP}:16686/" > /dev/null 2>&1; then
     echo "Jaeger Query UI is accessible (attempt ${i})"
     break

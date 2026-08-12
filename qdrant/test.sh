@@ -9,7 +9,7 @@ docker run -d --name qdrant-test "$IMAGE"
 sleep 4
 
 if docker ps | grep -q qdrant-test; then
-  QDRANT_IP=$(docker inspect -f '{{.NetworkSettings.IPAddress}}' qdrant-test)
+  QDRANT_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' qdrant-test)
   # Health check
   curl -sf "http://${QDRANT_IP}:6333/healthz" | grep -q "healthz check passed"
   # List collections (empty on fresh start)

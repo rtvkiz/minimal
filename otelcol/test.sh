@@ -13,7 +13,7 @@ docker run -d --name otelcol-test "$IMAGE"
 sleep 3
 
 if docker ps | grep -q otelcol-test; then
-  OTEL_IP=$(docker inspect -f '{{.NetworkSettings.IPAddress}}' otelcol-test)
+  OTEL_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' otelcol-test)
   curl -sf "http://${OTEL_IP}:55679/debug/servicez" > /dev/null
   echo "OTel Collector is running and zpages is accessible"
   docker stop otelcol-test && docker rm otelcol-test

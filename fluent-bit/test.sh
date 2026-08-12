@@ -20,7 +20,7 @@ for i in $(seq 1 30); do
     exit 1
   fi
 
-  IP=$(docker inspect -f '{{.NetworkSettings.IPAddress}}' fluentbit-test)
+  IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' fluentbit-test)
   HEALTH_CODE=$(curl -sS -o "$HEALTH_BODY" -w '%{http_code}' "http://${IP}:2020/api/v1/health" 2>"$HEALTH_ERR" || true)
 
   if [ "$HEALTH_CODE" = "200" ]; then

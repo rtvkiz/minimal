@@ -12,7 +12,7 @@ docker run -d --name openbao-test \
 sleep 4
 
 if docker ps | grep -q openbao-test; then
-  IP=$(docker inspect -f '{{.NetworkSettings.IPAddress}}' openbao-test)
+  IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' openbao-test)
   curl -sf "http://${IP}:8200/v1/sys/health" | head -c 200
   echo ""
   echo "OpenBao is running and healthy"

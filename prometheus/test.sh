@@ -18,7 +18,7 @@ sleep 4
 
 if docker ps | grep -q prometheus-test; then
   docker exec prometheus-test /usr/bin/promtool check healthy --http.config.file="" 2>/dev/null || \
-    curl -sf http://$(docker inspect -f '{{.NetworkSettings.IPAddress}}' prometheus-test):9090/-/healthy
+    curl -sf http://$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' prometheus-test):9090/-/healthy
   echo "Prometheus is running and healthy"
   docker stop prometheus-test && docker rm prometheus-test
 else

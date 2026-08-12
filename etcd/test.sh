@@ -16,7 +16,7 @@ docker run -d --name etcd-test \
 sleep 3
 
 if docker ps | grep -q etcd-test; then
-  ETCD_IP=$(docker inspect -f '{{.NetworkSettings.IPAddress}}' etcd-test)
+  ETCD_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' etcd-test)
   docker run --rm --entrypoint /usr/bin/etcdctl "$IMAGE" \
     --endpoints="http://${ETCD_IP}:2379" endpoint health
   docker run --rm --entrypoint /usr/bin/etcdctl "$IMAGE" \
