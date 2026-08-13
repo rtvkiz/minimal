@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our Jenkins (custom JRE + WAR)
-    - jenkins-minimal
+    - jenkins
 
     # Core System Tools (matching Chainguard SBOM)
     - coreutils

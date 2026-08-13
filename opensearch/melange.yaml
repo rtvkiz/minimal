@@ -8,12 +8,29 @@
 # License: Apache-2.0 (OpenSearch).
 
 package:
-  name: opensearch-minimal
+  # Named `opensearch` (not `opensearch-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:opensearch:opensearch-minimal:*,
+  # cpe:2.3:a:opensearch-minimal:opensearch-minimal:*, ...). NVD indexes this
+  # product bare, as cpe:2.3:a:opensearch:opensearch:*, so none of them
+  # matched, and the Wolfi secdb missed it too.
+  name: opensearch
   version: 3.8.0
   epoch: 0
   description: "Minimal OpenSearch from the official upstream min distribution"
   copyright:
     - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `opensearch` package today, but if it ever adds one at a higher
+    # version, apk would silently install it instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently.
+    provider-priority: 100
 
 vars:
   # SHA512 of the official opensearch-min-<ver>-linux-<arch>.tar.gz, from the

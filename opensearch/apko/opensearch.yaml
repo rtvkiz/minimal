@@ -15,7 +15,7 @@ contents:
     - wolfi-baselayout
 
     # OpenSearch core from the official min distribution (our melange package)
-    - opensearch-minimal
+    - opensearch
     # Wolfi OpenJDK 21 (we dropped the distro's bundled JDK)
     - openjdk-21-default-jvm
     # bin/opensearch is a bash script

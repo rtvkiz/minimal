@@ -3,7 +3,13 @@
 # You control version and security patches; no dependency on Wolfi's ruby package
 
 package:
-  name: ruby-minimal
+  # Named `ruby` (not `ruby-minimal`) so vulnerability scanners can identify
+  # it. Syft derives a package's CPE from its apk name, and every CPE it
+  # generated kept -minimal in the product field
+  # (cpe:2.3:a:ruby:ruby-minimal:*, cpe:2.3:a:ruby-minimal:ruby-minimal:*,
+  # ...). NVD indexes this product bare, as cpe:2.3:a:ruby:ruby:*, so none of
+  # them matched, and the Wolfi secdb missed it too.
+  name: ruby
   version: 4.0.6
   epoch: 0
   description: "Minimal Ruby runtime built from source"
@@ -11,6 +17,16 @@ package:
     - license: Ruby AND MIT
   options:
     no-depends: true
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `ruby` package today, but if it ever adds one at a higher version,
+    # apk would silently install it instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently.
+    provider-priority: 100
 
 vars:
   ruby_version: 4.0.6
@@ -127,14 +143,14 @@ pipeline:
       ls -lh "${{targets.destdir}}/usr/bin/gem"
 
 subpackages:
-  # Bundler as a separate apk so prod ruby-minimal stays curated (bundler
-  # stripped) while ruby-minimal-dev pulls bundler back in. Built against
+  # Bundler as a separate apk so prod ruby stays curated (bundler stripped)
+  # while the dev image pulls bundler back in. Built against
   # the same source ruby so gem paths line up by construction.
-  - name: ruby-minimal-bundler
-    description: "Bundler dependency manager for ruby-minimal"
+  - name: ruby-bundler
+    description: "Bundler dependency manager for ruby"
     dependencies:
       runtime:
-        - ruby-minimal
+        - ruby
     pipeline:
       - runs: |
           SUBPKG="${{targets.subpkgdir}}"
@@ -151,7 +167,7 @@ subpackages:
           [ -x "${SUBPKG}/usr/bin/bundle" ]   || { echo "::error::bundle binstub missing"; exit 1; }
           [ -x "${SUBPKG}/usr/bin/bundler" ]  || { echo "::error::bundler binstub missing"; exit 1; }
           ls -d "${GEMDIR}/gems/bundler-"* >/dev/null || { echo "::error::bundler gem dir missing"; exit 1; }
-          echo "✓ ruby-minimal-bundler built"
+          echo "✓ ruby-bundler built"
 
 update:
   enabled: true

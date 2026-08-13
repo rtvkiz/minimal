@@ -1,7 +1,7 @@
 #!/bin/bash
 # Smoke test for minimal-ruby-dev.
 # Validates the dev variant has shell + toolchain + bundler while preserving
-# ruby-minimal runtime parity (same entrypoint, same curated gem set).
+# ruby runtime parity (same entrypoint, same curated gem set).
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"

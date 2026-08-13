@@ -13,7 +13,7 @@ contents:
   packages:
     # Mirror prod exactly
     - wolfi-baselayout
-    - jenkins-minimal
+    - jenkins
     - coreutils
     - diffutils
     - findutils

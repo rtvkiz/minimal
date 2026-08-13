@@ -18,9 +18,9 @@ contents:
     - wolfi-baselayout
 
     # Our Ruby runtime (built from source via melange — same as prod)
-    - ruby-minimal
+    - ruby
     # Bundler subpackage (dev-only; prod strips bundler)
-    - ruby-minimal-bundler
+    - ruby-bundler
 
     # Core runtime dependencies (same as prod)
     - glibc

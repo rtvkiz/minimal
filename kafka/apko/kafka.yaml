@@ -17,7 +17,7 @@ contents:
     - busybox
 
     # Our Kafka (binary release + custom JRE via melange)
-    - kafka-minimal
+    - kafka
 
     # Core libraries for JNI / native JRE components
     - glibc

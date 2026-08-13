@@ -2,7 +2,7 @@
 # Same Kafka 4.x + custom jlink JRE as prod, plus bash, apk-tools,
 # curl/socat/jq for hitting AdminClient HTTP endpoints, kafka's own
 # CLI scripts (kafka-topics.sh, kafka-console-*.sh) ship in
-# kafka-minimal so no extra apk needed for those.
+# the kafka package so no extra apk needed for those.
 #
 # In-house composition.
 
@@ -18,7 +18,7 @@ contents:
     - wolfi-baselayout
 
     # Kafka + bundled JRE (same as prod)
-    - kafka-minimal
+    - kafka
 
     # Core libs (same as prod)
     - glibc

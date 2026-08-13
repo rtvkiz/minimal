@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our Ruby runtime (built from source via melange)
-    - ruby-minimal
+    - ruby
 
     # Core runtime dependencies
     - glibc

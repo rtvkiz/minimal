@@ -18,7 +18,7 @@ contents:
     - wolfi-baselayout
 
     # OpenSearch + JDK (same as prod; bash for bin/opensearch is in the dev set below)
-    - opensearch-minimal
+    - opensearch
     - openjdk-21-default-jvm
 
     # Core runtime libs (same as prod)
