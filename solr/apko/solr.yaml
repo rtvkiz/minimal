@@ -19,7 +19,7 @@ contents:
     - procps
 
     # Our Solr (binary release + custom JRE via melange)
-    - solr-minimal
+    - solr
 
     # Core libraries for JNI / native JRE components
     - glibc

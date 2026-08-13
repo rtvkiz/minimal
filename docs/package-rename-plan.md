@@ -5,8 +5,11 @@ wave 2: 5 of 10), plus the `redis` pilot — 21 renamed in total. 64 melange.yam
 files still carry the suffix: the 58 wave 3 Go images plus the 6 deferred below.
 `cuda-python` was never suffixed, so 21 + 64 + 1 = 86 melange configs.
 
-Deferred (build too slow to validate locally, still suffixed): `mysql`,
-`keycloak`, `solr`, `mariadb`, `deno`, `qdrant`.
+`mysql`, `keycloak`, `solr`, `mariadb`, `deno` and `qdrant` were renamed without
+the local build+test cycle — their builds are too slow to validate on a laptop,
+so CI is the validator for those six. This is a deliberate exception to the
+"never push a failing image" rule in CLAUDE.md, landed as its own commit so a
+red build points at exactly one change.
 
 ## Problem
 

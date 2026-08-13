@@ -2,7 +2,7 @@
 # Same MariaDB server (built from source via melange) as prod, plus
 # bash, apk-tools, mariadb-client (the CLI), git, curl.
 #
-# In-house composition (our mariadb-minimal is source-built, not the
+# In-house composition (our mariadb package is source-built, not the
 # Wolfi mariadb-12.2 family Chainguard uses). Same shape as their dev
 # variant though.
 
@@ -18,7 +18,7 @@ contents:
     - wolfi-baselayout
 
     # MariaDB (built from source via melange — same as prod)
-    - mariadb-minimal
+    - mariadb
 
     # Core libs (same as prod)
     - glibc

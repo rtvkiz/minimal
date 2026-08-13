@@ -13,7 +13,7 @@ contents:
   packages:
     # Base + Deno runtime (same as prod)
     - wolfi-baselayout
-    - deno-minimal
+    - deno
     - glibc
     - glibc-locale-posix
     - libgcc

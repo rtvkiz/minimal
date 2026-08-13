@@ -16,7 +16,7 @@ contents:
     - wolfi-baselayout
 
     # Solr + bundled JRE (same as prod)
-    - solr-minimal
+    - solr
 
     # Core libs (same as prod)
     - glibc

@@ -1,6 +1,6 @@
 # Minimal Deno image - official upstream binary via melange (shell-less)
 # TypeScript-first JS runtime with native permissions sandbox.
-# Uses our deno-minimal package (official release binary) instead of Wolfi's
+# Uses our deno package (official release binary) instead of Wolfi's
 # `deno` package, which lags behind upstream on CVE fixes.
 
 contents:
@@ -12,7 +12,7 @@ contents:
     # Local signing key passed via --keyring-append CLI flag
   packages:
     - wolfi-baselayout
-    - deno-minimal
+    - deno
     - glibc
     - glibc-locale-posix
     - libgcc

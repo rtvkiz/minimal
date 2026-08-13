@@ -16,7 +16,7 @@ contents:
     - busybox
 
     # Our MySQL (built from source via melange)
-    - mysql-minimal
+    - mysql
 
     # Core libraries
     - glibc
