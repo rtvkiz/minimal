@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our Unbound (built from source via melange)
-    - unbound-minimal
+    - unbound
 
     # Core libraries
     - glibc

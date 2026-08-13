@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our PgBouncer (built from source via melange)
-    - pgbouncer-minimal
+    - pgbouncer
 
     # Core libraries
     - glibc

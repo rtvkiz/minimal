@@ -3,12 +3,28 @@
 # Minimal footprint - single binary
 
 package:
-  name: memcached-minimal
+  # Named `memcached` (not `memcached-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:memcached:memcached-minimal:*,
+  # cpe:2.3:a:memcached-minimal:memcached-minimal:*, ...). NVD indexes this
+  # product bare, as cpe:2.3:a:memcached:memcached:*, so none of them matched,
+  # and the Wolfi secdb missed it too.
+  name: memcached
   version: 1.6.45
   epoch: 0
   description: "Minimal Memcached built from source"
   copyright:
     - license: BSD-3-Clause
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `memcached`, so without this apk could install Wolfi's build instead
+    # of this source-built one. provider-priority is evaluated BEFORE version
+    # in that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow

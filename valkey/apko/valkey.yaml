@@ -14,7 +14,7 @@ contents:
     - wolfi-baselayout
 
     # Our Valkey (built from source via melange)
-    - valkey-minimal
+    - valkey
 
     # Core libraries
     - glibc

@@ -15,7 +15,7 @@ contents:
   packages:
     # Base + pgbouncer (same as prod)
     - wolfi-baselayout
-    - pgbouncer-minimal
+    - pgbouncer
     - glibc
     - ld-linux
     - libgcc

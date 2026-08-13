@@ -15,7 +15,7 @@ contents:
   packages:
     # Base + unbound (same as prod)
     - wolfi-baselayout
-    - unbound-minimal
+    - unbound
     - glibc
     - ld-linux
     - libgcc

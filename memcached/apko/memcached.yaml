@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our Memcached (built from source via melange)
-    - memcached-minimal
+    - memcached
 
     # Core libraries
     - glibc

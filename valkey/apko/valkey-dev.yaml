@@ -17,7 +17,7 @@ contents:
     - wolfi-baselayout
 
     # Valkey server + CLI (built from source via melange — same as prod)
-    - valkey-minimal
+    - valkey
 
     # Core libs (same as prod)
     - glibc
