@@ -1,10 +1,26 @@
 package:
-  name: envoy-minimal
+  # Named `envoy` (not `envoy-minimal`) so vulnerability scanners can identify
+  # it. Syft derives a package's CPE from its apk name, so the `-minimal`
+  # suffix produced cpe:2.3:a:envoy-minimal:envoy-minimal:* — which matches
+  # nothing in NVD (indexed as cpe:2.3:a:envoy:envoy:*) and nothing in the
+  # Wolfi secdb either, so both of grype's matchers missed every CVE for this
+  # package.
+  name: envoy
   version: 1.39.0
   epoch: 0
   description: "Minimal Envoy proxy built from upstream releases"
   copyright:
     - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `envoy` package today, but if it ever adds one at a higher version,
+    # apk would silently install Wolfi's build instead of this source-built
+    # one. provider-priority is evaluated BEFORE version in that comparator, so
+    # this pins resolution to our package permanently.
+    provider-priority: 100
 
 vars:
   sha256_x86: 4409dadc87931d8f8676314cbd83071cb65125fb4feac3f6335800580dfa9218

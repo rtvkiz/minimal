@@ -3,14 +3,14 @@
 # native extensions like grpc/redis), git.
 #
 # NOTE on composer (PHP's package manager): NOT baked in v1.
-# Our prod php-minimal is built with --disable-all --enable-cli plus a
+# Our prod php package is built with --disable-all --enable-cli plus a
 # small set of extensions (openssl, zlib, libxml, curl, mbstring,
 # opcache). Composer requires php-ctype and php-phar, which our build
 # does not enable. To use composer in this image, either:
 #   1. Download composer.phar at runtime (after we add phar+ctype to
-#      php-minimal — tracked separately)
+#      our php build — tracked separately)
 #   2. Install Wolfi's `composer` apk which pulls Wolfi's php-8.5
-#      alongside our php-minimal (wasteful but functional)
+#      alongside our php (wasteful but functional)
 #
 # In-house composition (Chainguard's php-fpm-public is FPM-specific,
 # not directly applicable to our CLI build).
@@ -27,7 +27,7 @@ contents:
     - wolfi-baselayout
 
     # PHP CLI (built from source via melange — same as prod)
-    - php-minimal
+    - php
 
     # Core runtime deps (same as prod)
     - glibc

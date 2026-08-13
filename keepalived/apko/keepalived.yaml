@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our Keepalived (built from source via melange)
-    - keepalived-minimal
+    - keepalived
 
     # Core libraries
     - glibc

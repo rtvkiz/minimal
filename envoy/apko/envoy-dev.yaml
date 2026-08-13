@@ -12,7 +12,7 @@ contents:
   packages:
     # Base + envoy (same as prod)
     - wolfi-baselayout
-    - envoy-minimal
+    - envoy
     - ca-certificates-bundle
     - glibc
     - libstdc++

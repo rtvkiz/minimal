@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our PHP (built from source via melange)
-    - php-minimal
+    - php
 
     # Core runtime dependencies
     - glibc

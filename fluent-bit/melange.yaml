@@ -2,12 +2,29 @@
 # Builds Fluent Bit from source (C/CMake) — lightweight log processor/forwarder
 
 package:
-  name: fluent-bit-minimal
+  # Named `fluent-bit` (not `fluent-bit-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, so the
+  # `-minimal` suffix produced
+  # cpe:2.3:a:fluent-bit-minimal:fluent-bit-minimal:* — which matches nothing
+  # in NVD (indexed as cpe:2.3:a:fluent-bit:fluent-bit:*) and nothing in the
+  # Wolfi secdb either, so both of grype's matchers missed every CVE for this
+  # package.
+  name: fluent-bit
   version: 5.1.0
   epoch: 0
   description: "Minimal Fluent Bit log processor built from source"
   copyright:
     - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `fluent-bit` package today, but if it ever adds one at a higher
+    # version, apk would silently install Wolfi's build instead of this
+    # source-built one. provider-priority is evaluated BEFORE version in that
+    # comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
 
 vars:
   sha256: d230548fa3bb18d3d918f6b886530fb32380d609411c2959c358bda6a7702fb2
