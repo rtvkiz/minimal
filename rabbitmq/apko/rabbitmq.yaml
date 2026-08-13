@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our RabbitMQ (binary release via melange)
-    - rabbitmq-minimal
+    - rabbitmq
 
     # Erlang OTP runtime (required by RabbitMQ)
     # RabbitMQ 4.x requires Erlang 26+; 27 is explicitly supported

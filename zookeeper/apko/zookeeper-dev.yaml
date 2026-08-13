@@ -7,7 +7,7 @@ contents:
   packages:
     - wolfi-baselayout
     - busybox
-    - zookeeper-minimal
+    - zookeeper
     - glibc
     - glibc-locale-posix
     - ld-linux

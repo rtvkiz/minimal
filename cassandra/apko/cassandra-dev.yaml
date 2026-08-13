@@ -1,6 +1,6 @@
 # Development variant of minimal-cassandra.
 # Same Cassandra 5.0 + custom jlink JRE as prod, plus bash, apk-tools,
-# curl/socat/jq for debugging. nodetool ships in cassandra-minimal.
+# curl/socat/jq for debugging. nodetool ships in the cassandra package.
 #
 # In-house composition. Not for production.
 
@@ -16,7 +16,7 @@ contents:
     - wolfi-baselayout
 
     # Cassandra + bundled JRE (same as prod)
-    - cassandra-minimal
+    - cassandra
 
     # Core libs (same as prod)
     - glibc

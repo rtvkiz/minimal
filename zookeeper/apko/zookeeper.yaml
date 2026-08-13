@@ -10,7 +10,7 @@ contents:
     - wolfi-baselayout
     # Shell required for the entrypoint
     - busybox
-    - zookeeper-minimal
+    - zookeeper
     # Core libraries for native JRE components
     - glibc
     - glibc-locale-posix

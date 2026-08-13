@@ -1,6 +1,6 @@
 # Development variant of minimal-pulsar.
 # Same Pulsar 4.x + custom jlink JRE as prod, plus apk-tools + curl/socat/jq for
-# hitting the Pulsar Admin REST API. pulsar-admin ships in pulsar-minimal.
+# hitting the Pulsar Admin REST API. pulsar-admin ships in the pulsar package.
 #
 # In-house composition. Not for production.
 
@@ -16,7 +16,7 @@ contents:
     - wolfi-baselayout
 
     # Pulsar + bundled JRE (same as prod)
-    - pulsar-minimal
+    - pulsar
 
     # Core libs (same as prod)
     - glibc

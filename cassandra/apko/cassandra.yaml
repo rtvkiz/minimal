@@ -16,7 +16,7 @@ contents:
     - busybox
 
     # Our Cassandra (binary release + custom JRE via melange)
-    - cassandra-minimal
+    - cassandra
 
     # Core libraries for JNI / native JRE components
     - glibc

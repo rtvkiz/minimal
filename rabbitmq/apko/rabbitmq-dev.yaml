@@ -2,7 +2,7 @@
 # Same RabbitMQ 4 + Erlang 27 as prod, plus bash, apk-tools,
 # curl (for management plugin HTTP API), socat, jq.
 #
-# rabbitmqctl + rabbitmq-diagnostics already ship in rabbitmq-minimal.
+# rabbitmqctl + rabbitmq-diagnostics already ship in the rabbitmq package.
 #
 # In-house composition.
 
@@ -18,7 +18,7 @@ contents:
     - wolfi-baselayout
 
     # RabbitMQ + Erlang (same as prod)
-    - rabbitmq-minimal
+    - rabbitmq
     - erlang-27
 
     # Core libs (same as prod)

@@ -17,7 +17,7 @@ contents:
     - bash
 
     # Our Pulsar (binary release + custom JRE via melange)
-    - pulsar-minimal
+    - pulsar
 
     # Core libraries for JNI / native JRE components (Netty, RocksDB)
     - glibc

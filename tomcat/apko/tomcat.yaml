@@ -8,7 +8,7 @@ contents:
   packages:
     - wolfi-baselayout
     - busybox
-    - tomcat-minimal
+    - tomcat
     - glibc
     - glibc-locale-posix
     - ld-linux
