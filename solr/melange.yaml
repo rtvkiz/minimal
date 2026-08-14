@@ -96,6 +96,146 @@ pipeline:
       cp -a "$SOLR_SRC"/bin "$SOLR_SRC"/server "$SOLR_SRC"/modules "$SOLR_SRC"/lib "$SOLR_SRC"/licenses \
         "${{targets.destdir}}/opt/solr/"
 
+      # Replace vulnerable bundled JARs before the install is sealed.
+      JARROOT="${{targets.destdir}}/opt/solr"
+      # patch-java-deps: auto-generated — do not edit manually
+      #
+      # Upstream ships prebuilt JARs; these are the vendored copies grype flags.
+      # Each swap replaces one vulnerable JAR with the fixed release from Maven
+      # Central. A swap that finds no matching file is a hard error: it means the
+      # bundled version moved and this block is stale, which must not be mistaken
+      # for "nothing to do".
+      jar_swap() {
+        _g="$1"; _a="$2"; _old="$3"; _new="$4"; _cls="${5:-}"
+        _sfx=""; [ -n "$_cls" ] && _sfx="-$_cls"
+        _url="https://repo1.maven.org/maven2/$(echo "$_g" | tr . /)/$_a/$_new/$_a-$_new$_sfx.jar"
+        _n=0
+        for _f in $(find "$JARROOT" -name "$_a-$_old$_sfx.jar"); do
+          _d=$(dirname "$_f")
+          curl -sSfL --connect-timeout 10 --max-time 120 --retry 3 --retry-delay 5 \
+            "$_url" -o "$_d/$_a-$_new$_sfx.jar"
+          # A truncated or HTML error body would install silently and only fail at
+          # runtime; every JAR is a zip, so check the magic bytes before deleting
+          # the copy we are replacing.
+          case "$(head -c2 "$_d/$_a-$_new$_sfx.jar")" in
+            PK) ;;
+            *) echo "patch-java-deps: $_a-$_new$_sfx.jar is not a zip" >&2; exit 1 ;;
+          esac
+          rm -f "$_f"
+          _n=$((_n + 1))
+        done
+        if [ "$_n" -eq 0 ]; then
+          echo "patch-java-deps: no $_a-$_old$_sfx.jar found under $JARROOT" >&2
+          exit 1
+        fi
+        echo "patch-java-deps: $_a $_old -> $_new ($_n file(s))"
+      }
+      
+      jar_swap com.fasterxml.jackson.core jackson-core 2.20.0 2.21.5 
+      jar_swap com.fasterxml.jackson.core jackson-databind 2.20.0 2.21.5 
+      jar_swap io.netty netty-codec-compression 4.2.6.Final 4.2.16.Final 
+      jar_swap io.netty netty-codec-http2 4.2.6.Final 4.2.16.Final 
+      jar_swap io.netty netty-codec-http 4.2.6.Final 4.2.16.Final 
+      jar_swap io.netty netty-handler-proxy 4.2.6.Final 4.2.16.Final 
+      jar_swap io.netty netty-handler 4.2.6.Final 4.2.16.Final 
+      jar_swap io.netty netty-transport-classes-epoll 4.2.6.Final 4.2.16.Final 
+      jar_swap io.netty netty-transport-native-epoll 4.2.6.Final 4.2.16.Final linux-x86_64
+      jar_swap org.apache.calcite calcite-core 1.37.0 1.42.0 
+      jar_swap org.apache.httpcomponents.core5 httpcore5 5.2.3 5.4.3 
+      jar_swap org.apache.kafka kafka-clients 3.9.1 3.9.2 
+      jar_swap org.apache.logging.log4j log4j-1.2-api 2.25.3 2.25.4 
+      jar_swap org.apache.logging.log4j log4j-core 2.25.3 2.25.4 
+      jar_swap org.apache.logging.log4j log4j-layout-template-json 2.25.3 2.25.4 
+      jar_swap org.apache.opennlp opennlp-tools 2.5.6 2.5.9 
+      jar_swap org.apache.zookeeper zookeeper 3.9.4 3.9.5 
+      jar_swap org.eclipse.jetty jetty-http 12.0.27 12.0.36 
+      jar_swap org.eclipse.jetty jetty-security 12.0.27 12.0.36 
+      jar_swap org.eclipse.jetty jetty-server 12.0.27 12.0.36 
+      jar_swap org.eclipse.jetty jetty-util 12.0.27 12.0.36 
+      # SKIPPED lz4-java 1.8.0 -> 1.8.1: no jar published at that version.
+      #   Still vulnerable; needs a VEX entry or an upstream fix.
+      
+      # Sweep the rest of each upgraded family. Siblings with no CVE of their own
+      # never appear in a scan report — log4j-api, log4j-web and log4j-slf4j2-impl
+      # sat at 2.25.3 while log4j-core moved to 2.25.4, and log4j-core against a
+      # mismatched log4j-api is a LoggerContext failure at startup. Anything still
+      # at the old version is pulled up to the same target.
+      family_sweep() {
+        _g="$1"; _old="$2"; _new="$3"; _p="$4"
+        # Match the family by major.minor SERIES, not by exact version and not by
+        # prefix alone. Exact missed jackson-annotations, which sits at 2.20 while
+        # databind is 2.20.0 — Solr died with NoClassDefFoundError JsonSerializeAs.
+        # Prefix alone was too wide: netty-tcnative-boringssl-static shares the
+        # netty prefix and the io.netty group but versions independently at 2.0.x,
+        # and forcing it to 4.2.16.Final has no release to point at.
+        _series=$(echo "$_old" | cut -d. -f1,2)
+        for _f in $(find "$JARROOT" -name "$_p*.jar"); do
+          _b=$(basename "$_f" .jar)
+          _v="${_b##*-}"
+          # Trailing field is a classifier, not a version (…-linux-x86_64.jar).
+          case "$_v" in [0-9]*) ;; *) continue ;; esac
+          [ "$_v" = "$_new" ] && continue
+          # Different release line under the same prefix — not this family.
+          [ "$(echo "$_v" | cut -d. -f1,2)" = "$_series" ] || continue
+          _a="${_b%-$_v}"
+          _tok=$(echo "$_a" | cut -d- -f2)
+          _found=0
+          # Target: exact, then patch-trimmed (2.21.5 -> 2.21) for artifacts that
+          # release on major.minor only.
+          for _tv in "$_new" "${_new%.*}"; do
+            # Group: as given, then the two split-family shapes (jackson replaces
+            # the last segment, jetty appends).
+            for _cand in "$_g" "${_g%.*}.$_tok" "$_g.$_tok"; do
+              _u="https://repo1.maven.org/maven2/$(echo "$_cand" | tr . /)/$_a/$_tv/$_a-$_tv.jar"
+              if curl -sfI --connect-timeout 10 --max-time 30 "$_u" -o /dev/null; then
+                _found=1; break
+              fi
+            done
+            [ "$_found" -eq 1 ] && break
+          done
+          if [ "$_found" -eq 0 ]; then
+            echo "patch-java-deps: no release of $_a for family target $_new" >&2
+            exit 1
+          fi
+          curl -sSfL --connect-timeout 10 --max-time 120 --retry 3 --retry-delay 5 \
+            "$_u" -o "$(dirname "$_f")/$_a-$_tv.jar"
+          case "$(head -c2 "$(dirname "$_f")/$_a-$_tv.jar")" in
+            PK) ;;
+            *) echo "patch-java-deps: $_a-$_tv.jar is not a zip" >&2; exit 1 ;;
+          esac
+          [ "$_f" = "$(dirname "$_f")/$_a-$_tv.jar" ] || rm -f "$_f"
+          echo "patch-java-deps: swept $_a $_v -> $_tv"
+        done
+      }
+      family_sweep org.apache.logging.log4j 2.25.3 2.25.4 log4j
+      family_sweep org.apache.calcite 1.37.0 1.42.0 calcite
+      family_sweep com.fasterxml.jackson.core 2.20.0 2.21.5 jackson
+      family_sweep org.apache.httpcomponents.core5 5.2.3 5.4.3 httpcore5
+      family_sweep org.apache.kafka 3.9.1 3.9.2 kafka
+      family_sweep org.apache.zookeeper 3.9.4 3.9.5 zookeeper
+      family_sweep org.eclipse.jetty 12.0.27 12.0.36 jetty
+      family_sweep io.netty 4.2.6.Final 4.2.16.Final netty
+      family_sweep org.apache.opennlp 2.5.6 2.5.9 opennlp
+      
+      # Backstop: report every remaining mismatch in one pass. Exiting at the first
+      # one costs a full CI cycle per family to discover the next.
+      stragglers=""
+      stragglers="$stragglers$(find "$JARROOT" -name "log4j*-2.25.3.jar" -o -name "log4j*-2.25.3-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "calcite*-1.37.0.jar" -o -name "calcite*-1.37.0-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "jackson*-2.20.0.jar" -o -name "jackson*-2.20.0-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "httpcore5*-5.2.3.jar" -o -name "httpcore5*-5.2.3-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "kafka*-3.9.1.jar" -o -name "kafka*-3.9.1-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "zookeeper*-3.9.4.jar" -o -name "zookeeper*-3.9.4-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "jetty*-12.0.27.jar" -o -name "jetty*-12.0.27-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "netty*-4.2.6.Final.jar" -o -name "netty*-4.2.6.Final-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "opennlp*-2.5.6.jar" -o -name "opennlp*-2.5.6-*.jar")"
+      if [ -n "$stragglers" ]; then
+        echo "patch-java-deps: JARs still at a superseded version:" >&2
+        echo "$stragglers" >&2
+        exit 1
+      fi
+      # end-patch-java-deps
+
       # Entrypoint: seed SOLR_HOME with the bundled solr.xml (Solr writes cores under
       # SOLR_HOME, which must be writable — /opt/solr is read-only), then run in the
       # foreground bound on all interfaces.
