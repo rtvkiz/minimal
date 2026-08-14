@@ -96,6 +96,130 @@ pipeline:
       cp -a "$SOLR_SRC"/bin "$SOLR_SRC"/server "$SOLR_SRC"/modules "$SOLR_SRC"/lib "$SOLR_SRC"/licenses \
         "${{targets.destdir}}/opt/solr/"
 
+      # Replace vulnerable bundled JARs before the install is sealed.
+      JARROOT="${{targets.destdir}}/opt/solr"
+      # patch-java-deps: auto-generated — do not edit manually
+      #
+      # Upstream ships prebuilt JARs; these are the vendored copies grype flags.
+      # Each swap replaces one vulnerable JAR with the fixed release from Maven
+      # Central. A swap that finds no matching file is a hard error: it means the
+      # bundled version moved and this block is stale, which must not be mistaken
+      # for "nothing to do".
+      jar_swap() {
+        _g="$1"; _a="$2"; _old="$3"; _new="$4"; _cls="${5:-}"
+        _sfx=""; [ -n "$_cls" ] && _sfx="-$_cls"
+        _url="https://repo1.maven.org/maven2/$(echo "$_g" | tr . /)/$_a/$_new/$_a-$_new$_sfx.jar"
+        _n=0
+        for _f in $(find "$JARROOT" -name "$_a-$_old$_sfx.jar"); do
+          _d=$(dirname "$_f")
+          curl -sSfL --connect-timeout 10 --max-time 120 --retry 3 --retry-delay 5 \
+            "$_url" -o "$_d/$_a-$_new$_sfx.jar"
+          # A truncated or HTML error body would install silently and only fail at
+          # runtime; every JAR is a zip, so check the magic bytes before deleting
+          # the copy we are replacing.
+          case "$(head -c2 "$_d/$_a-$_new$_sfx.jar")" in
+            PK) ;;
+            *) echo "patch-java-deps: $_a-$_new$_sfx.jar is not a zip" >&2; exit 1 ;;
+          esac
+          rm -f "$_f"
+          _n=$((_n + 1))
+        done
+        if [ "$_n" -eq 0 ]; then
+          echo "patch-java-deps: no $_a-$_old$_sfx.jar found under $JARROOT" >&2
+          exit 1
+        fi
+        echo "patch-java-deps: $_a $_old -> $_new ($_n file(s))"
+      }
+      
+      jar_swap com.fasterxml.jackson.core jackson-core 2.20.0 2.21.5 
+      jar_swap com.fasterxml.jackson.core jackson-databind 2.20.0 2.21.5 
+      jar_swap io.netty netty-codec-compression 4.2.6.Final 4.2.16.Final 
+      jar_swap io.netty netty-codec-http2 4.2.6.Final 4.2.16.Final 
+      jar_swap io.netty netty-codec-http 4.2.6.Final 4.2.16.Final 
+      jar_swap io.netty netty-handler-proxy 4.2.6.Final 4.2.16.Final 
+      jar_swap io.netty netty-handler 4.2.6.Final 4.2.16.Final 
+      jar_swap io.netty netty-transport-classes-epoll 4.2.6.Final 4.2.16.Final 
+      jar_swap io.netty netty-transport-native-epoll 4.2.6.Final 4.2.16.Final linux-x86_64
+      jar_swap org.apache.calcite calcite-core 1.37.0 1.42.0 
+      jar_swap org.apache.httpcomponents.core5 httpcore5 5.2.3 5.4.3 
+      jar_swap org.apache.kafka kafka-clients 3.9.1 3.9.2 
+      jar_swap org.apache.logging.log4j log4j-1.2-api 2.25.3 2.25.4 
+      jar_swap org.apache.logging.log4j log4j-core 2.25.3 2.25.4 
+      jar_swap org.apache.logging.log4j log4j-layout-template-json 2.25.3 2.25.4 
+      jar_swap org.apache.opennlp opennlp-tools 2.5.6 2.5.9 
+      jar_swap org.apache.zookeeper zookeeper 3.9.4 3.9.5 
+      jar_swap org.eclipse.jetty jetty-http 12.0.27 12.0.36 
+      jar_swap org.eclipse.jetty jetty-security 12.0.27 12.0.36 
+      jar_swap org.eclipse.jetty jetty-server 12.0.27 12.0.36 
+      jar_swap org.eclipse.jetty jetty-util 12.0.27 12.0.36 
+      jar_swap org.lz4 lz4-java 1.8.0 1.8.1 
+      
+      # Mixed-version guard. Siblings with no CVE of their own are not listed
+      # above (netty-common, netty-buffer, ...), so they would silently stay at the
+      # old version and break the classpath. Any leftover at a version we just
+      # upgraded away from fails the build and names the file to add.
+      leftover=$(find "$JARROOT" -name "*-2.25.3.jar" -o -name "*-2.25.3-*.jar")
+      if [ -n "$leftover" ]; then
+        echo "patch-java-deps: JARs left at 2.25.3 after upgrade:" >&2
+        echo "$leftover" >&2
+        exit 1
+      fi
+      leftover=$(find "$JARROOT" -name "*-1.37.0.jar" -o -name "*-1.37.0-*.jar")
+      if [ -n "$leftover" ]; then
+        echo "patch-java-deps: JARs left at 1.37.0 after upgrade:" >&2
+        echo "$leftover" >&2
+        exit 1
+      fi
+      leftover=$(find "$JARROOT" -name "*-2.20.0.jar" -o -name "*-2.20.0-*.jar")
+      if [ -n "$leftover" ]; then
+        echo "patch-java-deps: JARs left at 2.20.0 after upgrade:" >&2
+        echo "$leftover" >&2
+        exit 1
+      fi
+      leftover=$(find "$JARROOT" -name "*-5.2.3.jar" -o -name "*-5.2.3-*.jar")
+      if [ -n "$leftover" ]; then
+        echo "patch-java-deps: JARs left at 5.2.3 after upgrade:" >&2
+        echo "$leftover" >&2
+        exit 1
+      fi
+      leftover=$(find "$JARROOT" -name "*-3.9.1.jar" -o -name "*-3.9.1-*.jar")
+      if [ -n "$leftover" ]; then
+        echo "patch-java-deps: JARs left at 3.9.1 after upgrade:" >&2
+        echo "$leftover" >&2
+        exit 1
+      fi
+      leftover=$(find "$JARROOT" -name "*-3.9.4.jar" -o -name "*-3.9.4-*.jar")
+      if [ -n "$leftover" ]; then
+        echo "patch-java-deps: JARs left at 3.9.4 after upgrade:" >&2
+        echo "$leftover" >&2
+        exit 1
+      fi
+      leftover=$(find "$JARROOT" -name "*-12.0.27.jar" -o -name "*-12.0.27-*.jar")
+      if [ -n "$leftover" ]; then
+        echo "patch-java-deps: JARs left at 12.0.27 after upgrade:" >&2
+        echo "$leftover" >&2
+        exit 1
+      fi
+      leftover=$(find "$JARROOT" -name "*-4.2.6.Final.jar" -o -name "*-4.2.6.Final-*.jar")
+      if [ -n "$leftover" ]; then
+        echo "patch-java-deps: JARs left at 4.2.6.Final after upgrade:" >&2
+        echo "$leftover" >&2
+        exit 1
+      fi
+      leftover=$(find "$JARROOT" -name "*-2.5.6.jar" -o -name "*-2.5.6-*.jar")
+      if [ -n "$leftover" ]; then
+        echo "patch-java-deps: JARs left at 2.5.6 after upgrade:" >&2
+        echo "$leftover" >&2
+        exit 1
+      fi
+      leftover=$(find "$JARROOT" -name "*-1.8.0.jar" -o -name "*-1.8.0-*.jar")
+      if [ -n "$leftover" ]; then
+        echo "patch-java-deps: JARs left at 1.8.0 after upgrade:" >&2
+        echo "$leftover" >&2
+        exit 1
+      fi
+      # end-patch-java-deps
+
       # Entrypoint: seed SOLR_HOME with the bundled solr.xml (Solr writes cores under
       # SOLR_HOME, which must be writable — /opt/solr is read-only), then run in the
       # foreground bound on all interfaces.
