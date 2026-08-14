@@ -7,7 +7,18 @@ melange.yaml files still carry the suffix: `kube-state-metrics` and
 (their `apko/` trees, tests and VEX files are still untracked, so renaming them
 would commit a package name whose only references live in uncommitted files).
 Rename them as part of finishing their onboarding, not here.
-`cuda-python` was never suffixed, so 83 + 2 + 1 = 86 melange configs.
+
+Counted by shipped image rather than by melange config, **all 96 images in
+`catalog.json` are now correct**: 83 are melange-built and have been renamed, and
+the other 13 are apko-only (`bun`, `dnsmasq`, `dotnet`, `go`, `httpd`, `java`,
+`nginx`, `node-slim`, `patroni`, `postgres-slim`, `python`, `sqlite`, `vector`).
+Those 13 never had a `-minimal` package to rename — they assemble directly from
+Wolfi packages, which already carry upstream names and correct CPEs, so this
+whole problem never applied to them.
+
+The two counts differ because three melange configs are not in the catalog:
+`cuda-python` (never suffixed) plus the two held back above. So 83 + 3 = 86
+melange configs, and 83 + 13 = 96 catalogued images.
 
 **CI is the validator from wave 3 onward.** `mysql`, `keycloak`, `solr`,
 `mariadb`, `deno` and `qdrant` were the first images renamed without the local
