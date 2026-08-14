@@ -98,7 +98,7 @@ jar_exists() {
     -o /dev/null
 }
 
-declare -A OLD_VERSIONS=()
+declare -A OLD_VERSIONS=() OLD_GROUP=() OLD_TARGET=()
 skipped=0
 while IFS=$'\t' read -r purl old path fixes; do
   [ -n "$purl" ] || continue
@@ -123,24 +123,56 @@ while IFS=$'\t' read -r purl old path fixes; do
     continue
   fi
 
-  # Only record the old version once a swap is actually emitted — the leftover
+  # Only record the old version once a swap is actually emitted — the sweep and
   # guard below must not trip on a family we deliberately left alone.
   OLD_VERSIONS[$old]=1
+  OLD_GROUP[$old]=$group
+  OLD_TARGET[$old]=$new
   emit "jar_swap $group $artifact $old $new $cls"
 done <<< "$rows"
 
 emit ''
-emit '# Mixed-version guard. Siblings with no CVE of their own are not listed'
-emit '# above (netty-common, netty-buffer, ...), so they would silently stay at the'
-emit '# old version and break the classpath. Any leftover at a version we just'
-emit '# upgraded away from fails the build and names the file to add.'
+emit '# Sweep the rest of each upgraded family. Siblings with no CVE of their own'
+emit '# never appear in a scan report — log4j-api, log4j-web and log4j-slf4j2-impl'
+emit '# sat at 2.25.3 while log4j-core moved to 2.25.4, and log4j-core against a'
+emit '# mismatched log4j-api is a LoggerContext failure at startup. Anything still'
+emit '# at the old version is pulled up to the same target.'
+emit 'family_sweep() {'
+emit '  _g="$1"; _old="$2"; _new="$3"'
+emit '  for _f in $(find "$JARROOT" -name "*-$_old.jar"); do'
+emit '    _b=$(basename "$_f" .jar); _a="${_b%-$_old}"'
+emit '    _url="https://repo1.maven.org/maven2/$(echo "$_g" | tr . /)/$_a/$_new/$_a-$_new.jar"'
+emit '    if ! curl -sfI --connect-timeout 10 --max-time 30 "$_url" -o /dev/null; then'
+emit '      # Same version string, different group — coincidence rather than a'
+emit '      # family member. Refuse rather than guess at its coordinates.'
+emit '      echo "patch-java-deps: $_b left at $_old and no $_a-$_new under $_g" >&2'
+emit '      exit 1'
+emit '    fi'
+emit '    curl -sSfL --connect-timeout 10 --max-time 120 --retry 3 --retry-delay 5 \'
+emit '      "$_url" -o "$(dirname "$_f")/$_a-$_new.jar"'
+emit '    case "$(head -c2 "$(dirname "$_f")/$_a-$_new.jar")" in'
+emit '      PK) ;;'
+emit '      *) echo "patch-java-deps: $_a-$_new.jar is not a zip" >&2; exit 1 ;;'
+emit '    esac'
+emit '    rm -f "$_f"'
+emit '    echo "patch-java-deps: swept $_a $_old -> $_new"'
+emit '  done'
+emit '}'
 for v in "${!OLD_VERSIONS[@]}"; do
-  emit "leftover=\$(find \"\$JARROOT\" -name \"*-$v.jar\" -o -name \"*-$v-*.jar\")"
-  emit 'if [ -n "$leftover" ]; then'
-  emit "  echo \"patch-java-deps: JARs left at $v after upgrade:\" >&2"
-  emit '  echo "$leftover" >&2'
-  emit '  exit 1'
-  emit 'fi'
+  emit "family_sweep ${OLD_GROUP[$v]} $v ${OLD_TARGET[$v]}"
 done
+
+emit ''
+emit '# Backstop: report every remaining mismatch in one pass. Exiting at the first'
+emit '# one costs a full CI cycle per family to discover the next.'
+emit 'stragglers=""'
+for v in "${!OLD_VERSIONS[@]}"; do
+  emit "stragglers=\"\$stragglers\$(find \"\$JARROOT\" -name \"*-$v.jar\" -o -name \"*-$v-*.jar\")\""
+done
+emit 'if [ -n "$stragglers" ]; then'
+emit '  echo "patch-java-deps: JARs still at a superseded version:" >&2'
+emit '  echo "$stragglers" >&2'
+emit '  exit 1'
+emit 'fi'
 
 emit '# end-patch-java-deps'
