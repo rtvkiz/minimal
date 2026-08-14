@@ -399,6 +399,26 @@
     releases: "https://github.com/prometheus/node_exporter/releases"
     notes: "https://github.com/prometheus/node_exporter/releases/tag/v{version}"
 
+- name: kube-state-metrics
+  cron-enabled: false  # enable in this PR once dispatch-validated
+  files: [kube-state-metrics/melange.yaml]
+  source: { type: github-releases-latest, repo: kubernetes/kube-state-metrics, strip-v: true, pin-major: 2 }
+  tarball: { url: "https://github.com/kubernetes/kube-state-metrics/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/kubernetes/kube-state-metrics/releases"
+    notes: "https://github.com/kubernetes/kube-state-metrics/releases/tag/v{version}"
+
+- name: redis-exporter
+  cron-enabled: false  # enable in this PR once dispatch-validated
+  files: [redis-exporter/melange.yaml]
+  source: { type: github-releases-latest, repo: oliver006/redis_exporter, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/oliver006/redis_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/oliver006/redis_exporter/releases"
+    notes: "https://github.com/oliver006/redis_exporter/releases/tag/v{version}"
+
 - name: blackbox-exporter
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [blackbox-exporter/melange.yaml]

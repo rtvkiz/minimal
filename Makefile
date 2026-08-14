@@ -83,6 +83,8 @@ TEMPO_VERSION ?= $(call melange_version,tempo/melange.yaml)
 THANOS_VERSION ?= $(call melange_version,thanos/melange.yaml)
 NODE_EXPORTER_VERSION ?= $(call melange_version,node-exporter/melange.yaml)
 BLACKBOX_EXPORTER_VERSION ?= $(call melange_version,blackbox-exporter/melange.yaml)
+REDIS_EXPORTER_VERSION ?= $(call melange_version,redis-exporter/melange.yaml)
+KUBE_STATE_METRICS_VERSION ?= $(call melange_version,kube-state-metrics/melange.yaml)
 PUSHGATEWAY_VERSION ?= $(call melange_version,pushgateway/melange.yaml)
 
 # --- IaC / GitOps ---
@@ -221,6 +223,8 @@ endef
 .PHONY: thanos thanos-melange test-thanos
 .PHONY: node-exporter node-exporter-melange test-node-exporter
 .PHONY: blackbox-exporter blackbox-exporter-melange test-blackbox-exporter
+.PHONY: redis-exporter redis-exporter-melange test-redis-exporter
+.PHONY: kube-state-metrics kube-state-metrics-melange test-kube-state-metrics
 .PHONY: pushgateway pushgateway-melange test-pushgateway
 .PHONY: mosquitto mosquitto-melange mosquitto-dev test-mosquitto test-mosquitto-dev
 .PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-cassandra scan-solr scan-pulsar scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
@@ -229,7 +233,7 @@ endef
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch redis-slim valkey memcached kafka zookeeper cassandra solr pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter pushgateway coredns etcd openbao keycloak qdrant registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch redis-slim valkey memcached kafka zookeeper cassandra solr pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -329,6 +333,8 @@ $(eval $(call DEV_IMAGE_RULE,oauth2-proxy,oauth2-proxy-melange,--repository-appe
 $(eval $(call DEV_IMAGE_RULE,thanos,thanos-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,node-exporter,node-exporter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,blackbox-exporter,blackbox-exporter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,redis-exporter,redis-exporter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,kube-state-metrics,kube-state-metrics-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,pushgateway,pushgateway-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,helm,helm-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,kubectl,kubectl-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -2362,6 +2368,58 @@ blackbox-exporter: blackbox-exporter-melange
 	@echo "✓ minimal-blackbox-exporter built (source build)"
 
 #------------------------------------------------------------------------------
+# KUBE-STATE-METRICS IMAGE (melange Go source build + apko; Kubernetes object state metrics for Prometheus)
+#------------------------------------------------------------------------------
+kube-state-metrics-melange: keygen
+	@echo "Building kube-state-metrics $(KUBE_STATE_METRICS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build kube-state-metrics/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ kube-state-metrics package built from source"
+
+kube-state-metrics: kube-state-metrics-melange
+	@echo "Assembling minimal-kube-state-metrics image with apko..."
+	apko build kube-state-metrics/apko/kube-state-metrics.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-kube-state-metrics:$(VERSION) \
+		kube-state-metrics.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < kube-state-metrics.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kube-state-metrics:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kube-state-metrics:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kube-state-metrics:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kube-state-metrics:latest
+	@rm -f kube-state-metrics.tar sbom-*.spdx.json
+	@echo "✓ minimal-kube-state-metrics built (source build)"
+
+#------------------------------------------------------------------------------
+# REDIS-EXPORTER IMAGE (melange Go source build + apko; Redis metrics exporter for Prometheus)
+#------------------------------------------------------------------------------
+redis-exporter-melange: keygen
+	@echo "Building redis_exporter $(REDIS_EXPORTER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build redis-exporter/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ redis_exporter package built from source"
+
+redis-exporter: redis-exporter-melange
+	@echo "Assembling minimal-redis-exporter image with apko..."
+	apko build redis-exporter/apko/redis-exporter.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-redis-exporter:$(VERSION) \
+		redis-exporter.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < redis-exporter.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-redis-exporter:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-redis-exporter:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-redis-exporter:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-redis-exporter:latest
+	@rm -f redis-exporter.tar sbom-*.spdx.json
+	@echo "✓ minimal-redis-exporter built (source build)"
+
+#------------------------------------------------------------------------------
 # PUSHGATEWAY IMAGE (melange Go source build + apko; Prometheus push gateway)
 #------------------------------------------------------------------------------
 pushgateway-melange: keygen
@@ -3614,6 +3672,18 @@ test-blackbox-exporter:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-blackbox-exporter:latest" && \
 		blackbox-exporter/test.sh
 	@echo "✓ blackbox-exporter tests passed"
+
+test-redis-exporter:
+	@echo "Testing redis-exporter image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-redis-exporter:latest" && \
+		redis-exporter/test.sh
+	@echo "✓ redis-exporter tests passed"
+
+test-kube-state-metrics:
+	@echo "Testing kube-state-metrics image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kube-state-metrics:latest" && \
+		kube-state-metrics/test.sh
+	@echo "✓ kube-state-metrics tests passed"
 
 test-pushgateway:
 	@echo "Testing pushgateway image..."

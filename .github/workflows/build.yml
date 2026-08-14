@@ -105,6 +105,8 @@ jobs:
             {"name":"thanos","variants":["prod","dev"]},
             {"name":"node-exporter","variants":["prod","dev"]},
             {"name":"blackbox-exporter","variants":["prod","dev"]},
+            {"name":"redis-exporter","variants":["prod","dev"]},
+            {"name":"kube-state-metrics","variants":["prod","dev"]},
             {"name":"pushgateway","variants":["prod","dev"]},
             {"name":"deno","variants":["prod","dev"]},
             {"name":"opensearch","variants":["prod","dev"]}
