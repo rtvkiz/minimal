@@ -161,44 +161,45 @@ pipeline:
       # mismatched log4j-api is a LoggerContext failure at startup. Anything still
       # at the old version is pulled up to the same target.
       family_sweep() {
-        _g="$1"; _old="$2"; _new="$3"; _p="$4"
-        for _f in $(find "$JARROOT" -name "$_p*-$_old.jar"); do
-          _b=$(basename "$_f" .jar); _a="${_b%-$_old}"
-          # Per-file copy: a group resolved for one artifact must not leak into
-          # the next iteration.
-          _gg="$_g"
-          _url="https://repo1.maven.org/maven2/$(echo "$_gg" | tr . /)/$_a/$_new/$_a-$_new.jar"
-          if ! curl -sfI --connect-timeout 10 --max-time 30 "$_url" -o /dev/null; then
-            # Split families put the artifact second token in the group, but not
-            # consistently: jackson REPLACES the last segment
-            #   (com.fasterxml.jackson.core -> com.fasterxml.jackson.module),
-            # while jetty APPENDS it
-            #   (org.eclipse.jetty -> org.eclipse.jetty.http2).
-            # Try both shapes. search.maven.org would answer directly but times
-            # out from a build sandbox, so it is not a dependency here.
-            _tok=$(echo "$_a" | cut -d- -f2)
-            _ok=0
-            for _cand in "${_gg%.*}.$_tok" "$_gg.$_tok"; do
-              _u2="https://repo1.maven.org/maven2/$(echo "$_cand" | tr . /)/$_a/$_new/$_a-$_new.jar"
-              if curl -sfI --connect-timeout 10 --max-time 30 "$_u2" -o /dev/null; then
-                _gg="$_cand"; _url="$_u2"; _ok=1; break
+        _g="$1"; _new="$3"; _p="$4"
+        # Match the family at ANY version, not just the one the scan flagged.
+        # jackson-annotations sat at 2.20 (Jackson versions it major.minor) while
+        # jackson-databind went to 2.21.5, so a sweep keyed on the flagged version
+        # never saw it — and Solr died with NoClassDefFoundError JsonSerializeAs.
+        for _f in $(find "$JARROOT" -name "$_p*.jar"); do
+          _b=$(basename "$_f" .jar)
+          _v="${_b##*-}"
+          # Trailing field is a classifier, not a version (…-linux-x86_64.jar).
+          case "$_v" in [0-9]*) ;; *) continue ;; esac
+          [ "$_v" = "$_new" ] && continue
+          _a="${_b%-$_v}"
+          _tok=$(echo "$_a" | cut -d- -f2)
+          _found=0
+          # Target: exact, then patch-trimmed (2.21.5 -> 2.21) for artifacts that
+          # release on major.minor only.
+          for _tv in "$_new" "${_new%.*}"; do
+            # Group: as given, then the two split-family shapes (jackson replaces
+            # the last segment, jetty appends).
+            for _cand in "$_g" "${_g%.*}.$_tok" "$_g.$_tok"; do
+              _u="https://repo1.maven.org/maven2/$(echo "$_cand" | tr . /)/$_a/$_tv/$_a-$_tv.jar"
+              if curl -sfI --connect-timeout 10 --max-time 30 "$_u" -o /dev/null; then
+                _found=1; break
               fi
             done
-            if [ "$_ok" -eq 0 ]; then
-              # Genuinely unrelated — calcite-core and opentelemetry-semconv both
-              # sat at 1.37.0. Refuse rather than invent coordinates.
-              echo "patch-java-deps: $_b left at $_old, no group found for $_a-$_new" >&2
-              exit 1
-            fi
+            [ "$_found" -eq 1 ] && break
+          done
+          if [ "$_found" -eq 0 ]; then
+            echo "patch-java-deps: no release of $_a for family target $_new" >&2
+            exit 1
           fi
           curl -sSfL --connect-timeout 10 --max-time 120 --retry 3 --retry-delay 5 \
-            "$_url" -o "$(dirname "$_f")/$_a-$_new.jar"
-          case "$(head -c2 "$(dirname "$_f")/$_a-$_new.jar")" in
+            "$_u" -o "$(dirname "$_f")/$_a-$_tv.jar"
+          case "$(head -c2 "$(dirname "$_f")/$_a-$_tv.jar")" in
             PK) ;;
-            *) echo "patch-java-deps: $_a-$_new.jar is not a zip" >&2; exit 1 ;;
+            *) echo "patch-java-deps: $_a-$_tv.jar is not a zip" >&2; exit 1 ;;
           esac
-          rm -f "$_f"
-          echo "patch-java-deps: swept $_a $_old -> $_new"
+          [ "$_f" = "$(dirname "$_f")/$_a-$_tv.jar" ] || rm -f "$_f"
+          echo "patch-java-deps: swept $_a $_v -> $_tv"
         done
       }
       family_sweep org.apache.logging.log4j 2.25.3 2.25.4 log4j
