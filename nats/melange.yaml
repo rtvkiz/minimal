@@ -3,13 +3,19 @@
 # CGO_ENABLED=0 produces fully static binary - zero runtime deps beyond glibc
 
 package:
-  # Named `nats` (not `nats-minimal`) so vulnerability scanners can identify
-  # it. Syft derives a package's CPE from its apk name, and every CPE it
-  # generated kept -minimal in the product field
-  # (cpe:2.3:a:nats:nats-minimal:*, cpe:2.3:a:nats-minimal:nats-minimal:*,
-  # ...). NVD indexes this product bare, as cpe:2.3:a:nats:nats:*, so none of
-  # them matched, and the Wolfi secdb missed it too.
-  name: nats
+  # Named `nats-server` (not `nats-minimal`, and NOT bare `nats`) so
+  # vulnerability scanners can identify it. Syft derives a package's CPE from
+  # its apk name, and the -minimal suffix kept landing in the product field
+  # (cpe:2.3:a:nats:nats-minimal:*, ...), matching nothing in NVD.
+  #
+  # `nats` would be wrong: in Wolfi that name is the NATS *command line
+  # interface* (a different program, versioned 0.x), while this package is the
+  # NATS *server*. Wolfi ships the server as `nats-server`, and that is the
+  # name upstream and NVD use for it. Taking the bare `nats` name would have
+  # matched the CLI's advisories against this server and derived a CPE for the
+  # wrong product — worse than not matching at all, because the comparison is
+  # meaningless rather than merely missing.
+  name: nats-server
   version: 2.14.5
   epoch: 0
   description: "Minimal NATS Server built from source"
@@ -20,9 +26,10 @@ package:
     # the highest version — it does not prefer our local repo (apko v1.1.6
     # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
     # request, so the repository-matching tiebreak never runs). Wolfi ships a
-    # bare `nats`, so without this apk could install Wolfi's build instead of
-    # this source-built one. provider-priority is evaluated BEFORE version in
-    # that comparator, so this pins resolution to our package permanently.
+    # `nats-server` (2.12.x) too, so without this apk could install Wolfi's
+    # build instead of this source-built one. provider-priority is evaluated
+    # BEFORE version in that comparator, so this pins resolution to ours
+    # permanently.
     provider-priority: 100
 
 vars:

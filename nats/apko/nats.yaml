@@ -14,7 +14,7 @@ contents:
     - wolfi-baselayout
 
     # Our NATS (built from source via melange)
-    - nats
+    - nats-server
 
     # Certificates
     - ca-certificates-bundle

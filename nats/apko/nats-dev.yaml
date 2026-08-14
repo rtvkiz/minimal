@@ -17,7 +17,7 @@ contents:
   packages:
     # Base filesystem + NATS (same as prod)
     - wolfi-baselayout
-    - nats
+    - nats-server
     - ca-certificates-bundle
 
     # --- Dev variant minimum (CONVENTIONS.md) ---
