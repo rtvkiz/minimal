@@ -4,7 +4,7 @@
 
 package:
   name: tempo-minimal
-  version: 3.0.2
+  version: 3.0.3
   epoch: 0
   description: "Minimal Grafana Tempo distributed tracing backend built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
 
 vars:
   # SHA256 of tempo source tarball - updated by update-versions.yml workflow
-  sha256: 9da6e1c411694d1010bb7641ab55e365095bc85fd76d02e142ede0fa2162cf71
+  sha256: 3aa84c97d3a8502848cc0e0cc3d0ef18886422842ba20e5bd157e7fe89ade02c
 
 environment:
   contents:
