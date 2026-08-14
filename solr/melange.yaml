@@ -161,17 +161,22 @@ pipeline:
       # mismatched log4j-api is a LoggerContext failure at startup. Anything still
       # at the old version is pulled up to the same target.
       family_sweep() {
-        _g="$1"; _new="$3"; _p="$4"
-        # Match the family at ANY version, not just the one the scan flagged.
-        # jackson-annotations sat at 2.20 (Jackson versions it major.minor) while
-        # jackson-databind went to 2.21.5, so a sweep keyed on the flagged version
-        # never saw it — and Solr died with NoClassDefFoundError JsonSerializeAs.
+        _g="$1"; _old="$2"; _new="$3"; _p="$4"
+        # Match the family by major.minor SERIES, not by exact version and not by
+        # prefix alone. Exact missed jackson-annotations, which sits at 2.20 while
+        # databind is 2.20.0 — Solr died with NoClassDefFoundError JsonSerializeAs.
+        # Prefix alone was too wide: netty-tcnative-boringssl-static shares the
+        # netty prefix and the io.netty group but versions independently at 2.0.x,
+        # and forcing it to 4.2.16.Final has no release to point at.
+        _series=$(echo "$_old" | cut -d. -f1,2)
         for _f in $(find "$JARROOT" -name "$_p*.jar"); do
           _b=$(basename "$_f" .jar)
           _v="${_b##*-}"
           # Trailing field is a classifier, not a version (…-linux-x86_64.jar).
           case "$_v" in [0-9]*) ;; *) continue ;; esac
           [ "$_v" = "$_new" ] && continue
+          # Different release line under the same prefix — not this family.
+          [ "$(echo "$_v" | cut -d. -f1,2)" = "$_series" ] || continue
           _a="${_b%-$_v}"
           _tok=$(echo "$_a" | cut -d- -f2)
           _found=0
