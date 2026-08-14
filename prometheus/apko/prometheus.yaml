@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our Prometheus (built from source via melange)
-    - prometheus-minimal
+    - prometheus
 
     # Certificates (needed for scraping HTTPS targets)
     - ca-certificates-bundle

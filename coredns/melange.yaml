@@ -2,12 +2,29 @@
 # Builds CoreDNS from source (Go) — Kubernetes-default DNS server
 
 package:
-  name: coredns-minimal
+  # Named `coredns` (not `coredns-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:coredns:coredns-minimal:*,
+  # cpe:2.3:a:coredns-minimal:coredns-minimal:*, ...). NVD indexes this product
+  # bare, as cpe:2.3:a:coredns:coredns:*, so none of them matched, and the
+  # Wolfi secdb missed it too.
+  name: coredns
   version: 1.14.6
   epoch: 0
   description: "Minimal CoreDNS DNS server built from source"
   copyright:
     - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `coredns` package today, but if it ever adds one at a higher
+    # version, apk would silently install it instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently.
+    provider-priority: 100
 
 vars:
   sha256: 44af24bd9ab0b9f85a9feaa3132de72e9e4a0629452d41b3e2f49aa2028233af

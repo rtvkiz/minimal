@@ -7,7 +7,7 @@ contents:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
   packages:
     - wolfi-baselayout
-    - otelcol-minimal
+    - otelcol
     - ca-certificates-bundle
 
 accounts:

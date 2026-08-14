@@ -1,9 +1,13 @@
 # Plan: rename `<app>-minimal` apk packages to upstream names
 
-Status: **in progress**. Waves 1 and 2 are complete — all 26 non-Go images
-renamed, plus the `redis` pilot. Wave 3 has started: 15 of the 58 Go images are
-done, leaving 43 melange.yaml files still carrying the suffix.
-`cuda-python` was never suffixed, so 42 + 43 + 1 = 86 melange configs.
+Status: **effectively complete**. Waves 1, 2 and 3 are done — all 26 non-Go
+images and all 56 buildable Go images renamed, plus the `redis` pilot. Two
+melange.yaml files still carry the suffix: `kube-state-metrics` and
+`redis-exporter`, deliberately held back because they are only half-onboarded
+(their `apko/` trees, tests and VEX files are still untracked, so renaming them
+would commit a package name whose only references live in uncommitted files).
+Rename them as part of finishing their onboarding, not here.
+`cuda-python` was never suffixed, so 83 + 2 + 1 = 86 melange configs.
 
 **CI is the validator from wave 3 onward.** `mysql`, `keycloak`, `solr`,
 `mariadb`, `deno` and `qdrant` were the first images renamed without the local
@@ -173,6 +177,18 @@ repeatedly invalidated by bump merges, and one bad image shouldn't block four go
 - **No CVE gate exists.** `grype "$IMAGE" -o json -o sarif` — no `--fail-on`, no
   severity cutoff. Newly-surfaced CVEs cannot fail a build. They will appear on the
   catalog site, so the public "0 CVEs" number will rise — frame it before it lands.
+- **Colliding names inherit Wolfi's advisory stream, keyed on Wolfi's epochs.**
+  This was not predicted. Renaming a package to a name Wolfi also ships opens the
+  `wolfi:distro:wolfi:rolling` matcher, not just the NVD/CPE path — and that matcher
+  compares our `-r<epoch>` against the epoch in Wolfi's secdb. Our epoch numbering is
+  independent of theirs, so we read as behind whenever they rebuild more often than we
+  do, regardless of what our build actually contains. `stern` at `1.34.0-r0` picked up
+  14 findings against Wolfi fix-versions `1.34.0-r2` … `-r6` — *identical upstream
+  version*, pure epoch drift; several may already be fixed by our `patch-go-deps` bot,
+  which grype cannot see. This affects the 22 colliding images and is structural, not
+  a one-time correction. Being matched by a live advisory feed still beats being
+  invisible, but expect standing noise on those images, and do not read a rising count
+  there as new vulnerability.
 - **NVD vendor mismatch is unresolved.** Envoy is indexed under vendor `envoyproxy`,
   not `envoy`. Syft has a CPE dictionary that may bridge some cases; unverified.
   **If the after-scan is still 0, the rename alone did not fix that image.** This is

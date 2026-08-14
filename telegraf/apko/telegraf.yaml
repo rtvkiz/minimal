@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our Telegraf (built from source via melange)
-    - telegraf-minimal
+    - telegraf
 
     # Certificates (needed for HTTPS scrape inputs and HTTPS outputs)
     - ca-certificates-bundle

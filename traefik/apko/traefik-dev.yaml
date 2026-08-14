@@ -12,7 +12,7 @@ contents:
   packages:
     # Base + traefik (same as prod)
     - wolfi-baselayout
-    - traefik-minimal
+    - traefik
     - ca-certificates-bundle
 
     # --- Dev variant minimum (CONVENTIONS.md) ---

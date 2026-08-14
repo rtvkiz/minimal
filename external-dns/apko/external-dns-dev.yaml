@@ -13,7 +13,7 @@ contents:
     # Local signing key passed via --keyring-append CLI flag
   packages:
     - wolfi-baselayout
-    - external-dns-minimal
+    - external-dns
     - ca-certificates-bundle
 
     # --- Dev variant minimum (CONVENTIONS.md) ---

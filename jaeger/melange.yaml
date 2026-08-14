@@ -3,12 +3,29 @@
 # Uses in-memory storage by default; OTLP-native ingestion
 
 package:
-  name: jaeger-minimal
+  # Named `jaeger` (not `jaeger-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:jaeger:jaeger-minimal:*,
+  # cpe:2.3:a:jaeger-minimal:jaeger-minimal:*, ...). NVD indexes this product
+  # bare, as cpe:2.3:a:jaeger:jaeger:*, so none of them matched, and the Wolfi
+  # secdb missed it too.
+  name: jaeger
   version: 2.20.0
   epoch: 0
   description: "Minimal Jaeger distributed tracing backend built from source"
   copyright:
     - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `jaeger` package today, but if it ever adds one at a higher version,
+    # apk would silently install it instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently.
+    provider-priority: 100
 
 vars:
   sha256: 667a744192a31d3159acbeafb08e3c241ffd86118696443643b6d03cec9b2af8

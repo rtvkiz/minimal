@@ -14,7 +14,7 @@ contents:
 
     # Our Mimir (built from source via melange) — bundles `mimir` daemon
     # plus `mimirtool` for rules/alerts/config operations.
-    - mimir-minimal
+    - mimir
 
     # Certificates (needed for remote_write/HTTPS object storage, S3, etc.)
     - ca-certificates-bundle

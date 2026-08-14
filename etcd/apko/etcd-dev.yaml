@@ -2,7 +2,7 @@
 # Same etcd + etcdctl + etcdutl (source-built via melange) as prod,
 # plus bash, apk-tools, curl/socat/jq for HTTP/gRPC API debugging.
 #
-# etcd-minimal already ships etcdctl and etcdutl (the canonical client
+# The etcd package already ships etcdctl and etcdutl (the canonical client
 # tools), so the dev variant just adds the shell + debug utilities.
 
 contents:
@@ -15,7 +15,7 @@ contents:
   packages:
     # Base filesystem + etcd (same as prod)
     - wolfi-baselayout
-    - etcd-minimal
+    - etcd
     - ca-certificates-bundle
 
     # --- Dev variant minimum (CONVENTIONS.md) ---

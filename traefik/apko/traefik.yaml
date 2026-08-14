@@ -14,7 +14,7 @@ contents:
     - wolfi-baselayout
 
     # Our Traefik (built from source via melange)
-    - traefik-minimal
+    - traefik
 
     # Certificates
     - ca-certificates-bundle
