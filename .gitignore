@@ -22,3 +22,6 @@ melange.rsa.pub
 
 # Local Claude session guidance (not for public repo)
 CLAUDE.md
+
+# Local working notes (not for public repo)
+docs/package-rename-plan.md

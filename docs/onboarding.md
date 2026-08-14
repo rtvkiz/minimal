@@ -246,9 +246,9 @@ fallback and are fully blind.
 - The image name stays `minimal-<name>` — this is the *apk package* name only, and
   it must match in `melange.yaml`, `apko/<name>.yaml`, and `apko/<name>-dev.yaml`.
 
-**Migration in progress.** 84 existing `melange.yaml` files still carry the suffix.
-`redis-slim` is the completed reference; the rollout plan is in
-`docs/package-rename-plan.md`. New images must not add to the backlog.
+**Migration complete.** Every melange-built image in `catalog.json` now uses the
+bare upstream package name; the 13 apko-only images never had one to rename. A
+new image must not reintroduce the suffix.
 
 ---
 
