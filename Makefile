@@ -4036,6 +4036,12 @@ lint-workflows:
 # Assert every prod image (catalog.json) has exactly one live auto-update
 # mechanism (a cron-enabled versions.yaml row, or a declared Wolfi-package
 # class). Run before pushing any new image or versions.yaml/catalog.json change.
+check-packages:
+	@bash tools/check-packages.sh
+
+check-packages-report:
+	@bash tools/check-packages.sh --report
+
 check-autoupdate:
 	@./scripts/check-autoupdate-coverage.sh
 

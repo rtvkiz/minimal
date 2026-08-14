@@ -315,6 +315,14 @@ jobs:
         # bespoke updater). Same check as local `make check-autoupdate`.
         run: make check-autoupdate
 
+      - name: Assert apk package invariants
+        # Enforces what docs/onboarding.md previously only stated: no -minimal
+        # suffix (it breaks both grype paths), catalog primary_package ==
+        # melange package.name, and provider-priority: 100 wherever Wolfi ships
+        # the same name. nats shipped under the NATS *CLI's* name while
+        # catalog.json correctly said nats-server — nothing compared them.
+        run: make check-packages
+
   #----------------------------------------------------------------------------
   # GENERATE EPHEMERAL SIGNING KEY (PRs only - secrets not available for forks)
   #----------------------------------------------------------------------------
