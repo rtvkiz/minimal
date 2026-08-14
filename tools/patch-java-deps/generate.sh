@@ -88,14 +88,24 @@ while IFS=$'\t' read -r purl old path fixes; do
   fi
 done <<< "$rows"
 
+# Confirm the target JAR actually exists before emitting a swap. A version can
+# be present in Maven metadata and still publish no jar: org.lz4:lz4-java:1.8.1
+# ships only a .pom, so grype advises a fix that cannot be installed. Checking
+# here turns that into a recorded skip instead of a 404 at build time.
+jar_exists() {
+  curl -sfI --connect-timeout 10 --max-time 30 \
+    "https://repo1.maven.org/maven2/$(echo "$1" | tr . /)/$2/$3/$2-$3${4:+-$4}.jar" \
+    -o /dev/null
+}
+
 declare -A OLD_VERSIONS=()
+skipped=0
 while IFS=$'\t' read -r purl old path fixes; do
   [ -n "$purl" ] || continue
   # pkg:maven/<group>/<artifact>@<version>
   ga=${purl#pkg:maven/}; ga=${ga%@*}
   group=${ga%/*}; artifact=${ga##*/}
   new=${GROUP_TARGET[$group]}
-  OLD_VERSIONS[$old]=1
   # A classifier shows up in the filename but not the purl, e.g.
   # netty-transport-native-epoll-4.2.6.Final-linux-x86_64.jar.
   base=$(basename "$path" .jar)
@@ -104,6 +114,18 @@ while IFS=$'\t' read -r purl old path fixes; do
     "$artifact-$old") ;;
     "$artifact-$old-"*) cls=${base#"$artifact-$old-"} ;;
   esac
+
+  if ! jar_exists "$group" "$artifact" "$new" "$cls"; then
+    emit "# SKIPPED $artifact $old -> $new: no jar published at that version."
+    emit "#   Still vulnerable; needs a VEX entry or an upstream fix."
+    echo "skip: $artifact $old -> $new (no jar on Maven Central)" >&2
+    skipped=$((skipped + 1))
+    continue
+  fi
+
+  # Only record the old version once a swap is actually emitted — the leftover
+  # guard below must not trip on a family we deliberately left alone.
+  OLD_VERSIONS[$old]=1
   emit "jar_swap $group $artifact $old $new $cls"
 done <<< "$rows"
 

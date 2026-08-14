@@ -152,7 +152,8 @@ pipeline:
       jar_swap org.eclipse.jetty jetty-security 12.0.27 12.0.36 
       jar_swap org.eclipse.jetty jetty-server 12.0.27 12.0.36 
       jar_swap org.eclipse.jetty jetty-util 12.0.27 12.0.36 
-      jar_swap org.lz4 lz4-java 1.8.0 1.8.1 
+      # SKIPPED lz4-java 1.8.0 -> 1.8.1: no jar published at that version.
+      #   Still vulnerable; needs a VEX entry or an upstream fix.
       
       # Mixed-version guard. Siblings with no CVE of their own are not listed
       # above (netty-common, netty-buffer, ...), so they would silently stay at the
@@ -209,12 +210,6 @@ pipeline:
       leftover=$(find "$JARROOT" -name "*-2.5.6.jar" -o -name "*-2.5.6-*.jar")
       if [ -n "$leftover" ]; then
         echo "patch-java-deps: JARs left at 2.5.6 after upgrade:" >&2
-        echo "$leftover" >&2
-        exit 1
-      fi
-      leftover=$(find "$JARROOT" -name "*-1.8.0.jar" -o -name "*-1.8.0-*.jar")
-      if [ -n "$leftover" ]; then
-        echo "patch-java-deps: JARs left at 1.8.0 after upgrade:" >&2
         echo "$leftover" >&2
         exit 1
       fi
