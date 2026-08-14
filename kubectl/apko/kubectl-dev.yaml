@@ -11,7 +11,7 @@ contents:
     # Local signing key passed via --keyring-append CLI flag
   packages:
     - wolfi-baselayout
-    - kubectl-minimal
+    - kubectl
     - ca-certificates-bundle
     - busybox
     - bash

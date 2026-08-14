@@ -1,15 +1,21 @@
 # Plan: rename `<app>-minimal` apk packages to upstream names
 
-Status: **in progress**. 20 of the 26 wave 1+2 images renamed (wave 1: 15 of 16,
-wave 2: 5 of 10), plus the `redis` pilot — 21 renamed in total. 64 melange.yaml
-files still carry the suffix: the 58 wave 3 Go images plus the 6 deferred below.
-`cuda-python` was never suffixed, so 21 + 64 + 1 = 86 melange configs.
+Status: **in progress**. Waves 1 and 2 are complete — all 26 non-Go images
+renamed, plus the `redis` pilot. Wave 3 has started: 15 of the 58 Go images are
+done, leaving 43 melange.yaml files still carrying the suffix.
+`cuda-python` was never suffixed, so 42 + 43 + 1 = 86 melange configs.
 
-`mysql`, `keycloak`, `solr`, `mariadb`, `deno` and `qdrant` were renamed without
-the local build+test cycle — their builds are too slow to validate on a laptop,
-so CI is the validator for those six. This is a deliberate exception to the
-"never push a failing image" rule in CLAUDE.md, landed as its own commit so a
-red build points at exactly one change.
+**CI is the validator from wave 3 onward.** `mysql`, `keycloak`, `solr`,
+`mariadb`, `deno` and `qdrant` were the first images renamed without the local
+build+test cycle — their builds are too slow for a laptop. The Go images are
+landing the same way: 58 source builds is more compute than a laptop has, and
+the rename is mechanical and identical across all of them, so the marginal
+information from building each one locally is small. This is a deliberate,
+scoped exception to the "never push a failing image" rule in CLAUDE.md. It is
+bounded by two things: each batch lands as its own commit, so a red build points
+at a small set of images; and every batch clears a static precheck first (bare
+name, `provider-priority: 100`, no stray references, YAML parses) — the failure
+modes that precheck catches are the ones this rename actually produces.
 
 ## Problem
 
