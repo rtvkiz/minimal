@@ -17,7 +17,7 @@ contents:
   packages:
     # Base + minio (same as prod)
     - wolfi-baselayout
-    - minio-minimal
+    - minio
     - ca-certificates-bundle
 
     # --- Dev variant minimum (CONVENTIONS.md) ---

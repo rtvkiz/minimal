@@ -14,7 +14,7 @@ contents:
     - wolfi-baselayout
 
     # metrics-server (same as prod)
-    - metrics-server-minimal
+    - metrics-server
 
     # Certificates (same as prod)
     - ca-certificates-bundle

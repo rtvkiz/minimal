@@ -3,12 +3,27 @@
 # CGO_ENABLED=1 required for SQLite — produces dynamically linked binary
 
 package:
-  name: gitea-minimal
+  # Named `gitea` (not `gitea-minimal`) so vulnerability scanners can identify
+  # it. Syft derives a package's CPE from its apk name, and every CPE it
+  # generated kept -minimal in the product field
+  # (cpe:2.3:a:gitea:gitea-minimal:*, cpe:2.3:a:gitea-minimal:gitea-minimal:*,
+  # ...). NVD indexes this product bare, as cpe:2.3:a:gitea:gitea:*, so none of
+  # them matched, and the Wolfi secdb missed it too.
+  name: gitea
   version: 1.27.2
   epoch: 0
   description: "Minimal Gitea git hosting server built from source"
   copyright:
     - license: MIT
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `gitea`, so without this apk could install Wolfi's build instead of
+    # this source-built one. provider-priority is evaluated BEFORE version in
+    # that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
 
 vars:
   # SHA256 checksum of source tarball

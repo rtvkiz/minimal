@@ -10,7 +10,7 @@ contents:
     # Local signing key passed via --keyring-append CLI flag
   packages:
     - wolfi-baselayout
-    - gitleaks-minimal
+    - gitleaks
     - ca-certificates-bundle
 
 accounts:

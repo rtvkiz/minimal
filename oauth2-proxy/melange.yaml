@@ -4,12 +4,29 @@
 # License: MIT (oauth2-proxy authors).
 
 package:
-  name: oauth2-proxy-minimal
+  # Named `oauth2-proxy` (not `oauth2-proxy-minimal`) so vulnerability scanners
+  # can identify it. Syft derives a package's CPE from its apk name, and every
+  # CPE it generated kept -minimal in the product field
+  # (cpe:2.3:a:oauth2-proxy:oauth2-proxy-minimal:*,
+  # cpe:2.3:a:oauth2-proxy-minimal:oauth2-proxy-minimal:*, ...). NVD indexes
+  # this product bare, as cpe:2.3:a:oauth2-proxy:oauth2-proxy:*, so none of
+  # them matched, and the Wolfi secdb missed it too.
+  name: oauth2-proxy
   version: 7.15.3
   epoch: 0
   description: "Minimal OAuth2 Proxy (OIDC/OAuth2 authenticating reverse proxy) built from source"
   copyright:
     - license: MIT
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `oauth2-proxy`, so without this apk could install Wolfi's build
+    # instead of this source-built one. provider-priority is evaluated BEFORE
+    # version in that comparator, so this pins resolution to our package
+    # permanently.
+    provider-priority: 100
 
 vars:
   # SHA256 of oauth2-proxy source tarball - updated by update-versions.yml workflow

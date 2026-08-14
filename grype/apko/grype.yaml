@@ -10,7 +10,7 @@ contents:
     # Local signing key passed via --keyring-append CLI flag
   packages:
     - wolfi-baselayout
-    - grype-minimal
+    - grype
     - ca-certificates-bundle
 
 accounts:

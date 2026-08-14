@@ -14,7 +14,7 @@ contents:
     - wolfi-baselayout
 
     # Our MinIO (built from source via melange)
-    - minio-minimal
+    - minio
 
     # Certificates (required for TLS and S3 client connections)
     - ca-certificates-bundle

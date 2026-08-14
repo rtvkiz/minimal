@@ -14,7 +14,7 @@ contents:
     - wolfi-baselayout
 
     # Our Caddy (built from source via melange)
-    - caddy-minimal
+    - caddy
 
     # Certificates
     - ca-certificates-bundle

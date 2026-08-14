@@ -13,7 +13,7 @@ contents:
     - wolfi-baselayout
 
     # Our metrics-server (built from source via melange)
-    - metrics-server-minimal
+    - metrics-server
 
     # Certificates — metrics-server talks to the kubelet over TLS and serves
     # the aggregated API over TLS.

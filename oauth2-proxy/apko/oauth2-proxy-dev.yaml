@@ -8,7 +8,7 @@ contents:
     # Local signing key passed via --keyring-append CLI flag
   packages:
     - wolfi-baselayout
-    - oauth2-proxy-minimal
+    - oauth2-proxy
     - ca-certificates-bundle
     - busybox
     - bash

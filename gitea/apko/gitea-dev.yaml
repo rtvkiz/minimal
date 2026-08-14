@@ -12,7 +12,7 @@ contents:
   packages:
     # Same as prod
     - wolfi-baselayout
-    - gitea-minimal
+    - gitea
     - glibc
     - glibc-locale-posix
     - ld-linux

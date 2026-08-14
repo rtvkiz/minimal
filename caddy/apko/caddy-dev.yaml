@@ -12,7 +12,7 @@ contents:
   packages:
     # Base + caddy (same as prod)
     - wolfi-baselayout
-    - caddy-minimal
+    - caddy
     - ca-certificates-bundle
 
     # --- Dev variant minimum (CONVENTIONS.md) ---

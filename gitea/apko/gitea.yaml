@@ -14,7 +14,7 @@ contents:
     - wolfi-baselayout
 
     # Our Gitea (built from source via melange)
-    - gitea-minimal
+    - gitea
 
     # Core runtime (CGO binary needs these)
     - glibc
