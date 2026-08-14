@@ -98,7 +98,7 @@ jar_exists() {
     -o /dev/null
 }
 
-declare -A OLD_VERSIONS=() OLD_GROUP=() OLD_TARGET=()
+declare -A OLD_VERSIONS=() OLD_GROUP=() OLD_TARGET=() OLD_PREFIX=()
 skipped=0
 while IFS=$'\t' read -r purl old path fixes; do
   [ -n "$purl" ] || continue
@@ -128,6 +128,14 @@ while IFS=$'\t' read -r purl old path fixes; do
   OLD_VERSIONS[$old]=1
   OLD_GROUP[$old]=$group
   OLD_TARGET[$old]=$new
+  # A shared version string does not imply a shared family: calcite-core and
+  # opentelemetry-semconv are both 1.37.0 and belong to different groups. Record
+  # the artifact-id prefix so the sweep touches only real family members.
+  pfx=${artifact%%-*}
+  case " ${OLD_PREFIX[$old]:-} " in
+    *" $pfx "*) ;;
+    *) OLD_PREFIX[$old]="${OLD_PREFIX[$old]:-}${OLD_PREFIX[$old]:+ }$pfx" ;;
+  esac
   emit "jar_swap $group $artifact $old $new $cls"
 done <<< "$rows"
 
@@ -138,8 +146,8 @@ emit '# sat at 2.25.3 while log4j-core moved to 2.25.4, and log4j-core against a
 emit '# mismatched log4j-api is a LoggerContext failure at startup. Anything still'
 emit '# at the old version is pulled up to the same target.'
 emit 'family_sweep() {'
-emit '  _g="$1"; _old="$2"; _new="$3"'
-emit '  for _f in $(find "$JARROOT" -name "*-$_old.jar"); do'
+emit '  _g="$1"; _old="$2"; _new="$3"; _p="$4"'
+emit '  for _f in $(find "$JARROOT" -name "$_p*-$_old.jar"); do'
 emit '    _b=$(basename "$_f" .jar); _a="${_b%-$_old}"'
 emit '    _url="https://repo1.maven.org/maven2/$(echo "$_g" | tr . /)/$_a/$_new/$_a-$_new.jar"'
 emit '    if ! curl -sfI --connect-timeout 10 --max-time 30 "$_url" -o /dev/null; then'
@@ -159,7 +167,9 @@ emit '    echo "patch-java-deps: swept $_a $_old -> $_new"'
 emit '  done'
 emit '}'
 for v in "${!OLD_VERSIONS[@]}"; do
-  emit "family_sweep ${OLD_GROUP[$v]} $v ${OLD_TARGET[$v]}"
+  for p in ${OLD_PREFIX[$v]}; do
+    emit "family_sweep ${OLD_GROUP[$v]} $v ${OLD_TARGET[$v]} $p"
+  done
 done
 
 emit ''
@@ -167,7 +177,9 @@ emit '# Backstop: report every remaining mismatch in one pass. Exiting at the fi
 emit '# one costs a full CI cycle per family to discover the next.'
 emit 'stragglers=""'
 for v in "${!OLD_VERSIONS[@]}"; do
-  emit "stragglers=\"\$stragglers\$(find \"\$JARROOT\" -name \"*-$v.jar\" -o -name \"*-$v-*.jar\")\""
+  for p in ${OLD_PREFIX[$v]}; do
+    emit "stragglers=\"\$stragglers\$(find \"\$JARROOT\" -name \"$p*-$v.jar\" -o -name \"$p*-$v-*.jar\")\""
+  done
 done
 emit 'if [ -n "$stragglers" ]; then'
 emit '  echo "patch-java-deps: JARs still at a superseded version:" >&2'

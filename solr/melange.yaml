@@ -161,8 +161,8 @@ pipeline:
       # mismatched log4j-api is a LoggerContext failure at startup. Anything still
       # at the old version is pulled up to the same target.
       family_sweep() {
-        _g="$1"; _old="$2"; _new="$3"
-        for _f in $(find "$JARROOT" -name "*-$_old.jar"); do
+        _g="$1"; _old="$2"; _new="$3"; _p="$4"
+        for _f in $(find "$JARROOT" -name "$_p*-$_old.jar"); do
           _b=$(basename "$_f" .jar); _a="${_b%-$_old}"
           _url="https://repo1.maven.org/maven2/$(echo "$_g" | tr . /)/$_a/$_new/$_a-$_new.jar"
           if ! curl -sfI --connect-timeout 10 --max-time 30 "$_url" -o /dev/null; then
@@ -181,28 +181,28 @@ pipeline:
           echo "patch-java-deps: swept $_a $_old -> $_new"
         done
       }
-      family_sweep org.apache.logging.log4j 2.25.3 2.25.4
-      family_sweep org.apache.calcite 1.37.0 1.42.0
-      family_sweep com.fasterxml.jackson.core 2.20.0 2.21.5
-      family_sweep org.apache.httpcomponents.core5 5.2.3 5.4.3
-      family_sweep org.apache.kafka 3.9.1 3.9.2
-      family_sweep org.apache.zookeeper 3.9.4 3.9.5
-      family_sweep org.eclipse.jetty 12.0.27 12.0.36
-      family_sweep io.netty 4.2.6.Final 4.2.16.Final
-      family_sweep org.apache.opennlp 2.5.6 2.5.9
+      family_sweep org.apache.logging.log4j 2.25.3 2.25.4 log4j
+      family_sweep org.apache.calcite 1.37.0 1.42.0 calcite
+      family_sweep com.fasterxml.jackson.core 2.20.0 2.21.5 jackson
+      family_sweep org.apache.httpcomponents.core5 5.2.3 5.4.3 httpcore5
+      family_sweep org.apache.kafka 3.9.1 3.9.2 kafka
+      family_sweep org.apache.zookeeper 3.9.4 3.9.5 zookeeper
+      family_sweep org.eclipse.jetty 12.0.27 12.0.36 jetty
+      family_sweep io.netty 4.2.6.Final 4.2.16.Final netty
+      family_sweep org.apache.opennlp 2.5.6 2.5.9 opennlp
       
       # Backstop: report every remaining mismatch in one pass. Exiting at the first
       # one costs a full CI cycle per family to discover the next.
       stragglers=""
-      stragglers="$stragglers$(find "$JARROOT" -name "*-2.25.3.jar" -o -name "*-2.25.3-*.jar")"
-      stragglers="$stragglers$(find "$JARROOT" -name "*-1.37.0.jar" -o -name "*-1.37.0-*.jar")"
-      stragglers="$stragglers$(find "$JARROOT" -name "*-2.20.0.jar" -o -name "*-2.20.0-*.jar")"
-      stragglers="$stragglers$(find "$JARROOT" -name "*-5.2.3.jar" -o -name "*-5.2.3-*.jar")"
-      stragglers="$stragglers$(find "$JARROOT" -name "*-3.9.1.jar" -o -name "*-3.9.1-*.jar")"
-      stragglers="$stragglers$(find "$JARROOT" -name "*-3.9.4.jar" -o -name "*-3.9.4-*.jar")"
-      stragglers="$stragglers$(find "$JARROOT" -name "*-12.0.27.jar" -o -name "*-12.0.27-*.jar")"
-      stragglers="$stragglers$(find "$JARROOT" -name "*-4.2.6.Final.jar" -o -name "*-4.2.6.Final-*.jar")"
-      stragglers="$stragglers$(find "$JARROOT" -name "*-2.5.6.jar" -o -name "*-2.5.6-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "log4j*-2.25.3.jar" -o -name "log4j*-2.25.3-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "calcite*-1.37.0.jar" -o -name "calcite*-1.37.0-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "jackson*-2.20.0.jar" -o -name "jackson*-2.20.0-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "httpcore5*-5.2.3.jar" -o -name "httpcore5*-5.2.3-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "kafka*-3.9.1.jar" -o -name "kafka*-3.9.1-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "zookeeper*-3.9.4.jar" -o -name "zookeeper*-3.9.4-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "jetty*-12.0.27.jar" -o -name "jetty*-12.0.27-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "netty*-4.2.6.Final.jar" -o -name "netty*-4.2.6.Final-*.jar")"
+      stragglers="$stragglers$(find "$JARROOT" -name "opennlp*-2.5.6.jar" -o -name "opennlp*-2.5.6-*.jar")"
       if [ -n "$stragglers" ]; then
         echo "patch-java-deps: JARs still at a superseded version:" >&2
         echo "$stragglers" >&2
