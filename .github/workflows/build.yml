@@ -985,10 +985,30 @@ jobs:
 
       - name: Back off before provenance retry
         if: github.event_name != 'pull_request' && steps.slsa-provenance.outcome == 'failure'
-        run: sleep 60
+        run: |
+          # Jittered, not fixed. A large run fires 80+ attestations at once and
+          # trips the installation rate limit; a constant 60s meant every job
+          # then retried in the same instant against the same limit, so the
+          # retry was guaranteed to fail with it. This is the same burst bug as
+          # the curl --retry fix above. Spread over 1-6min instead.
+          sleep $(( (RANDOM % 300) + 60 ))
 
       - name: Generate SLSA build provenance (retry)
+        id: slsa-retry
+        continue-on-error: true
         if: github.event_name != 'pull_request' && steps.slsa-provenance.outcome == 'failure'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
+      - name: Back off before final provenance attempt
+        if: github.event_name != 'pull_request' && steps.slsa-retry.outcome == 'failure'
+        run: sleep $(( (RANDOM % 600) + 300 ))
+
+      - name: Generate SLSA build provenance (final)
+        if: github.event_name != 'pull_request' && steps.slsa-retry.outcome == 'failure'
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
@@ -1578,10 +1598,30 @@ jobs:
 
       - name: Back off before provenance retry
         if: github.event_name != 'pull_request' && steps.slsa-provenance.outcome == 'failure'
-        run: sleep 60
+        run: |
+          # Jittered, not fixed. A large run fires 80+ attestations at once and
+          # trips the installation rate limit; a constant 60s meant every job
+          # then retried in the same instant against the same limit, so the
+          # retry was guaranteed to fail with it. This is the same burst bug as
+          # the curl --retry fix above. Spread over 1-6min instead.
+          sleep $(( (RANDOM % 300) + 60 ))
 
       - name: Generate SLSA build provenance (retry)
+        id: slsa-retry
+        continue-on-error: true
         if: github.event_name != 'pull_request' && steps.slsa-provenance.outcome == 'failure'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
+      - name: Back off before final provenance attempt
+        if: github.event_name != 'pull_request' && steps.slsa-retry.outcome == 'failure'
+        run: sleep $(( (RANDOM % 600) + 300 ))
+
+      - name: Generate SLSA build provenance (final)
+        if: github.event_name != 'pull_request' && steps.slsa-retry.outcome == 'failure'
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
