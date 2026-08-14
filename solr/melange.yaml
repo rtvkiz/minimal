@@ -169,21 +169,25 @@ pipeline:
           _gg="$_g"
           _url="https://repo1.maven.org/maven2/$(echo "$_gg" | tr . /)/$_a/$_new/$_a-$_new.jar"
           if ! curl -sfI --connect-timeout 10 --max-time 30 "$_url" -o /dev/null; then
-            # A prefix match does not guarantee the same group: jackson-databind
-            # is com.fasterxml.jackson.core, but jackson-module-jakarta-xmlbind-
-            # annotations is com.fasterxml.jackson.module. For these split
-            # families the group tracks the artifact id: swap the last group
-            # segment for the artifact second token and try once more.
-            # search.maven.org would answer this directly but is not reliably
-            # reachable from a build sandbox, so it is not a dependency here.
-            _g2="${_gg%.*}.$(echo "$_a" | cut -d- -f2)"
-            _u2="https://repo1.maven.org/maven2/$(echo "$_g2" | tr . /)/$_a/$_new/$_a-$_new.jar"
-            if curl -sfI --connect-timeout 10 --max-time 30 "$_u2" -o /dev/null; then
-              _gg="$_g2"; _url="$_u2"
-            else
+            # Split families put the artifact second token in the group, but not
+            # consistently: jackson REPLACES the last segment
+            #   (com.fasterxml.jackson.core -> com.fasterxml.jackson.module),
+            # while jetty APPENDS it
+            #   (org.eclipse.jetty -> org.eclipse.jetty.http2).
+            # Try both shapes. search.maven.org would answer directly but times
+            # out from a build sandbox, so it is not a dependency here.
+            _tok=$(echo "$_a" | cut -d- -f2)
+            _ok=0
+            for _cand in "${_gg%.*}.$_tok" "$_gg.$_tok"; do
+              _u2="https://repo1.maven.org/maven2/$(echo "$_cand" | tr . /)/$_a/$_new/$_a-$_new.jar"
+              if curl -sfI --connect-timeout 10 --max-time 30 "$_u2" -o /dev/null; then
+                _gg="$_cand"; _url="$_u2"; _ok=1; break
+              fi
+            done
+            if [ "$_ok" -eq 0 ]; then
               # Genuinely unrelated — calcite-core and opentelemetry-semconv both
               # sat at 1.37.0. Refuse rather than invent coordinates.
-              echo "patch-java-deps: $_b left at $_old, not under $_gg or $_g2" >&2
+              echo "patch-java-deps: $_b left at $_old, no group found for $_a-$_new" >&2
               exit 1
             fi
           fi
