@@ -10,7 +10,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:trivy:trivy:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: trivy
-  version: 0.73.0
+  version: 0.74.0
   epoch: 0
   description: "Minimal Trivy (vulnerability/IaC/secret scanner) built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 of trivy source tarball - updated by update-versions.yml workflow
-  sha256: a2a6f9eee305dd6672ec3af92954c456e5f5439ab3a46d6f4dc06f53422752d0
+  sha256: 04268af574690b84bc3474a5f19e002cd6da3e16899fac9fd39c6e84e7843940
 
 environment:
   contents:
