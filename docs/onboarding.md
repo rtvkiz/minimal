@@ -246,9 +246,21 @@ fallback and are fully blind.
 - The image name stays `minimal-<name>` — this is the *apk package* name only, and
   it must match in `melange.yaml`, `apko/<name>.yaml`, and `apko/<name>-dev.yaml`.
 
-**Migration complete.** Every melange-built image in `catalog.json` now uses the
-bare upstream package name; the 13 apko-only images never had one to rename. A
-new image must not reintroduce the suffix.
+**Migration complete, and now enforced.** Every melange-built image in
+`catalog.json` uses the bare upstream package name; the 13 apko-only images never
+had one to rename. `make check-packages` (CI: the `validate-catalog` job) asserts
+all four rules above and fails the PR on any violation — a suffix, a
+`primary_package` that disagrees with `package.name`, a Wolfi-colliding name
+without `provider-priority: 100`, or an apko variant referencing a package
+melange does not build. Use `make check-packages-report` locally to list
+violations without failing.
+
+Naming judgment: prefer the name **upstream** uses, not the name another distro
+uses. Adopting Wolfi's name for a package we build ourselves also adopts their
+advisory stream, which is keyed to *their* epoch numbering — that is what makes
+our `-r0` read as vulnerable against their `-r6` even when our build is newer.
+`otelcol` keeps the upstream binary name for this reason rather than moving to
+Wolfi's `opentelemetry-collector`.
 
 ---
 

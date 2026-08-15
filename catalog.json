@@ -68,12 +68,14 @@
     { "name": "jaeger", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "jaeger", "upstream_url": "https://www.jaegertracing.io", "summary": "Jaeger distributed tracing backend built from source via melange." },
     { "name": "loki", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "loki", "upstream_url": "https://grafana.com/oss/loki/", "summary": "Loki log aggregation server built from source via melange." },
     { "name": "tempo", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "tempo", "upstream_url": "https://grafana.com/oss/tempo/", "summary": "Shell-less Grafana Tempo distributed tracing backend." },
-    { "name": "otelcol", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "opentelemetry-collector", "upstream_url": "https://opentelemetry.io/docs/collector/", "summary": "OpenTelemetry Collector built from source via melange." },
+    { "name": "otelcol", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "otelcol", "upstream_url": "https://opentelemetry.io/docs/collector/", "summary": "OpenTelemetry Collector built from source via melange." },
     { "name": "fluent-bit", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "fluent-bit", "upstream_url": "https://fluentbit.io", "summary": "Fluent Bit log processor and forwarder built from source via melange." },
     { "name": "telegraf", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "telegraf", "upstream_url": "https://www.influxdata.com/time-series-platform/telegraf/", "summary": "Telegraf metrics collection agent built from source via melange." },
     { "name": "vector", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "vector", "upstream_url": "https://vector.dev", "summary": "Shell-less Vector observability data pipeline built on Wolfi." },
     { "name": "node-exporter", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "node-exporter", "upstream_url": "https://github.com/prometheus/node_exporter", "summary": "Shell-less Prometheus Node Exporter for hardware and OS metrics." },
     { "name": "blackbox-exporter", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "blackbox-exporter", "upstream_url": "https://github.com/prometheus/blackbox_exporter", "summary": "Shell-less Prometheus Blackbox Exporter for endpoint probing." },
+    { "name": "kube-state-metrics", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "kube-state-metrics", "upstream_url": "https://github.com/kubernetes/kube-state-metrics", "summary": "Shell-less kube-state-metrics for Kubernetes object metrics." },
+    { "name": "redis-exporter", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "redis-exporter", "upstream_url": "https://github.com/oliver006/redis_exporter", "summary": "Shell-less Redis Exporter for Prometheus metrics." },
     { "name": "pushgateway", "category": "Observability", "variants": ["prod", "dev"], "primary_package": "pushgateway", "upstream_url": "https://github.com/prometheus/pushgateway", "summary": "Shell-less Prometheus Pushgateway for ephemeral and batch job metrics." },
 
     { "name": "coredns", "category": "Infrastructure", "variants": ["prod", "dev"], "primary_package": "coredns", "upstream_url": "https://coredns.io", "summary": "CoreDNS DNS server built from source via melange." },
@@ -114,7 +116,7 @@
     { "name": "jenkins", "category": "Apps", "variants": ["prod", "dev"], "primary_package": "jenkins", "upstream_url": "https://www.jenkins.io", "summary": "Shell-less Jenkins with jlink custom JRE, built from source via melange." },
     { "name": "gitea", "category": "Apps", "variants": ["prod", "dev"], "primary_package": "gitea", "upstream_url": "https://gitea.io", "summary": "Gitea git hosting built from source via melange." },
     { "name": "minio", "category": "Apps", "variants": ["prod", "dev"], "primary_package": "minio", "upstream_url": "https://min.io", "summary": "Shell-less MinIO S3-compatible object storage built from source via melange." },
-    { "name": "rails", "category": "Apps", "variants": ["prod", "dev"], "primary_package": "ruby", "upstream_url": "https://rubyonrails.org", "summary": "Ruby on Rails built from source via melange." },
+    { "name": "rails", "category": "Apps", "variants": ["prod", "dev"], "primary_package": "rails", "upstream_url": "https://rubyonrails.org", "summary": "Ruby on Rails built from source via melange." },
     { "name": "mailpit", "category": "Apps", "variants": ["prod", "dev"], "primary_package": "mailpit", "upstream_url": "https://mailpit.axllent.org", "summary": "Shell-less Mailpit SMTP/email testing tool built from source via melange." }
   ]
 }

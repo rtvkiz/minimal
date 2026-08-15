@@ -88,6 +88,8 @@ jobs:
           # have their own go.mod; patching only the root has no effect on
           # the built binaries). For single-module images, one path suffices.
           declare -A MODROOTS=(
+            [kube-state-metrics]="/home/build/kube-state-metrics-${D}{{package.version}}"
+            [redis-exporter]="/home/build/redis-exporter-${D}{{package.version}}"
             [caddy]="/home/build/caddy-${D}{{package.version}}"
             [traefik]="/home/build/traefik-${D}{{package.version}}"
             [nats]="/home/build/nats-server-${D}{{package.version}}"
@@ -158,6 +160,8 @@ jobs:
           # "package X is in the main module, so can't request version Y".
           # Listing the main module here lets the FIXES filter drop self-bumps.
           declare -A MAIN_MODULES=(
+            [kube-state-metrics]="k8s.io/kube-state-metrics/v2"
+            [redis-exporter]="github.com/oliver006/redis_exporter"
             [caddy]="github.com/caddyserver/caddy/v2"
             [traefik]="github.com/traefik/traefik/v3"
             [nats]="github.com/nats-io/nats-server/v2"
@@ -218,6 +222,8 @@ jobs:
 
           # Build step markers to insert before
           declare -A BUILD_MARKERS=(
+            [kube-state-metrics]='CGO_ENABLED=0 go build'
+            [redis-exporter]='CGO_ENABLED=0 go build'
             [caddy]='# Build Caddy from source'
             [traefik]='# Build Traefik from source'
             [nats]='# Build NATS from source'
