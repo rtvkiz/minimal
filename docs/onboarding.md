@@ -294,6 +294,26 @@ round-trip), and **no-shell**.
   user can't read them. Verify with `[ -s "$work/out" ]` (stat, needs only the
   0777 dir), **not** `grep` (needs read). (cosign's pubkey happens to be 0644, so
   its grep works; step-cli's keypair is 0600, so use `-s`.)
+- **Never pipe a producer straight into `grep -q` under `set -o pipefail`.**
+  `grep -q` exits at the first match, the producer takes SIGPIPE, and the
+  pipeline returns 141 — so the test fails on a perfectly good image. It is a
+  *race*: whether the producer finishes writing before grep exits. The same
+  line passed in a prod job and failed in the dev job of the same run, and the
+  flink and vaultwarden tests both shipped this bug. Capture first, then match:
+
+  ```bash
+  # wrong — flaky, fails with 141
+  docker run --rm --entrypoint /usr/bin/java "$IMAGE" -version 2>&1 | grep -q "21\."
+  curl -sf "$url" | grep -q "<html"
+
+  # right
+  jv=$(docker run --rm --entrypoint /usr/bin/java "$IMAGE" -version 2>&1)
+  echo "$jv" | grep -q "21\." || { echo "unexpected JRE: $jv"; exit 1; }
+  ```
+
+  Piping a *variable* into grep (`echo "$x" | grep -q`) is fine — the write
+  completes before grep can exit. So is `docker ps | grep -q`, for the same
+  reason. The danger is a producer that writes a lot, or slowly.
 
 ---
 

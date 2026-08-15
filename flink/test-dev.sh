@@ -5,7 +5,11 @@ cleanup() { docker rm -f flink-dev-test >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
 echo "Testing Java version (parity with prod)..."
-docker run --rm --entrypoint /usr/bin/java "$IMAGE" -version 2>&1 | grep -q "21\."
+# Capture before matching. `java -version | grep -q` lets grep exit at the
+# first match, java takes SIGPIPE, and pipefail fails the test with 141 —
+# a race that passed in prod and failed in dev from the same code.
+jv=$(docker run --rm --entrypoint /usr/bin/java "$IMAGE" -version 2>&1)
+echo "$jv" | grep -q "21\." || { echo "unexpected JRE: $jv"; exit 1; }
 
 echo "Testing dev tooling is present..."
 for tool in /bin/sh /bin/bash /usr/bin/curl /usr/bin/jq /usr/bin/ps; do
