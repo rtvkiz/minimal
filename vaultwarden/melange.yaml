@@ -1,0 +1,112 @@
+# Melange build configuration for minimal Vaultwarden
+# Builds the Vaultwarden server from source (Rust) and bundles the prebuilt
+# web vault. Unofficial Bitwarden-compatible server; ~316M pulls upstream.
+
+package:
+  # Named `vaultwarden` — what upstream calls it and what NVD indexes. Never
+  # `vaultwarden-minimal`: syft derives the CPE from the apk name, so a suffix
+  # produces cpe:2.3:a:vaultwarden-minimal:vaultwarden-minimal:* which matches
+  # nothing in NVD and has no Wolfi secdb entry, and grype then reports zero
+  # findings for an unscanned image.
+  name: vaultwarden
+  version: 1.37.1
+  epoch: 0
+  description: "Minimal Vaultwarden (Bitwarden-compatible server) built from source"
+  copyright:
+    # Two licenses ship in this image: the server is AGPL-3.0, and the bundled
+    # web vault is Bitwarden's OSS build (GPL-3.0). bw_web_builds compiles it
+    # with `npm run dist:oss:selfhost`, Bitwarden's `oss:` target — not the
+    # `bit:` target, which is the proprietary bitwarden_license tree. So no
+    # source-available/EULA code is redistributed here.
+    - license: AGPL-3.0-only
+    - license: GPL-3.0-only
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `vaultwarden` today, but if it ever adds one at a higher version apk
+    # would silently install it instead of this source-built one.
+    provider-priority: 100
+
+vars:
+  sha256: 32c43436517fe67bdf207cf9e803a3b71e87703f384604588d360f7e6724f045
+  # The web vault is a separate prebuilt release, not built here. Building it
+  # would mean running the Bitwarden npm/Angular toolchain inside bwrap — the
+  # frontend quagmire that keeps grafana and argocd off the catalog. Upstream
+  # publishes sha256sums.txt with the release, so the artifact is verifiable.
+  web_vault_version: 2026.6.4
+  web_vault_sha256: d47f16ed4e756c73c88143047281f8881f1a6fb680d9bf0dd24c8adae6799592
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - rust
+      - openssl-dev
+      - pkgconf
+      # No sqlite-dev: the `sqlite` cargo feature pulls libsqlite3-sys/bundled,
+      # which compiles SQLite into the binary. That needs a C compiler at build
+      # time (build-base) but leaves no SQLite runtime dependency.
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/dani-garcia/vaultwarden/archive/refs/tags/${{package.version}}.tar.gz" \
+        -o /home/build/vaultwarden.tar.gz
+      echo "${{vars.sha256}}  /home/build/vaultwarden.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf vaultwarden.tar.gz && rm vaultwarden.tar.gz
+
+  - runs: |
+      curl -fsSL --retry 5 --retry-all-errors \
+        "https://github.com/dani-garcia/bw_web_builds/releases/download/v${{vars.web_vault_version}}/bw_web_v${{vars.web_vault_version}}.tar.gz" \
+        -o /home/build/web-vault.tar.gz
+      echo "${{vars.web_vault_sha256}}  /home/build/web-vault.tar.gz" | sha256sum -c -
+
+  - runs: |
+      cd /home/build/vaultwarden-${{package.version}}
+      # `default = []` upstream — no database backend is compiled in unless one
+      # is named, and the server refuses to start without one. sqlite only:
+      # mysql/postgresql would add libmariadb/libpq runtime dependencies for
+      # backends a single-container deployment does not use.
+      cargo build --release --features sqlite --bin vaultwarden
+
+  - runs: |
+      cd /home/build/vaultwarden-${{package.version}}
+
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp target/release/vaultwarden "${{targets.destdir}}/usr/bin/"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/vaultwarden"
+
+      # The tarball unpacks a top-level web-vault/ directory.
+      mkdir -p "${{targets.destdir}}/usr/share/vaultwarden"
+      tar xzf /home/build/web-vault.tar.gz -C "${{targets.destdir}}/usr/share/vaultwarden"
+      test -f "${{targets.destdir}}/usr/share/vaultwarden/web-vault/index.html"
+
+      # Drop the cargo registry cache: melange's license scanner runs as the
+      # host user after the sandbox exits and cannot chmod registry sources,
+      # which fails the post-build check (same trap as qdrant).
+      rm -rf /home/build/.cargo/registry
+
+  - runs: |
+      echo "Verifying Vaultwarden build..."
+      "${{targets.destdir}}/usr/bin/vaultwarden" --version
+      ls -lh "${{targets.destdir}}/usr/bin/vaultwarden"
+      ls "${{targets.destdir}}/usr/share/vaultwarden/web-vault/" | head -5
+
+update:
+  enabled: true
+  github:
+    identifier: dani-garcia/vaultwarden
+    use-tag: true
+    # Upstream tags are bare versions (1.37.1), with no leading v.
+    tag-filter: "1."
+    strip-prefix: ""

@@ -1,0 +1,73 @@
+# Development variant of minimal-vaultwarden.
+# Same vaultwarden binary and web vault (source-built via melange) as prod,
+# plus a shell and HTTP/TLS debugging tools for poking at the Rocket API.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - vaultwarden
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libssl3
+    - libcrypto3
+    - ca-certificates-bundle
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+    - curl
+    - openssl
+    - bind-tools
+    - jq
+    - git
+    # sqlite CLI is a genuine debugging aid here: the prod image links SQLite
+    # statically into the binary, so there is no other way to inspect db.sqlite3.
+    - sqlite
+
+accounts:
+  groups:
+    - groupname: vaultwarden
+      gid: 65532
+  users:
+    - username: vaultwarden
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/vaultwarden
+
+work-dir: /data
+
+environment:
+  PATH: /usr/bin:/bin
+  DATA_FOLDER: /data
+  WEB_VAULT_FOLDER: /usr/share/vaultwarden/web-vault
+  ROCKET_ADDRESS: 0.0.0.0
+  ROCKET_PORT: "8080"
+
+paths:
+  - path: /data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+
+annotations:
+  org.opencontainers.image.title: "minimal-vaultwarden-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-vaultwarden: same server + shell and debug tools. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/vaultwarden"
+  org.opencontainers.image.licenses: "AGPL-3.0-only AND GPL-3.0-only"
+
+archs:
+  - x86_64
+  - aarch64
