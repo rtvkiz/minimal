@@ -419,6 +419,18 @@
     releases: "https://github.com/oliver006/redis_exporter/releases"
     notes: "https://github.com/oliver006/redis_exporter/releases/tag/v{version}"
 
+- name: vaultwarden
+  cron-enabled: true   # onboarded 2026-08-14 (dispatch-validated: current=1.37.1 latest=1.37.1)
+  files: [vaultwarden/melange.yaml]
+  # pattern is mandatory for github-tags (check-upstream.sh exits 1 without it).
+  # Upstream tags are bare versions with no leading v, so no strip-prefix.
+  source: { type: github-tags, repo: dani-garcia/vaultwarden, pattern: '^[0-9]+\.[0-9]+\.[0-9]+$', pin-major: 1 }
+  tarball: { url: "https://github.com/dani-garcia/vaultwarden/archive/refs/tags/{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/dani-garcia/vaultwarden/releases"
+    notes: "https://github.com/dani-garcia/vaultwarden/releases/tag/{version}"
+
 - name: blackbox-exporter
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [blackbox-exporter/melange.yaml]

@@ -65,6 +65,7 @@ FLUENT_BIT_VERSION ?= $(call melange_version,fluent-bit/melange.yaml)
 
 # --- Search/AI ---
 QDRANT_VERSION ?= $(call melange_version,qdrant/melange.yaml)
+VAULTWARDEN_VERSION ?= $(call melange_version,vaultwarden/melange.yaml)
 OPENSEARCH_VERSION ?= $(call melange_version,opensearch/melange.yaml)
 
 # --- Registries ---
@@ -223,6 +224,7 @@ endef
 .PHONY: thanos thanos-melange test-thanos
 .PHONY: node-exporter node-exporter-melange test-node-exporter
 .PHONY: blackbox-exporter blackbox-exporter-melange test-blackbox-exporter
+.PHONY: vaultwarden vaultwarden-melange test-vaultwarden
 .PHONY: redis-exporter redis-exporter-melange test-redis-exporter
 .PHONY: kube-state-metrics kube-state-metrics-melange test-kube-state-metrics
 .PHONY: pushgateway pushgateway-melange test-pushgateway
@@ -233,7 +235,7 @@ endef
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch redis-slim valkey memcached kafka zookeeper cassandra solr pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch redis-slim valkey memcached kafka zookeeper cassandra solr pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -305,6 +307,7 @@ $(eval $(call DEV_IMAGE_RULE,jenkins,jenkins-melange,--repository-append ./packa
 $(eval $(call DEV_IMAGE_RULE,openbao,openbao-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,mysql,mysql-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,qdrant,qdrant-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,vaultwarden,vaultwarden-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,keycloak,keycloak-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,registry,registry-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,mailpit,mailpit-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -2420,6 +2423,32 @@ redis-exporter: redis-exporter-melange
 	@echo "✓ minimal-redis-exporter built (source build)"
 
 #------------------------------------------------------------------------------
+# VAULTWARDEN IMAGE (melange Rust source build + apko; Bitwarden-compatible server)
+#------------------------------------------------------------------------------
+vaultwarden-melange: keygen
+	@echo "Building vaultwarden $(VAULTWARDEN_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build vaultwarden/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ vaultwarden package built from source"
+
+vaultwarden: vaultwarden-melange
+	@echo "Assembling minimal-vaultwarden image with apko..."
+	apko build vaultwarden/apko/vaultwarden.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-vaultwarden:$(VERSION) \
+		vaultwarden.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < vaultwarden.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-vaultwarden:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-vaultwarden:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-vaultwarden:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-vaultwarden:latest
+	@rm -f vaultwarden.tar sbom-*.spdx.json
+	@echo "✓ minimal-vaultwarden built (source build)"
+
+#------------------------------------------------------------------------------
 # PUSHGATEWAY IMAGE (melange Go source build + apko; Prometheus push gateway)
 #------------------------------------------------------------------------------
 pushgateway-melange: keygen
@@ -3884,6 +3913,12 @@ test-otelcol:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-otelcol:latest" && \
 		otelcol/test.sh
 	@echo "✓ OTel Collector tests passed"
+
+test-vaultwarden:
+	@echo "Testing vaultwarden image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-vaultwarden:latest" && \
+		vaultwarden/test.sh
+	@echo "✓ vaultwarden tests passed"
 
 test-qdrant:
 	@echo "Testing Qdrant image..."

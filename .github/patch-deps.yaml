@@ -51,6 +51,7 @@
     commands in each image's melange.yaml.
   images:
     - { name: qdrant, src-root: "/home/build/qdrant-<<PKG_VERSION>>", build-marker: "cargo build --release" }
+    - { name: vaultwarden, src-root: "/home/build/vaultwarden-<<PKG_VERSION>>", build-marker: "cargo build --release" }
 
 - name: maven
   artifact-type: java-archive

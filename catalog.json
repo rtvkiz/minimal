@@ -83,6 +83,7 @@
     { "name": "openbao", "category": "Infrastructure", "variants": ["prod", "dev"], "primary_package": "openbao", "upstream_url": "https://openbao.org", "summary": "OpenBao secret management server (Vault fork, MPL 2.0)." },
     { "name": "keycloak", "category": "Infrastructure", "variants": ["prod", "dev"], "primary_package": "keycloak", "upstream_url": "https://www.keycloak.org", "summary": "Keycloak identity and access management server." },
     { "name": "qdrant", "category": "Infrastructure", "variants": ["prod", "dev"], "primary_package": "qdrant", "upstream_url": "https://qdrant.tech", "summary": "Qdrant vector search engine built from source via melange." },
+    { "name": "vaultwarden", "category": "Apps", "variants": ["prod", "dev"], "primary_package": "vaultwarden", "upstream_url": "https://github.com/dani-garcia/vaultwarden", "summary": "Shell-less Vaultwarden Bitwarden-compatible server built from source." },
     { "name": "registry", "category": "Infrastructure", "variants": ["prod", "dev"], "primary_package": "registry", "upstream_url": "https://distribution.github.io/distribution/", "summary": "Shell-less OCI distribution registry (Docker Registry v2)." },
     { "name": "consul", "category": "Infrastructure", "variants": ["prod", "dev"], "primary_package": "consul", "upstream_url": "https://www.consul.io", "summary": "Shell-less HashiCorp Consul (BUSL-1.1) built from source via melange." },
 
