@@ -35,6 +35,7 @@ NATS_VERSION ?= $(call melange_version,nats/melange.yaml)
 RABBITMQ_VERSION ?= $(call melange_version,rabbitmq/melange.yaml)
 CASSANDRA_VERSION ?= $(call melange_version,cassandra/melange.yaml)
 SOLR_VERSION ?= $(call melange_version,solr/melange.yaml)
+FLINK_VERSION ?= $(call melange_version,flink/melange.yaml)
 PULSAR_VERSION ?= $(call melange_version,pulsar/melange.yaml)
 
 # --- Ingress/Proxies ---
@@ -224,6 +225,7 @@ endef
 .PHONY: thanos thanos-melange test-thanos
 .PHONY: node-exporter node-exporter-melange test-node-exporter
 .PHONY: blackbox-exporter blackbox-exporter-melange test-blackbox-exporter
+.PHONY: flink flink-melange test-flink
 .PHONY: vaultwarden vaultwarden-melange test-vaultwarden
 .PHONY: redis-exporter redis-exporter-melange test-redis-exporter
 .PHONY: kube-state-metrics kube-state-metrics-melange test-kube-state-metrics
@@ -235,7 +237,7 @@ endef
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch redis-slim valkey memcached kafka zookeeper cassandra solr pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -283,6 +285,7 @@ $(eval $(call DEV_IMAGE_RULE,opensearch))
 $(eval $(call DEV_IMAGE_RULE,kafka,kafka-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,cassandra,cassandra-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,solr,solr-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,flink,flink-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,pulsar,pulsar-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,rabbitmq,rabbitmq-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,nats,nats-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -2449,6 +2452,32 @@ vaultwarden: vaultwarden-melange
 	@echo "✓ minimal-vaultwarden built (source build)"
 
 #------------------------------------------------------------------------------
+# FLINK IMAGE (Apache binary release + jlink JRE via melange; stream processing)
+#------------------------------------------------------------------------------
+flink-melange: keygen
+	@echo "Building Flink $(FLINK_VERSION) via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build flink/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ flink package built"
+
+flink: flink-melange
+	@echo "Assembling minimal-flink image with apko..."
+	apko build flink/apko/flink.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-flink:$(VERSION) \
+		flink.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < flink.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-flink:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-flink:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-flink:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-flink:latest
+	@rm -f flink.tar sbom-*.spdx.json
+	@echo "✓ minimal-flink built"
+
+#------------------------------------------------------------------------------
 # PUSHGATEWAY IMAGE (melange Go source build + apko; Prometheus push gateway)
 #------------------------------------------------------------------------------
 pushgateway-melange: keygen
@@ -3459,6 +3488,12 @@ test-cassandra:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-cassandra:latest" && \
 		cassandra/test.sh
 	@echo "✓ Cassandra tests passed"
+
+test-flink:
+	@echo "Testing flink image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-flink:latest" && \
+		flink/test.sh
+	@echo "✓ flink tests passed"
 
 test-solr:
 	@echo "Testing Solr image..."

@@ -1,0 +1,146 @@
+# Melange build configuration for minimal Apache Flink
+# Official binary release + custom JRE via jlink (kafka/zookeeper/solr JVM pattern).
+# Stream processing engine; fills the catalog's thin data-processing category.
+
+package:
+  # Named `flink` — what upstream calls it and what NVD indexes. Never
+  # `flink-minimal`: syft derives the CPE from the apk name, so a suffix
+  # produces cpe:2.3:a:flink-minimal:flink-minimal:* which matches nothing in
+  # NVD and has no Wolfi secdb entry, leaving the image effectively unscanned.
+  name: flink
+  version: 2.3.0
+  epoch: 0
+  description: "Minimal Apache Flink stream processing engine with custom JRE (jlink)"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `flink` today, but if it ever adds one at a higher version apk would
+    # silently install it instead of this build.
+    provider-priority: 100
+
+vars:
+  # sha256 of flink-2.3.0-bin-scala_2.12.tgz. Verified against the sha512 Apache
+  # publishes next to the artifact before being recorded here.
+  sha256: b52864b0c42a3638adb0895b97542a3ca820a0c3defda99eba6e45c2f8ca496a
+  scala: "2.12"
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      # Full JDK 21 needed for jlink (build-time only). Flink 2.x supports
+      # Java 17 and 21; 21 matches the solr/kafka images.
+      - openjdk-21-default-jdk
+      - openjdk-21-jmods
+      # binutils provides objcopy, required by jlink --strip-debug
+      - binutils
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      # dlcdn carries only current releases; archive.apache.org keeps every
+      # version, so a rebuild of an older tag still resolves.
+      for base in https://dlcdn.apache.org/flink https://archive.apache.org/dist/flink; do
+        if curl -fsSL --retry 3 --retry-all-errors \
+             "$base/flink-${{package.version}}/flink-${{package.version}}-bin-scala_${{vars.scala}}.tgz" \
+             -o /home/build/flink.tgz; then
+          break
+        fi
+      done
+      echo "${{vars.sha256}}  /home/build/flink.tgz" | sha256sum -c -
+      cd /home/build && tar xzf flink.tgz && rm flink.tgz
+
+  - runs: |
+      # Custom JRE. java.desktop is required even headless: Log4j2's
+      # LoggerContext.updateLoggers() needs java.beans.PropertyChangeEvent,
+      # which has lived in java.desktop since Java 9 (learned on kafka).
+      # jdk.unsupported provides sun.misc.Unsafe, which Netty and Flink's
+      # memory segments require.
+      JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      $JAVA_HOME/bin/jlink \
+        --output /home/build/custom-jre \
+        --add-modules java.base,java.compiler,java.desktop,java.instrument,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.xml,java.xml.crypto,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.httpserver,jdk.jfr,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.net,jdk.security.auth,jdk.unsupported,jdk.zipfs \
+        --strip-debug --no-man-pages --no-header-files --compress=zip-6
+
+  - runs: |
+      FLINK_SRC=/home/build/flink-${{package.version}}
+
+      mkdir -p "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+      cp -a /home/build/custom-jre/* "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      # Relative symlink: an absolute one dangles during melange's verify step,
+      # which runs against destdir rather than a mounted root.
+      ln -sf ../lib/jvm/java-21-minimal/bin/java "${{targets.destdir}}/usr/bin/java"
+
+      # Ship the runtime only. opt/ is 330MB of optional connectors and state
+      # backends, examples/ another 5.7MB — neither is needed to run a cluster,
+      # and both are pure CVE surface in a hardened image. Mount them in if a
+      # deployment genuinely needs one.
+      mkdir -p "${{targets.destdir}}/opt/flink"
+      cp -a "$FLINK_SRC"/bin "$FLINK_SRC"/lib "$FLINK_SRC"/conf "$FLINK_SRC"/plugins \
+            "$FLINK_SRC"/licenses "$FLINK_SRC"/LICENSE "$FLINK_SRC"/NOTICE \
+            "${{targets.destdir}}/opt/flink/"
+
+      # Flink ships binding to localhost by default, which makes the REST API
+      # and RPC unreachable from outside the container. The official image
+      # rewrites these at entrypoint time; doing it at build time keeps the
+      # runtime free of config mutation.
+      CONF="${{targets.destdir}}/opt/flink/conf/config.yaml"
+      sed -i 's/^\( *\)bind-host: localhost/\1bind-host: 0.0.0.0/' "$CONF"
+      sed -i 's/^\( *\)address: localhost/\1address: 0.0.0.0/' "$CONF"
+      grep -q "bind-host: 0.0.0.0" "$CONF"
+
+  - runs: |
+      # Entrypoint mirrors the official image's command surface: `jobmanager`
+      # (default) or `taskmanager`, both in the foreground so the container's
+      # lifecycle is the process's. Anything else is exec'd verbatim so
+      # `flink run ...` still works.
+      cat > "${{targets.destdir}}/usr/bin/flink-entrypoint.sh" << 'ENTRY'
+      #!/bin/bash
+      set -e
+      export JAVA_HOME=/usr/lib/jvm/java-21-minimal
+      export FLINK_HOME=/opt/flink
+      # /opt/flink is read-only for uid 65532; logs must go somewhere writable.
+      export FLINK_LOG_DIR="${FLINK_LOG_DIR:-/tmp/flink-logs}"
+      mkdir -p "$FLINK_LOG_DIR"
+
+      case "${1:-jobmanager}" in
+        jobmanager)  exec /opt/flink/bin/jobmanager.sh  start-foreground ;;
+        taskmanager) exec /opt/flink/bin/taskmanager.sh start-foreground ;;
+        *)           exec "$@" ;;
+      esac
+      ENTRY
+      chmod +x "${{targets.destdir}}/usr/bin/flink-entrypoint.sh"
+
+      chmod -R a+rX "${{targets.destdir}}/opt/flink"
+      find "${{targets.destdir}}/usr/lib/jvm/java-21-minimal" -name '*.so' \
+        -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  - runs: |
+      echo "Verifying Flink install..."
+      # Direct path, not /usr/bin/java: that is a symlink which does not
+      # resolve inside destdir during verify.
+      "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/bin/java" -version
+      test -x "${{targets.destdir}}/opt/flink/bin/jobmanager.sh"
+      test -f "${{targets.destdir}}/opt/flink/conf/config.yaml"
+      ls "${{targets.destdir}}"/opt/flink/lib/flink-dist-*.jar
+      test ! -d "${{targets.destdir}}/opt/flink/opt"
+
+update:
+  enabled: true
+  github:
+    identifier: apache/flink
+    use-tag: true
+    # Upstream tags releases as release-X.Y.Z.
+    tag-filter: "release-2."
+    strip-prefix: "release-"

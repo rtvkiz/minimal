@@ -145,3 +145,8 @@
       policy: report-only
       strategy: rename
       splice-before: "update:"
+    - name: flink
+      jar-root: opt/flink
+      policy: report-only
+      strategy: rename
+      splice-before: "update:"

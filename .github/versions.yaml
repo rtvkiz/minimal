@@ -431,6 +431,18 @@
     releases: "https://github.com/dani-garcia/vaultwarden/releases"
     notes: "https://github.com/dani-garcia/vaultwarden/releases/tag/{version}"
 
+- name: flink
+  cron-enabled: false  # enable in this PR once dispatch-validated
+  files: [flink/melange.yaml]
+  # Upstream tags releases as release-X.Y.Z; pattern is mandatory for
+  # github-tags (check-upstream.sh exits 1 without it).
+  source: { type: github-tags, repo: apache/flink, pattern: '^release-[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'release-', pin-major: 2 }
+  tarball: { url: "https://archive.apache.org/dist/flink/flink-{version}/flink-{version}-bin-scala_2.12.tgz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://flink.apache.org/downloads/"
+    notes: "https://nightlies.apache.org/flink/flink-docs-release-{version}/"
+
 - name: blackbox-exporter
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [blackbox-exporter/melange.yaml]
