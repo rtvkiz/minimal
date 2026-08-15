@@ -432,7 +432,7 @@
     notes: "https://github.com/dani-garcia/vaultwarden/releases/tag/{version}"
 
 - name: flink
-  cron-enabled: false  # enable in this PR once dispatch-validated
+  cron-enabled: true   # onboarded 2026-08-15 (dispatch-validated)
   files: [flink/melange.yaml]
   # Upstream tags releases as release-X.Y.Z; pattern is mandatory for
   # github-tags (check-upstream.sh exits 1 without it).
