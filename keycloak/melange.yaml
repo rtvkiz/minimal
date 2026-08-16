@@ -88,7 +88,15 @@ pipeline:
         done
         rm -f /tmp/_bj.jar
       }
+      _swap jackson-core com/fasterxml/jackson/core 2.21.2 2.21.5 b64b5874162b503a0e58a8f7758266e8dd9f91bf49e3a59ae0b5f47589a231b7 keep-filename
       _swap jackson-databind com/fasterxml/jackson/core 2.21.2 2.21.5 507418c0fafd38b2b2cfb704521630da613a8e4cc8381195a6f418017883e2c0 keep-filename
+      _swap micrometer-core io/micrometer 1.16.3 1.16.6 1957ef2deaffbc1fb98cebfd0f5b3109ecf19c994d7e5378598c20747ba8d68b keep-filename
+      _swap netty-codec io/netty 4.1.135.Final 4.1.136.Final 2de4fc13005c7740b46427a47ee04265a19779c147d53e583f441889b1148159 keep-filename
+      _swap netty-codec-dns io/netty 4.1.135.Final 4.1.136.Final 89bddc4ec42756c41a0195a50a1323a324836162b6712a843c3de5c29096c93b keep-filename
+      _swap netty-codec-haproxy io/netty 4.1.135.Final 4.1.136.Final 841be7fc6f1c929ecc63c70a909e0df085b4e80e44680acf46708f0e93e68037 keep-filename
+      _swap netty-codec-http io/netty 4.1.135.Final 4.1.136.Final ffd1e1b19a533bc6e47ef2cbc1290374ff4a7cb53a280defa3df392538214948 keep-filename
+      _swap netty-codec-http2 io/netty 4.1.135.Final 4.1.136.Final 14f67ae095c056b062aa0ee2c7b01f6b78004cf3620a6e9061bcb637f079387a keep-filename
+      _swap postgresql org/postgresql 42.7.11 42.7.12 31fbf6f06b2217fb51d5100cee51b22625cc81640da0679b47914e54c1e6377c keep-filename
   # end-patch-bundled-jars
 update:
   enabled: true

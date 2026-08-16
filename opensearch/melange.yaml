@@ -111,7 +111,20 @@ pipeline:
         done
         rm -f /tmp/_bj.jar
       }
-      _swap jackson-databind com/fasterxml/jackson/core 2.21.3 2.21.5 507418c0fafd38b2b2cfb704521630da613a8e4cc8381195a6f418017883e2c0 rename
+      _swap httpclient5 org/apache/httpcomponents/client5 5.6.1 5.6.3 80712ff129210d7c73d9fcc1195cbee5c3c34744965c7a05ea107b3648922f18 rename
+      _swap httpcore5 org/apache/httpcomponents/core5 5.4 5.4.3 18bfbbabb478dfb67f31aeaf428c387f3c3df654582e1309f708ee1f3086830a rename
+      _swap httpcore5-h2 org/apache/httpcomponents/core5 5.4 5.4.3 c7db7026b8e2dea39132b04a6069f6671e2858309b20a146ec5c7dd6ed73a0b6 rename
+      _swap log4j-api org/apache/logging/log4j 2.25.4 2.25.5 64777f73ea0b3104c04eb82befbdccc30a425a19e83ad06cb2f93aa303511863 rename
+      _stragglers=""
+      _stragglers="$_stragglers$(find "${{targets.destdir}}/usr/share/opensearch" -name "httpclient5*-5.6.*.jar" -o -name "httpclient5*-5.6.jar" 2>/dev/null)"
+      _stragglers="$_stragglers$(find "${{targets.destdir}}/usr/share/opensearch" -name "httpcore5*-5.4.*.jar" -o -name "httpcore5*-5.4.jar" 2>/dev/null)"
+      _stragglers="$_stragglers$(find "${{targets.destdir}}/usr/share/opensearch" -name "httpcore5*-5.4.*.jar" -o -name "httpcore5*-5.4.jar" 2>/dev/null)"
+      _stragglers="$_stragglers$(find "${{targets.destdir}}/usr/share/opensearch" -name "log4j*-2.25.*.jar" -o -name "log4j*-2.25.jar" 2>/dev/null)"
+      if [ -n "$_stragglers" ]; then
+        echo "patch-bundled-jars: jars left on a superseded version:" >&2
+        echo "$_stragglers" >&2
+        exit 1
+      fi
   # end-patch-bundled-jars
   # Verify the distribution shape + that the fixed netty shipped.
   - runs: |
