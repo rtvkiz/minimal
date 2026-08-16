@@ -29,6 +29,7 @@ permissions: {}
 env:
   REGISTRY: ghcr.io
   GRYPE_VERSION: v0.109.1
+  SYFT_VERSION: v1.51.0
 
 jobs:
   plan:
@@ -103,6 +104,25 @@ jobs:
             "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
           tar -xzf /tmp/grype.tar.gz -C /usr/local/bin grype
           rm -f /tmp/grype.tar.gz
+
+      - name: Cache Syft binary
+        id: syft-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: /usr/local/bin/syft
+          key: syft-${{ env.SYFT_VERSION }}-linux-amd64
+
+      - name: Install Syft
+        # grype -o json reports only MATCHES, so a family member with no
+        # advisory of its own is invisible to the patcher. syft lists every
+        # package, which is what lets a whole jar family be lifted together
+        # instead of leaving siblings behind on the old version.
+        if: steps.syft-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fL --retry 5 --retry-all-errors -o /tmp/syft.tar.gz \
+            "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VERSION#v}_linux_amd64.tar.gz"
+          tar -xzf /tmp/syft.tar.gz -C /usr/local/bin syft
+          rm -f /tmp/syft.tar.gz
 
       - name: Log in to GHCR
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
