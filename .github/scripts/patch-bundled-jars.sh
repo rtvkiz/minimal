@@ -155,6 +155,7 @@ for i in $(seq 0 $((image_count - 1))); do
   # SWAPS lines: "artifact|group-path|installed|newver|sha256"
   SWAPS=""
   declare -A seen=()
+  declare -A seen2=()
   while IFS=$'\t' read -r artifact installed fix purl; do
     [ -n "$artifact" ] || continue
     [ -n "${seen[$artifact]:-}" ] && continue   # one swap per artifact (newest fix wins below)
@@ -195,7 +196,54 @@ for i in $(seq 0 $((image_count - 1))); do
     seen[$artifact]=1
     echo "  -> $artifact $inst -> $fixv ($sha)"
   done <<< "$fixes"
-  unset seen GROUP_MAX
+  unset seen seen2 GROUP_MAX
+
+  # --- family lift ------------------------------------------------------------
+  # Alignment above only reaches artifacts that APPEAR in the scan report. A
+  # sibling with no advisory of its own never appears, so it is never swapped
+  # and silently stays on the old version — opensearch lifted log4j-api to
+  # 2.25.5 while log4j-core and log4j-jul sat at 2.25.4, which is the mixed
+  # classpath that stops the JVM at startup.
+  #
+  # syft lists every package, not just vulnerable ones, so the rest of each
+  # upgraded family can be pulled up too — resolved and sha256-pinned exactly
+  # like any other swap, never guessed.
+  if command -v syft >/dev/null 2>&1; then
+    inv=$(mktemp)
+    if syft "$full_image" -o json >"$inv" 2>/dev/null; then
+      while IFS='|' read -r artifact gpath inst fixv sha; do
+        [ -n "$artifact" ] || continue
+        pfx="${artifact%%-*}"
+        series="$(printf '%s' "$inst" | cut -d. -f1,2)"
+        group="${gpath//\//.}"
+        # Same group, same prefix, same major.minor series, wrong version.
+        while IFS=$'\t' read -r sib sibver; do
+          [ -n "$sib" ] || continue
+          [ "$sib" = "$artifact" ] && continue
+          [ -n "${seen2[$sib]:-}" ] && continue
+          [ "$sibver" = "$fixv" ] && continue
+          case "$sib" in "$pfx"*) ;; *) continue ;; esac
+          [ "$(printf '%s' "$sibver" | cut -d. -f1,2)" = "$series" ] || continue
+          published "$gpath" "$sib" "$fixv" || {
+            echo "  family lift: $sib has no $fixv under $group, leaving it"; continue; }
+          tmp=$(mktemp)
+          curl -fsSL --retry 5 --retry-all-errors "$(maven_url "$gpath" "$sib" "$fixv")" -o "$tmp"
+          sha2=$(sha256sum "$tmp" | awk '{print $1}'); rm -f "$tmp"
+          SWAPS="${SWAPS}${sib}|${gpath}|${sibver}|${fixv}|${sha2}"$'\n'
+          seen2[$sib]=1
+          echo "  family lift: $sib $sibver -> $fixv (no CVE of its own)"
+        done < <(jq -r --arg g "$group" '
+            .artifacts[]? | select(.type == "java-archive")
+            | select((.purl // "") | test("pkg:maven/" + ($g | gsub("\\."; "\\.")) + "/"))
+            | [.name, .version] | @tsv' "$inv" 2>/dev/null)
+      done <<< "$SWAPS"
+    else
+      echo "  WARN: syft inventory failed; siblings without advisories may be missed"
+    fi
+    rm -f "$inv"
+  else
+    echo "  WARN: syft not installed; cannot lift families, only guard them"
+  fi
 
   [ -n "$SWAPS" ] || { echo "  Nothing to patch after filtering"; continue; }
 
