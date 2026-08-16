@@ -81,6 +81,17 @@ for img in $images; do
 done
 
 echo
+# Floor check. The loop skips any catalog image whose melange.yaml it cannot
+# find, so a wrong path makes this script report "0 images clean" and exit 0 —
+# absence read as success, the exact failure this gate exists to prevent. If
+# almost nothing was checked, the paths are wrong, not the repo.
+min_expected=${CHECK_PACKAGES_MIN:-80}
+if [ "$checked" -lt "$min_expected" ]; then
+  echo "✗ only $checked melange-built image(s) found, expected >= $min_expected" >&2
+  echo "  the melange paths this script derives are almost certainly wrong" >&2
+  exit 1
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "✓ apk package invariants: $checked melange-built images clean"
   exit 0
