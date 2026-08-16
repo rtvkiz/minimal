@@ -1,0 +1,61 @@
+# Development variant of minimal-kaniko.
+# Same source-built executor as prod, plus a shell and debugging tools.
+# Runs as root (same as prod — kaniko requires it). Not for production.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - kaniko
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- HTTP / TLS debugging (registry pulls/pushes) ---
+    - curl
+    - openssl
+
+    # --- JSON (image manifests / config) ---
+    - jq
+
+    # --- VCS (git context builds) ---
+    - git
+
+entrypoint:
+  command: /kaniko/executor
+
+environment:
+  PATH: /kaniko:/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  DOCKER_CONFIG: /kaniko/.docker
+  SSL_CERT_DIR: /etc/ssl/certs
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  LANG: C.UTF-8
+
+paths:
+  - path: /kaniko/.docker
+    type: directory
+    permissions: 0o755
+  - path: /workspace
+    type: directory
+    permissions: 0o755
+
+annotations:
+  org.opencontainers.image.title: "minimal-kaniko-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-kaniko: same executor + shell + curl/openssl/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kaniko"
+  org.opencontainers.image.licenses: "Apache-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

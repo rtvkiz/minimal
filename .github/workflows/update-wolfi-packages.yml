@@ -45,7 +45,7 @@ jobs:
           echo "=== Checking for updates ==="
 
           # --- Python ---
-          CURRENT_PYTHON=$(grep -oP 'python-\d+\.\d+' python/apko/python.yaml | head -1)
+          CURRENT_PYTHON=$(grep -oP 'python-\d+\.\d+' images/python/apko/python.yaml | head -1)
           echo "Current Python package: $CURRENT_PYTHON"
 
           # Find all python-3.x packages (not python-3.x-base, python-3.x-dev, etc.)
@@ -63,7 +63,7 @@ jobs:
           fi
 
           # --- Go ---
-          CURRENT_GO=$(grep -oP 'go-\d+\.\d+' go/apko/go.yaml | head -1)
+          CURRENT_GO=$(grep -oP 'go-\d+\.\d+' images/go/apko/go.yaml | head -1)
           echo "Current Go package: $CURRENT_GO"
 
           # Find all go-1.x packages
@@ -81,7 +81,7 @@ jobs:
           fi
 
           # --- Node.js ---
-          CURRENT_NODE=$(grep -oP 'nodejs-\d+' node-slim/apko/node.yaml | head -1)
+          CURRENT_NODE=$(grep -oP 'nodejs-\d+' images/node-slim/apko/node.yaml | head -1)
           echo "Current Node.js package: $CURRENT_NODE"
 
           # Find all nodejs-XX packages (LTS versions are even numbers)
@@ -101,7 +101,7 @@ jobs:
           fi
 
           # --- .NET Runtime ---
-          CURRENT_DOTNET=$(grep -oP 'dotnet-\d+-runtime' dotnet/apko/dotnet.yaml | head -1)
+          CURRENT_DOTNET=$(grep -oP 'dotnet-\d+-runtime' images/dotnet/apko/dotnet.yaml | head -1)
           echo "Current .NET package: $CURRENT_DOTNET"
 
           # Find all dotnet-XX-runtime packages
@@ -119,7 +119,7 @@ jobs:
           fi
 
           # --- OpenJDK ---
-          CURRENT_JDK=$(grep -oP 'openjdk-\d+-jre' java/apko/java.yaml | head -1)
+          CURRENT_JDK=$(grep -oP 'openjdk-\d+-jre' images/java/apko/java.yaml | head -1)
           echo "Current OpenJDK package: $CURRENT_JDK"
 
           # Find all openjdk-XX-jre packages
@@ -137,7 +137,7 @@ jobs:
           fi
 
           # --- PostgreSQL ---
-          CURRENT_PG=$(grep -oP 'postgresql-\d+' postgres-slim/apko/postgres.yaml | head -1)
+          CURRENT_PG=$(grep -oP 'postgresql-\d+' images/postgres-slim/apko/postgres.yaml | head -1)
           echo "Current PostgreSQL package: $CURRENT_PG"
 
           # Find all postgresql-XX packages
@@ -184,7 +184,7 @@ jobs:
         run: |
           OLD="${{ steps.check.outputs.python_current }}"
           NEW="${{ steps.check.outputs.python_latest }}"
-          sed -i "s/$OLD/$NEW/g" python/apko/*.yaml
+          sed -i "s/$OLD/$NEW/g" images/python/apko/*.yaml
           BRANCH="update-python-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -211,7 +211,7 @@ jobs:
         run: |
           OLD="${{ steps.check.outputs.go_current }}"
           NEW="${{ steps.check.outputs.go_latest }}"
-          sed -i "s/$OLD/$NEW/g" go/apko/*.yaml
+          sed -i "s/$OLD/$NEW/g" images/go/apko/*.yaml
           BRANCH="update-go-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -238,7 +238,7 @@ jobs:
         run: |
           OLD="${{ steps.check.outputs.node_current }}"
           NEW="${{ steps.check.outputs.node_latest }}"
-          sed -i "s/$OLD/$NEW/g" node-slim/apko/*.yaml
+          sed -i "s/$OLD/$NEW/g" images/node-slim/apko/*.yaml
           BRANCH="update-node-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -271,7 +271,7 @@ jobs:
           # dotnet-100), else dev drifts to a mismatched major.
           OLD_MAJOR=$(echo "$OLD" | grep -oE '[0-9]+' | head -1)
           NEW_MAJOR=$(echo "$NEW" | grep -oE '[0-9]+' | head -1)
-          sed -i -E "s/dotnet-${OLD_MAJOR}\b/dotnet-${NEW_MAJOR}/g" dotnet/apko/*.yaml
+          sed -i -E "s/dotnet-${OLD_MAJOR}\b/dotnet-${NEW_MAJOR}/g" images/dotnet/apko/*.yaml
           BRANCH="update-dotnet-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -303,8 +303,8 @@ jobs:
           # Rewrite the whole openjdk-<major> family — jre, default-jvm, AND the
           # dev-only default-jdk + a bare openjdk-N — plus the java-<major>-openjdk
           # JAVA_HOME token. The old per-suffix seds missed dev's default-jdk.
-          sed -i -E "s/openjdk-${OLD_VER}\b/openjdk-${NEW_VER}/g" java/apko/*.yaml
-          sed -i "s/java-${OLD_VER}-openjdk/java-${NEW_VER}-openjdk/g" java/apko/*.yaml
+          sed -i -E "s/openjdk-${OLD_VER}\b/openjdk-${NEW_VER}/g" images/java/apko/*.yaml
+          sed -i "s/java-${OLD_VER}-openjdk/java-${NEW_VER}-openjdk/g" images/java/apko/*.yaml
           BRANCH="update-java-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -331,7 +331,7 @@ jobs:
         run: |
           OLD="${{ steps.check.outputs.pg_current }}"
           NEW="${{ steps.check.outputs.pg_latest }}"
-          sed -i "s/$OLD/$NEW/g" postgres-slim/apko/*.yaml
+          sed -i "s/$OLD/$NEW/g" images/postgres-slim/apko/*.yaml
           BRANCH="update-postgres-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

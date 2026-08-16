@@ -66,7 +66,7 @@ done < <(jq -r '
   .files[] |
   (if type == "string" then . else .path end) as $p |
   select($p | test("/melange\\.yaml$")) |
-  [($p | sub("/melange\\.yaml$"; "")), $cron] | @tsv
+  [($p | sub("/melange\\.yaml$"; "") | sub("^images/"; "")), $cron] | @tsv
 ' <<<"$versions_json")
 
 # coverage lists
@@ -86,7 +86,7 @@ has() { local x="$1"; shift; local e; for e in "$@"; do [ "$e" = "$x" ] && retur
 # --- forward check: every prod image is covered ------------------------------
 echo "Checking auto-update coverage for ${#prod[@]} prod images…"
 for img in "${prod[@]}"; do
-  if [ -f "$img/melange.yaml" ]; then
+  if [ -f "images/$img/melange.yaml" ]; then
     # source-built -> a cron-enabled versions.yaml row, OR a declared bespoke updater
     if has "$img" "${bespoke[@]:-}"; then
       wf="${bespoke_wf[$img]:-}"
@@ -120,7 +120,7 @@ done
 for name in "${wolfi_versioned[@]:-}" "${wolfi_rolling[@]:-}"; do
   [ -n "$name" ] || continue
   in_prod "$name" || err "$COVERAGE lists '$name' which is not a prod image in $CATALOG"
-  [ -f "$name/melange.yaml" ] && err "$COVERAGE lists '$name' as package-based, but it has a melange.yaml (should be a versions.yaml row)"
+  [ -f "images/$name/melange.yaml" ] && err "$COVERAGE lists '$name' as package-based, but it has a melange.yaml (should be a versions.yaml row)"
 done
 for name in "${bespoke[@]:-}" "${exempt[@]:-}"; do
   [ -n "$name" ] || continue
@@ -170,10 +170,10 @@ done < <(jq -r '
 # shipped this way). ------------------------------------------------------------
 PGD=".github/workflows/patch-go-deps.yml"
 for img in "${prod[@]}"; do
-  [ -f "$img/melange.yaml" ] || continue
+  [ -f "images/$img/melange.yaml" ] || continue
   # Go image heuristic: a whitespace-anchored "go build" (so Rust's
   # "cargo build" — which contains the substring "go build" — doesn't match).
-  grep -qE '(^|[[:space:]])go build' "$img/melange.yaml" || continue
+  grep -qE '(^|[[:space:]])go build' "images/$img/melange.yaml" || continue
   # Must be a key in ALL 3 dicts (MODROOTS/MAIN_MODULES/BUILD_MARKERS) — a
   # partial registration (in 1 or 2) silently under-patches. Each `[img]=` key
   # appears once per dict, so a fully-registered image has >= 3 (TESTKEEP images

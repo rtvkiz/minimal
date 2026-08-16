@@ -50,7 +50,7 @@ images=$(jq -r '.images[].name' catalog.json)
 checked=0
 
 for img in $images; do
-  mf="$img/melange.yaml"
+  mf="images/$img/melange.yaml"
   [ -f "$mf" ] || continue          # apko-only: no apk package of ours to check
   checked=$((checked + 1))
 
@@ -73,7 +73,7 @@ for img in $images; do
     note "$img: Wolfi ships '$pkg' ($wv) but provider-priority is $prio (want 100)"
   fi
 
-  for af in "$img"/apko/*.yaml; do
+  for af in "images/$img"/apko/*.yaml; do
     [ -f "$af" ] || continue
     grep -qE "^\s*- ${pkg}\$" "$af" || \
       note "$(basename "$af"): does not reference package '$pkg'"
@@ -81,6 +81,17 @@ for img in $images; do
 done
 
 echo
+# Floor check. The loop skips any catalog image whose melange.yaml it cannot
+# find, so a wrong path makes this script report "0 images clean" and exit 0 —
+# absence read as success, the exact failure this gate exists to prevent. If
+# almost nothing was checked, the paths are wrong, not the repo.
+min_expected=${CHECK_PACKAGES_MIN:-80}
+if [ "$checked" -lt "$min_expected" ]; then
+  echo "✗ only $checked melange-built image(s) found, expected >= $min_expected" >&2
+  echo "  the melange paths this script derives are almost certainly wrong" >&2
+  exit 1
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "✓ apk package invariants: $checked melange-built images clean"
   exit 0

@@ -69,7 +69,7 @@ for i in $(seq 0 $((image_count - 1))); do
   policy=$(jq -r '.policy // "auto"' <<<"$img_json")
   strategy=$(jq -r '.strategy' <<<"$img_json")
   splice_before=$(jq -r '.["splice-before"]' <<<"$img_json")
-  melange="${image}/melange.yaml"
+  melange="images/${image}/melange.yaml"
   full_image="${registry}/${owner}/minimal-${image}:latest"
 
   echo "=== Scanning $image (bundled jars) ==="

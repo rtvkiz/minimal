@@ -1,0 +1,59 @@
+# Minimal kube-state-metrics image - built from source via melange
+# CVE patching via the 6-hourly rebuild from upstream source
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Our kube-state-metrics (built from source via melange)
+    - kube-state-metrics
+
+    # Certificates — talks to the Kubernetes API over TLS
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+# kube-state-metrics watches Kubernetes objects and exposes their state as
+# Prometheus metrics. It runs in-cluster and reads credentials from the mounted
+# service-account token, so no flags are baked in.
+#
+# Listens on :8080 (metrics) and :8081 (telemetry) by default — both above 1024,
+# so nonroot binds them without any capability.
+entrypoint:
+  command: /usr/bin/kube-state-metrics
+
+environment:
+  PATH: /usr/bin:/bin
+
+paths:
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-kube-state-metrics"
+  org.opencontainers.image.description: "Hardened shell-less kube-state-metrics Kubernetes object-state exporter built from source via melange with CVE patches on every rebuild"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kube-state-metrics"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

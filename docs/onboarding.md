@@ -56,12 +56,12 @@ Tick every box. The ones marked **⛔ CI-enforced** will fail your PR if missing
 
 ### Files to create
 
-- [ ] `<name>/apko/<name>.yaml` — production image (§3)
-- [ ] `<name>/apko/<name>-dev.yaml` — dev variant ([conventions](dev-variants/CONVENTIONS.md))
-- [ ] `<name>/test.sh` — prod smoke test, **`chmod +x`** (§5)
-- [ ] `<name>/test-dev.sh` — dev smoke test, **`chmod +x`**
+- [ ] `images/<name>/apko/<name>.yaml` — production image (§3)
+- [ ] `images/<name>/apko/<name>-dev.yaml` — dev variant ([conventions](dev-variants/CONVENTIONS.md))
+- [ ] `images/<name>/test.sh` — prod smoke test, **`chmod +x`** (§5)
+- [ ] `images/<name>/test-dev.sh` — dev smoke test, **`chmod +x`**
 - [ ] `vex/<name>.openvex.json` — VEX statements file (§8) — every image has one
-- [ ] `<name>/melange.yaml` — **source-built only** (§4)
+- [ ] `images/<name>/melange.yaml` — **source-built only** (§4)
 
 ### Files to edit (register the image)
 
@@ -82,9 +82,9 @@ Tick every box. The ones marked **⛔ CI-enforced** will fail your PR if missing
 
 ---
 
-## 3. The apko config (`<name>/apko/<name>.yaml`)
+## 3. The apko config (`images/<name>/apko/<name>.yaml`)
 
-Model on an existing image (`python/apko/python.yaml`, or `cosign/apko/cosign.yaml`
+Model on an existing image (`images/python/apko/python.yaml`, or `images/cosign/apko/cosign.yaml`
 for a source-built one). Required shape:
 
 ```yaml
@@ -148,9 +148,9 @@ bind-tools jq git …`) on top of the same package. See the dev-variant conventi
 
 ---
 
-## 4. The melange source build (`<name>/melange.yaml`)
+## 4. The melange source build (`images/<name>/melange.yaml`)
 
-Model on `cosign/melange.yaml` (Go) or `mosquitto/melange.yaml` (C). Skeleton:
+Model on `images/cosign/melange.yaml` (Go) or `images/mosquitto/melange.yaml` (C). Skeleton:
 
 ```yaml
 package:
@@ -321,7 +321,7 @@ round-trip), and **no-shell**.
 
 ```makefile
 # version var (top of file, near the other *_VERSION lines)
-<NAME>_VERSION ?= $(call melange_version,<name>/melange.yaml)
+<NAME>_VERSION ?= $(call melange_version,images/<name>/melange.yaml)
 
 # .PHONY (with the other .PHONY lines)
 .PHONY: <name> <name>-melange test-<name>
@@ -330,7 +330,7 @@ round-trip), and **no-shell**.
 # renaming: <name>-melange (melange build), <name> (apko assemble + docker load + tag)
 # test target
 test-<name>:
-	@export IMAGE="$(REGISTRY)/$(OWNER)/minimal-<name>:latest" && <name>/test.sh
+	@export IMAGE="$(REGISTRY)/$(OWNER)/minimal-<name>:latest" && images/<name>/test.sh
 ```
 
 apko-only images skip the `-melange` target (there's no melange build).
@@ -350,7 +350,7 @@ MELANGE_IMAGES='[ ... {"name":"<name>","variants":["prod","dev"]} ]'
 // apko-only (the "grep" is the Wolfi apk-name regex that triggers a rebuild):
 APKO_IMAGES='[ ... {"name":"<name>","grep":"<apk-name>","variants":["prod","dev"]} ]'
 ```
-Add `"apko":"<path>"` if the config isn't at `<name>/apko/<name>.yaml`; drop `dev`
+Add `"apko":"<path>"` if the config isn't at `images/<name>/apko/<name>.yaml`; drop `dev`
 if there's no `-dev.yaml`.
 
 **catalog.json** — one object in `.images` (single-line style, match neighbours):
@@ -412,7 +412,7 @@ row. Full schema + examples are at the top of `.github/versions.yaml`.
 ```yaml
 - name: <name>
   # cron-enabled: true          # ← add ONLY after the dispatch check below passes
-  files: [<name>/melange.yaml]
+  files: [images/<name>/melange.yaml]
   source: { type: github-releases-latest, repo: <owner>/<repo>, strip-v: true, pin-major: <N> }
   tarball: { url: "https://github.com/<owner>/<repo>/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   major-issue: true

@@ -4,10 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - '*/apko/*.yaml'
-      - '*/melange.yaml'
-      - '*/test.sh'
-      - '*/test-dev.sh'
+      - 'images/*/apko/*.yaml'
+      - 'images/*/melange.yaml'
+      - 'images/*/test.sh'
+      - 'images/*/test-dev.sh'
       - '.github/workflows/build.yml'
   pull_request:
     branches: [main]
@@ -189,7 +189,7 @@ jobs:
             ((.arches // "x86_64,aarch64") | split(","))[] as $arch |
             {
               name: .name,
-              melange_config: (.name + "/melange.yaml"),
+              melange_config: ("images/" + .name + "/melange.yaml"),
               arch: $arch,
               runner: (if $arch == "aarch64" then "ubuntu-24.04-arm" else "ubuntu-latest" end)
             }
@@ -207,15 +207,15 @@ jobs:
               variant: $variant,
               apko_config: (
                 if $variant == "dev"
-                then ($img.name + "/apko/" + $img.name + "-dev.yaml")
-                else ($img.apko // ($img.name + "/apko/" + $img.name + ".yaml"))
+                then ("images/" + $img.name + "/apko/" + $img.name + "-dev.yaml")
+                else ("images/" + ($img.apko // ($img.name + "/apko/" + $img.name + ".yaml")))
                 end
               ),
-              melange_config: ($img.name + "/melange.yaml"),
+              melange_config: ("images/" + $img.name + "/melange.yaml"),
               arches: ($img.arches // "x86_64,aarch64"),
               tag_suffix: (if $variant == "dev" then "-dev" else "" end),
               latest_tag: (if $variant == "dev" then "latest-dev" else "latest" end),
-              test_script: (if $variant == "dev" then ($img.name + "/test-dev.sh") else ($img.name + "/test.sh") end),
+              test_script: ("images/" + (if $variant == "dev" then ($img.name + "/test-dev.sh") else ($img.name + "/test.sh") end)),
               scan_for_cves: ($variant == "prod")
             }
           ]}')
@@ -234,14 +234,14 @@ jobs:
               variant: $variant,
               apko_config: (
                 if $variant == "dev"
-                then ($img.name + "/apko/" + $img.name + "-dev.yaml")
-                else ($img.apko // ($img.name + "/apko/" + $img.name + ".yaml"))
+                then ("images/" + $img.name + "/apko/" + $img.name + "-dev.yaml")
+                else ("images/" + ($img.apko // ($img.name + "/apko/" + $img.name + ".yaml")))
                 end
               ),
               primary_grep: $img.grep,
               tag_suffix: (if $variant == "dev" then "-dev" else "" end),
               latest_tag: (if $variant == "dev" then "latest-dev" else "latest" end),
-              test_script: (if $variant == "dev" then ($img.name + "/test-dev.sh") else ($img.name + "/test.sh") end),
+              test_script: ("images/" + (if $variant == "dev" then ($img.name + "/test-dev.sh") else ($img.name + "/test.sh") end)),
               scan_for_cves: ($variant == "prod")
             }
           ]}')

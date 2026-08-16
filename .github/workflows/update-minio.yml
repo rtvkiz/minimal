@@ -56,8 +56,8 @@ jobs:
           NEW_VERSION="$DATE_PART"
 
           # Get current release tag from melange.yaml vars
-          CURRENT_TAG=$(grep '^ *minio_release:' minio/melange.yaml | awk '{print $2}')
-          CURRENT_VERSION=$(grep '^  version:' minio/melange.yaml | awk '{print $2}')
+          CURRENT_TAG=$(grep '^ *minio_release:' images/minio/melange.yaml | awk '{print $2}')
+          CURRENT_VERSION=$(grep '^  version:' images/minio/melange.yaml | awk '{print $2}')
 
           echo "Current tag: $CURRENT_TAG (version $CURRENT_VERSION)"
           echo "Latest tag:  $LATEST_TAG (version $NEW_VERSION)"
@@ -90,21 +90,21 @@ jobs:
           rm /tmp/minio.tar.gz
           echo "SHA256: $SHA256"
 
-          # Update minio/melange.yaml - package version (date-based)
-          sed -i "s/^  version: .*/  version: $NEW_VERSION/" minio/melange.yaml
+          # Update images/minio/melange.yaml - package version (date-based)
+          sed -i "s/^  version: .*/  version: $NEW_VERSION/" images/minio/melange.yaml
 
-          # Update minio/melange.yaml - minio_release tag
-          sed -i "s/^  minio_release: .*/  minio_release: $NEW_TAG/" minio/melange.yaml
+          # Update images/minio/melange.yaml - minio_release tag
+          sed -i "s/^  minio_release: .*/  minio_release: $NEW_TAG/" images/minio/melange.yaml
 
-          # Update minio/melange.yaml - checksum
-          sed -i "s/^  sha256: .*/  sha256: $SHA256/" minio/melange.yaml
+          # Update images/minio/melange.yaml - checksum
+          sed -i "s/^  sha256: .*/  sha256: $SHA256/" images/minio/melange.yaml
 
           # Reset epoch to 0 for new upstream version
-          sed -i "s/^  epoch: .*/  epoch: 0/" minio/melange.yaml
+          sed -i "s/^  epoch: .*/  epoch: 0/" images/minio/melange.yaml
 
           # Verify changes
-          echo "=== minio/melange.yaml ==="
-          grep -E '(version:|minio_release:|sha256:)' minio/melange.yaml | head -3
+          echo "=== images/minio/melange.yaml ==="
+          grep -E '(version:|minio_release:|sha256:)' images/minio/melange.yaml | head -3
 
       - name: Create PR and enable auto-merge
         if: steps.check.outputs.update_available == 'true'
@@ -128,7 +128,7 @@ jobs:
 
           ## Changes
 
-          - `minio/melange.yaml` - package version (`${{ steps.check.outputs.new_version }}`), release tag, SHA256 checksum, epoch reset
+          - `images/minio/melange.yaml` - package version (`${{ steps.check.outputs.new_version }}`), release tag, SHA256 checksum, epoch reset
 
           ## Image Tag
 

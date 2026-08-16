@@ -60,13 +60,13 @@ Adding an image is mechanical. Every registration point:
 
 | File | When you need it |
 |---|---|
-| `<name>/apko/<name>.yaml` + `<name>/test.sh` (`chmod +x`) | always |
-| `<name>/apko/<name>-dev.yaml` + `<name>/test-dev.sh` | recommended — see [dev variant conventions](docs/dev-variants/CONVENTIONS.md) |
+| `images/<name>/apko/<name>.yaml` + `images/<name>/test.sh` (`chmod +x`) | always |
+| `images/<name>/apko/<name>-dev.yaml` + `images/<name>/test-dev.sh` | recommended — see [dev variant conventions](docs/dev-variants/CONVENTIONS.md) |
 | `vex/<name>.openvex.json` | always (CI-validated) |
 | Entry in `.github/workflows/build.yml` matrix | always (CI-enforced) |
 | Entry in `catalog.json` | always — **`validate-catalog` fails the PR without it** |
 | `Makefile` version var + `.PHONY` + build/test targets | always |
-| `<name>/melange.yaml` | only when building from source (try Wolfi first) |
+| `images/<name>/melange.yaml` | only when building from source (try Wolfi first) |
 | Row in `.github/versions.yaml` | source-built — to auto-bump the app version |
 | Three dicts in `.github/workflows/patch-go-deps.yml`, **or** `SKIP_IMAGES` | source-built **Go** — transitive CVE patching (or a documented exclusion) |
 | Row in `.github/patch-deps.yaml` | source-built Ruby/Rust/Maven |
@@ -92,7 +92,7 @@ If building from source (rare — only needed when Wolfi doesn't have the packag
 
 ### 2. Write the apko config
 
-Use `python/apko/python.yaml` as a starting template. Every config must include:
+Use `images/python/apko/python.yaml` as a starting template. Every config must include:
 
 ```yaml
 contents:
@@ -211,7 +211,7 @@ MELANGE_IMAGES='[
 ]'
 ```
 
-If your apko config file isn't at the default `<name>/apko/<name>.yaml`,
+If your apko config file isn't at the default `images/<name>/apko/<name>.yaml`,
 add an `"apko":"<path>"` field. Drop the `dev` variant from the list if
 you haven't created a `-dev.yaml`.
 

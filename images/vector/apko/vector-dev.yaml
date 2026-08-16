@@ -1,0 +1,79 @@
+# Development variant of minimal-vector.
+# Same Vector from prod, plus a shell and the network/JSON tools needed to work
+# out why a source is not receiving or a sink is not delivering.
+#
+# In-house composition (no public Chainguard vector-dev reference).
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Vector (same as prod)
+    - vector
+
+    # Core libs (same as prod)
+    - glibc
+    - ld-linux
+    - libgcc
+    - openssl
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- HTTP/JSON utilities (sink debugging) ---
+    - curl
+    - jq
+
+    # --- DNS/network troubleshooting ---
+    - bind-tools
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/vector
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  LANG: C.UTF-8
+  VECTOR_DATA_DIR: /var/lib/vector
+
+paths:
+  - path: /var/lib/vector
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-vector-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-vector: same Vector + shell, curl/jq and dig. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/vector"
+  org.opencontainers.image.licenses: "MPL-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64
