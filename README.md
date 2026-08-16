@@ -3,188 +3,101 @@
 </p>
 
 <p align="center">
-  Small, hardened container images, free and MIT-licensed.<br>
-  Built with Chainguard's <a href="https://github.com/chainguard-dev/apko">apko</a>, <a href="https://github.com/chainguard-dev/melange">melange</a>, and <a href="https://github.com/wolfi-dev">Wolfi</a> packages; rebuilt every six hours.<br>
-  Production images are signed and published with SPDX SBOM and SLSA build-provenance attestations.
+  <strong>100 small, hardened container images. Free, MIT-licensed, signed, and rebuilt every six hours.</strong>
 </p>
 
 <p align="center">
-  <a href="https://minimalcontainers.com"><strong>Browse the live image catalog at minimalcontainers.com →</strong></a>
+  <a href="https://minimalcontainers.com"><strong>Browse the catalog →</strong></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build status"></a>
-  <a href="https://minimalcontainers.com"><img src="https://img.shields.io/badge/Image_Catalog-Live-0d9488" alt="Image catalog"></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/Images-100-0d9488" alt="Images: 100">
   <a href="https://slsa.dev/spec/v1.0/levels#build-l3"><img src="https://img.shields.io/badge/SLSA-Level_3-0d9488" alt="SLSA Level 3"></a>
-  <img src="https://img.shields.io/badge/Images-96-0d9488" alt="Images: 96">
   <img src="https://img.shields.io/badge/Arch-amd64_%7C_arm64-0d9488" alt="Architectures: amd64 and arm64">
-</p>
-
-<p align="center">
-  <a href="#pull-and-verify-an-image">Verify an image</a> ·
-  <a href="https://minimalcontainers.com/images">All 96 images</a> ·
-  <a href="#how-images-stay-current">Update model</a> ·
-  <a href="https://minimalcontainers.com/docs">Docs</a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 
 ---
 
-## Pull and verify an image
-
-Public images are available from GHCR without an account:
+## Quick start
 
 ```bash
 docker pull ghcr.io/rtvkiz/minimal-python:latest
 ```
 
-Verify the GitHub build provenance:
+No account needed. Every image has a `:latest-dev` companion with a shell and
+toolchain for debugging and multi-stage builds.
 
 ```bash
-gh attestation verify \
-  oci://ghcr.io/rtvkiz/minimal-python:latest \
-  --owner rtvkiz
+docker run --rm -p 8080:80 ghcr.io/rtvkiz/minimal-nginx:latest
+docker run --rm -p 6379:6379 ghcr.io/rtvkiz/minimal-redis-slim:latest
 ```
 
-Verify the keyless Cosign signature:
+**[Find an image →](https://minimalcontainers.com/images)** — all 100, with live
+sizes and CVE counts.
+
+## Verify what you pulled
 
 ```bash
-cosign verify \
-  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
-  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  ghcr.io/rtvkiz/minimal-python:latest
+gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz
 ```
 
-Download the attached SPDX SBOM attestation:
+Every published image carries a keyless Cosign signature, an SPDX SBOM, and SLSA
+v1.0 build provenance tied to the workflow and commit that produced it.
 
-```bash
-cosign verify-attestation --type spdxjson \
-  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
-  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  ghcr.io/rtvkiz/minimal-python:latest \
-  | jq -r '.payload | @base64d | fromjson | .predicate' \
-  > python-sbom.spdx.json
-```
+**[Signature, SBOM, and provenance commands →](.github/SECURITY.md)**
 
-More verification examples and the vulnerability-reporting policy are in [`.github/SECURITY.md`](.github/SECURITY.md).
+## What makes these different
 
-## What the project provides
+- **Small and shell-less** — production images ship no `/bin/sh` where the
+  application permits it, and run as non-root by default.
+- **Built from source** — public, readable `melange` recipes, not a repackaged
+  base image. Native `amd64` and `arm64`.
+- **Never stale** — rebuilt every six hours against current Wolfi packages;
+  upstream releases and transitive CVEs open their own auto-merging PRs.
+- **Verifiable** — signed, with SBOM and provenance attached to every digest.
 
-- Public, readable build recipes for every image.
-- Native `linux/amd64` and `linux/arm64` packages and images.
-- A keyless Cosign signature for each published image digest.
-- SPDX SBOM attestations for the published architectures and image index.
-- SLSA v1.0 build provenance tied to the GitHub workflow and commit.
-- Grype reports in the [live catalog](https://minimalcontainers.com) and GitHub Security tab.
-- Non-root execution by default, except where an upstream application requires another user model.
-- Shell-less production images where the application permits it.
-- A `:latest-dev` companion for every production image.
-- Six-hour rebuilds to consume current Wolfi packages and security fixes.
-- Automated application-version and transitive-dependency update PRs.
+No vendor SLA, support contract, or FedRAMP/FIPS/STIG accreditation. The
+signatures, SBOMs, and provenance help with verification and audits; they do not
+replace those programs.
 
-The project does not provide a vendor SLA, an on-call support contract, or FedRAMP/FIPS/STIG accreditation. The signatures, SBOMs, and provenance help with verification and audits, but do not replace those programs.
-
-## Available images — 96 total
-
-Browse the full, always-current inventory with sizes and CVE counts at
-**[minimalcontainers.com/images](https://minimalcontainers.com/images)**.
-The canonical source is [`catalog.json`](catalog.json), validated against the
-build matrix in CI.
-
-| Category | Count |
-|---|---:|
-| Kubernetes, CI & IaC | 29 |
-| Observability | 15 |
-| Infrastructure | 11 |
-| Databases | 9 |
-| Caches, Queues & Messaging | 9 |
-| Languages & Runtimes | 9 |
-| Web Servers & Proxies | 8 |
-| Apps | 5 |
-
-## Quick start
-
-```bash
-# Python application
-docker run --rm -v "$PWD:/app" \
-  ghcr.io/rtvkiz/minimal-python:latest /app/main.py
-
-# Nginx web server
-docker run --rm -p 8080:80 \
-  ghcr.io/rtvkiz/minimal-nginx:latest
-
-# PostgreSQL
-docker run --rm -p 5432:5432 -v pgdata:/var/lib/postgresql/data \
-  ghcr.io/rtvkiz/minimal-postgres-slim:latest
-
-# Redis
-docker run --rm -p 6379:6379 \
-  ghcr.io/rtvkiz/minimal-redis-slim:latest
-
-# Caddy version
-docker run --rm --entrypoint /usr/bin/caddy \
-  ghcr.io/rtvkiz/minimal-caddy:latest version
-```
-
-## Using images in production
-
-Pin by digest when you need an immutable artifact:
+## Pinning
 
 ```dockerfile
-FROM ghcr.io/rtvkiz/minimal-python@sha256:<digest>
+FROM ghcr.io/rtvkiz/minimal-python@sha256:<digest>   # immutable
+FROM ghcr.io/rtvkiz/minimal-python:3                 # patched, no major jumps
 ```
 
-Or pin a **major line** (`:3`) to get ongoing patches without being carried across a
-breaking upstream release — `:latest` crosses major versions, an exact version tag
-never moves forward at all.
+`:latest` crosses major versions; an exact version tag never moves at all.
 
-Every image also publishes a `:latest-dev` companion with a shell and toolchain,
-intended for multi-stage builds and debugging rather than production.
+**[Tags and pinning →](https://minimalcontainers.com/docs/tags)**
 
-→ **[Tags & pinning](https://minimalcontainers.com/docs/tags)** ·
-**[Development variants](https://minimalcontainers.com/docs/dev-variants)**
+## On vulnerability counts
 
-## How images stay current
+A green build does not mean zero findings. Grype scans every production image and
+results are informational — they do not block publication. The catalog shows raw
+and VEX-effective counts side by side, and suppressions are reconciled against
+each fresh scan so they cannot quietly go stale.
 
-Rebuilding an image and upgrading its application are different operations, so they
-run on separate loops — neither waits on the other, and neither needs a human.
-
-- **Every 6 hours** — the full catalog is rebuilt against current Wolfi packages, so
-  upstream fixes land without any code change.
-- **Daily** — upstream releases are detected, checksummed, and opened as auto-merging PRs.
-- **Every 6 hours** — transitive CVEs in Go, Ruby, Rust, and Maven dependencies are
-  patched into the build recipes.
-- **Every build** — guardrails assert that no image can be silently frozen and that the
-  catalog matches the build matrix.
-
-→ **[How images stay current](https://minimalcontainers.com/docs/updates)** for the
-full model, workflows, and guardrails.
-
-## Understanding vulnerability results
-
-A successful build does not mean an image has zero reported vulnerabilities. Grype
-scans every production image; findings are informational and do not block publication.
-The catalog shows both raw and VEX-effective counts, and VEX suppressions are
-reconciled against every fresh scan so they cannot quietly go stale.
-
-→ **[Reading scan results](https://minimalcontainers.com/docs/vulnerabilities)**
-
-## Build locally
-
-```bash
-make python && make test-python        # apko-only image
-make caddy-melange && make caddy && make test-caddy   # source-built image
-```
-
-Tooling, the project layout, and the full pre-push checklist are in
-[CONTRIBUTING.md](CONTRIBUTING.md) and [`docs/onboarding.md`](docs/onboarding.md).
+**[Reading scan results →](https://minimalcontainers.com/docs/vulnerabilities)**
 
 ## Contributing
 
-PRs are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), then use [`docs/onboarding.md`](docs/onboarding.md) for the complete image registration and validation checklist. The demand-ranked image backlog is in [`docs/roadmap.md`](docs/roadmap.md).
+```bash
+make python && make test-python                       # apko-only image
+make caddy-melange && make caddy && make test-caddy   # source-built image
+```
 
-For security issues, use [GitHub private vulnerability reporting](https://github.com/rtvkiz/minimal/security/advisories/new) instead of opening a public issue.
+PRs welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers tooling and layout;
+[`docs/onboarding.md`](docs/onboarding.md) is the complete checklist for adding an
+image; [`docs/roadmap.md`](docs/roadmap.md) is the demand-ranked backlog.
+
+Security issues: please use
+[private vulnerability reporting](https://github.com/rtvkiz/minimal/security/advisories/new)
+rather than a public issue.
 
 ## License
 
-The repository is MIT-licensed; see [LICENSE](LICENSE). Container images include Wolfi and upstream packages under their respective licenses. Package and license details are available in each image's attached SPDX SBOM.
+MIT — see [LICENSE](LICENSE). Images include Wolfi and upstream packages under
+their own licenses; each image's SPDX SBOM has the details.
