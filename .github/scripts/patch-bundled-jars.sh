@@ -155,7 +155,6 @@ for i in $(seq 0 $((image_count - 1))); do
   # SWAPS lines: "artifact|group-path|installed|newver|sha256"
   SWAPS=""
   declare -A seen=()
-  declare -A seen2=()
   while IFS=$'\t' read -r artifact installed fix purl; do
     [ -n "$artifact" ] || continue
     [ -n "${seen[$artifact]:-}" ] && continue   # one swap per artifact (newest fix wins below)
@@ -196,7 +195,7 @@ for i in $(seq 0 $((image_count - 1))); do
     seen[$artifact]=1
     echo "  -> $artifact $inst -> $fixv ($sha)"
   done <<< "$fixes"
-  unset seen seen2 GROUP_MAX
+  unset seen GROUP_MAX
 
   # --- family lift ------------------------------------------------------------
   # Alignment above only reaches artifacts that APPEAR in the scan report. A
@@ -209,6 +208,10 @@ for i in $(seq 0 $((image_count - 1))); do
   # upgraded family can be pulled up too — resolved and sha256-pinned exactly
   # like any other swap, never guessed.
   if command -v syft >/dev/null 2>&1; then
+    # Declared here, not with `seen` above: that one is unset before this block
+    # runs, and under `set -u` indexing an unset associative array aborts the
+    # script ("httpcore5: unbound variable") rather than reading as empty.
+    declare -A seen2=()
     inv=$(mktemp)
     if syft "$full_image" -o json >"$inv" 2>/dev/null; then
       while IFS='|' read -r artifact gpath inst fixv sha; do
@@ -241,6 +244,7 @@ for i in $(seq 0 $((image_count - 1))); do
       echo "  WARN: syft inventory failed; siblings without advisories may be missed"
     fi
     rm -f "$inv"
+    unset seen2
   else
     echo "  WARN: syft not installed; cannot lift families, only guard them"
   fi
