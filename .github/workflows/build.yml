@@ -315,6 +315,11 @@ jobs:
         # bespoke updater). Same check as local `make check-autoupdate`.
         run: make check-autoupdate
 
+      - name: Assert docs match the catalog
+        # The README's image count sat at 96 while the catalog grew to 100 —
+        # badge, nav link and heading — because nothing compared them.
+        run: make check-docs
+
       - name: Assert apk package invariants
         # Enforces what docs/onboarding.md previously only stated: no -minimal
         # suffix (it breaks both grype paths), catalog primary_package ==
