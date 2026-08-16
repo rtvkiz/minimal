@@ -1,0 +1,67 @@
+# Minimal Vaultwarden image - built from source via melange
+# Unofficial Bitwarden-compatible password manager server
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - vaultwarden
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libssl3
+    - libcrypto3
+    - ca-certificates-bundle
+    # No sqlite package: the sqlite cargo feature statically links SQLite into
+    # the binary, so there is nothing to load at runtime.
+
+accounts:
+  groups:
+    - groupname: vaultwarden
+      gid: 65532
+  users:
+    - username: vaultwarden
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/vaultwarden
+
+work-dir: /data
+
+environment:
+  PATH: /usr/bin:/bin
+  DATA_FOLDER: /data
+  # Absolute path: vaultwarden resolves WEB_VAULT_FOLDER relative to the
+  # working directory otherwise, and /data is a mounted volume that does not
+  # contain the assets.
+  WEB_VAULT_FOLDER: /usr/share/vaultwarden/web-vault
+  ROCKET_ADDRESS: 0.0.0.0
+  # Upstream defaults to 80, which uid 65532 cannot bind — a nonroot container
+  # would fail to start. 8080 is unprivileged; publish it as :80 if wanted.
+  ROCKET_PORT: "8080"
+
+paths:
+  - path: /data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+
+annotations:
+  org.opencontainers.image.title: "minimal-vaultwarden"
+  org.opencontainers.image.description: "Hardened shell-less Vaultwarden (Bitwarden-compatible server) built from source via melange"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/vaultwarden"
+  # The server is AGPL-3.0; the bundled web vault is Bitwarden's OSS (GPL-3.0)
+  # build. Both ship in this image, so both are declared.
+  org.opencontainers.image.licenses: "AGPL-3.0-only AND GPL-3.0-only"
+
+archs:
+  - x86_64
+  - aarch64

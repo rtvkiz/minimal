@@ -1,0 +1,66 @@
+# Development variant of minimal-flink.
+# Same Flink distribution and jlink JRE (source-built via melange) as prod,
+# plus debugging tools for poking at the REST API and the JVM.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - busybox
+    - bash
+    - flink
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - ca-certificates-bundle
+    - apk-tools
+    - curl
+    - wget
+    - openssl
+    - bind-tools
+    - jq
+    - procps
+
+accounts:
+  groups:
+    - groupname: flink
+      gid: 65532
+  users:
+    - username: flink
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/flink-entrypoint.sh
+
+work-dir: /opt/flink
+
+environment:
+  PATH: /usr/bin:/bin
+  JAVA_HOME: /usr/lib/jvm/java-21-minimal
+  FLINK_HOME: /opt/flink
+  FLINK_LOG_DIR: /tmp/flink-logs
+
+paths:
+  - path: /tmp/flink-logs
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+
+annotations:
+  org.opencontainers.image.title: "minimal-flink-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-flink: same engine + shell and debug tools. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/flink"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

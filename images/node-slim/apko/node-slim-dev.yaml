@@ -1,0 +1,127 @@
+# Development variant of minimal-node-slim.
+# Same Node.js 26 runtime as prod, plus shell, npm/yarn/pnpm/corepack,
+# build toolchain (for node-gyp), git, and native-module deps.
+# Intended for CI build stages and in-pod debugging. NOT for production.
+#
+# Mirrors Chainguard's node-public/devConfigs package set.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Node.js runtime (same as prod)
+    - nodejs-26
+
+    # Init system (same as prod entrypoint chain)
+    - dumb-init
+
+    # Core libs (same as prod)
+    - glibc
+    - libstdc++
+    - libgcc
+    - libssl3
+    - libcrypto3
+    - zlib
+    - c-ares
+    - libuv
+    - nghttp2
+    - libbrotlicommon1
+    - libbrotlidec1
+    - libbrotlienc1
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- C/C++ toolchain (node-gyp builds native modules) ---
+    - build-base
+    - gcc
+    - binutils
+    - make
+    - pkgconf
+    - posix-cc-wrappers
+    - linux-headers
+    - openssf-compiler-options
+
+    # --- Dev headers ---
+    - glibc-dev
+    - libstdc++-dev
+    - libxcrypt-dev
+
+    # --- Node package managers (all baked in, switchable via corepack) ---
+    - npm
+    - yarn
+    - pnpm
+    - corepack
+    - node-gyp
+
+    # --- VCS for `npm install git+...` ---
+    - git
+
+    # --- Auth + network libs commonly needed by native modules ---
+    - krb5-libs
+    - libldap
+    - libcurl-openssl4
+    - libexpat1
+    - libidn2
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  # MUST match prod for drop-in compatibility.
+  command: /usr/bin/dumb-init -- /usr/bin/node
+
+work-dir: /app
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  LANG: C.UTF-8
+  NODE_ENV: development
+
+paths:
+  - path: /app
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+  # Writable npm cache + global dir for `npm install -g` without root
+  - path: /home/nonroot/.npm
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+    recursive: true
+
+annotations:
+  org.opencontainers.image.title: "minimal-node-slim-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-node-slim: same Node.js runtime + shell + build toolchain + npm/yarn/pnpm. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/node-slim"
+  org.opencontainers.image.licenses: "Apache-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

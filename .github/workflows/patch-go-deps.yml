@@ -352,7 +352,7 @@ jobs:
             [[ "$TESTKEEP_IMAGES" == *" $IMAGE "* ]] && IS_TESTKEEP=true
             echo "=== Scanning $IMAGE (test-and-keep=$IS_TESTKEEP) ==="
             FULL_IMAGE="${REGISTRY}/${OWNER}/minimal-${IMAGE}:latest"
-            MELANGE_FILE="${IMAGE}/melange.yaml"
+            MELANGE_FILE="images/${IMAGE}/melange.yaml"
             BEFORE_HASH=$(sha256sum "$MELANGE_FILE" | awk '{print $1}')
 
             # DO NOT remove the existing auto-generated patch block here.

@@ -10,125 +10,125 @@ VERSION ?= $(shell date +%Y%m%d)
 melange_version = $(shell grep '^  version:' $(1) 2>/dev/null | awk '{print $$2}')
 
 # --- Infrastructure/Core ---
-JENKINS_VERSION ?= $(call melange_version,jenkins/melange.yaml)
+JENKINS_VERSION ?= $(call melange_version,images/jenkins/melange.yaml)
 NGINX_VERSION ?= 1.29.4
 HTTPD_VERSION ?= 2.4.66
 
 # --- Databases/Storage ---
-REDIS_VERSION ?= $(call melange_version,redis-slim/melange.yaml)
-MYSQL_VERSION ?= $(call melange_version,mysql/melange.yaml)
-MARIADB_VERSION ?= $(call melange_version,mariadb/melange.yaml)
-MEMCACHED_VERSION ?= $(call melange_version,memcached/melange.yaml)
-MINIO_VERSION ?= $(call melange_version,minio/melange.yaml)
-ETCD_VERSION ?= $(call melange_version,etcd/melange.yaml)
+REDIS_VERSION ?= $(call melange_version,images/redis-slim/melange.yaml)
+MYSQL_VERSION ?= $(call melange_version,images/mysql/melange.yaml)
+MARIADB_VERSION ?= $(call melange_version,images/mariadb/melange.yaml)
+MEMCACHED_VERSION ?= $(call melange_version,images/memcached/melange.yaml)
+MINIO_VERSION ?= $(call melange_version,images/minio/melange.yaml)
+ETCD_VERSION ?= $(call melange_version,images/etcd/melange.yaml)
 
 # --- Languages/Frameworks ---
-RUBY_VERSION ?= $(call melange_version,ruby/melange.yaml)
-RAILS_VERSION ?= $(shell grep '^  rails_version:' rails/melange.yaml 2>/dev/null | awk '{print $$2}')
+RUBY_VERSION ?= $(call melange_version,images/ruby/melange.yaml)
+RAILS_VERSION ?= $(shell grep '^  rails_version:' images/rails/melange.yaml 2>/dev/null | awk '{print $$2}')
 
 # --- Messaging/Coordination ---
-KAFKA_VERSION ?= $(call melange_version,kafka/melange.yaml)
-ZOOKEEPER_VERSION ?= $(call melange_version,zookeeper/melange.yaml)
-TOMCAT_VERSION ?= $(call melange_version,tomcat/melange.yaml)
-VALKEY_VERSION ?= $(call melange_version,valkey/melange.yaml)
-NATS_VERSION ?= $(call melange_version,nats/melange.yaml)
-RABBITMQ_VERSION ?= $(call melange_version,rabbitmq/melange.yaml)
-CASSANDRA_VERSION ?= $(call melange_version,cassandra/melange.yaml)
-SOLR_VERSION ?= $(call melange_version,solr/melange.yaml)
-FLINK_VERSION ?= $(call melange_version,flink/melange.yaml)
-PULSAR_VERSION ?= $(call melange_version,pulsar/melange.yaml)
+KAFKA_VERSION ?= $(call melange_version,images/kafka/melange.yaml)
+ZOOKEEPER_VERSION ?= $(call melange_version,images/zookeeper/melange.yaml)
+TOMCAT_VERSION ?= $(call melange_version,images/tomcat/melange.yaml)
+VALKEY_VERSION ?= $(call melange_version,images/valkey/melange.yaml)
+NATS_VERSION ?= $(call melange_version,images/nats/melange.yaml)
+RABBITMQ_VERSION ?= $(call melange_version,images/rabbitmq/melange.yaml)
+CASSANDRA_VERSION ?= $(call melange_version,images/cassandra/melange.yaml)
+SOLR_VERSION ?= $(call melange_version,images/solr/melange.yaml)
+FLINK_VERSION ?= $(call melange_version,images/flink/melange.yaml)
+PULSAR_VERSION ?= $(call melange_version,images/pulsar/melange.yaml)
 
 # --- Ingress/Proxies ---
-CADDY_VERSION ?= $(call melange_version,caddy/melange.yaml)
-HAPROXY_VERSION ?= $(call melange_version,haproxy/melange.yaml)
-TRAEFIK_VERSION ?= $(call melange_version,traefik/melange.yaml)
-ENVOY_VERSION ?= $(call melange_version,envoy/melange.yaml)
+CADDY_VERSION ?= $(call melange_version,images/caddy/melange.yaml)
+HAPROXY_VERSION ?= $(call melange_version,images/haproxy/melange.yaml)
+TRAEFIK_VERSION ?= $(call melange_version,images/traefik/melange.yaml)
+ENVOY_VERSION ?= $(call melange_version,images/envoy/melange.yaml)
 
 # --- Observability ---
-PROMETHEUS_VERSION ?= $(call melange_version,prometheus/melange.yaml)
-ALERTMANAGER_VERSION ?= $(call melange_version,alertmanager/melange.yaml)
-JAEGER_VERSION ?= $(call melange_version,jaeger/melange.yaml)
-OTELCOL_VERSION ?= $(call melange_version,otelcol/melange.yaml)
-VICTORIA_METRICS_VERSION ?= $(call melange_version,victoria-metrics/melange.yaml)
-TELEGRAF_VERSION ?= $(call melange_version,telegraf/melange.yaml)
-MIMIR_VERSION ?= $(call melange_version,mimir/melange.yaml)
+PROMETHEUS_VERSION ?= $(call melange_version,images/prometheus/melange.yaml)
+ALERTMANAGER_VERSION ?= $(call melange_version,images/alertmanager/melange.yaml)
+JAEGER_VERSION ?= $(call melange_version,images/jaeger/melange.yaml)
+OTELCOL_VERSION ?= $(call melange_version,images/otelcol/melange.yaml)
+VICTORIA_METRICS_VERSION ?= $(call melange_version,images/victoria-metrics/melange.yaml)
+TELEGRAF_VERSION ?= $(call melange_version,images/telegraf/melange.yaml)
+MIMIR_VERSION ?= $(call melange_version,images/mimir/melange.yaml)
 
 # --- DNS/Secrets/IAM ---
-COREDNS_VERSION ?= $(call melange_version,coredns/melange.yaml)
-PHP_VERSION ?= $(call melange_version,php/melange.yaml)
-GITEA_VERSION ?= $(call melange_version,gitea/melange.yaml)
-OPENBAO_VERSION ?= $(call melange_version,openbao/melange.yaml)
-KEYCLOAK_VERSION ?= $(call melange_version,keycloak/melange.yaml)
+COREDNS_VERSION ?= $(call melange_version,images/coredns/melange.yaml)
+PHP_VERSION ?= $(call melange_version,images/php/melange.yaml)
+GITEA_VERSION ?= $(call melange_version,images/gitea/melange.yaml)
+OPENBAO_VERSION ?= $(call melange_version,images/openbao/melange.yaml)
+KEYCLOAK_VERSION ?= $(call melange_version,images/keycloak/melange.yaml)
 
 # --- Logging ---
-LOKI_VERSION ?= $(call melange_version,loki/melange.yaml)
-FLUENT_BIT_VERSION ?= $(call melange_version,fluent-bit/melange.yaml)
+LOKI_VERSION ?= $(call melange_version,images/loki/melange.yaml)
+FLUENT_BIT_VERSION ?= $(call melange_version,images/fluent-bit/melange.yaml)
 
 # --- Search/AI ---
-QDRANT_VERSION ?= $(call melange_version,qdrant/melange.yaml)
-VAULTWARDEN_VERSION ?= $(call melange_version,vaultwarden/melange.yaml)
-OPENSEARCH_VERSION ?= $(call melange_version,opensearch/melange.yaml)
+QDRANT_VERSION ?= $(call melange_version,images/qdrant/melange.yaml)
+VAULTWARDEN_VERSION ?= $(call melange_version,images/vaultwarden/melange.yaml)
+OPENSEARCH_VERSION ?= $(call melange_version,images/opensearch/melange.yaml)
 
 # --- Registries ---
 # NB: REGISTRY (above) is the OCI registry hostname; DISTRIBUTION_VERSION is the
 # upstream version of distribution/distribution we ship as `minimal-registry`.
-DISTRIBUTION_VERSION ?= $(call melange_version,registry/melange.yaml)
+DISTRIBUTION_VERSION ?= $(call melange_version,images/registry/melange.yaml)
 
 # --- Dev tools ---
-MAILPIT_VERSION ?= $(call melange_version,mailpit/melange.yaml)
+MAILPIT_VERSION ?= $(call melange_version,images/mailpit/melange.yaml)
 
 # --- Service Discovery / Coordination (HashiCorp) ---
-CONSUL_VERSION ?= $(call melange_version,consul/melange.yaml)
+CONSUL_VERSION ?= $(call melange_version,images/consul/melange.yaml)
 
 # --- Observability (extra) ---
-TEMPO_VERSION ?= $(call melange_version,tempo/melange.yaml)
-THANOS_VERSION ?= $(call melange_version,thanos/melange.yaml)
-NODE_EXPORTER_VERSION ?= $(call melange_version,node-exporter/melange.yaml)
-BLACKBOX_EXPORTER_VERSION ?= $(call melange_version,blackbox-exporter/melange.yaml)
-REDIS_EXPORTER_VERSION ?= $(call melange_version,redis-exporter/melange.yaml)
-KUBE_STATE_METRICS_VERSION ?= $(call melange_version,kube-state-metrics/melange.yaml)
-PUSHGATEWAY_VERSION ?= $(call melange_version,pushgateway/melange.yaml)
+TEMPO_VERSION ?= $(call melange_version,images/tempo/melange.yaml)
+THANOS_VERSION ?= $(call melange_version,images/thanos/melange.yaml)
+NODE_EXPORTER_VERSION ?= $(call melange_version,images/node-exporter/melange.yaml)
+BLACKBOX_EXPORTER_VERSION ?= $(call melange_version,images/blackbox-exporter/melange.yaml)
+REDIS_EXPORTER_VERSION ?= $(call melange_version,images/redis-exporter/melange.yaml)
+KUBE_STATE_METRICS_VERSION ?= $(call melange_version,images/kube-state-metrics/melange.yaml)
+PUSHGATEWAY_VERSION ?= $(call melange_version,images/pushgateway/melange.yaml)
 
 # --- IaC / GitOps ---
-OPENTOFU_VERSION ?= $(call melange_version,opentofu/melange.yaml)
+OPENTOFU_VERSION ?= $(call melange_version,images/opentofu/melange.yaml)
 
 # --- Security tooling ---
-TRIVY_VERSION ?= $(call melange_version,trivy/melange.yaml)
-COSIGN_VERSION ?= $(call melange_version,cosign/melange.yaml)
-SYFT_VERSION ?= $(call melange_version,syft/melange.yaml)
-GRYPE_VERSION ?= $(call melange_version,grype/melange.yaml)
-ORAS_VERSION ?= $(call melange_version,oras/melange.yaml)
-GITLEAKS_VERSION ?= $(call melange_version,gitleaks/melange.yaml)
-STEP_VERSION ?= $(call melange_version,step-cli/melange.yaml)
-OPA_VERSION ?= $(call melange_version,opa/melange.yaml)
-OSV_SCANNER_VERSION ?= $(call melange_version,osv-scanner/melange.yaml)
-OAUTH2_PROXY_VERSION ?= $(call melange_version,oauth2-proxy/melange.yaml)
-FLUX_VERSION ?= $(call melange_version,flux/melange.yaml)
-KUSTOMIZE_VERSION ?= $(call melange_version,kustomize/melange.yaml)
-SOPS_VERSION ?= $(call melange_version,sops/melange.yaml)
-CRANE_VERSION ?= $(call melange_version,crane/melange.yaml)
-KUBESEAL_VERSION ?= $(call melange_version,kubeseal/melange.yaml)
-HELMFILE_VERSION ?= $(call melange_version,helmfile/melange.yaml)
-REGCTL_VERSION ?= $(call melange_version,regctl/melange.yaml)
-STERN_VERSION ?= $(call melange_version,stern/melange.yaml)
-NOTATION_VERSION ?= $(call melange_version,notation/melange.yaml)
-CONFTEST_VERSION ?= $(call melange_version,conftest/melange.yaml)
-KUBECONFORM_VERSION ?= $(call melange_version,kubeconform/melange.yaml)
-KUBE_BENCH_VERSION ?= $(call melange_version,kube-bench/melange.yaml)
-TRUFFLEHOG_VERSION ?= $(call melange_version,trufflehog/melange.yaml)
+TRIVY_VERSION ?= $(call melange_version,images/trivy/melange.yaml)
+COSIGN_VERSION ?= $(call melange_version,images/cosign/melange.yaml)
+SYFT_VERSION ?= $(call melange_version,images/syft/melange.yaml)
+GRYPE_VERSION ?= $(call melange_version,images/grype/melange.yaml)
+ORAS_VERSION ?= $(call melange_version,images/oras/melange.yaml)
+GITLEAKS_VERSION ?= $(call melange_version,images/gitleaks/melange.yaml)
+STEP_VERSION ?= $(call melange_version,images/step-cli/melange.yaml)
+OPA_VERSION ?= $(call melange_version,images/opa/melange.yaml)
+OSV_SCANNER_VERSION ?= $(call melange_version,images/osv-scanner/melange.yaml)
+OAUTH2_PROXY_VERSION ?= $(call melange_version,images/oauth2-proxy/melange.yaml)
+FLUX_VERSION ?= $(call melange_version,images/flux/melange.yaml)
+KUSTOMIZE_VERSION ?= $(call melange_version,images/kustomize/melange.yaml)
+SOPS_VERSION ?= $(call melange_version,images/sops/melange.yaml)
+CRANE_VERSION ?= $(call melange_version,images/crane/melange.yaml)
+KUBESEAL_VERSION ?= $(call melange_version,images/kubeseal/melange.yaml)
+HELMFILE_VERSION ?= $(call melange_version,images/helmfile/melange.yaml)
+REGCTL_VERSION ?= $(call melange_version,images/regctl/melange.yaml)
+STERN_VERSION ?= $(call melange_version,images/stern/melange.yaml)
+NOTATION_VERSION ?= $(call melange_version,images/notation/melange.yaml)
+CONFTEST_VERSION ?= $(call melange_version,images/conftest/melange.yaml)
+KUBECONFORM_VERSION ?= $(call melange_version,images/kubeconform/melange.yaml)
+KUBE_BENCH_VERSION ?= $(call melange_version,images/kube-bench/melange.yaml)
+TRUFFLEHOG_VERSION ?= $(call melange_version,images/trufflehog/melange.yaml)
 # --- Messaging (MQTT) ---
-MOSQUITTO_VERSION ?= $(call melange_version,mosquitto/melange.yaml)
-PGBOUNCER_VERSION ?= $(call melange_version,pgbouncer/melange.yaml)
-UNBOUND_VERSION ?= $(call melange_version,unbound/melange.yaml)
-KEEPALIVED_VERSION ?= $(call melange_version,keepalived/melange.yaml)
-METRICS_SERVER_VERSION ?= $(call melange_version,metrics-server/melange.yaml)
-EXTERNAL_DNS_VERSION ?= $(call melange_version,external-dns/melange.yaml)
-VELERO_VERSION ?= $(call melange_version,velero/melange.yaml)
-KANIKO_VERSION ?= $(call melange_version,kaniko/melange.yaml)
-STEP_CA_VERSION ?= $(call melange_version,step-ca/melange.yaml)
-SKOPEO_VERSION ?= $(call melange_version,skopeo/melange.yaml)
-HELM_VERSION ?= $(call melange_version,helm/melange.yaml)
-KUBECTL_VERSION ?= $(call melange_version,kubectl/melange.yaml)
+MOSQUITTO_VERSION ?= $(call melange_version,images/mosquitto/melange.yaml)
+PGBOUNCER_VERSION ?= $(call melange_version,images/pgbouncer/melange.yaml)
+UNBOUND_VERSION ?= $(call melange_version,images/unbound/melange.yaml)
+KEEPALIVED_VERSION ?= $(call melange_version,images/keepalived/melange.yaml)
+METRICS_SERVER_VERSION ?= $(call melange_version,images/metrics-server/melange.yaml)
+EXTERNAL_DNS_VERSION ?= $(call melange_version,images/external-dns/melange.yaml)
+VELERO_VERSION ?= $(call melange_version,images/velero/melange.yaml)
+KANIKO_VERSION ?= $(call melange_version,images/kaniko/melange.yaml)
+STEP_CA_VERSION ?= $(call melange_version,images/step-ca/melange.yaml)
+SKOPEO_VERSION ?= $(call melange_version,images/skopeo/melange.yaml)
+HELM_VERSION ?= $(call melange_version,images/helm/melange.yaml)
+KUBECTL_VERSION ?= $(call melange_version,images/kubectl/melange.yaml)
 
 # --- AI/ML ---
 CUDA_VERSION ?= 12.9.0
@@ -254,7 +254,7 @@ keygen:
 #------------------------------------------------------------------------------
 python:
 	@echo "Assembling minimal-python image with apko..."
-	apko build python/apko/python.yaml \
+	apko build images/python/apko/python.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-python:$(VERSION) \
 		python.tar \
 		--arch x86_64
@@ -373,14 +373,14 @@ $(eval $(call DEV_IMAGE_RULE,opa,opa-melange,--repository-append ./packages --ke
 #------------------------------------------------------------------------------
 jenkins-melange: keygen
 	@echo "Building Jenkins $(JENKINS_VERSION) with custom JRE (jlink) via melange..."
-	melange build jenkins/melange.yaml \
+	melange build images/jenkins/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Jenkins package built (custom JRE + WAR)"
 
 jenkins: jenkins-melange
 	@echo "Assembling minimal-jenkins image with apko..."
-	apko build jenkins/apko/jenkins.yaml \
+	apko build images/jenkins/apko/jenkins.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-jenkins:$(VERSION) \
 		jenkins.tar \
 		--arch x86_64 \
@@ -399,7 +399,7 @@ jenkins: jenkins-melange
 #------------------------------------------------------------------------------
 go:
 	@echo "Assembling minimal-go image with apko..."
-	apko build go/apko/go.yaml \
+	apko build images/go/apko/go.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-go:$(VERSION) \
 		go.tar \
 		--arch x86_64
@@ -416,7 +416,7 @@ go:
 #------------------------------------------------------------------------------
 node-slim:
 	@echo "Assembling minimal-node-slim image with apko..."
-	apko build node-slim/apko/node.yaml \
+	apko build images/node-slim/apko/node.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-node-slim:$(VERSION) \
 		node.tar \
 		--arch x86_64
@@ -433,7 +433,7 @@ node-slim:
 #------------------------------------------------------------------------------
 nginx:
 	@echo "Assembling minimal-nginx image with apko..."
-	apko build nginx/apko/nginx.yaml \
+	apko build images/nginx/apko/nginx.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-nginx:$(VERSION) \
 		nginx.tar \
 		--arch x86_64
@@ -450,7 +450,7 @@ nginx:
 #------------------------------------------------------------------------------
 httpd:
 	@echo "Assembling minimal-httpd image with apko..."
-	apko build httpd/apko/httpd.yaml \
+	apko build images/httpd/apko/httpd.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-httpd:$(VERSION) \
 		httpd.tar \
 		--arch x86_64
@@ -467,14 +467,14 @@ httpd:
 #------------------------------------------------------------------------------
 redis-slim-melange: keygen
 	@echo "Building Redis $(REDIS_VERSION) from source via melange..."
-	melange build redis-slim/melange.yaml \
+	melange build images/redis-slim/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Redis package built from source"
 
 redis-slim: redis-slim-melange
 	@echo "Assembling minimal-redis-slim image with apko..."
-	apko build redis-slim/apko/redis.yaml \
+	apko build images/redis-slim/apko/redis.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-redis-slim:$(VERSION) \
 		redis-slim.tar \
 		--arch x86_64 \
@@ -493,7 +493,7 @@ redis-slim: redis-slim-melange
 #------------------------------------------------------------------------------
 mysql-melange: keygen
 	@echo "Building MySQL $(MYSQL_VERSION) from source via melange..."
-	melange build mysql/melange.yaml \
+	melange build images/mysql/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ MySQL package built from source"
@@ -501,13 +501,13 @@ mysql-melange: keygen
 # Local-only: build mysql package for x86_64 then assemble image (skip aarch64 to avoid pod failure on WSL2)
 mysql-local: keygen
 	@echo "Building MySQL $(MYSQL_VERSION) from source (x86_64 only)..."
-	melange build mysql/melange.yaml \
+	melange build images/mysql/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa \
 		--out-dir ./packages \
 		--runner docker
 	@echo "Assembling minimal-mysql image with apko..."
-	apko build mysql/apko/mysql.yaml \
+	apko build images/mysql/apko/mysql.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION) \
 		mysql.tar \
 		--arch x86_64 \
@@ -523,7 +523,7 @@ mysql-local: keygen
 
 mysql: mysql-melange
 	@echo "Assembling minimal-mysql image with apko..."
-	apko build mysql/apko/mysql.yaml \
+	apko build images/mysql/apko/mysql.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-mysql:$(VERSION) \
 		mysql.tar \
 		--arch x86_64 \
@@ -542,14 +542,14 @@ mysql: mysql-melange
 #------------------------------------------------------------------------------
 memcached-melange: keygen
 	@echo "Building Memcached $(MEMCACHED_VERSION) from source via melange..."
-	melange build memcached/melange.yaml \
+	melange build images/memcached/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Memcached package built from source"
 
 memcached: memcached-melange
 	@echo "Assembling minimal-memcached image with apko..."
-	apko build memcached/apko/memcached.yaml \
+	apko build images/memcached/apko/memcached.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-memcached:$(VERSION) \
 		memcached.tar \
 		--arch x86_64 \
@@ -568,14 +568,14 @@ memcached: memcached-melange
 #------------------------------------------------------------------------------
 caddy-melange: keygen
 	@echo "Building Caddy $(CADDY_VERSION) from source via melange..."
-	melange build caddy/melange.yaml \
+	melange build images/caddy/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Caddy package built from source"
 
 caddy: caddy-melange
 	@echo "Assembling minimal-caddy image with apko..."
-	apko build caddy/apko/caddy.yaml \
+	apko build images/caddy/apko/caddy.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-caddy:$(VERSION) \
 		caddy.tar \
 		--arch x86_64 \
@@ -594,14 +594,14 @@ caddy: caddy-melange
 #------------------------------------------------------------------------------
 haproxy-melange: keygen
 	@echo "Building HAProxy $(HAPROXY_VERSION) from source via melange..."
-	melange build haproxy/melange.yaml \
+	melange build images/haproxy/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ HAProxy package built from source"
 
 haproxy: haproxy-melange
 	@echo "Assembling minimal-haproxy image with apko..."
-	apko build haproxy/apko/haproxy.yaml \
+	apko build images/haproxy/apko/haproxy.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-haproxy:$(VERSION) \
 		haproxy.tar \
 		--arch x86_64 \
@@ -620,14 +620,14 @@ haproxy: haproxy-melange
 #------------------------------------------------------------------------------
 valkey-melange: keygen
 	@echo "Building Valkey $(VALKEY_VERSION) from source via melange..."
-	melange build valkey/melange.yaml \
+	melange build images/valkey/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Valkey package built from source"
 
 valkey: valkey-melange
 	@echo "Assembling minimal-valkey image with apko..."
-	apko build valkey/apko/valkey.yaml \
+	apko build images/valkey/apko/valkey.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-valkey:$(VERSION) \
 		valkey.tar \
 		--arch x86_64 \
@@ -646,14 +646,14 @@ valkey: valkey-melange
 #------------------------------------------------------------------------------
 nats-melange: keygen
 	@echo "Building NATS $(NATS_VERSION) from source via melange..."
-	melange build nats/melange.yaml \
+	melange build images/nats/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ NATS package built from source"
 
 nats: nats-melange
 	@echo "Assembling minimal-nats image with apko..."
-	apko build nats/apko/nats.yaml \
+	apko build images/nats/apko/nats.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-nats:$(VERSION) \
 		nats.tar \
 		--arch x86_64 \
@@ -672,14 +672,14 @@ nats: nats-melange
 #------------------------------------------------------------------------------
 traefik-melange: keygen
 	@echo "Building Traefik $(TRAEFIK_VERSION) from source via melange..."
-	melange build traefik/melange.yaml \
+	melange build images/traefik/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Traefik package built from source"
 
 traefik: traefik-melange
 	@echo "Assembling minimal-traefik image with apko..."
-	apko build traefik/apko/traefik.yaml \
+	apko build images/traefik/apko/traefik.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-traefik:$(VERSION) \
 		traefik.tar \
 		--arch x86_64 \
@@ -698,14 +698,14 @@ traefik: traefik-melange
 #------------------------------------------------------------------------------
 envoy-melange: keygen
 	@echo "Building Envoy $(ENVOY_VERSION) from upstream releases via melange..."
-	melange build envoy/melange.yaml \
+	melange build images/envoy/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Envoy package built"
 
 envoy: envoy-melange
 	@echo "Assembling minimal-envoy image with apko..."
-	apko build envoy/apko/envoy.yaml \
+	apko build images/envoy/apko/envoy.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-envoy:$(VERSION) \
 		envoy.tar \
 		--arch x86_64 \
@@ -724,14 +724,14 @@ envoy: envoy-melange
 #------------------------------------------------------------------------------
 rabbitmq-melange: keygen
 	@echo "Building RabbitMQ $(RABBITMQ_VERSION) via melange (official generic-unix release)..."
-	melange build rabbitmq/melange.yaml \
+	melange build images/rabbitmq/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ RabbitMQ package built"
 
 rabbitmq: rabbitmq-melange
 	@echo "Assembling minimal-rabbitmq image with apko..."
-	apko build rabbitmq/apko/rabbitmq.yaml \
+	apko build images/rabbitmq/apko/rabbitmq.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-rabbitmq:$(RABBITMQ_VERSION) \
 		rabbitmq.tar \
 		--arch x86_64 \
@@ -750,14 +750,14 @@ rabbitmq: rabbitmq-melange
 #------------------------------------------------------------------------------
 minio-melange: keygen
 	@echo "Building MinIO $(MINIO_VERSION) from source via melange..."
-	melange build minio/melange.yaml \
+	melange build images/minio/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ MinIO package built from source"
 
 minio: minio-melange
 	@echo "Assembling minimal-minio image with apko..."
-	apko build minio/apko/minio.yaml \
+	apko build images/minio/apko/minio.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-minio:$(VERSION) \
 		minio.tar \
 		--arch x86_64 \
@@ -776,14 +776,14 @@ minio: minio-melange
 #------------------------------------------------------------------------------
 prometheus-melange: keygen
 	@echo "Building Prometheus $(PROMETHEUS_VERSION) from source via melange..."
-	melange build prometheus/melange.yaml \
+	melange build images/prometheus/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Prometheus package built from source"
 
 prometheus: prometheus-melange
 	@echo "Assembling minimal-prometheus image with apko..."
-	apko build prometheus/apko/prometheus.yaml \
+	apko build images/prometheus/apko/prometheus.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-prometheus:$(VERSION) \
 		prometheus.tar \
 		--arch x86_64 \
@@ -802,14 +802,14 @@ prometheus: prometheus-melange
 #------------------------------------------------------------------------------
 telegraf-melange: keygen
 	@echo "Building Telegraf $(TELEGRAF_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build telegraf/melange.yaml \
+	melange build images/telegraf/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Telegraf package built from source"
 
 telegraf: telegraf-melange
 	@echo "Assembling minimal-telegraf image with apko..."
-	apko build telegraf/apko/telegraf.yaml \
+	apko build images/telegraf/apko/telegraf.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-telegraf:$(VERSION) \
 		telegraf.tar \
 		--arch x86_64 \
@@ -828,14 +828,14 @@ telegraf: telegraf-melange
 #------------------------------------------------------------------------------
 mimir-melange: keygen
 	@echo "Building Mimir $(MIMIR_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build mimir/melange.yaml \
+	melange build images/mimir/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Mimir package built from source"
 
 mimir: mimir-melange
 	@echo "Assembling minimal-mimir image with apko..."
-	apko build mimir/apko/mimir.yaml \
+	apko build images/mimir/apko/mimir.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-mimir:$(VERSION) \
 		mimir.tar \
 		--arch x86_64 \
@@ -853,14 +853,14 @@ alertmanager-melange: keygen
 	@echo "Building Alertmanager $(ALERTMANAGER_VERSION) from source via melange..."
 	# Local build is x86_64-only: bwrap sandbox can't run aarch64 binaries
 	# without QEMU binfmt registered. CI builds aarch64 on native ARM runners.
-	melange build alertmanager/melange.yaml \
+	melange build images/alertmanager/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Alertmanager package built from source (x86_64)"
 
 alertmanager: alertmanager-melange
 	@echo "Assembling minimal-alertmanager image with apko..."
-	apko build alertmanager/apko/alertmanager.yaml \
+	apko build images/alertmanager/apko/alertmanager.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-alertmanager:$(VERSION) \
 		alertmanager.tar \
 		--arch x86_64 \
@@ -880,14 +880,14 @@ alertmanager: alertmanager-melange
 #------------------------------------------------------------------------------
 mariadb-melange: keygen
 	@echo "Building MariaDB $(MARIADB_VERSION) from source via melange..."
-	melange build mariadb/melange.yaml \
+	melange build images/mariadb/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ MariaDB package built from source"
 
 mariadb: mariadb-melange
 	@echo "Assembling minimal-mariadb image with apko..."
-	apko build mariadb/apko/mariadb.yaml \
+	apko build images/mariadb/apko/mariadb.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-mariadb:$(VERSION) \
 		mariadb.tar \
 		--arch x86_64 \
@@ -906,14 +906,14 @@ mariadb: mariadb-melange
 #------------------------------------------------------------------------------
 etcd-melange: keygen
 	@echo "Building etcd $(ETCD_VERSION) from source via melange..."
-	melange build etcd/melange.yaml \
+	melange build images/etcd/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ etcd package built from source"
 
 etcd: etcd-melange
 	@echo "Assembling minimal-etcd image with apko..."
-	apko build etcd/apko/etcd.yaml \
+	apko build images/etcd/apko/etcd.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-etcd:$(VERSION) \
 		etcd.tar \
 		--arch x86_64 \
@@ -932,14 +932,14 @@ etcd: etcd-melange
 #------------------------------------------------------------------------------
 victoria-metrics-melange: keygen
 	@echo "Building VictoriaMetrics $(VICTORIA_METRICS_VERSION) from source via melange..."
-	melange build victoria-metrics/melange.yaml \
+	melange build images/victoria-metrics/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ VictoriaMetrics package built from source"
 
 victoria-metrics: victoria-metrics-melange
 	@echo "Assembling minimal-victoria-metrics image with apko..."
-	apko build victoria-metrics/apko/victoria-metrics.yaml \
+	apko build images/victoria-metrics/apko/victoria-metrics.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-victoria-metrics:$(VERSION) \
 		victoria-metrics.tar \
 		--arch x86_64 \
@@ -958,14 +958,14 @@ victoria-metrics: victoria-metrics-melange
 #------------------------------------------------------------------------------
 jaeger-melange: keygen
 	@echo "Building Jaeger $(JAEGER_VERSION) from source via melange..."
-	melange build jaeger/melange.yaml \
+	melange build images/jaeger/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Jaeger package built from source"
 
 jaeger: jaeger-melange
 	@echo "Assembling minimal-jaeger image with apko..."
-	apko build jaeger/apko/jaeger.yaml \
+	apko build images/jaeger/apko/jaeger.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-jaeger:$(VERSION) \
 		jaeger.tar \
 		--arch x86_64 \
@@ -984,14 +984,14 @@ jaeger: jaeger-melange
 #------------------------------------------------------------------------------
 otelcol-melange: keygen
 	@echo "Building OTel Collector $(OTELCOL_VERSION) from source via melange..."
-	melange build otelcol/melange.yaml \
+	melange build images/otelcol/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ OTel Collector package built from source"
 
 otelcol: otelcol-melange
 	@echo "Assembling minimal-otelcol image with apko..."
-	apko build otelcol/apko/otelcol.yaml \
+	apko build images/otelcol/apko/otelcol.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-otelcol:$(VERSION) \
 		otelcol.tar \
 		--arch x86_64 \
@@ -1010,14 +1010,14 @@ otelcol: otelcol-melange
 #------------------------------------------------------------------------------
 qdrant-melange: keygen
 	@echo "Building Qdrant $(QDRANT_VERSION) from source via melange (Rust)..."
-	melange build qdrant/melange.yaml \
+	melange build images/qdrant/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Qdrant package built from source"
 
 qdrant: qdrant-melange
 	@echo "Assembling minimal-qdrant image with apko..."
-	apko build qdrant/apko/qdrant.yaml \
+	apko build images/qdrant/apko/qdrant.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-qdrant:$(VERSION) \
 		qdrant.tar \
 		--arch x86_64 \
@@ -1034,18 +1034,18 @@ qdrant: qdrant-melange
 #------------------------------------------------------------------------------
 # DENO IMAGE (melange: official upstream binary, shell-less)
 #------------------------------------------------------------------------------
-DENO_VERSION ?= $(call melange_version,deno/melange.yaml)
+DENO_VERSION ?= $(call melange_version,images/deno/melange.yaml)
 
 deno-melange: keygen
 	@echo "Building Deno $(DENO_VERSION) (official upstream binary) via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build deno/melange.yaml \
+	melange build images/deno/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Deno package built (official binary)"
 
 deno: deno-melange
 	@echo "Assembling minimal-deno image with apko..."
-	apko build deno/apko/deno.yaml \
+	apko build images/deno/apko/deno.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-deno:$(VERSION) \
 		deno.tar \
 		--arch x86_64 \
@@ -1064,14 +1064,14 @@ deno: deno-melange
 #------------------------------------------------------------------------------
 cuda-python-melange: keygen
 	@echo "Building CUDA $(CUDA_VERSION) runtime packages via melange..."
-	melange build cuda-python/melange.yaml \
+	melange build images/cuda-python/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ CUDA runtime packages built"
 
 cuda-python: cuda-python-melange
 	@echo "Assembling minimal-cuda-python image with apko..."
-	apko build cuda-python/apko/cuda-python.yaml \
+	apko build images/cuda-python/apko/cuda-python.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-cuda-python:$(VERSION) \
 		cuda-python.tar \
 		--arch x86_64 \
@@ -1090,7 +1090,7 @@ cuda-python: cuda-python-melange
 #------------------------------------------------------------------------------
 postgres-slim:
 	@echo "Assembling minimal-postgres-slim image with apko..."
-	apko build postgres-slim/apko/postgres.yaml \
+	apko build images/postgres-slim/apko/postgres.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-postgres-slim:$(VERSION) \
 		postgres-slim.tar \
 		--arch x86_64
@@ -1107,7 +1107,7 @@ postgres-slim:
 #------------------------------------------------------------------------------
 bun:
 	@echo "Assembling minimal-bun image with apko..."
-	apko build bun/apko/bun.yaml \
+	apko build images/bun/apko/bun.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-bun:$(VERSION) \
 		bun.tar \
 		--arch x86_64
@@ -1124,7 +1124,7 @@ bun:
 #------------------------------------------------------------------------------
 vector:
 	@echo "Assembling minimal-vector image with apko..."
-	apko build vector/apko/vector.yaml \
+	apko build images/vector/apko/vector.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-vector:$(VERSION) \
 		vector.tar \
 		--arch x86_64
@@ -1141,7 +1141,7 @@ vector:
 #------------------------------------------------------------------------------
 patroni:
 	@echo "Assembling minimal-patroni image with apko..."
-	apko build patroni/apko/patroni.yaml \
+	apko build images/patroni/apko/patroni.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-patroni:$(VERSION) \
 		patroni.tar \
 		--arch x86_64
@@ -1158,7 +1158,7 @@ patroni:
 #------------------------------------------------------------------------------
 dnsmasq:
 	@echo "Assembling minimal-dnsmasq image with apko..."
-	apko build dnsmasq/apko/dnsmasq.yaml \
+	apko build images/dnsmasq/apko/dnsmasq.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-dnsmasq:$(VERSION) \
 		dnsmasq.tar \
 		--arch x86_64
@@ -1175,7 +1175,7 @@ dnsmasq:
 #------------------------------------------------------------------------------
 sqlite:
 	@echo "Assembling minimal-sqlite image with apko..."
-	apko build sqlite/apko/sqlite.yaml \
+	apko build images/sqlite/apko/sqlite.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-sqlite:$(VERSION) \
 		sqlite.tar \
 		--arch x86_64
@@ -1192,7 +1192,7 @@ sqlite:
 #------------------------------------------------------------------------------
 dotnet:
 	@echo "Assembling minimal-dotnet image with apko..."
-	apko build dotnet/apko/dotnet.yaml \
+	apko build images/dotnet/apko/dotnet.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-dotnet:$(VERSION) \
 		dotnet.tar \
 		--arch x86_64
@@ -1209,7 +1209,7 @@ dotnet:
 #------------------------------------------------------------------------------
 java:
 	@echo "Assembling minimal-java image with apko..."
-	apko build java/apko/java.yaml \
+	apko build images/java/apko/java.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-java:$(VERSION) \
 		java.tar \
 		--arch x86_64
@@ -1226,14 +1226,14 @@ java:
 #------------------------------------------------------------------------------
 opensearch-melange: keygen
 	@echo "Building OpenSearch $(OPENSEARCH_VERSION) (official min distribution) via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build opensearch/melange.yaml \
+	melange build images/opensearch/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ OpenSearch package built (official min distribution)"
 
 opensearch: opensearch-melange
 	@echo "Assembling minimal-opensearch image with apko..."
-	apko build opensearch/apko/opensearch.yaml \
+	apko build images/opensearch/apko/opensearch.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-opensearch:$(VERSION) \
 		opensearch.tar \
 		--arch x86_64 \
@@ -1252,14 +1252,14 @@ opensearch: opensearch-melange
 #------------------------------------------------------------------------------
 php-melange: keygen
 	@echo "Building PHP from source via melange..."
-	melange build php/melange.yaml \
+	melange build images/php/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ PHP package built from source"
 
 php: php-melange
 	@echo "Assembling minimal-php image with apko..."
-	apko build php/apko/php.yaml \
+	apko build images/php/apko/php.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-php:$(VERSION) \
 		php.tar \
 		--arch x86_64 \
@@ -1278,14 +1278,14 @@ php: php-melange
 #------------------------------------------------------------------------------
 ruby-melange: keygen
 	@echo "Building Ruby $(RUBY_VERSION) from source via melange..."
-	melange build ruby/melange.yaml \
+	melange build images/ruby/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Ruby package built from source"
 
 ruby: ruby-melange
 	@echo "Assembling minimal-ruby image with apko..."
-	apko build ruby/apko/ruby.yaml \
+	apko build images/ruby/apko/ruby.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-ruby:$(VERSION) \
 		ruby.tar \
 		--arch x86_64 \
@@ -1306,14 +1306,14 @@ $(eval $(call DEV_IMAGE_RULE,ruby,ruby-melange,--repository-append ./packages --
 #------------------------------------------------------------------------------
 rails-melange: keygen
 	@echo "Building Ruby $(RUBY_VERSION) + Rails $(RAILS_VERSION) from source via melange..."
-	melange build rails/melange.yaml \
+	melange build images/rails/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Rails package built from source"
 
 rails: rails-melange
 	@echo "Assembling minimal-rails image with apko..."
-	apko build rails/apko/rails.yaml \
+	apko build images/rails/apko/rails.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-rails:$(VERSION) \
 		rails.tar \
 		--arch x86_64 \
@@ -1334,14 +1334,14 @@ kafka-melange: keygen
 	@echo "Building Kafka $(KAFKA_VERSION) package via melange..."
 	# x86_64 only locally: jlink runs inside the melange sandbox so aarch64
 	# cross-builds fail on x86_64 hosts without QEMU binfmt. CI uses native ARM runners.
-	melange build kafka/melange.yaml \
+	melange build images/kafka/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Kafka package built"
 
 kafka: kafka-melange
 	@echo "Assembling minimal-kafka image with apko..."
-	apko build kafka/apko/kafka.yaml \
+	apko build images/kafka/apko/kafka.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-kafka:$(KAFKA_VERSION) \
 		kafka.tar \
 		--arch x86_64 \
@@ -1362,14 +1362,14 @@ cassandra-melange: keygen
 	@echo "Building Cassandra $(CASSANDRA_VERSION) package via melange..."
 	# x86_64 only locally: jlink runs inside the melange sandbox so aarch64
 	# cross-builds fail on x86_64 hosts without QEMU binfmt. CI uses native ARM runners.
-	melange build cassandra/melange.yaml \
+	melange build images/cassandra/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Cassandra package built"
 
 cassandra: cassandra-melange
 	@echo "Assembling minimal-cassandra image with apko..."
-	apko build cassandra/apko/cassandra.yaml \
+	apko build images/cassandra/apko/cassandra.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-cassandra:$(CASSANDRA_VERSION) \
 		cassandra.tar \
 		--arch x86_64 \
@@ -1388,14 +1388,14 @@ cassandra: cassandra-melange
 #------------------------------------------------------------------------------
 solr-melange: keygen
 	@echo "Building Solr $(SOLR_VERSION) package via melange..."
-	melange build solr/melange.yaml \
+	melange build images/solr/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Solr package built"
 
 solr: solr-melange
 	@echo "Assembling minimal-solr image with apko..."
-	apko build solr/apko/solr.yaml \
+	apko build images/solr/apko/solr.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-solr:$(SOLR_VERSION) \
 		solr.tar \
 		--arch x86_64 \
@@ -1414,14 +1414,14 @@ solr: solr-melange
 #------------------------------------------------------------------------------
 pulsar-melange: keygen
 	@echo "Building Pulsar $(PULSAR_VERSION) package via melange..."
-	melange build pulsar/melange.yaml \
+	melange build images/pulsar/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Pulsar package built"
 
 pulsar: pulsar-melange
 	@echo "Assembling minimal-pulsar image with apko..."
-	apko build pulsar/apko/pulsar.yaml \
+	apko build images/pulsar/apko/pulsar.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-pulsar:$(PULSAR_VERSION) \
 		pulsar.tar \
 		--arch x86_64 \
@@ -1439,14 +1439,14 @@ zookeeper-melange: keygen
 	@echo "Building ZooKeeper $(ZOOKEEPER_VERSION) package via melange..."
 	# x86_64 only locally: jlink runs inside the melange sandbox so aarch64
 	# cross-builds fail on x86_64 hosts without QEMU binfmt. CI uses native ARM runners.
-	melange build zookeeper/melange.yaml \
+	melange build images/zookeeper/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ ZooKeeper package built"
 
 zookeeper: zookeeper-melange
 	@echo "Assembling minimal-zookeeper image with apko..."
-	apko build zookeeper/apko/zookeeper.yaml \
+	apko build images/zookeeper/apko/zookeeper.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-zookeeper:$(ZOOKEEPER_VERSION) \
 		zookeeper.tar \
 		--arch x86_64 \
@@ -1463,14 +1463,14 @@ zookeeper: zookeeper-melange
 tomcat-melange: keygen
 	@echo "Building Tomcat $(TOMCAT_VERSION) package via melange..."
 	# x86_64 only locally: jlink runs inside the melange sandbox.
-	melange build tomcat/melange.yaml \
+	melange build images/tomcat/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Tomcat package built"
 
 tomcat: tomcat-melange
 	@echo "Assembling minimal-tomcat image with apko..."
-	apko build tomcat/apko/tomcat.yaml \
+	apko build images/tomcat/apko/tomcat.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-tomcat:$(TOMCAT_VERSION) \
 		tomcat.tar \
 		--arch x86_64 \
@@ -1489,14 +1489,14 @@ tomcat: tomcat-melange
 #------------------------------------------------------------------------------
 coredns-melange: keygen
 	@echo "Building CoreDNS $(COREDNS_VERSION) from source via melange..."
-	melange build coredns/melange.yaml \
+	melange build images/coredns/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ CoreDNS package built from source"
 
 coredns: coredns-melange
 	@echo "Assembling minimal-coredns image with apko..."
-	apko build coredns/apko/coredns.yaml \
+	apko build images/coredns/apko/coredns.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-coredns:$(VERSION) \
 		coredns.tar \
 		--arch x86_64 \
@@ -1512,14 +1512,14 @@ coredns: coredns-melange
 
 gitea-melange: keygen
 	@echo "Building Gitea $(GITEA_VERSION) from source via melange..."
-	melange build gitea/melange.yaml \
+	melange build images/gitea/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Gitea package built from source"
 
 gitea: gitea-melange
 	@echo "Assembling minimal-gitea image with apko..."
-	apko build gitea/apko/gitea.yaml \
+	apko build images/gitea/apko/gitea.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-gitea:$(VERSION) \
 		gitea.tar \
 		--arch x86_64 \
@@ -1538,14 +1538,14 @@ gitea: gitea-melange
 #------------------------------------------------------------------------------
 openbao-melange: keygen
 	@echo "Building OpenBao $(OPENBAO_VERSION) from source via melange..."
-	melange build openbao/melange.yaml \
+	melange build images/openbao/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ OpenBao package built from source"
 
 openbao: openbao-melange
 	@echo "Assembling minimal-openbao image with apko..."
-	apko build openbao/apko/openbao.yaml \
+	apko build images/openbao/apko/openbao.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-openbao:$(VERSION) \
 		openbao.tar \
 		--arch x86_64 \
@@ -1564,14 +1564,14 @@ openbao: openbao-melange
 #------------------------------------------------------------------------------
 loki-melange: keygen
 	@echo "Building Loki $(LOKI_VERSION) from source via melange..."
-	melange build loki/melange.yaml \
+	melange build images/loki/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Loki package built from source"
 
 loki: loki-melange
 	@echo "Assembling minimal-loki image with apko..."
-	apko build loki/apko/loki.yaml \
+	apko build images/loki/apko/loki.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-loki:$(VERSION) \
 		loki.tar \
 		--arch x86_64 \
@@ -1590,14 +1590,14 @@ loki: loki-melange
 #------------------------------------------------------------------------------
 fluent-bit-melange: keygen
 	@echo "Building Fluent Bit $(FLUENT_BIT_VERSION) from source via melange..."
-	melange build fluent-bit/melange.yaml \
+	melange build images/fluent-bit/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Fluent Bit package built from source"
 
 fluent-bit: fluent-bit-melange
 	@echo "Assembling minimal-fluent-bit image with apko..."
-	apko build fluent-bit/apko/fluent-bit.yaml \
+	apko build images/fluent-bit/apko/fluent-bit.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-fluent-bit:$(VERSION) \
 		fluent-bit.tar \
 		--arch x86_64 \
@@ -1616,14 +1616,14 @@ fluent-bit: fluent-bit-melange
 #------------------------------------------------------------------------------
 keycloak-melange: keygen
 	@echo "Building Keycloak $(KEYCLOAK_VERSION) package via melange..."
-	melange build keycloak/melange.yaml \
+	melange build images/keycloak/melange.yaml \
 		--arch x86_64,aarch64 \
 		--signing-key melange.rsa
 	@echo "✓ Keycloak package built"
 
 keycloak: keycloak-melange
 	@echo "Assembling minimal-keycloak image with apko..."
-	apko build keycloak/apko/keycloak.yaml \
+	apko build images/keycloak/apko/keycloak.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-keycloak:$(VERSION) \
 		keycloak.tar \
 		--arch x86_64 \
@@ -1642,14 +1642,14 @@ keycloak: keycloak-melange
 #------------------------------------------------------------------------------
 registry-melange: keygen
 	@echo "Building distribution $(DISTRIBUTION_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build registry/melange.yaml \
+	melange build images/registry/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ registry (distribution) package built from source"
 
 registry: registry-melange
 	@echo "Assembling minimal-registry image with apko..."
-	apko build registry/apko/registry.yaml \
+	apko build images/registry/apko/registry.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-registry:$(VERSION) \
 		registry.tar \
 		--arch x86_64 \
@@ -1668,14 +1668,14 @@ registry: registry-melange
 #------------------------------------------------------------------------------
 mailpit-melange: keygen
 	@echo "Building mailpit $(MAILPIT_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build mailpit/melange.yaml \
+	melange build images/mailpit/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ mailpit package built from source"
 
 mailpit: mailpit-melange
 	@echo "Assembling minimal-mailpit image with apko..."
-	apko build mailpit/apko/mailpit.yaml \
+	apko build images/mailpit/apko/mailpit.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-mailpit:$(VERSION) \
 		mailpit.tar \
 		--arch x86_64 \
@@ -1694,14 +1694,14 @@ mailpit: mailpit-melange
 #------------------------------------------------------------------------------
 consul-melange: keygen
 	@echo "Building Consul $(CONSUL_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build consul/melange.yaml \
+	melange build images/consul/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Consul package built from source"
 
 consul: consul-melange
 	@echo "Assembling minimal-consul image with apko..."
-	apko build consul/apko/consul.yaml \
+	apko build images/consul/apko/consul.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-consul:$(VERSION) \
 		consul.tar \
 		--arch x86_64 \
@@ -1720,14 +1720,14 @@ consul: consul-melange
 #------------------------------------------------------------------------------
 tempo-melange: keygen
 	@echo "Building Tempo $(TEMPO_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build tempo/melange.yaml \
+	melange build images/tempo/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Tempo package built from source"
 
 tempo: tempo-melange
 	@echo "Assembling minimal-tempo image with apko..."
-	apko build tempo/apko/tempo.yaml \
+	apko build images/tempo/apko/tempo.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-tempo:$(VERSION) \
 		tempo.tar \
 		--arch x86_64 \
@@ -1746,14 +1746,14 @@ tempo: tempo-melange
 #------------------------------------------------------------------------------
 opentofu-melange: keygen
 	@echo "Building OpenTofu $(OPENTOFU_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build opentofu/melange.yaml \
+	melange build images/opentofu/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ OpenTofu package built from source"
 
 opentofu: opentofu-melange
 	@echo "Assembling minimal-opentofu image with apko..."
-	apko build opentofu/apko/opentofu.yaml \
+	apko build images/opentofu/apko/opentofu.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-opentofu:$(VERSION) \
 		opentofu.tar \
 		--arch x86_64 \
@@ -1772,14 +1772,14 @@ opentofu: opentofu-melange
 #------------------------------------------------------------------------------
 trivy-melange: keygen
 	@echo "Building Trivy $(TRIVY_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build trivy/melange.yaml \
+	melange build images/trivy/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Trivy package built from source"
 
 trivy: trivy-melange
 	@echo "Assembling minimal-trivy image with apko..."
-	apko build trivy/apko/trivy.yaml \
+	apko build images/trivy/apko/trivy.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-trivy:$(VERSION) \
 		trivy.tar \
 		--arch x86_64 \
@@ -1798,14 +1798,14 @@ trivy: trivy-melange
 #------------------------------------------------------------------------------
 cosign-melange: keygen
 	@echo "Building Cosign $(COSIGN_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build cosign/melange.yaml \
+	melange build images/cosign/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Cosign package built from source"
 
 cosign: cosign-melange
 	@echo "Assembling minimal-cosign image with apko..."
-	apko build cosign/apko/cosign.yaml \
+	apko build images/cosign/apko/cosign.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-cosign:$(VERSION) \
 		cosign.tar \
 		--arch x86_64 \
@@ -1824,14 +1824,14 @@ cosign: cosign-melange
 #------------------------------------------------------------------------------
 syft-melange: keygen
 	@echo "Building Syft $(SYFT_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build syft/melange.yaml \
+	melange build images/syft/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Syft package built from source"
 
 syft: syft-melange
 	@echo "Assembling minimal-syft image with apko..."
-	apko build syft/apko/syft.yaml \
+	apko build images/syft/apko/syft.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-syft:$(VERSION) \
 		syft.tar \
 		--arch x86_64 \
@@ -1850,14 +1850,14 @@ syft: syft-melange
 #------------------------------------------------------------------------------
 grype-melange: keygen
 	@echo "Building Grype $(GRYPE_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build grype/melange.yaml \
+	melange build images/grype/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Grype package built from source"
 
 grype: grype-melange
 	@echo "Assembling minimal-grype image with apko..."
-	apko build grype/apko/grype.yaml \
+	apko build images/grype/apko/grype.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-grype:$(VERSION) \
 		grype.tar \
 		--arch x86_64 \
@@ -1876,14 +1876,14 @@ grype: grype-melange
 #------------------------------------------------------------------------------
 oras-melange: keygen
 	@echo "Building ORAS $(ORAS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build oras/melange.yaml \
+	melange build images/oras/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ ORAS package built from source"
 
 oras: oras-melange
 	@echo "Assembling minimal-oras image with apko..."
-	apko build oras/apko/oras.yaml \
+	apko build images/oras/apko/oras.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-oras:$(VERSION) \
 		oras.tar \
 		--arch x86_64 \
@@ -1902,14 +1902,14 @@ oras: oras-melange
 #------------------------------------------------------------------------------
 gitleaks-melange: keygen
 	@echo "Building Gitleaks $(GITLEAKS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build gitleaks/melange.yaml \
+	melange build images/gitleaks/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Gitleaks package built from source"
 
 gitleaks: gitleaks-melange
 	@echo "Assembling minimal-gitleaks image with apko..."
-	apko build gitleaks/apko/gitleaks.yaml \
+	apko build images/gitleaks/apko/gitleaks.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-gitleaks:$(VERSION) \
 		gitleaks.tar \
 		--arch x86_64 \
@@ -1928,14 +1928,14 @@ gitleaks: gitleaks-melange
 #------------------------------------------------------------------------------
 step-cli-melange: keygen
 	@echo "Building step-cli $(STEP_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build step-cli/melange.yaml \
+	melange build images/step-cli/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ step-cli package built from source"
 
 step-cli: step-cli-melange
 	@echo "Assembling minimal-step-cli image with apko..."
-	apko build step-cli/apko/step-cli.yaml \
+	apko build images/step-cli/apko/step-cli.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-step-cli:$(VERSION) \
 		step-cli.tar \
 		--arch x86_64 \
@@ -1954,14 +1954,14 @@ step-cli: step-cli-melange
 #------------------------------------------------------------------------------
 opa-melange: keygen
 	@echo "Building OPA $(OPA_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build opa/melange.yaml \
+	melange build images/opa/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ OPA package built from source"
 
 opa: opa-melange
 	@echo "Assembling minimal-opa image with apko..."
-	apko build opa/apko/opa.yaml \
+	apko build images/opa/apko/opa.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-opa:$(VERSION) \
 		opa.tar \
 		--arch x86_64 \
@@ -1980,14 +1980,14 @@ opa: opa-melange
 #------------------------------------------------------------------------------
 osv-scanner-melange: keygen
 	@echo "Building OSV-Scanner $(OSV_SCANNER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build osv-scanner/melange.yaml \
+	melange build images/osv-scanner/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ OSV-Scanner package built from source"
 
 osv-scanner: osv-scanner-melange
 	@echo "Assembling minimal-osv-scanner image with apko..."
-	apko build osv-scanner/apko/osv-scanner.yaml \
+	apko build images/osv-scanner/apko/osv-scanner.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-osv-scanner:$(VERSION) \
 		osv-scanner.tar \
 		--arch x86_64 \
@@ -2003,14 +2003,14 @@ osv-scanner: osv-scanner-melange
 
 oauth2-proxy-melange: keygen
 	@echo "Building OAuth2 Proxy $(OAUTH2_PROXY_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build oauth2-proxy/melange.yaml \
+	melange build images/oauth2-proxy/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ OAuth2 Proxy package built from source"
 
 oauth2-proxy: oauth2-proxy-melange
 	@echo "Assembling minimal-oauth2-proxy image with apko..."
-	apko build oauth2-proxy/apko/oauth2-proxy.yaml \
+	apko build images/oauth2-proxy/apko/oauth2-proxy.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-oauth2-proxy:$(VERSION) \
 		oauth2-proxy.tar \
 		--arch x86_64 \
@@ -2026,14 +2026,14 @@ oauth2-proxy: oauth2-proxy-melange
 
 flux-melange: keygen
 	@echo "Building flux $(FLUX_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build flux/melange.yaml \
+	melange build images/flux/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ flux package built from source"
 
 flux: flux-melange
 	@echo "Assembling minimal-flux image with apko..."
-	apko build flux/apko/flux.yaml \
+	apko build images/flux/apko/flux.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-flux:$(VERSION) \
 		flux.tar \
 		--arch x86_64 \
@@ -2049,14 +2049,14 @@ flux: flux-melange
 
 kustomize-melange: keygen
 	@echo "Building kustomize $(KUSTOMIZE_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build kustomize/melange.yaml \
+	melange build images/kustomize/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ kustomize package built from source"
 
 kustomize: kustomize-melange
 	@echo "Assembling minimal-kustomize image with apko..."
-	apko build kustomize/apko/kustomize.yaml \
+	apko build images/kustomize/apko/kustomize.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-kustomize:$(VERSION) \
 		kustomize.tar \
 		--arch x86_64 \
@@ -2072,14 +2072,14 @@ kustomize: kustomize-melange
 
 sops-melange: keygen
 	@echo "Building sops $(SOPS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build sops/melange.yaml \
+	melange build images/sops/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ sops package built from source"
 
 sops: sops-melange
 	@echo "Assembling minimal-sops image with apko..."
-	apko build sops/apko/sops.yaml \
+	apko build images/sops/apko/sops.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-sops:$(VERSION) \
 		sops.tar \
 		--arch x86_64 \
@@ -2095,14 +2095,14 @@ sops: sops-melange
 
 crane-melange: keygen
 	@echo "Building crane $(CRANE_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build crane/melange.yaml \
+	melange build images/crane/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ crane package built from source"
 
 crane: crane-melange
 	@echo "Assembling minimal-crane image with apko..."
-	apko build crane/apko/crane.yaml \
+	apko build images/crane/apko/crane.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-crane:$(VERSION) \
 		crane.tar \
 		--arch x86_64 \
@@ -2118,14 +2118,14 @@ crane: crane-melange
 
 kubeseal-melange: keygen
 	@echo "Building kubeseal $(KUBESEAL_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build kubeseal/melange.yaml \
+	melange build images/kubeseal/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ kubeseal package built from source"
 
 kubeseal: kubeseal-melange
 	@echo "Assembling minimal-kubeseal image with apko..."
-	apko build kubeseal/apko/kubeseal.yaml \
+	apko build images/kubeseal/apko/kubeseal.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-kubeseal:$(VERSION) \
 		kubeseal.tar \
 		--arch x86_64 \
@@ -2141,14 +2141,14 @@ kubeseal: kubeseal-melange
 
 helmfile-melange: keygen
 	@echo "Building helmfile $(HELMFILE_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build helmfile/melange.yaml \
+	melange build images/helmfile/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ helmfile package built from source"
 
 helmfile: helmfile-melange
 	@echo "Assembling minimal-helmfile image with apko..."
-	apko build helmfile/apko/helmfile.yaml \
+	apko build images/helmfile/apko/helmfile.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-helmfile:$(VERSION) \
 		helmfile.tar \
 		--arch x86_64 \
@@ -2164,14 +2164,14 @@ helmfile: helmfile-melange
 
 regctl-melange: keygen
 	@echo "Building regctl $(REGCTL_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build regctl/melange.yaml \
+	melange build images/regctl/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ regctl package built from source"
 
 regctl: regctl-melange
 	@echo "Assembling minimal-regctl image with apko..."
-	apko build regctl/apko/regctl.yaml \
+	apko build images/regctl/apko/regctl.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-regctl:$(VERSION) \
 		regctl.tar \
 		--arch x86_64 \
@@ -2187,14 +2187,14 @@ regctl: regctl-melange
 
 stern-melange: keygen
 	@echo "Building stern $(STERN_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build stern/melange.yaml \
+	melange build images/stern/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ stern package built from source"
 
 stern: stern-melange
 	@echo "Assembling minimal-stern image with apko..."
-	apko build stern/apko/stern.yaml \
+	apko build images/stern/apko/stern.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-stern:$(VERSION) \
 		stern.tar \
 		--arch x86_64 \
@@ -2215,12 +2215,12 @@ stern: stern-melange
 #------------------------------------------------------------------------------
 notation-melange: keygen
 	@echo "Building notation $(NOTATION_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build notation/melange.yaml --arch x86_64 --signing-key melange.rsa
+	melange build images/notation/melange.yaml --arch x86_64 --signing-key melange.rsa
 	@echo "✓ notation package built from source"
 
 notation: notation-melange
 	@echo "Assembling minimal-notation image with apko..."
-	apko build notation/apko/notation.yaml $(REGISTRY)/$(OWNER)/minimal-notation:$(VERSION) notation.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
+	apko build images/notation/apko/notation.yaml $(REGISTRY)/$(OWNER)/minimal-notation:$(VERSION) notation.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
 	docker load < notation.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-notation:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-notation:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-notation:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-notation:latest
@@ -2232,12 +2232,12 @@ notation: notation-melange
 #------------------------------------------------------------------------------
 conftest-melange: keygen
 	@echo "Building conftest $(CONFTEST_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build conftest/melange.yaml --arch x86_64 --signing-key melange.rsa
+	melange build images/conftest/melange.yaml --arch x86_64 --signing-key melange.rsa
 	@echo "✓ conftest package built from source"
 
 conftest: conftest-melange
 	@echo "Assembling minimal-conftest image with apko..."
-	apko build conftest/apko/conftest.yaml $(REGISTRY)/$(OWNER)/minimal-conftest:$(VERSION) conftest.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
+	apko build images/conftest/apko/conftest.yaml $(REGISTRY)/$(OWNER)/minimal-conftest:$(VERSION) conftest.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
 	docker load < conftest.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-conftest:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-conftest:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-conftest:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-conftest:latest
@@ -2249,12 +2249,12 @@ conftest: conftest-melange
 #------------------------------------------------------------------------------
 kubeconform-melange: keygen
 	@echo "Building kubeconform $(KUBECONFORM_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build kubeconform/melange.yaml --arch x86_64 --signing-key melange.rsa
+	melange build images/kubeconform/melange.yaml --arch x86_64 --signing-key melange.rsa
 	@echo "✓ kubeconform package built from source"
 
 kubeconform: kubeconform-melange
 	@echo "Assembling minimal-kubeconform image with apko..."
-	apko build kubeconform/apko/kubeconform.yaml $(REGISTRY)/$(OWNER)/minimal-kubeconform:$(VERSION) kubeconform.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
+	apko build images/kubeconform/apko/kubeconform.yaml $(REGISTRY)/$(OWNER)/minimal-kubeconform:$(VERSION) kubeconform.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
 	docker load < kubeconform.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-kubeconform:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-kubeconform:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-kubeconform:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-kubeconform:latest
@@ -2266,12 +2266,12 @@ kubeconform: kubeconform-melange
 #------------------------------------------------------------------------------
 kube-bench-melange: keygen
 	@echo "Building kube-bench $(KUBE_BENCH_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build kube-bench/melange.yaml --arch x86_64 --signing-key melange.rsa
+	melange build images/kube-bench/melange.yaml --arch x86_64 --signing-key melange.rsa
 	@echo "✓ kube-bench package built from source"
 
 kube-bench: kube-bench-melange
 	@echo "Assembling minimal-kube-bench image with apko..."
-	apko build kube-bench/apko/kube-bench.yaml $(REGISTRY)/$(OWNER)/minimal-kube-bench:$(VERSION) kube-bench.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
+	apko build images/kube-bench/apko/kube-bench.yaml $(REGISTRY)/$(OWNER)/minimal-kube-bench:$(VERSION) kube-bench.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
 	docker load < kube-bench.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-kube-bench:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-kube-bench:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-kube-bench:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-kube-bench:latest
@@ -2283,12 +2283,12 @@ kube-bench: kube-bench-melange
 #------------------------------------------------------------------------------
 trufflehog-melange: keygen
 	@echo "Building trufflehog $(TRUFFLEHOG_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build trufflehog/melange.yaml --arch x86_64 --signing-key melange.rsa
+	melange build images/trufflehog/melange.yaml --arch x86_64 --signing-key melange.rsa
 	@echo "✓ trufflehog package built from source"
 
 trufflehog: trufflehog-melange
 	@echo "Assembling minimal-trufflehog image with apko..."
-	apko build trufflehog/apko/trufflehog.yaml $(REGISTRY)/$(OWNER)/minimal-trufflehog:$(VERSION) trufflehog.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
+	apko build images/trufflehog/apko/trufflehog.yaml $(REGISTRY)/$(OWNER)/minimal-trufflehog:$(VERSION) trufflehog.tar --arch x86_64 --repository-append ./packages --keyring-append melange.rsa.pub
 	docker load < trufflehog.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-trufflehog:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-trufflehog:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-trufflehog:$(VERSION)-amd64 $(REGISTRY)/$(OWNER)/minimal-trufflehog:latest
@@ -2300,14 +2300,14 @@ trufflehog: trufflehog-melange
 #------------------------------------------------------------------------------
 thanos-melange: keygen
 	@echo "Building Thanos $(THANOS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build thanos/melange.yaml \
+	melange build images/thanos/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Thanos package built from source"
 
 thanos: thanos-melange
 	@echo "Assembling minimal-thanos image with apko..."
-	apko build thanos/apko/thanos.yaml \
+	apko build images/thanos/apko/thanos.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-thanos:$(VERSION) \
 		thanos.tar \
 		--arch x86_64 \
@@ -2326,14 +2326,14 @@ thanos: thanos-melange
 #------------------------------------------------------------------------------
 node-exporter-melange: keygen
 	@echo "Building node_exporter $(NODE_EXPORTER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build node-exporter/melange.yaml \
+	melange build images/node-exporter/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ node_exporter package built from source"
 
 node-exporter: node-exporter-melange
 	@echo "Assembling minimal-node-exporter image with apko..."
-	apko build node-exporter/apko/node-exporter.yaml \
+	apko build images/node-exporter/apko/node-exporter.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-node-exporter:$(VERSION) \
 		node-exporter.tar \
 		--arch x86_64 \
@@ -2352,14 +2352,14 @@ node-exporter: node-exporter-melange
 #------------------------------------------------------------------------------
 blackbox-exporter-melange: keygen
 	@echo "Building blackbox_exporter $(BLACKBOX_EXPORTER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build blackbox-exporter/melange.yaml \
+	melange build images/blackbox-exporter/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ blackbox_exporter package built from source"
 
 blackbox-exporter: blackbox-exporter-melange
 	@echo "Assembling minimal-blackbox-exporter image with apko..."
-	apko build blackbox-exporter/apko/blackbox-exporter.yaml \
+	apko build images/blackbox-exporter/apko/blackbox-exporter.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-blackbox-exporter:$(VERSION) \
 		blackbox-exporter.tar \
 		--arch x86_64 \
@@ -2378,14 +2378,14 @@ blackbox-exporter: blackbox-exporter-melange
 #------------------------------------------------------------------------------
 kube-state-metrics-melange: keygen
 	@echo "Building kube-state-metrics $(KUBE_STATE_METRICS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build kube-state-metrics/melange.yaml \
+	melange build images/kube-state-metrics/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ kube-state-metrics package built from source"
 
 kube-state-metrics: kube-state-metrics-melange
 	@echo "Assembling minimal-kube-state-metrics image with apko..."
-	apko build kube-state-metrics/apko/kube-state-metrics.yaml \
+	apko build images/kube-state-metrics/apko/kube-state-metrics.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-kube-state-metrics:$(VERSION) \
 		kube-state-metrics.tar \
 		--arch x86_64 \
@@ -2404,14 +2404,14 @@ kube-state-metrics: kube-state-metrics-melange
 #------------------------------------------------------------------------------
 redis-exporter-melange: keygen
 	@echo "Building redis_exporter $(REDIS_EXPORTER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build redis-exporter/melange.yaml \
+	melange build images/redis-exporter/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ redis_exporter package built from source"
 
 redis-exporter: redis-exporter-melange
 	@echo "Assembling minimal-redis-exporter image with apko..."
-	apko build redis-exporter/apko/redis-exporter.yaml \
+	apko build images/redis-exporter/apko/redis-exporter.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-redis-exporter:$(VERSION) \
 		redis-exporter.tar \
 		--arch x86_64 \
@@ -2430,14 +2430,14 @@ redis-exporter: redis-exporter-melange
 #------------------------------------------------------------------------------
 vaultwarden-melange: keygen
 	@echo "Building vaultwarden $(VAULTWARDEN_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build vaultwarden/melange.yaml \
+	melange build images/vaultwarden/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ vaultwarden package built from source"
 
 vaultwarden: vaultwarden-melange
 	@echo "Assembling minimal-vaultwarden image with apko..."
-	apko build vaultwarden/apko/vaultwarden.yaml \
+	apko build images/vaultwarden/apko/vaultwarden.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-vaultwarden:$(VERSION) \
 		vaultwarden.tar \
 		--arch x86_64 \
@@ -2456,14 +2456,14 @@ vaultwarden: vaultwarden-melange
 #------------------------------------------------------------------------------
 flink-melange: keygen
 	@echo "Building Flink $(FLINK_VERSION) via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build flink/melange.yaml \
+	melange build images/flink/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ flink package built"
 
 flink: flink-melange
 	@echo "Assembling minimal-flink image with apko..."
-	apko build flink/apko/flink.yaml \
+	apko build images/flink/apko/flink.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-flink:$(VERSION) \
 		flink.tar \
 		--arch x86_64 \
@@ -2482,14 +2482,14 @@ flink: flink-melange
 #------------------------------------------------------------------------------
 pushgateway-melange: keygen
 	@echo "Building pushgateway $(PUSHGATEWAY_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build pushgateway/melange.yaml \
+	melange build images/pushgateway/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ pushgateway package built from source"
 
 pushgateway: pushgateway-melange
 	@echo "Assembling minimal-pushgateway image with apko..."
-	apko build pushgateway/apko/pushgateway.yaml \
+	apko build images/pushgateway/apko/pushgateway.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-pushgateway:$(VERSION) \
 		pushgateway.tar \
 		--arch x86_64 \
@@ -2508,14 +2508,14 @@ pushgateway: pushgateway-melange
 #------------------------------------------------------------------------------
 mosquitto-melange: keygen
 	@echo "Building Mosquitto $(MOSQUITTO_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build mosquitto/melange.yaml \
+	melange build images/mosquitto/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Mosquitto package built from source"
 
 mosquitto: mosquitto-melange
 	@echo "Assembling minimal-mosquitto image with apko..."
-	apko build mosquitto/apko/mosquitto.yaml \
+	apko build images/mosquitto/apko/mosquitto.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-mosquitto:$(VERSION) \
 		mosquitto.tar \
 		--arch x86_64 \
@@ -2531,14 +2531,14 @@ mosquitto: mosquitto-melange
 
 pgbouncer-melange: keygen
 	@echo "Building PgBouncer $(PGBOUNCER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build pgbouncer/melange.yaml \
+	melange build images/pgbouncer/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ PgBouncer package built from source"
 
 pgbouncer: pgbouncer-melange
 	@echo "Assembling minimal-pgbouncer image with apko..."
-	apko build pgbouncer/apko/pgbouncer.yaml \
+	apko build images/pgbouncer/apko/pgbouncer.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-pgbouncer:$(VERSION) \
 		pgbouncer.tar \
 		--arch x86_64 \
@@ -2557,14 +2557,14 @@ pgbouncer: pgbouncer-melange
 #------------------------------------------------------------------------------
 metrics-server-melange: keygen
 	@echo "Building metrics-server $(METRICS_SERVER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build metrics-server/melange.yaml \
+	melange build images/metrics-server/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ metrics-server package built from source"
 
 metrics-server: metrics-server-melange
 	@echo "Assembling minimal-metrics-server image with apko..."
-	apko build metrics-server/apko/metrics-server.yaml \
+	apko build images/metrics-server/apko/metrics-server.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-metrics-server:$(VERSION) \
 		metrics-server.tar \
 		--arch x86_64 \
@@ -2580,14 +2580,14 @@ metrics-server: metrics-server-melange
 
 keepalived-melange: keygen
 	@echo "Building Keepalived package from source with melange..."
-	melange build keepalived/melange.yaml \
+	melange build images/keepalived/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Keepalived package built from source"
 
 keepalived: keepalived-melange
 	@echo "Assembling minimal-keepalived image with apko..."
-	apko build keepalived/apko/keepalived.yaml \
+	apko build images/keepalived/apko/keepalived.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-keepalived:$(VERSION) \
 		keepalived.tar \
 		--arch x86_64 \
@@ -2603,14 +2603,14 @@ keepalived: keepalived-melange
 
 unbound-melange: keygen
 	@echo "Building Unbound $(UNBOUND_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build unbound/melange.yaml \
+	melange build images/unbound/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Unbound package built from source"
 
 unbound: unbound-melange
 	@echo "Assembling minimal-unbound image with apko..."
-	apko build unbound/apko/unbound.yaml \
+	apko build images/unbound/apko/unbound.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-unbound:$(VERSION) \
 		unbound.tar \
 		--arch x86_64 \
@@ -2626,14 +2626,14 @@ unbound: unbound-melange
 
 external-dns-melange: keygen
 	@echo "Building ExternalDNS $(EXTERNAL_DNS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build external-dns/melange.yaml \
+	melange build images/external-dns/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ ExternalDNS package built from source"
 
 external-dns: external-dns-melange
 	@echo "Assembling minimal-external-dns image with apko..."
-	apko build external-dns/apko/external-dns.yaml \
+	apko build images/external-dns/apko/external-dns.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-external-dns:$(VERSION) \
 		external-dns.tar \
 		--arch x86_64 \
@@ -2649,14 +2649,14 @@ external-dns: external-dns-melange
 
 velero-melange: keygen
 	@echo "Building Velero $(VELERO_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build velero/melange.yaml \
+	melange build images/velero/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Velero package built from source"
 
 velero: velero-melange
 	@echo "Assembling minimal-velero image with apko..."
-	apko build velero/apko/velero.yaml \
+	apko build images/velero/apko/velero.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-velero:$(VERSION) \
 		velero.tar \
 		--arch x86_64 \
@@ -2672,14 +2672,14 @@ velero: velero-melange
 
 kaniko-melange: keygen
 	@echo "Building Kaniko $(KANIKO_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build kaniko/melange.yaml \
+	melange build images/kaniko/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Kaniko package built from source"
 
 kaniko: kaniko-melange
 	@echo "Assembling minimal-kaniko image with apko..."
-	apko build kaniko/apko/kaniko.yaml \
+	apko build images/kaniko/apko/kaniko.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-kaniko:$(VERSION) \
 		kaniko.tar \
 		--arch x86_64 \
@@ -2695,14 +2695,14 @@ kaniko: kaniko-melange
 
 step-ca-melange: keygen
 	@echo "Building step-ca $(STEP_CA_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build step-ca/melange.yaml \
+	melange build images/step-ca/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ step-ca package built from source"
 
 step-ca: step-ca-melange
 	@echo "Assembling minimal-step-ca image with apko..."
-	apko build step-ca/apko/step-ca.yaml \
+	apko build images/step-ca/apko/step-ca.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-step-ca:$(VERSION) \
 		step-ca.tar \
 		--arch x86_64 \
@@ -2718,14 +2718,14 @@ step-ca: step-ca-melange
 
 skopeo-melange: keygen
 	@echo "Building Skopeo $(SKOPEO_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build skopeo/melange.yaml \
+	melange build images/skopeo/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Skopeo package built from source"
 
 skopeo: skopeo-melange
 	@echo "Assembling minimal-skopeo image with apko..."
-	apko build skopeo/apko/skopeo.yaml \
+	apko build images/skopeo/apko/skopeo.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-skopeo:$(VERSION) \
 		skopeo.tar \
 		--arch x86_64 \
@@ -2741,14 +2741,14 @@ skopeo: skopeo-melange
 
 helm-melange: keygen
 	@echo "Building Helm $(HELM_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build helm/melange.yaml \
+	melange build images/helm/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Helm package built from source"
 
 helm: helm-melange
 	@echo "Assembling minimal-helm image with apko..."
-	apko build helm/apko/helm.yaml \
+	apko build images/helm/apko/helm.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-helm:$(VERSION) \
 		helm.tar \
 		--arch x86_64 \
@@ -2764,14 +2764,14 @@ helm: helm-melange
 
 kubectl-melange: keygen
 	@echo "Building kubectl $(KUBECTL_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
-	melange build kubectl/melange.yaml \
+	melange build images/kubectl/melange.yaml \
 		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ kubectl package built from source"
 
 kubectl: kubectl-melange
 	@echo "Assembling minimal-kubectl image with apko..."
-	apko build kubectl/apko/kubectl.yaml \
+	apko build images/kubectl/apko/kubectl.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-kubectl:$(VERSION) \
 		kubectl.tar \
 		--arch x86_64 \
@@ -3410,7 +3410,7 @@ test-haproxy:
 test-postgres-slim:
 	@echo "Testing Postgres Slim image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-postgres-slim:latest" && \
-		postgres-slim/test.sh
+		images/postgres-slim/test.sh
 	@echo "✓ Postgres Slim tests passed"
 
 test-bun:
@@ -3455,7 +3455,7 @@ test-java:
 	@echo "✓ OpenJDK Runtime tests passed"
 
 test-ruby:
-	@IMAGE=$(REGISTRY)/$(OWNER)/minimal-ruby:latest bash ruby/test.sh
+	@IMAGE=$(REGISTRY)/$(OWNER)/minimal-ruby:latest bash images/ruby/test.sh
 	@echo "✓ Ruby tests passed"
 
 $(eval $(call DEV_TEST_RULE,ruby))
@@ -3480,497 +3480,497 @@ test-rails:
 test-kafka:
 	@echo "Testing Kafka image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kafka:latest" && \
-		kafka/test.sh
+		images/kafka/test.sh
 	@echo "✓ Kafka tests passed"
 
 test-cassandra:
 	@echo "Testing Cassandra image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-cassandra:latest" && \
-		cassandra/test.sh
+		images/cassandra/test.sh
 	@echo "✓ Cassandra tests passed"
 
 test-flink:
 	@echo "Testing flink image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-flink:latest" && \
-		flink/test.sh
+		images/flink/test.sh
 	@echo "✓ flink tests passed"
 
 test-solr:
 	@echo "Testing Solr image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-solr:latest" && \
-		solr/test.sh
+		images/solr/test.sh
 	@echo "✓ Solr tests passed"
 
 test-pulsar:
 	@echo "Testing Pulsar image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-pulsar:latest" && \
-		pulsar/test.sh
+		images/pulsar/test.sh
 	@echo "✓ Pulsar tests passed"
 
 test-zookeeper:
 	@echo "Testing zookeeper image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-zookeeper:latest" && \
-		zookeeper/test.sh
+		images/zookeeper/test.sh
 	@echo "✓ zookeeper tests passed"
 
 test-tomcat:
 	@echo "Testing tomcat image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-tomcat:latest" && \
-		tomcat/test.sh
+		images/tomcat/test.sh
 	@echo "✓ tomcat tests passed"
 
 test-valkey:
 	@echo "Testing Valkey image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-valkey:latest" && \
-		valkey/test.sh
+		images/valkey/test.sh
 	@echo "✓ Valkey tests passed"
 
 test-nats:
 	@echo "Testing NATS image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-nats:latest" && \
-		nats/test.sh
+		images/nats/test.sh
 	@echo "✓ NATS tests passed"
 
 test-traefik:
 	@echo "Testing Traefik image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-traefik:latest" && \
-		traefik/test.sh
+		images/traefik/test.sh
 	@echo "✓ Traefik tests passed"
 
 test-envoy:
 	@echo "Testing Envoy image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-envoy:latest" && \
-		envoy/test.sh
+		images/envoy/test.sh
 	@echo "✓ Envoy tests passed"
 
 test-rabbitmq:
 	@echo "Testing RabbitMQ image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-rabbitmq:latest" && \
-		rabbitmq/test.sh
+		images/rabbitmq/test.sh
 	@echo "✓ RabbitMQ tests passed"
 
 test-minio:
 	@echo "Testing MinIO image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-minio:latest" && \
-		minio/test.sh
+		images/minio/test.sh
 	@echo "✓ MinIO tests passed"
 
 test-registry:
 	@echo "Testing registry image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-registry:latest" && \
-		registry/test.sh
+		images/registry/test.sh
 	@echo "✓ registry tests passed"
 
 test-mailpit:
 	@echo "Testing mailpit image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-mailpit:latest" && \
-		mailpit/test.sh
+		images/mailpit/test.sh
 	@echo "✓ mailpit tests passed"
 
 test-consul:
 	@echo "Testing consul image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-consul:latest" && \
-		consul/test.sh
+		images/consul/test.sh
 	@echo "✓ consul tests passed"
 
 test-tempo:
 	@echo "Testing tempo image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-tempo:latest" && \
-		tempo/test.sh
+		images/tempo/test.sh
 	@echo "✓ tempo tests passed"
 
 test-opentofu:
 	@echo "Testing opentofu image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-opentofu:latest" && \
-		opentofu/test.sh
+		images/opentofu/test.sh
 	@echo "✓ opentofu tests passed"
 
 test-trivy:
 	@echo "Testing trivy image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-trivy:latest" && \
-		trivy/test.sh
+		images/trivy/test.sh
 	@echo "✓ trivy tests passed"
 
 test-cosign:
 	@echo "Testing cosign image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-cosign:latest" && \
-		cosign/test.sh
+		images/cosign/test.sh
 	@echo "✓ cosign tests passed"
 
 test-syft:
 	@echo "Testing syft image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-syft:latest" && \
-		syft/test.sh
+		images/syft/test.sh
 	@echo "✓ syft tests passed"
 
 test-grype:
 	@echo "Testing grype image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-grype:latest" && \
-		grype/test.sh
+		images/grype/test.sh
 	@echo "✓ grype tests passed"
 
 test-oras:
 	@echo "Testing oras image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-oras:latest" && \
-		oras/test.sh
+		images/oras/test.sh
 	@echo "✓ oras tests passed"
 
 test-gitleaks:
 	@echo "Testing gitleaks image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-gitleaks:latest" && \
-		gitleaks/test.sh
+		images/gitleaks/test.sh
 	@echo "✓ gitleaks tests passed"
 
 test-step-cli:
 	@echo "Testing step-cli image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-step-cli:latest" && \
-		step-cli/test.sh
+		images/step-cli/test.sh
 	@echo "✓ step-cli tests passed"
 
 test-opa:
 	@echo "Testing opa image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-opa:latest" && \
-		opa/test.sh
+		images/opa/test.sh
 	@echo "✓ opa tests passed"
 
 test-osv-scanner:
 	@echo "Testing osv-scanner image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-osv-scanner:latest" && \
-		osv-scanner/test.sh
+		images/osv-scanner/test.sh
 	@echo "✓ osv-scanner tests passed"
 
 test-oauth2-proxy:
 	@echo "Testing oauth2-proxy image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-oauth2-proxy:latest" && \
-		oauth2-proxy/test.sh
+		images/oauth2-proxy/test.sh
 	@echo "✓ oauth2-proxy tests passed"
 
 test-flux:
 	@echo "Testing flux image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-flux:latest" && \
-		flux/test.sh
+		images/flux/test.sh
 	@echo "✓ flux tests passed"
 
 test-kustomize:
 	@echo "Testing kustomize image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kustomize:latest" && \
-		kustomize/test.sh
+		images/kustomize/test.sh
 	@echo "✓ kustomize tests passed"
 
 test-sops:
 	@echo "Testing sops image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-sops:latest" && \
-		sops/test.sh
+		images/sops/test.sh
 	@echo "✓ sops tests passed"
 
 test-crane:
 	@echo "Testing crane image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-crane:latest" && \
-		crane/test.sh
+		images/crane/test.sh
 	@echo "✓ crane tests passed"
 
 test-kubeseal:
 	@echo "Testing kubeseal image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kubeseal:latest" && \
-		kubeseal/test.sh
+		images/kubeseal/test.sh
 	@echo "✓ kubeseal tests passed"
 
 test-helmfile:
 	@echo "Testing helmfile image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-helmfile:latest" && \
-		helmfile/test.sh
+		images/helmfile/test.sh
 	@echo "✓ helmfile tests passed"
 
 test-regctl:
 	@echo "Testing regctl image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-regctl:latest" && \
-		regctl/test.sh
+		images/regctl/test.sh
 	@echo "✓ regctl tests passed"
 
 test-stern:
 	@echo "Testing stern image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-stern:latest" && \
-		stern/test.sh
+		images/stern/test.sh
 	@echo "✓ stern tests passed"
 
 
 test-notation:
 	@echo "Testing notation image..."
-	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-notation:latest" && notation/test.sh
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-notation:latest" && images/notation/test.sh
 	@echo "✓ notation tests passed"
 
 test-conftest:
 	@echo "Testing conftest image..."
-	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-conftest:latest" && conftest/test.sh
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-conftest:latest" && images/conftest/test.sh
 	@echo "✓ conftest tests passed"
 
 test-kubeconform:
 	@echo "Testing kubeconform image..."
-	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kubeconform:latest" && kubeconform/test.sh
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kubeconform:latest" && images/kubeconform/test.sh
 	@echo "✓ kubeconform tests passed"
 
 test-kube-bench:
 	@echo "Testing kube-bench image..."
-	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kube-bench:latest" && kube-bench/test.sh
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kube-bench:latest" && images/kube-bench/test.sh
 	@echo "✓ kube-bench tests passed"
 
 test-trufflehog:
 	@echo "Testing trufflehog image..."
-	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-trufflehog:latest" && trufflehog/test.sh
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-trufflehog:latest" && images/trufflehog/test.sh
 	@echo "✓ trufflehog tests passed"
 
 test-thanos:
 	@echo "Testing thanos image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-thanos:latest" && \
-		thanos/test.sh
+		images/thanos/test.sh
 	@echo "✓ thanos tests passed"
 
 test-node-exporter:
 	@echo "Testing node-exporter image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-node-exporter:latest" && \
-		node-exporter/test.sh
+		images/node-exporter/test.sh
 	@echo "✓ node-exporter tests passed"
 
 test-blackbox-exporter:
 	@echo "Testing blackbox-exporter image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-blackbox-exporter:latest" && \
-		blackbox-exporter/test.sh
+		images/blackbox-exporter/test.sh
 	@echo "✓ blackbox-exporter tests passed"
 
 test-redis-exporter:
 	@echo "Testing redis-exporter image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-redis-exporter:latest" && \
-		redis-exporter/test.sh
+		images/redis-exporter/test.sh
 	@echo "✓ redis-exporter tests passed"
 
 test-kube-state-metrics:
 	@echo "Testing kube-state-metrics image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kube-state-metrics:latest" && \
-		kube-state-metrics/test.sh
+		images/kube-state-metrics/test.sh
 	@echo "✓ kube-state-metrics tests passed"
 
 test-pushgateway:
 	@echo "Testing pushgateway image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-pushgateway:latest" && \
-		pushgateway/test.sh
+		images/pushgateway/test.sh
 	@echo "✓ pushgateway tests passed"
 
 test-mosquitto:
 	@echo "Testing mosquitto image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-mosquitto:latest" && \
-		mosquitto/test.sh
+		images/mosquitto/test.sh
 	@echo "✓ mosquitto tests passed"
 
 test-pgbouncer:
 	@echo "Testing pgbouncer image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-pgbouncer:latest" && \
-		pgbouncer/test.sh
+		images/pgbouncer/test.sh
 	@echo "✓ pgbouncer tests passed"
 
 test-keepalived:
 	@echo "Testing keepalived image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-keepalived:latest" && \
-		keepalived/test.sh
+		images/keepalived/test.sh
 	@echo "✓ keepalived tests passed"
 
 test-vector:
 	@echo "Testing vector image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-vector:latest" && \
-		vector/test.sh
+		images/vector/test.sh
 	@echo "✓ vector tests passed"
 
 test-patroni:
 	@echo "Testing patroni image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-patroni:latest" && \
-		patroni/test.sh
+		images/patroni/test.sh
 	@echo "✓ patroni tests passed"
 
 test-metrics-server:
 	@echo "Testing metrics-server image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-metrics-server:latest" && \
-		metrics-server/test.sh
+		images/metrics-server/test.sh
 	@echo "✓ metrics-server tests passed"
 
 test-dnsmasq:
 	@echo "Testing dnsmasq image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-dnsmasq:latest" && \
-		dnsmasq/test.sh
+		images/dnsmasq/test.sh
 	@echo "✓ dnsmasq tests passed"
 
 test-unbound:
 	@echo "Testing unbound image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-unbound:latest" && \
-		unbound/test.sh
+		images/unbound/test.sh
 	@echo "✓ unbound tests passed"
 
 test-external-dns:
 	@echo "Testing external-dns image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-external-dns:latest" && \
-		external-dns/test.sh
+		images/external-dns/test.sh
 	@echo "✓ external-dns tests passed"
 
 test-velero:
 	@echo "Testing velero image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-velero:latest" && \
-		velero/test.sh
+		images/velero/test.sh
 	@echo "✓ velero tests passed"
 
 test-kaniko:
 	@echo "Testing kaniko image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kaniko:latest" && \
-		kaniko/test.sh
+		images/kaniko/test.sh
 	@echo "✓ kaniko tests passed"
 
 test-step-ca:
 	@echo "Testing step-ca image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-step-ca:latest" && \
-		step-ca/test.sh
+		images/step-ca/test.sh
 	@echo "✓ step-ca tests passed"
 
 test-skopeo:
 	@echo "Testing skopeo image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-skopeo:latest" && \
-		skopeo/test.sh
+		images/skopeo/test.sh
 	@echo "✓ skopeo tests passed"
 
 test-helm:
 	@echo "Testing helm image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-helm:latest" && \
-		helm/test.sh
+		images/helm/test.sh
 	@echo "✓ helm tests passed"
 
 test-kubectl:
 	@echo "Testing kubectl image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kubectl:latest" && \
-		kubectl/test.sh
+		images/kubectl/test.sh
 	@echo "✓ kubectl tests passed"
 
 test-opensearch:
 	@echo "Testing OpenSearch image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-opensearch:latest" && \
-		opensearch/test.sh
+		images/opensearch/test.sh
 	@echo "✓ OpenSearch tests passed"
 
 test-prometheus:
 	@echo "Testing Prometheus image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-prometheus:latest" && \
-		prometheus/test.sh
+		images/prometheus/test.sh
 	@echo "✓ Prometheus tests passed"
 
 test-alertmanager:
 	@echo "Testing Alertmanager image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-alertmanager:latest" && \
-		alertmanager/test.sh
+		images/alertmanager/test.sh
 	@echo "✓ Alertmanager tests passed"
 
 
 test-mariadb:
 	@echo "Testing MariaDB image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-mariadb:latest" && \
-		mariadb/test.sh
+		images/mariadb/test.sh
 	@echo "✓ MariaDB tests passed"
 
 test-etcd:
 	@echo "Testing etcd image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-etcd:latest" && \
-		etcd/test.sh
+		images/etcd/test.sh
 	@echo "✓ etcd tests passed"
 
 test-victoria-metrics:
 	@echo "Testing VictoriaMetrics image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-victoria-metrics:latest" && \
-		victoria-metrics/test.sh
+		images/victoria-metrics/test.sh
 	@echo "✓ VictoriaMetrics tests passed"
 
 test-telegraf:
 	@echo "Testing Telegraf image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-telegraf:latest" && \
-		telegraf/test.sh
+		images/telegraf/test.sh
 	@echo "✓ Telegraf tests passed"
 
 test-mimir:
 	@echo "Testing Mimir image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-mimir:latest" && \
-		mimir/test.sh
+		images/mimir/test.sh
 	@echo "✓ Mimir tests passed"
 
 test-coredns:
 	@echo "Testing CoreDNS image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-coredns:latest" && \
-		coredns/test.sh
+		images/coredns/test.sh
 	@echo "✓ coredns tests passed"
 
 test-fluent-bit:
 	@echo "Testing Fluent Bit image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-fluent-bit:latest" && \
-		fluent-bit/test.sh
+		images/fluent-bit/test.sh
 	@echo "✓ fluent-bit tests passed"
 
 test-keycloak:
 	@echo "Testing Keycloak image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-keycloak:latest" && \
-		keycloak/test.sh
+		images/keycloak/test.sh
 	@echo "✓ keycloak tests passed"
 
 test-loki:
 	@echo "Testing Loki image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-loki:latest" && \
-		loki/test.sh
+		images/loki/test.sh
 	@echo "✓ loki tests passed"
 
 test-openbao:
 	@echo "Testing OpenBao image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-openbao:latest" && \
-		openbao/test.sh
+		images/openbao/test.sh
 	@echo "✓ openbao tests passed"
 
 test-php:
 	@echo "Testing PHP image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-php:latest" && \
-		php/test.sh
+		images/php/test.sh
 	@echo "✓ php tests passed"
 
 test-gitea:
 	@echo "Testing Gitea image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-gitea:latest" && \
-		gitea/test.sh
+		images/gitea/test.sh
 	@echo "✓ gitea tests passed"
 
 
 test-jaeger:
 	@echo "Testing Jaeger image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-jaeger:latest" && \
-		jaeger/test.sh
+		images/jaeger/test.sh
 	@echo "✓ Jaeger tests passed"
 
 test-otelcol:
 	@echo "Testing OTel Collector image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-otelcol:latest" && \
-		otelcol/test.sh
+		images/otelcol/test.sh
 	@echo "✓ OTel Collector tests passed"
 
 test-vaultwarden:
 	@echo "Testing vaultwarden image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-vaultwarden:latest" && \
-		vaultwarden/test.sh
+		images/vaultwarden/test.sh
 	@echo "✓ vaultwarden tests passed"
 
 test-qdrant:
 	@echo "Testing Qdrant image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-qdrant:latest" && \
-		qdrant/test.sh
+		images/qdrant/test.sh
 	@echo "✓ Qdrant tests passed"
 
 test-deno:
 	@echo "Testing Deno image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-deno:latest" && \
-		deno/test.sh
+		images/deno/test.sh
 	@echo "✓ Deno tests passed"
 
 test-cuda-python:
 	@echo "Testing CUDA Python image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-cuda-python:latest" && \
-		cuda-python/test.sh
+		images/cuda-python/test.sh
 	@echo "✓ CUDA Python tests passed"
 
 #------------------------------------------------------------------------------

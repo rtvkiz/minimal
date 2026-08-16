@@ -1,0 +1,88 @@
+# Development variant of minimal-patroni.
+# Same Patroni + PostgreSQL from prod, plus a shell and the tools needed to
+# inspect a failing HA cluster (psql, etcdctl-style HTTP probes, JSON parsing).
+#
+# In-house composition (no public Chainguard patroni-dev reference).
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Patroni + PostgreSQL (same as prod)
+    - patroni
+    - postgresql-18
+    - postgresql-18-client
+
+    # Core libs (same as prod)
+    - glibc
+    - ld-linux
+    - libgcc
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- HTTP/JSON utilities (Patroni REST API + DCS debugging) ---
+    - curl
+    - jq
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/patroni
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  LANG: C.UTF-8
+  PATRONI_POSTGRESQL_DATA_DIR: /var/lib/postgresql/data
+  PGDATA: /var/lib/postgresql/data
+
+paths:
+  - path: /var/lib/postgresql
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/postgresql/data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o700
+  - path: /run/postgresql
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-patroni-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-patroni: same Patroni + PostgreSQL, plus a shell, psql, curl and jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/patroni"
+  org.opencontainers.image.licenses: "MIT"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

@@ -1,0 +1,47 @@
+# Development variant of minimal-flux.
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - flux
+    - ca-certificates-bundle
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+    - curl
+    - openssl
+    - bind-tools
+    - jq
+    - git
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/flux
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+
+annotations:
+  org.opencontainers.image.title: "minimal-flux-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-flux: same flux + shell + curl/openssl/dig/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/flux"
+  org.opencontainers.image.licenses: "Apache-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

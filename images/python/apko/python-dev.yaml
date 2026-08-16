@@ -1,0 +1,137 @@
+# Development variant of minimal-python.
+# Same Python 3.14 runtime as prod, plus shell, package manager, build
+# toolchain, pip/setuptools/uv, and common native-extension dependencies.
+# Intended for CI build stages and in-pod debugging. NOT for production.
+#
+# Package list mirrors Chainguard's public ruby-public/devConfigs as
+# closely as Wolfi naming allows. See docs/dev-variants/CONVENTIONS.md
+# for the rules every dev variant follows.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Python runtime (same as prod)
+    - python-3.14
+
+    # Core runtime deps (same as prod)
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libstdc++
+
+    # Python module deps (same as prod)
+    - libffi
+    - zlib
+    - libssl3
+    - libcrypto3
+    - readline
+    - ncurses
+    - ncurses-terminfo-base
+    - libexpat1
+    - libbz2-1
+    - xz
+    - libzstd1
+    - mpdecimal
+    - sqlite-libs
+    - gdbm
+    - libuuid
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- C/C++ toolchain for native extension compilation ---
+    - build-base
+    - gcc
+    - binutils
+    - make
+    - pkgconf
+    - posix-cc-wrappers
+    - linux-headers
+    - openssf-compiler-options
+
+    # --- Dev headers ---
+    - glibc-dev
+    - libstdc++-dev
+    - libxcrypt-dev
+    - python-3.14-dev
+
+    # --- Python package management (baked in) ---
+    - py3.14-pip
+    - py3.14-setuptools
+    - py3-pip-wheel
+    - uv
+
+    # --- VCS for `pip install git+...` ---
+    - git
+
+    # --- Auth + network libs commonly needed by native packages ---
+    - krb5-libs
+    - libldap
+    - libcurl-openssl4
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  # MUST match prod for drop-in compatibility. Users get a shell via
+  # `--entrypoint /bin/sh` per CONVENTIONS.md.
+  command: /usr/bin/python3
+
+work-dir: /app
+
+environment:
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTHONHASHSEED: random
+  LANG: C.UTF-8
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+
+paths:
+  - path: /app
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+  # Writable user dir for `pip install --user`
+  - path: /home/nonroot/.local
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+    recursive: true
+
+annotations:
+  org.opencontainers.image.title: "minimal-python-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-python: same Python runtime + shell + build toolchain + pip/uv. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/python"
+  org.opencontainers.image.licenses: "Apache-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

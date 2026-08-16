@@ -76,7 +76,7 @@ for i in $(seq 0 $((image_count - 1))); do
   src_root="${src_root_raw//<<PKG_VERSION>>/\${\{package.version\}\}}"
 
   full_image="${registry}/${owner}/minimal-${image}:latest"
-  melange="${image}/melange.yaml"
+  melange="images/${image}/melange.yaml"
 
   echo "=== Scanning $image ==="
 

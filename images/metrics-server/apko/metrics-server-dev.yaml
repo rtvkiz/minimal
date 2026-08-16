@@ -1,0 +1,72 @@
+# Development variant of minimal-metrics-server.
+# Same metrics-server from prod, plus a shell and the tools needed to work out
+# why kubelet scraping fails (TLS/DNS/HTTP probing).
+#
+# In-house composition (no public Chainguard metrics-server-dev reference).
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # metrics-server (same as prod)
+    - metrics-server
+
+    # Certificates (same as prod)
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- HTTP/TLS/JSON debugging (kubelet scrape failures) ---
+    - curl
+    - jq
+    - openssl
+
+    # --- DNS troubleshooting (kubelet address resolution) ---
+    - bind-tools
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/metrics-server
+
+work-dir: /tmp
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  LANG: C.UTF-8
+
+paths:
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-metrics-server-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-metrics-server: same binary + shell, curl/jq/openssl and dig. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/metrics-server"
+  org.opencontainers.image.licenses: "Apache-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

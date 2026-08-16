@@ -1,0 +1,78 @@
+# Development variant of minimal-telegraf.
+# Same source-built telegraf + ca-certs, plus shell + curl/openssl/dig
+# + jq for HTTP API debugging.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - telegraf
+    - ca-certificates-bundle
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+    - curl
+    - openssl
+    - bind-tools
+    - jq
+    - git
+
+accounts:
+  groups:
+    - groupname: telegraf
+      gid: 65532
+  users:
+    - username: telegraf
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/telegraf
+
+cmd: --config /etc/telegraf/telegraf.conf
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  LANG: C.UTF-8
+
+paths:
+  - path: /etc/telegraf
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /etc/telegraf/telegraf.d
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/telegraf
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-telegraf-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-telegraf: same telegraf + shell + curl/openssl/dig/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/telegraf"
+  org.opencontainers.image.licenses: "MIT"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

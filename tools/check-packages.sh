@@ -50,7 +50,7 @@ images=$(jq -r '.images[].name' catalog.json)
 checked=0
 
 for img in $images; do
-  mf="$img/melange.yaml"
+  mf="images/$img/melange.yaml"
   [ -f "$mf" ] || continue          # apko-only: no apk package of ours to check
   checked=$((checked + 1))
 
@@ -73,7 +73,7 @@ for img in $images; do
     note "$img: Wolfi ships '$pkg' ($wv) but provider-priority is $prio (want 100)"
   fi
 
-  for af in "$img"/apko/*.yaml; do
+  for af in "images/$img"/apko/*.yaml; do
     [ -f "$af" ] || continue
     grep -qE "^\s*- ${pkg}\$" "$af" || \
       note "$(basename "$af"): does not reference package '$pkg'"

@@ -1,0 +1,72 @@
+# Development variant of minimal-dnsmasq.
+# Same dnsmasq from prod, plus a shell and DNS troubleshooting tools
+# (dig/nslookup) for working out why a query is not being answered.
+#
+# In-house composition (no public Chainguard dnsmasq-dev reference).
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # dnsmasq (same as prod)
+    - dnsmasq
+
+    # Core libs (same as prod)
+    - glibc
+    - ld-linux
+    - libgcc
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- DNS troubleshooting ---
+    - bind-tools
+
+    # --- HTTP/JSON utilities ---
+    - curl
+    - jq
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/dnsmasq -k --conf-file= --pid-file= --log-facility=-
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  LANG: C.UTF-8
+
+paths:
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-dnsmasq-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-dnsmasq: same dnsmasq + shell and dig/nslookup. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/dnsmasq"
+  org.opencontainers.image.licenses: "GPL-2.0-or-later"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64
