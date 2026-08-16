@@ -116,6 +116,12 @@
     tarball, so the maven patcher can't reach them) with grype, finds
     java-archive CVEs whose fix is a published Maven Central artifact, and
     splices sha256-pinned jar-swap blocks into each image's melange.yaml.
+  # coord-map is now an OVERRIDE, not a requirement: the group is derived from
+  # grype's purl (pkg:maven/<group>/<artifact>@<ver>). Before that, every
+  # artifact needed an entry here and only one existed, so all other fixable
+  # jars were skipped with "no coord-map entry" — flink kept log4j 2.25.3 and
+  # its six advisories for exactly that reason. Add an entry only when an
+  # artifact's purl is missing or wrong.
   coord-map:
     jackson-databind: com.fasterxml.jackson.core:jackson-databind
   images:

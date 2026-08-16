@@ -113,13 +113,21 @@ for i in $(seq 0 $((image_count - 1))); do
 
   # grype → "artifact<TAB>installed<TAB>fix" for java-archive matches whose
   # artifact is in coord-map and that actually have a fix version.
-  fixes=$(jq -r --argjson cm "$(jq -c '.["coord-map"]' <<<"$row")" '
+  # Group comes from grype's purl (pkg:maven/<group>/<artifact>@<ver>), so a
+  # new artifact needs no hand-written coord-map entry. coord-map remains an
+  # override for the rare artifact whose purl is missing or wrong.
+  #
+  # This was the real blocker: the map had exactly one entry (jackson-databind),
+  # so every other fixable jar was skipped with "no coord-map entry" — flink
+  # shipped log4j 2.25.3 with six advisories for that reason alone.
+  fixes=$(jq -r '
       [ .matches[]
         | select(.artifact.type == "java-archive")
-        | select(.artifact.name as $n | $cm | has($n))
         | select((.vulnerability.fix.versions | length) > 0)
-        | { name: .artifact.name, installed: .artifact.version, fix: .vulnerability.fix.versions[0] }
-      ] | unique_by(.name + .installed + .fix) | .[] | "\(.name)\t\(.installed)\t\(.fix)"
+        | { name: .artifact.name, installed: .artifact.version,
+            fix: .vulnerability.fix.versions[0], purl: (.artifact.purl // "") }
+      ] | unique_by(.name + .installed + .fix) | .[]
+        | "\(.name)\t\(.installed)\t\(.fix)\t\(.purl)"
     ' "$scan_json" 2>/dev/null | sort -t"$(printf '\t')" -k1,1 -k3,3rV || true)
   rm -f "$scan_json"
   # Highest fix version per artifact is tried first; the loop takes the first
@@ -127,17 +135,46 @@ for i in $(seq 0 $((image_count - 1))); do
 
   [ -n "$fixes" ] || { echo "  No fixable bundled-jar CVEs"; continue; }
 
+  # Align every artifact in a group to that group's HIGHEST fix version before
+  # resolving. Netty, Jetty, Jackson and Log4j release in lockstep and throw
+  # NoSuchMethodError / NoClassDefFoundError on a mixed classpath, so taking
+  # each artifact's own minimum fix builds an image that scans clean and will
+  # not start. Solr proved this: log4j-core at 2.25.4 beside log4j-api at
+  # 2.25.5 is exactly the pair that broke it.
+  declare -A GROUP_MAX=()
+  while IFS=$'\t' read -r a_ i_ f_ p_; do
+    [ -n "$a_" ] || continue
+    c_=$(jq -r --arg a "$a_" '.["coord-map"][$a] // ""' <<<"$row")
+    if [ -n "$c_" ]; then g_="${c_%:*}"; else ga_="${p_#pkg:maven/}"; ga_="${ga_%@*}"; g_="${ga_%/*}"; fi
+    [ -n "$g_" ] || continue
+    cur_="${GROUP_MAX[$g_]:-}"
+    if [ -z "$cur_" ] || ver_gt "$f_" "$cur_"; then GROUP_MAX[$g_]="$f_"; fi
+  done <<< "$fixes"
+
   # Resolve each fix to the newest *published* version that clears it, pin sha256.
   # SWAPS lines: "artifact|group-path|installed|newver|sha256"
   SWAPS=""
   declare -A seen=()
-  while IFS=$'\t' read -r artifact installed fix; do
+  while IFS=$'\t' read -r artifact installed fix purl; do
     [ -n "$artifact" ] || continue
     [ -n "${seen[$artifact]:-}" ] && continue   # one swap per artifact (newest fix wins below)
     coord=$(jq -r --arg a "$artifact" '.["coord-map"][$a] // ""' <<<"$row")
-    [ -n "$coord" ] || { echo "  skip $artifact: no coord-map entry"; continue; }
-    group="${coord%:*}"; gpath="${group//.//}"
+    if [ -n "$coord" ]; then
+      group="${coord%:*}"
+    else
+      # pkg:maven/<group>/<artifact>@<version>
+      ga="${purl#pkg:maven/}"; ga="${ga%@*}"; group="${ga%/*}"
+    fi
+    [ -n "$group" ] && [ "$group" != "$artifact" ] \
+      || { echo "  skip $artifact: no group from coord-map or purl ($purl)"; continue; }
+    gpath="${group//.//}"
     inst="${installed#v}"; fixv="${fix#v}"
+    # Lift to the group target so the whole family lands on one version.
+    gmax="${GROUP_MAX[$group]:-}"
+    if [ -n "$gmax" ] && ver_gt "${gmax#v}" "$fixv"; then
+      echo "  $artifact: raising $fixv -> ${gmax#v} to match the $group family"
+      fixv="${gmax#v}"
+    fi
 
     # Refuse a major-version jump — bundled deps are API-coupled to the distro
     # (e.g. jline 3.x -> 4.x would break kafka). Only same-major bumps.
@@ -158,7 +195,7 @@ for i in $(seq 0 $((image_count - 1))); do
     seen[$artifact]=1
     echo "  -> $artifact $inst -> $fixv ($sha)"
   done <<< "$fixes"
-  unset seen
+  unset seen GROUP_MAX
 
   [ -n "$SWAPS" ] || { echo "  Nothing to patch after filtering"; continue; }
 
@@ -209,6 +246,29 @@ for i in $(seq 0 $((image_count - 1))); do
       printf '      _swap %s %s %s %s %s %s\n' "$artifact" "$gpath" "$inst" "$fixv" "$sha" "$strategy"
       count=$((count + 1))
     done <<< "$SWAPS"
+    # Sibling guard. A family member with no CVE of its own never appears in a
+    # scan report, so it is never swapped and silently stays behind — that is
+    # how solr ended up with log4j-core 2.25.4 beside log4j-api 2.25.3 and died
+    # at startup with NoClassDefFoundError. Fail the build and name the file
+    # instead of shipping a mixed classpath. Scoped to the artifact prefix and
+    # the old major.minor series so unrelated jars that merely share a version
+    # string are left alone (calcite-core and opentelemetry-semconv were both
+    # 1.37.0).
+    if [ "$strategy" != "keep-filename" ]; then
+      printf '      _stragglers=""\n'
+      while IFS='|' read -r artifact gpath inst fixv sha; do
+        [ -n "$artifact" ] || continue
+        pfx="${artifact%%-*}"
+        series="$(printf '%s' "$inst" | cut -d. -f1,2)"
+        printf '      _stragglers="$_stragglers$(find "${{targets.destdir}}/%s" -name "%s*-%s.*.jar" -o -name "%s*-%s.jar" 2>/dev/null)"\n' \
+          "$jar_root" "$pfx" "$series" "$pfx" "$series"
+      done <<< "$SWAPS"
+      printf '      if [ -n "$_stragglers" ]; then\n'
+      printf '        echo "patch-bundled-jars: jars left on a superseded version:" >&2\n'
+      printf '        echo "$_stragglers" >&2\n'
+      printf '        exit 1\n'
+      printf '      fi\n'
+    fi
     printf '  # end-%s\n' "$marker_id"
     tail -n +"$marker_line" "$melange"
   } > "${melange}.tmp"
