@@ -39,6 +39,11 @@ environment:
       - busybox
       - ca-certificates-bundle
       - curl
+      # Needed by _stamp() in the patch-bundled-jars auto-block: keep-filename
+      # swaps must write a pom.properties into jars that ship none, or the
+      # scanner reads the (deliberately unchanged) filename and reports the old
+      # version forever. Without zip the stamp degrades to a WARN, not a failure.
+      - zip
 
 pipeline:
   - runs: |
@@ -68,12 +73,37 @@ pipeline:
   - runs: |
       # Bundled-jar CVE fixes, sha256-pinned. Regenerated from grype by
       # .github/scripts/patch-bundled-jars.sh — do not edit by hand.
+      _stamp() {  # $1=jarfile $2=group-path $3=artifact $4=newver
+        # keep-filename leaves the old version in the filename, so a scanner only
+        # sees the real version if the jar carries META-INF/maven/**/pom.properties
+        # (syft precedence: pom.properties > filename > MANIFEST.MF). Jars that ship
+        # none — micrometer-core, postgresql — reported the OLD version forever
+        # while being genuinely patched on disk. Write the true coordinates so the
+        # SBOM and the scan match what the bytes actually are.
+        command -v zip >/dev/null 2>&1 || { echo "  WARN: no zip in build env; $3 keeps scanning as its old version"; return 0; }
+        unzip -l "$1" 2>/dev/null | grep -q "META-INF/maven/.*/pom.properties" && return 0
+        # Never touch a signed jar: an added entry can trip jarsigner verification.
+        unzip -l "$1" 2>/dev/null | grep -qE "META-INF/.*[.](SF|DSA|RSA|EC)$" && { echo "  $3 is signed, not stamping"; return 0; }
+        _g=$(echo "$2" | tr / .)
+        _d=$(mktemp -d) || return 0
+        mkdir -p "$_d/META-INF/maven/$_g/$3"
+        { echo "groupId=$_g"; echo "artifactId=$3"; echo "version=$4"; } > "$_d/META-INF/maven/$_g/$3/pom.properties"
+        ( cd "$_d" && zip -q "$1" "META-INF/maven/$_g/$3/pom.properties" )
+        rm -rf "$_d"
+        echo "  stamped $3 $4 pom.properties (jar ships none)"
+      }
       _swap() {  # $1=artifact $2=group-path $3=oldver $4=newver $5=sha256 $6=mode
         # rename: jar filename carries the version, match it exactly. keep-filename:
         # filename stays the upstream version while contents change, so match any
-        # version of the artifact and overwrite in place.
+        # version of the artifact and overwrite in place. Two anchors on that
+        # match, both load-bearing: [0-9] pins the start of the version segment,
+        # or netty-codec matches netty-codec-http-*.jar and overwrites the http
+        # codec with the plain codec jar (keycloak died with NoClassDefFoundError
+        # FullHttpResponse); the ! -name excludes classifier jars
+        # (netty-transport-native-epoll-<v>-linux-x86_64.jar), whose content is
+        # NOT what $1-$4.jar holds — overwriting them drops the bundled .so.
         if [ "$6" = "keep-filename" ]; then
-          found=$(find "${{targets.destdir}}/opt/keycloak" -name "*$1-*.jar")
+          found=$(find "${{targets.destdir}}/opt/keycloak" -name "*$1-[0-9]*.jar" ! -name "*$1-[0-9]*-*.jar")
         else
           found=$(find "${{targets.destdir}}/opt/keycloak" -name "*$1-$3.jar")
         fi
@@ -81,6 +111,7 @@ pipeline:
         curl -fsSL --retry 5 --retry-all-errors \
           "https://repo1.maven.org/maven2/$2/$1/$4/$1-$4.jar" -o /tmp/_bj.jar
         echo "$5  /tmp/_bj.jar" | sha256sum -c -
+        _stamp /tmp/_bj.jar "$2" "$1" "$4"
         for f in $found; do
           if [ "$6" = "keep-filename" ]; then cp /tmp/_bj.jar "$f";
           else cp /tmp/_bj.jar "$(dirname "$f")/$1-$4.jar"; rm -f "$f"; fi
@@ -97,16 +128,10 @@ pipeline:
       _swap netty-codec-http io/netty 4.1.135.Final 4.1.136.Final ffd1e1b19a533bc6e47ef2cbc1290374ff4a7cb53a280defa3df392538214948 keep-filename
       _swap netty-codec-http2 io/netty 4.1.135.Final 4.1.136.Final 14f67ae095c056b062aa0ee2c7b01f6b78004cf3620a6e9061bcb637f079387a keep-filename
       _swap postgresql org/postgresql 42.7.11 42.7.12 31fbf6f06b2217fb51d5100cee51b22625cc81640da0679b47914e54c1e6377c keep-filename
-      _swap jackson-databind com/fasterxml/jackson/core 2.21.2 2.21.5 507418c0fafd38b2b2cfb704521630da613a8e4cc8381195a6f418017883e2c0 keep-filename
-      _swap jackson-core com/fasterxml/jackson/core 2.21.2 2.21.5 b64b5874162b503a0e58a8f7758266e8dd9f91bf49e3a59ae0b5f47589a231b7 keep-filename
       _swap micrometer-commons io/micrometer 1.16.3 1.16.6 45aff76226830db257f4bc39a5bcff83d633e572fee9dc4e45cfa12af9a0a49a keep-filename
       _swap micrometer-observation io/micrometer 1.16.3 1.16.6 4c0826d5e7c8522a8e111470b4e77f77b0a10f520eb5502ddd143fdbcedb2340 keep-filename
       _swap micrometer-registry-prometheus-simpleclient io/micrometer 1.16.3 1.16.6 5f665369724caa8ffbb3f83a492b02d1de17a1420758e4a55debcb6ee2bd5e2a keep-filename
       _swap netty-buffer io/netty 4.1.135.Final 4.1.136.Final c88f13fc41156fde5df918c7b240038dfbe97ac57576163f208630391789b5d5 keep-filename
-      _swap netty-codec-dns io/netty 4.1.135.Final 4.1.136.Final 89bddc4ec42756c41a0195a50a1323a324836162b6712a843c3de5c29096c93b keep-filename
-      _swap netty-codec-haproxy io/netty 4.1.135.Final 4.1.136.Final 841be7fc6f1c929ecc63c70a909e0df085b4e80e44680acf46708f0e93e68037 keep-filename
-      _swap netty-codec-http io/netty 4.1.135.Final 4.1.136.Final ffd1e1b19a533bc6e47ef2cbc1290374ff4a7cb53a280defa3df392538214948 keep-filename
-      _swap netty-codec-http2 io/netty 4.1.135.Final 4.1.136.Final 14f67ae095c056b062aa0ee2c7b01f6b78004cf3620a6e9061bcb637f079387a keep-filename
       _swap netty-codec-socks io/netty 4.1.135.Final 4.1.136.Final 341f47dbaac667a6e7e6cad4114218025f9755ced641bb0740fb69e34d29b421 keep-filename
       _swap netty-common io/netty 4.1.135.Final 4.1.136.Final e2f73be7ec359b46583ad875521137000eff520bafd320e730846ec9974f3be6 keep-filename
       _swap netty-handler io/netty 4.1.135.Final 4.1.136.Final 54bb1a59f46a3aefd117942e6acee09e555b756776bad731fc06159d89c2da28 keep-filename
@@ -117,7 +142,6 @@ pipeline:
       _swap netty-transport-classes-epoll io/netty 4.1.135.Final 4.1.136.Final f6a0b631b98667f131daf4ca07a9cae1072d58e259dcbc0f8c6a053d843449c6 keep-filename
       _swap netty-transport-native-epoll io/netty 4.1.135.Final 4.1.136.Final 41a30e3e096091695ef7b7cf16c85802bbc05d4be94643ecc5e8a8d9759acb77 keep-filename
       _swap netty-transport-native-unix-common io/netty 4.1.135.Final 4.1.136.Final 7e014c9b13defd9d254d4e5a5edd8ab6dde17533e1152f99699a6b28b2967a8a keep-filename
-      _swap netty-codec io/netty 4.1.135.Final 4.1.136.Final 2de4fc13005c7740b46427a47ee04265a19779c147d53e583f441889b1148159 keep-filename
   # end-patch-bundled-jars
 update:
   enabled: true

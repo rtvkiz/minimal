@@ -32,8 +32,14 @@
 #                  jar under its real <artifact>-<newver>.jar name, drop the old.
 #   keep-filename  exact-filename classpaths (keycloak/Quarkus) — overwrite the
 #                  jar contents in place, keep the old filename so the classpath
-#                  reference stays valid (grype reads the version from the jar's
-#                  internal pom.properties, so the CVE still clears).
+#                  reference stays valid. Scanners read the version from the
+#                  jar's internal META-INF/maven/**/pom.properties, so the CVE
+#                  clears even though the filename still says the old version —
+#                  but ONLY for jars that ship one. syft's precedence is
+#                  pom.properties > filename > MANIFEST.MF, so a jar without it
+#                  (micrometer-core, postgresql) kept reporting the old version
+#                  forever despite being genuinely patched on disk. _stamp()
+#                  writes the true coordinates into such jars for that reason.
 set -euo pipefail
 
 row="${1:?row JSON required as $1}"
@@ -212,6 +218,15 @@ for i in $(seq 0 $((image_count - 1))); do
     # runs, and under `set -u` indexing an unset associative array aborts the
     # script ("httpcore5: unbound variable") rather than reading as empty.
     declare -A seen2=()
+    # Pre-seed with everything already swapped above. Without this a sibling that
+    # DID have its own advisory gets re-emitted as a "lift" while walking another
+    # row of the same family (the `$sib` = `$artifact` test below only skips the
+    # row's own artifact), producing a duplicate _swap line — and for
+    # keep-filename images the duplicate lands *after* the more specific
+    # artifact's swap and clobbers it.
+    while IFS='|' read -r a_ _rest; do
+      [ -n "$a_" ] && seen2[$a_]=1
+    done <<< "$SWAPS"
     inv=$(mktemp)
     if syft "$full_image" -o json >"$inv" 2>/dev/null; then
       while IFS='|' read -r artifact gpath inst fixv sha; do
@@ -273,12 +288,39 @@ for i in $(seq 0 $((image_count - 1))); do
     printf '  - runs: |\n'
     printf '      # Bundled-jar CVE fixes, sha256-pinned. Regenerated from grype by\n'
     printf '      # .github/scripts/patch-bundled-jars.sh — do not edit by hand.\n'
+    if [ "$strategy" = "keep-filename" ]; then
+      printf '      _stamp() {  # $1=jarfile $2=group-path $3=artifact $4=newver\n'
+      printf '        # keep-filename leaves the old version in the filename, so a scanner only\n'
+      printf '        # sees the real version if the jar carries META-INF/maven/**/pom.properties\n'
+      printf '        # (syft precedence: pom.properties > filename > MANIFEST.MF). Jars that ship\n'
+      printf '        # none — micrometer-core, postgresql — reported the OLD version forever\n'
+      printf '        # while being genuinely patched on disk. Write the true coordinates so the\n'
+      printf '        # SBOM and the scan match what the bytes actually are.\n'
+      printf '        command -v zip >/dev/null 2>&1 || { echo "  WARN: no zip in build env; $3 keeps scanning as its old version"; return 0; }\n'
+      printf '        unzip -l "$1" 2>/dev/null | grep -q "META-INF/maven/.*/pom.properties" && return 0\n'
+      printf '        # Never touch a signed jar: an added entry can trip jarsigner verification.\n'
+      printf '        unzip -l "$1" 2>/dev/null | grep -qE "META-INF/.*[.](SF|DSA|RSA|EC)$" && { echo "  $3 is signed, not stamping"; return 0; }\n'
+      printf '        _g=$(echo "$2" | tr / .)\n'
+      printf '        _d=$(mktemp -d) || return 0\n'
+      printf '        mkdir -p "$_d/META-INF/maven/$_g/$3"\n'
+      printf '        { echo "groupId=$_g"; echo "artifactId=$3"; echo "version=$4"; } > "$_d/META-INF/maven/$_g/$3/pom.properties"\n'
+      printf '        ( cd "$_d" && zip -q "$1" "META-INF/maven/$_g/$3/pom.properties" )\n'
+      printf '        rm -rf "$_d"\n'
+      printf '        echo "  stamped $3 $4 pom.properties (jar ships none)"\n'
+      printf '      }\n'
+    fi
     printf '      _swap() {  # $1=artifact $2=group-path $3=oldver $4=newver $5=sha256 $6=mode\n'
     printf '        # rename: jar filename carries the version, match it exactly. keep-filename:\n'
     printf '        # filename stays the upstream version while contents change, so match any\n'
-    printf '        # version of the artifact and overwrite in place.\n'
+    printf '        # version of the artifact and overwrite in place. Two anchors on that\n'
+    printf '        # match, both load-bearing: [0-9] pins the start of the version segment,\n'
+    printf '        # or netty-codec matches netty-codec-http-*.jar and overwrites the http\n'
+    printf '        # codec with the plain codec jar (keycloak died with NoClassDefFoundError\n'
+    printf '        # FullHttpResponse); the ! -name excludes classifier jars\n'
+    printf '        # (netty-transport-native-epoll-<v>-linux-x86_64.jar), whose content is\n'
+    printf '        # NOT what $1-$4.jar holds — overwriting them drops the bundled .so.\n'
     printf '        if [ "$6" = "keep-filename" ]; then\n'
-    printf '          found=$(find "${{targets.destdir}}/%s" -name "*$1-*.jar")\n' "$jar_root"
+    printf '          found=$(find "${{targets.destdir}}/%s" -name "*$1-[0-9]*.jar" ! -name "*$1-[0-9]*-*.jar")\n' "$jar_root"
     printf '        else\n'
     printf '          found=$(find "${{targets.destdir}}/%s" -name "*$1-$3.jar")\n' "$jar_root"
     printf '        fi\n'
@@ -286,6 +328,10 @@ for i in $(seq 0 $((image_count - 1))); do
     printf '        curl -fsSL --retry 5 --retry-all-errors \\\n'
     printf '          "https://repo1.maven.org/maven2/$2/$1/$4/$1-$4.jar" -o /tmp/_bj.jar\n'
     printf '        echo "$5  /tmp/_bj.jar" | sha256sum -c -\n'
+    # Stamp AFTER the checksum so what we verify is the pristine Central artifact.
+    if [ "$strategy" = "keep-filename" ]; then
+      printf '        _stamp /tmp/_bj.jar "$2" "$1" "$4"\n'
+    fi
     printf '        for f in $found; do\n'
     printf '          if [ "$6" = "keep-filename" ]; then cp /tmp/_bj.jar "$f";\n'
     printf '          else cp /tmp/_bj.jar "$(dirname "$f")/$1-$4.jar"; rm -f "$f"; fi\n'
@@ -306,20 +352,30 @@ for i in $(seq 0 $((image_count - 1))); do
     # the old major.minor series so unrelated jars that merely share a version
     # string are left alone (calcite-core and opentelemetry-semconv were both
     # 1.37.0).
+    # The `! -name "*-$fixv.jar"` exclusion is load-bearing: the series is the
+    # major.minor of the OLD version, and nearly every fix is a patch-level bump
+    # inside that same series (5.4 -> 5.4.3, 2.25.4 -> 2.25.5), so without it the
+    # guard matches the jars _swap just wrote and fails every build.
     if [ "$strategy" != "keep-filename" ]; then
-      printf '      _stragglers=""\n'
+      printf '      _strag=/tmp/_bj_stragglers; : > "$_strag"\n'
+      declare -A guarded=()
       while IFS='|' read -r artifact gpath inst fixv sha; do
         [ -n "$artifact" ] || continue
         pfx="${artifact%%-*}"
         series="$(printf '%s' "$inst" | cut -d. -f1,2)"
-        printf '      _stragglers="$_stragglers$(find "${{targets.destdir}}/%s" -name "%s*-%s.*.jar" -o -name "%s*-%s.jar" 2>/dev/null)"\n' \
-          "$jar_root" "$pfx" "$series" "$pfx" "$series"
+        key="${pfx}|${series}|${fixv}"
+        [ -n "${guarded[$key]:-}" ] && continue
+        guarded[$key]=1
+        printf '      find "${{targets.destdir}}/%s" \\( -name "%s*-%s.*.jar" -o -name "%s*-%s.jar" \\) ! -name "*-%s.jar" >> "$_strag" 2>/dev/null || true\n' \
+          "$jar_root" "$pfx" "$series" "$pfx" "$series" "$fixv"
       done <<< "$SWAPS"
-      printf '      if [ -n "$_stragglers" ]; then\n'
+      unset guarded
+      printf '      if [ -s "$_strag" ]; then\n'
       printf '        echo "patch-bundled-jars: jars left on a superseded version:" >&2\n'
-      printf '        echo "$_stragglers" >&2\n'
-      printf '        exit 1\n'
+      printf '        sort -u "$_strag" >&2\n'
+      printf '        rm -f "$_strag"; exit 1\n'
       printf '      fi\n'
+      printf '      rm -f "$_strag"\n'
     fi
     printf '  # end-%s\n' "$marker_id"
     tail -n +"$marker_line" "$melange"
