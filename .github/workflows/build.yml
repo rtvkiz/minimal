@@ -177,7 +177,14 @@ jobs:
             CHANGED=$(echo "$MELANGE_IMAGES $APKO_IMAGES" | jq -s 'add | [.[].name]')
           else
             # Combine file-diff image dirs with image names extracted from build.yml diff.
-            CHANGED=$( ( echo "$CHANGED_FILES" | grep -E '^[^./][^/]*/' | sed 's|/.*||'
+            # The image name is the SECOND path segment: #551 moved all 101 image
+            # directories under images/. While this still took the first segment it
+            # resolved every image change to the literal string "images", which
+            # matches no catalog name, so every build job was skipped and the run
+            # reported green — PRs and pushes stopped building images entirely and
+            # only the 6-hourly FULL_REBUILD caught breakage (that is how the
+            # opensearch/keycloak failures in #556 reached main on a green PR).
+            CHANGED=$( ( echo "$CHANGED_FILES" | grep -E '^images/[^/]+/' | sed -E 's|^images/([^/]+)/.*|\1|'
                         echo "$BUILD_YML_IMAGES"
                       ) | grep -v '^$' | sort -u | jq -R . | jq -s .)
             echo "Changed dirs: $CHANGED"
