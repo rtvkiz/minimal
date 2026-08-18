@@ -18,6 +18,8 @@ wolfi-versioned:
   - dotnet          # dotnet-*
   - java            # openjdk-*
   - postgres-slim   # postgresql-*
+  - patroni         # patroni (unversioned) BUT pins postgresql-* like postgres-slim;
+                    # update-wolfi-packages.yml rewrites both in lockstep
 
 # wolfi-rolling: apko references an *unversioned / rolling* Wolfi package
 # (e.g. apache2, nginx-mainline, sqlite, bun). Wolfi keeps that single package at
@@ -30,7 +32,6 @@ wolfi-rolling:
   - bun             # bun (unversioned)
   - dnsmasq         # dnsmasq (unversioned)
   - vector          # vector (unversioned)
-  - patroni         # patroni (unversioned)
 
 # bespoke: SOURCE-BUILT images auto-updated by a dedicated workflow instead of
 # the shared .github/versions.yaml pipeline. Each MUST name the workflow and a

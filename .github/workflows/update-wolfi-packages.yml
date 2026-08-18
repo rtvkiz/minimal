@@ -331,7 +331,21 @@ jobs:
         run: |
           OLD="${{ steps.check.outputs.pg_current }}"
           NEW="${{ steps.check.outputs.pg_latest }}"
-          sed -i "s/$OLD/$NEW/g" images/postgres-slim/apko/*.yaml
+          OLD_VER=$(echo "$OLD" | grep -oP '\d+')
+          NEW_VER=$(echo "$NEW" | grep -oP '\d+')
+          # Rewrite the whole postgres family, not just postgresql-N: libpq, ecpg and
+          # pgaudit carry the same major and a bare postgresql-N sed left them on the
+          # old one, which would ship a mixed-major image (postgresql-19 beside
+          # libpq-18). \b keeps postgresql-18-client in scope while the anchored
+          # family list leaves unrelated pins (libxml2-16, libldap-2.6) alone.
+          #
+          # patroni pins the SAME family and must move in lockstep. It was omitted
+          # here and classified wolfi-rolling, so its pin was watched by nothing —
+          # postgres-slim would advance while patroni silently stayed behind.
+          # Detection still reads postgres-slim as the source of truth.
+          for f in images/postgres-slim/apko/*.yaml images/patroni/apko/*.yaml; do
+            sed -i -E "s/\b(postgresql|libpq|ecpg|pgaudit)-${OLD_VER}\b/\1-${NEW_VER}/g" "$f"
+          done
           BRANCH="update-postgres-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
