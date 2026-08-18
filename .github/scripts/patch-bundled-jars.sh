@@ -55,7 +55,12 @@ j() { jq -r "$1" <<<"$row"; }
 # e.g. jackson 2.21.5 before it hits Central — fetching it would 404 the build).
 # Maven layout: /<group-path>/<artifact>/<version>/<artifact>-<version>.jar
 # $1=group-path $2=artifact $3=version
-maven_url() { printf 'https://repo1.maven.org/maven2/%s/%s/%s/%s-%s.jar' "$1" "$2" "$3" "$2" "$3"; }
+# $4 = optional classifier (linux-x86_64, ...) for native/per-platform artifacts
+maven_url() {
+  local sfx=""
+  [ -n "${4:-}" ] && [ "${4:-}" != "-" ] && sfx="-$4"
+  printf 'https://repo1.maven.org/maven2/%s/%s/%s/%s-%s%s.jar' "$1" "$2" "$3" "$2" "$3" "$sfx"
+}
 published() { curl -fsSLI -o /dev/null --connect-timeout 20 --retry 2 --retry-all-errors "$(maven_url "$@")"; }
 
 # Numeric major.minor.patch compare: is $1 strictly greater than $2 ?
@@ -229,8 +234,9 @@ for i in $(seq 0 $((image_count - 1))); do
     done <<< "$SWAPS"
     inv=$(mktemp)
     if syft "$full_image" -o json >"$inv" 2>/dev/null; then
-      while IFS='|' read -r artifact gpath inst fixv sha; do
+      while IFS='|' read -r artifact gpath inst fixv sha cls; do
         [ -n "$artifact" ] || continue
+        [ "${cls:--}" = "-" ] || continue
         pfx="${artifact%%-*}"
         series="$(printf '%s' "$inst" | cut -d. -f1,2)"
         group="${gpath//\//.}"
@@ -247,7 +253,7 @@ for i in $(seq 0 $((image_count - 1))); do
           tmp=$(mktemp)
           curl -fsSL --retry 5 --retry-all-errors "$(maven_url "$gpath" "$sib" "$fixv")" -o "$tmp"
           sha2=$(sha256sum "$tmp" | awk '{print $1}'); rm -f "$tmp"
-          SWAPS="${SWAPS}${sib}|${gpath}|${sibver}|${fixv}|${sha2}"$'\n'
+          SWAPS="${SWAPS}${sib}|${gpath}|${sibver}|${fixv}|${sha2}|-"$'\n'
           seen2[$sib]=1
           echo "  family lift: $sib $sibver -> $fixv (no CVE of its own)"
         done < <(jq -r --arg g "$group" '
@@ -255,6 +261,33 @@ for i in $(seq 0 $((image_count - 1))); do
             | select((.purl // "") | test("pkg:maven/" + ($g | gsub("\\."; "\\.")) + "/"))
             | [.name, .version] | @tsv' "$inv" 2>/dev/null)
       done <<< "$SWAPS"
+      # --- classifier variants ------------------------------------------------
+      # Native artifacts ship one jar per platform
+      # (netty-codec-native-quic-<ver>-linux-x86_64.jar). A plain swap matches
+      # only the classifier-less file, so those stayed on the old version — a
+      # genuinely mixed netty that the sibling guard then failed the build over
+      # (opensearch, netty 4.2.16 -> 4.2.17). Central publishes every classifier
+      # artifact, so discover which ones this image actually ships from syft's
+      # location paths and pin one swap each.
+      CLS_ADD=""
+      while IFS='|' read -r artifact gpath inst fixv sha cls; do
+        [ -n "$artifact" ] || continue
+        [ "${cls:--}" = "-" ] || continue
+        while read -r c; do
+          [ -n "$c" ] || continue
+          published "$gpath" "$artifact" "$fixv" "$c" || {
+            echo "  classifier: $artifact $fixv has no -$c on Central, leaving it"; continue; }
+          tmp=$(mktemp)
+          curl -fsSL --retry 5 --retry-all-errors "$(maven_url "$gpath" "$artifact" "$fixv" "$c")" -o "$tmp"
+          sha3=$(sha256sum "$tmp" | awk '{print $1}'); rm -f "$tmp"
+          CLS_ADD="${CLS_ADD}${artifact}|${gpath}|${inst}|${fixv}|${sha3}|${c}"$'\n'
+          echo "  classifier: $artifact $inst -> $fixv ($c)"
+        done < <(jq -r --arg n "$artifact" '
+            .artifacts[]? | select(.name == $n) | .locations[]?.path' "$inv" 2>/dev/null \
+          | sed 's|.*/||' \
+          | sed -n "s/^.*${artifact}-${inst}-\(.*\)\.jar$/\1/p" | sort -u)
+      done <<< "$SWAPS"
+      SWAPS="${SWAPS}${CLS_ADD}"
     else
       echo "  WARN: syft inventory failed; siblings without advisories may be missed"
     fi
@@ -284,7 +317,7 @@ for i in $(seq 0 $((image_count - 1))); do
     PRIOR=$(awk -v id="$marker_id" '
       $0 ~ "# " id ": auto-generated" {inb=1; next}
       $0 ~ "# end-" id {inb=0}
-      inb && $1 == "_swap" { print $2"|"$3"|"$4"|"$5"|"$6 }
+      inb && $1 == "_swap" { print $2"|"$3"|"$4"|"$5"|"$6"|"($8==""?"-":$8) }
     ' "$melange")
     if [ -n "$PRIOR" ]; then
       scan_n=$(printf '%s' "$SWAPS" | grep -c . || true)
@@ -292,15 +325,19 @@ for i in $(seq 0 $((image_count - 1))); do
       # Scan results first, then prior: whichever carries the higher fix version
       # wins, so a newer fix supersedes an old pin and a pin nobody re-flagged
       # is still carried forward.
-      while IFS='|' read -r a g i f h; do
+      while IFS='|' read -r a g i f h c; do
         [ -n "$a" ] || continue
-        cur="${BEST[$a]:-}"
-        if [ -z "$cur" ]; then BEST[$a]="${a}|${g}|${i}|${f}|${h}"; continue; fi
+        c="${c:--}"
+        # Key on artifact AND classifier: netty-codec-native-quic and its
+        # -linux-x86_64 variant are different files, not duplicates of each other.
+        k="${a}@${c}"
+        cur="${BEST[$k]:-}"
+        if [ -z "$cur" ]; then BEST[$k]="${a}|${g}|${i}|${f}|${h}|${c}"; continue; fi
         cur_f=$(printf '%s' "$cur" | cut -d'|' -f4)
-        if ver_gt "$f" "$cur_f"; then BEST[$a]="${a}|${g}|${i}|${f}|${h}"; fi
+        if ver_gt "$f" "$cur_f"; then BEST[$k]="${a}|${g}|${i}|${f}|${h}|${c}"; fi
       done <<< "$(printf '%s\n%s\n' "$SWAPS" "$PRIOR" | grep -v '^$')"
       SWAPS=""
-      for a in "${!BEST[@]}"; do SWAPS="${SWAPS}${BEST[$a]}"$'\n'; done
+      for k in "${!BEST[@]}"; do SWAPS="${SWAPS}${BEST[$k]}"$'\n'; done
       SWAPS=$(printf '%s' "$SWAPS" | grep -v '^$' | sort)
       kept_n=$(printf '%s' "$SWAPS" | grep -c . || true)
       echo "  sticky merge: ${scan_n} from scan + prior block -> ${kept_n} swap(s)"
@@ -373,7 +410,12 @@ for i in $(seq 0 $((image_count - 1))); do
       printf '          exit 0}\x27\n'
       printf '      }\n'
     fi
-    printf '      _swap() {  # $1=artifact $2=group-path $3=oldver $4=newver $5=sha256 $6=mode\n'
+    printf '      _swap() {  # $1=artifact $2=group-path $3=oldver $4=newver $5=sha256 $6=mode $7=classifier|-\n'
+    printf '        # $7 is a per-platform classifier (linux-x86_64, ...) or "-" for the plain\n'
+    printf '        # jar. Native artifacts ship one jar per platform and the plain match skips\n'
+    printf '        # them, which left a mixed netty in opensearch. Central publishes each\n'
+    printf '        # classifier artifact, so they are pinned individually.\n'
+    printf '        _c=""; [ "$7" = "-" ] || _c="-$7"\n'
     printf '        # rename: jar filename carries the version, match it exactly. keep-filename:\n'
     printf '        # filename stays the upstream version while contents change, so match any\n'
     printf '        # version of the artifact and overwrite in place. Two anchors on that\n'
@@ -384,13 +426,14 @@ for i in $(seq 0 $((image_count - 1))); do
     printf '        # (netty-transport-native-epoll-<v>-linux-x86_64.jar), whose content is\n'
     printf '        # NOT what $1-$4.jar holds — overwriting them drops the bundled .so.\n'
     printf '        if [ "$6" = "keep-filename" ]; then\n'
-    printf '          found=$(find "${{targets.destdir}}/%s" -name "*$1-[0-9]*.jar" ! -name "*$1-[0-9]*-*.jar")\n' "$jar_root"
+    printf '          if [ -n "$_c" ]; then found=$(find "${{targets.destdir}}/%s" -name "*$1-[0-9]*$_c.jar")\n' "$jar_root"
+    printf '          else found=$(find "${{targets.destdir}}/%s" -name "*$1-[0-9]*.jar" ! -name "*$1-[0-9]*-*.jar"); fi\n' "$jar_root"
     printf '        else\n'
-    printf '          found=$(find "${{targets.destdir}}/%s" -name "*$1-$3.jar")\n' "$jar_root"
+    printf '          found=$(find "${{targets.destdir}}/%s" -name "*$1-$3$_c.jar")\n' "$jar_root"
     printf '        fi\n'
-    printf '        [ -n "$found" ] || { echo "  $1 $3 not present (upstream may already ship >=$4)"; return 0; }\n'
+    printf '        [ -n "$found" ] || { echo "  $1 $3$_c not present (upstream may already ship >=$4)"; return 0; }\n'
     printf '        curl -fsSL --retry 5 --retry-all-errors \\\n'
-    printf '          "https://repo1.maven.org/maven2/$2/$1/$4/$1-$4.jar" -o /tmp/_bj.jar\n'
+    printf '          "https://repo1.maven.org/maven2/$2/$1/$4/$1-$4$_c.jar" -o /tmp/_bj.jar\n'
     printf '        echo "$5  /tmp/_bj.jar" | sha256sum -c -\n'
     # Stamp AFTER the checksum so what we verify is the pristine Central artifact.
     if [ "$strategy" = "keep-filename" ]; then
@@ -401,14 +444,14 @@ for i in $(seq 0 $((image_count - 1))); do
     printf '            _have=$(_jarver "$f")\n'
     printf '            if _vge "$_have" "$4"; then echo "  $1 already at $_have (>= $4), leaving it"; continue; fi\n'
     printf '            cp /tmp/_bj.jar "$f"\n'
-    printf '          else cp /tmp/_bj.jar "$(dirname "$f")/$1-$4.jar"; rm -f "$f"; fi\n'
-    printf '          echo "  patched $1 $3 -> $4 ($6)"\n'
+    printf '          else cp /tmp/_bj.jar "$(dirname "$f")/$1-$4$_c.jar"; rm -f "$f"; fi\n'
+    printf '          echo "  patched $1 $3 -> $4 ($6$_c)"\n'
     printf '        done\n'
     printf '        rm -f /tmp/_bj.jar\n'
     printf '      }\n'
-    while IFS='|' read -r artifact gpath inst fixv sha; do
+    while IFS='|' read -r artifact gpath inst fixv sha cls; do
       [ -n "$artifact" ] || continue
-      printf '      _swap %s %s %s %s %s %s\n' "$artifact" "$gpath" "$inst" "$fixv" "$sha" "$strategy"
+      printf '      _swap %s %s %s %s %s %s %s\n' "$artifact" "$gpath" "$inst" "$fixv" "$sha" "$strategy" "${cls:--}"
       count=$((count + 1))
     done <<< "$SWAPS"
     # Sibling guard. A family member with no CVE of its own never appears in a
@@ -426,15 +469,16 @@ for i in $(seq 0 $((image_count - 1))); do
     if [ "$strategy" != "keep-filename" ]; then
       printf '      _strag=/tmp/_bj_stragglers; : > "$_strag"\n'
       declare -A guarded=()
-      while IFS='|' read -r artifact gpath inst fixv sha; do
+      while IFS='|' read -r artifact gpath inst fixv sha cls; do
         [ -n "$artifact" ] || continue
+        [ "${cls:--}" = "-" ] || continue   # classifier rows share the plain row's guard
         pfx="${artifact%%-*}"
         series="$(printf '%s' "$inst" | cut -d. -f1,2)"
         key="${pfx}|${series}|${fixv}"
         [ -n "${guarded[$key]:-}" ] && continue
         guarded[$key]=1
-        printf '      find "${{targets.destdir}}/%s" \\( -name "%s*-%s.*.jar" -o -name "%s*-%s.jar" \\) ! -name "*-%s.jar" >> "$_strag" 2>/dev/null || true\n' \
-          "$jar_root" "$pfx" "$series" "$pfx" "$series" "$fixv"
+        printf '      find "${{targets.destdir}}/%s" \\( -name "%s*-%s.*.jar" -o -name "%s*-%s.jar" \\) ! -name "*-%s.jar" ! -name "*-%s-*.jar" >> "$_strag" 2>/dev/null || true\n' \
+          "$jar_root" "$pfx" "$series" "$pfx" "$series" "$fixv" "$fixv"
       done <<< "$SWAPS"
       unset guarded
       printf '      if [ -s "$_strag" ]; then\n'
