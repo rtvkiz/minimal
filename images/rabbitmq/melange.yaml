@@ -11,7 +11,7 @@ package:
   # product bare, as cpe:2.3:a:rabbitmq:rabbitmq:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: rabbitmq
-  version: 4.3.4
+  version: 4.3.5
   epoch: 0
   description: "Minimal RabbitMQ message broker from official generic-unix release"
   copyright:
@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 of rabbitmq-server-generic-unix-{version}.tar.xz - updated by update-versions.yml
-  sha256: 992b73ad65856f5e0006cfb04366207c13da325462a3798d8e5ec22506219d67
+  sha256: 0b961bc6ae544c6a3411e7f1616bc2eb2dc5cc4f70a03b2131a19f9e833dbd5e
 
 environment:
   contents:
