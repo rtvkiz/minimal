@@ -11,7 +11,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:helm:helm:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: helm
-  version: 3.21.3
+  version: 4.2.4
   epoch: 0
   description: "Minimal Helm CLI for Kubernetes built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of helm source tarball - updated by update-versions.yml workflow
-  sha256: 9265b7bcad329480fe1f14547befe5da1dbbede6bbd13e3dd6bfebb00d42cb68
+  sha256: f1a1aa56fff071cfa1eecc18c6a7212b2e5c7a0a123fd8e4dcae620bd51b4286
 
 environment:
   contents:
@@ -58,7 +58,10 @@ pipeline:
       tar xzf helm.tar.gz
       rm helm.tar.gz
 
-  # Build helm — single static binary, version stamps via helm.sh/helm/v3/internal/version.
+  # Build helm — single static binary, version stamps via helm.sh/helm/v4/internal/version.
+  # Helm 4 moved the module to helm.sh/helm/v4 and DROPPED the buildDate symbol;
+  # go ignores -X on a symbol that no longer exists, so a stale v3 path or a
+  # buildDate stamp would silently produce a binary reporting no version.
 
 
   # patch-go-deps: auto-generated — do not edit manually
@@ -95,15 +98,13 @@ pipeline:
   # end-patch-go-deps
   - runs: |
       cd /home/build/helm-${{package.version}}
-      BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w \
-          -X helm.sh/helm/v3/internal/version.version=v${{package.version}} \
-          -X helm.sh/helm/v3/internal/version.metadata=source-build \
-          -X helm.sh/helm/v3/internal/version.gitCommit=source-build \
-          -X helm.sh/helm/v3/internal/version.gitTreeState=clean \
-          -X helm.sh/helm/v3/internal/version.buildDate=${BUILD_DATE}" \
+          -X helm.sh/helm/v4/internal/version.version=v${{package.version}} \
+          -X helm.sh/helm/v4/internal/version.metadata=source-build \
+          -X helm.sh/helm/v4/internal/version.gitCommit=source-build \
+          -X helm.sh/helm/v4/internal/version.gitTreeState=clean" \
         -o /home/build/helm-bin \
         ./cmd/helm
 
@@ -126,4 +127,3 @@ update:
     identifier: helm/helm
     use-tag: true
     strip-prefix: "v"
-    tag-filter: "v3."

@@ -7,8 +7,19 @@ set -eu
 echo "Testing helm version..."
 VERSION_OUT=$(docker run --rm --entrypoint /usr/bin/helm "$IMAGE" version --short)
 echo "$VERSION_OUT"
-if ! echo "$VERSION_OUT" | grep -qE '^v3\.[0-9]+\.[0-9]+'; then
-  echo "FAIL: expected v3.x.y in helm version output"
+# Assert the binary reports exactly the version the recipe built, rather than a
+# hardcoded major. Two reasons: the catalog tracks upstream across majors, so a
+# literal ^v3 assertion breaks on every major bump; and comparing against the
+# recipe also catches a broken -X ldflags path (helm 4 moved the module to
+# helm.sh/helm/v4 — a stale v3 path stamps nothing and `version --short`
+# silently reports an empty version, which ^v3 would have caught only by luck).
+EXPECTED=$(grep -m1 '^  version:' "$(dirname "$0")/melange.yaml" | awk '{print $2}')
+if [ -z "$EXPECTED" ]; then
+  echo "FAIL: could not read version from melange.yaml"
+  exit 1
+fi
+if ! echo "$VERSION_OUT" | grep -qE "^v${EXPECTED//./\\.}([+.-]|$)"; then
+  echo "FAIL: expected v${EXPECTED} in helm version output, got: ${VERSION_OUT}"
   exit 1
 fi
 
