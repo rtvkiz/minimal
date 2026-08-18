@@ -11,7 +11,7 @@ package:
   # bare, as cpe:2.3:a:otelcol:otelcol:*, so none of them matched, and the
   # Wolfi secdb missed it too.
   name: otelcol
-  version: 0.158.0
+  version: 0.159.0
   epoch: 0
   description: "Minimal OpenTelemetry Collector built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: 3a3beda63970852aec25bda5c4b1057f708a11f8ff47bc779059bf9d74437c2f
+  sha256: 3a28ae62c568e73205fc0313f7ed085ef4686db76ea663a2db46bf2dcac7e72b
 
 environment:
   contents:
