@@ -148,7 +148,7 @@ CUDA_VERSION ?= 12.9.0
 define DEV_IMAGE_RULE
 $(1)-dev: $(2)
 	@echo "Assembling minimal-$(1)-dev image with apko..."
-	apko build $(1)/apko/$(1)-dev.yaml \
+	apko build images/$(1)/apko/$(1)-dev.yaml \
 		$$(REGISTRY)/$$(OWNER)/minimal-$(1):$$(VERSION)-dev \
 		$(1)-dev.tar \
 		--arch x86_64 $(3)
@@ -166,7 +166,7 @@ endef
 # Conventions: test script lives at <name>/test-dev.sh and reads $$IMAGE.
 define DEV_TEST_RULE
 test-$(1)-dev:
-	@IMAGE=$$(REGISTRY)/$$(OWNER)/minimal-$(1):latest-dev bash $(1)/test-dev.sh
+	@IMAGE=$$(REGISTRY)/$$(OWNER)/minimal-$(1):latest-dev bash images/$(1)/test-dev.sh
 	@echo "✓ $(1) dev tests passed"
 endef
 

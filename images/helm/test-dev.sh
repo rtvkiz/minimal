@@ -7,7 +7,18 @@ set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 echo "Testing helm version (parity with prod)..."
 VERSION_OUT=$(docker run --rm --entrypoint /usr/bin/helm "$IMAGE" version --short)
 echo "$VERSION_OUT"
-echo "$VERSION_OUT" | grep -qE '^v3\.[0-9]+\.[0-9]+'
+# Same rule as test.sh: assert the recipe's version rather than a hardcoded
+# major, so this does not have to be edited on every major bump — and so a
+# broken -X ldflags path (which stamps an EMPTY version) still fails here.
+EXPECTED=$(grep -m1 '^  version:' "$(dirname "$0")/melange.yaml" | awk '{print $2}')
+if [ -z "$EXPECTED" ]; then
+  echo "FAIL: could not read version from melange.yaml"
+  exit 1
+fi
+if ! echo "$VERSION_OUT" | grep -qE "^v${EXPECTED//./\\.}([+.-]|$)"; then
+  echo "FAIL: expected v${EXPECTED} in helm version output, got: ${VERSION_OUT}"
+  exit 1
+fi
 
 echo "Testing /bin/sh (busybox)..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo sh-ok" | grep -q sh-ok
