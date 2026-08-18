@@ -35,7 +35,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Get latest release tag from GitHub API
-          LATEST_TAG=$(curl -sS --retry 3 --retry-all-errors \
+          # -f so --retry-all-errors covers HTTP errors too: without it a 403
+          # rate-limit or 5xx is treated as success, the error JSON becomes the
+          # body, nothing retries and .tag_name is null — which is exactly how
+          # this job went red on 2026-08-18 after 14 clean days.
+          LATEST_TAG=$(curl -fsS --retry 3 --retry-all-errors \
             --header "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/minio/minio/releases/latest" | \
             jq -r '.tag_name')

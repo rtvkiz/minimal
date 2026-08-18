@@ -46,7 +46,7 @@ elif [ -n "$current_grep_file" ]; then
 else
   current=$(grep -E '^  version:' "$files_first" | head -1 | awk '{print $2}')
 fi
-[ -n "$current" ] || { echo "::error::could not read current version for $name"; exit 1; }
+[ -n "$current" ] || { echo "::error::could not read current version for $name" >&2; exit 1; }
 
 # --- pin-alignment guard ---
 # The configured pin-major MUST match the current recipe's major. If it doesn't,
@@ -57,17 +57,27 @@ fi
 if [ -n "$pin_major" ]; then
   current_major="${current%%.*}"
   if [ "$current_major" != "$pin_major" ]; then
-    echo "::error::$name: pin-major=$pin_major does not match current version $current (major $current_major) — fix the row's pin-major"
+    echo "::error::$name: pin-major=$pin_major does not match current version $current (major $current_major) — fix the row's pin-major" >&2
     exit 1
   fi
 fi
 
 # --- fetch LATEST per source type ---
+# Every fetch_* below is invoked as `latest=$(fetch_...)`, so anything they
+# echo to STDOUT is captured into $latest instead of being shown. Diagnostics
+# must go to stderr or they vanish: a 404 repo aborted the row with a bare
+# exit 1 and no message at all, because set -e killed the script on the
+# function's return before the "invalid upstream version" line could print it.
 gh_curl() {
   # --max-time bounds each attempt so a stalled endpoint (server accepts the
   # connection then never sends a body — --connect-timeout alone won't catch it)
   # fails fast instead of hanging the whole update-versions job.
-  curl -sS --connect-timeout 20 --max-time 20 --retry 3 --retry-all-errors \
+  # -f is what makes --retry-all-errors actually work on HTTP errors. Without
+  # it curl treats a 403 rate-limit or a 5xx as SUCCESS (the error JSON is the
+  # body), so nothing is retried and the caller just sees an empty tag. Callers
+  # tolerate a non-zero exit and report their own descriptive error, so a
+  # genuine 404 still says "no tag from <repo>" rather than aborting on pipefail.
+  curl -fsS --connect-timeout 20 --max-time 20 --retry 3 --retry-all-errors \
     ${GH_TOKEN:+-H "Authorization: Bearer $GH_TOKEN"} \
     "$1"
 }
@@ -75,8 +85,8 @@ gh_curl() {
 fetch_github_releases_latest() {
   local repo; repo=$(j '.source.repo')
   local tag strip_prefix
-  tag=$(gh_curl "https://api.github.com/repos/${repo}/releases/latest" | jq -r '.tag_name // empty')
-  [ -n "$tag" ] || { echo "::error::no tag from $repo/releases/latest"; return 1; }
+  tag=$({ gh_curl "https://api.github.com/repos/${repo}/releases/latest" || true; } | jq -r '.tag_name // empty')
+  [ -n "$tag" ] || { echo "::error::no tag from $repo/releases/latest" >&2; return 1; }
   # Optional source.strip-prefix removes a fixed release-name prefix
   # (e.g. grafana/mimir tags releases `mimir-3.1.2`). No-op when unset.
   strip_prefix=$(j '.source["strip-prefix"] // ""')
@@ -96,15 +106,15 @@ fetch_github_tags() {
   strip_prefix=$(j '.source["strip-prefix"] // ""')
   from=$(j '.source["tag-rewrite"].from // empty')
   to=$(j '.source["tag-rewrite"].to // empty')
-  [ -n "$pattern" ] || { echo "::error::source.pattern required for github-tags"; return 1; }
-  tags=$(gh_curl "https://api.github.com/repos/${repo}/tags?per_page=100" \
+  [ -n "$pattern" ] || { echo "::error::source.pattern required for github-tags" >&2; return 1; }
+  tags=$({ gh_curl "https://api.github.com/repos/${repo}/tags?per_page=100" || true; } \
     | jq -r --arg p "$pattern" --arg s "$strip_prefix" \
         '[.[] | .name | select(test($p)) | sub("^" + $s; "")] | .[]')
   if [ -n "$from" ]; then
     tags=$(printf '%s\n' "$tags" | tr "$from" "$to")
   fi
   tags=$(printf '%s\n' "$tags" | sort -t. -k1,1n -k2,2n -k3,3n)
-  [ -n "$tags" ] || { echo "::error::no tags matching /$pattern/ in $repo"; return 1; }
+  [ -n "$tags" ] || { echo "::error::no tags matching /$pattern/ in $repo" >&2; return 1; }
 
   # Tags can be created before the release assets are published (keycloak cuts
   # the tag, then publishes `releases/download/<v>/...` minutes-to-hours later).
@@ -125,7 +135,7 @@ fetch_github_tags() {
       fi
       echo "::warning::$repo tag $v has no published release asset yet — skipping until it is" >&2
     done < <(printf '%s\n' "$tags" | tac)
-    echo "::error::no released tag matching /$pattern/ in $repo"; return 1
+    echo "::error::no released tag matching /$pattern/ in $repo" >&2; return 1
   fi
 
   printf '%s\n' "$tags" | tail -1
@@ -171,9 +181,9 @@ url_list() {
 # Pattern's capture group 1 is the version; if no group, the full match is used.
 fetch_scrape() {
   local pattern; pattern=$(j '.source.pattern')
-  [ -n "$pattern" ] || { echo "::error::source.pattern required for scrape"; return 1; }
+  [ -n "$pattern" ] || { echo "::error::source.pattern required for scrape" >&2; return 1; }
   mapfile -t urls < <(url_list)
-  local body; body=$(fetch_first_url "${urls[@]}") || { echo "::error::all scrape URLs failed"; return 1; }
+  local body; body=$(fetch_first_url "${urls[@]}") || { echo "::error::all scrape URLs failed" >&2; return 1; }
   # grep -oE returns full matches; if the pattern has a capture, post-process.
   printf '%s' "$body" | grep -oE "$pattern" \
     | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' \
@@ -183,11 +193,11 @@ fetch_scrape() {
 # Fetch URL returning JSON, run the supplied jq expression, return its output.
 fetch_json() {
   local jq_expr; jq_expr=$(j '.source.jq')
-  [ -n "$jq_expr" ] || { echo "::error::source.jq required for json"; return 1; }
+  [ -n "$jq_expr" ] || { echo "::error::source.jq required for json" >&2; return 1; }
   mapfile -t urls < <(url_list)
-  local body; body=$(fetch_first_url "${urls[@]}") || { echo "::error::all json URLs failed"; return 1; }
+  local body; body=$(fetch_first_url "${urls[@]}") || { echo "::error::all json URLs failed" >&2; return 1; }
   local out; out=$(jq -r "$jq_expr" <<<"$body")
-  [ -n "$out" ] && [ "$out" != "null" ] || { echo "::error::jq expression returned empty"; return 1; }
+  [ -n "$out" ] && [ "$out" != "null" ] || { echo "::error::jq expression returned empty" >&2; return 1; }
   printf '%s' "$out"
 }
 

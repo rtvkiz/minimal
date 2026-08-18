@@ -34,7 +34,9 @@ jobs:
           set -e
 
           # Download Wolfi package index
-          curl -sS --retry 3 --retry-all-errors https://packages.wolfi.dev/os/x86_64/APKINDEX.tar.gz -o /tmp/APKINDEX.tar.gz
+          # -f so an HTTP error is retried rather than written to the file as an
+          # error page that only fails later at tar -xzf.
+          curl -fsS --retry 3 --retry-all-errors https://packages.wolfi.dev/os/x86_64/APKINDEX.tar.gz -o /tmp/APKINDEX.tar.gz
           tar -xzf /tmp/APKINDEX.tar.gz -C /tmp
 
           # Parse APKINDEX to find available packages
