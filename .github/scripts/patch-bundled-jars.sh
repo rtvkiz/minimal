@@ -264,6 +264,50 @@ for i in $(seq 0 $((image_count - 1))); do
     echo "  WARN: syft not installed; cannot lift families, only guard them"
   fi
 
+  # --- sticky merge with the swaps already in the recipe ----------------------
+  # The scan reads the PUBLISHED image, which was built WITH the previous block
+  # applied. So a swap that worked makes its own CVE disappear, the next scan
+  # emits nothing for it, and regenerating from the scan alone DELETES the swap
+  # that was holding the fix. The next build then ships the pristine upstream
+  # jar again and the CVE returns — an oscillation with a live vulnerability
+  # window on every cycle, not the harmless "re-flagged next scan" the old
+  # comment claimed. It removed 21 netty/micrometer/postgresql swaps from
+  # keycloak in #560 exactly this way.
+  #
+  # Fix: a swap is never dropped because its CVE went quiet. Union the existing
+  # block with this scan's findings, keeping the HIGHER fix version per
+  # artifact so a genuinely newer fix still supersedes an old pin. Retained
+  # swaps are safe: rename matches the exact old filename and no-ops once
+  # upstream ships the fix, and keep-filename is version-guarded at build time
+  # (see _swap) so it can never write an older jar over a newer one.
+  if grep -q "# ${marker_id}: auto-generated" "$melange"; then
+    PRIOR=$(awk -v id="$marker_id" '
+      $0 ~ "# " id ": auto-generated" {inb=1; next}
+      $0 ~ "# end-" id {inb=0}
+      inb && $1 == "_swap" { print $2"|"$3"|"$4"|"$5"|"$6 }
+    ' "$melange")
+    if [ -n "$PRIOR" ]; then
+      scan_n=$(printf '%s' "$SWAPS" | grep -c . || true)
+      declare -A BEST=()
+      # Scan results first, then prior: whichever carries the higher fix version
+      # wins, so a newer fix supersedes an old pin and a pin nobody re-flagged
+      # is still carried forward.
+      while IFS='|' read -r a g i f h; do
+        [ -n "$a" ] || continue
+        cur="${BEST[$a]:-}"
+        if [ -z "$cur" ]; then BEST[$a]="${a}|${g}|${i}|${f}|${h}"; continue; fi
+        cur_f=$(printf '%s' "$cur" | cut -d'|' -f4)
+        if ver_gt "$f" "$cur_f"; then BEST[$a]="${a}|${g}|${i}|${f}|${h}"; fi
+      done <<< "$(printf '%s\n%s\n' "$SWAPS" "$PRIOR" | grep -v '^$')"
+      SWAPS=""
+      for a in "${!BEST[@]}"; do SWAPS="${SWAPS}${BEST[$a]}"$'\n'; done
+      SWAPS=$(printf '%s' "$SWAPS" | grep -v '^$' | sort)
+      kept_n=$(printf '%s' "$SWAPS" | grep -c . || true)
+      echo "  sticky merge: ${scan_n} from scan + prior block -> ${kept_n} swap(s)"
+      unset BEST
+    fi
+  fi
+
   [ -n "$SWAPS" ] || { echo "  Nothing to patch after filtering"; continue; }
 
   # --- regenerate the auto-block ---------------------------------------------
@@ -308,6 +352,26 @@ for i in $(seq 0 $((image_count - 1))); do
       printf '        rm -rf "$_d"\n'
       printf '        echo "  stamped $3 $4 pom.properties (jar ships none)"\n'
       printf '      }\n'
+      # Version guard for keep-filename. The block is now sticky (a swap is not
+      # dropped just because its CVE went quiet), and keep-filename matches ANY
+      # version of the artifact — so once upstream ships a jar NEWER than our
+      # pin, an unguarded swap would overwrite it with the older one. Read what
+      # the jar actually reports and skip when it is already >= the fix.
+      printf '      _jarver() {  # echo the version a jar reports, or empty\n'
+      printf '        _v=$(unzip -p "$1" "META-INF/maven/*/*/pom.properties" 2>/dev/null | sed -n "s/^version=//p" | head -1 | tr -d "\\r")\n'
+      printf '        [ -n "$_v" ] || _v=$(unzip -p "$1" META-INF/MANIFEST.MF 2>/dev/null | sed -n "s/^Implementation-Version: //p" | head -1 | tr -d "\\r")\n'
+      printf '        printf "%%s" "$_v"\n'
+      printf '      }\n'
+      printf '      _vge() {  # is $1 >= $2 ?\n'
+      printf '        [ -n "$1" ] || return 1\n'
+      printf '        awk -v a="$1" -v b="$2" \x27BEGIN{\n'
+      printf '          na=split(a,A,/[._-]/); nb=split(b,B,/[._-]/); n=(na>nb?na:nb);\n'
+      printf '          for(i=1;i<=n;i++){\n'
+      printf '            if(A[i]~/^[0-9]+$/ && B[i]~/^[0-9]+$/){\n'
+      printf '              if(A[i]+0!=B[i]+0) exit !((A[i]+0)>(B[i]+0));\n'
+      printf '            } else if(A[i]!=B[i]) exit !(A[i]>B[i]); }\n'
+      printf '          exit 0}\x27\n'
+      printf '      }\n'
     fi
     printf '      _swap() {  # $1=artifact $2=group-path $3=oldver $4=newver $5=sha256 $6=mode\n'
     printf '        # rename: jar filename carries the version, match it exactly. keep-filename:\n'
@@ -333,7 +397,10 @@ for i in $(seq 0 $((image_count - 1))); do
       printf '        _stamp /tmp/_bj.jar "$2" "$1" "$4"\n'
     fi
     printf '        for f in $found; do\n'
-    printf '          if [ "$6" = "keep-filename" ]; then cp /tmp/_bj.jar "$f";\n'
+    printf '          if [ "$6" = "keep-filename" ]; then\n'
+    printf '            _have=$(_jarver "$f")\n'
+    printf '            if _vge "$_have" "$4"; then echo "  $1 already at $_have (>= $4), leaving it"; continue; fi\n'
+    printf '            cp /tmp/_bj.jar "$f"\n'
     printf '          else cp /tmp/_bj.jar "$(dirname "$f")/$1-$4.jar"; rm -f "$f"; fi\n'
     printf '          echo "  patched $1 $3 -> $4 ($6)"\n'
     printf '        done\n'
