@@ -23,6 +23,13 @@
 #     strip-v: true to strip a leading "v" from tag names
 #     pin-major: integer; refuse upgrades that change major version. If a higher
 #                major appears, surface as next_major_* output (→ optional issue).
+#                DEFAULT POLICY IS LATEST-TRACKING: images follow upstream across
+#                majors, and the version bump itself is the notification. Only set
+#                pin-major for a DELIBERATE, DOCUMENTED hold (an LTS line), and
+#                pair it with a series-scoped source URL so the pinned line keeps
+#                receiving patches — see mariadb. A pin over an unscoped source
+#                does NOT track its line: it stops updating entirely once a newer
+#                major exists (helm sat on 3.21.3 for four weeks that way).
 #   tarball: (optional) how to fetch the artifact whose hash we record
 #     url:     template with {version} and any keys from `vars`
 #     urls:    list of templates; first that succeeds wins (mirror fallback)
@@ -44,9 +51,8 @@
 - name: qdrant
   cron-enabled: true   # wave 1
   files: [images/qdrant/melange.yaml]
-  source: { type: github-releases-latest, repo: qdrant/qdrant, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: qdrant/qdrant, strip-v: true }
   tarball: { url: "https://github.com/qdrant/qdrant/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/qdrant/qdrant/releases"
     notes: "https://github.com/qdrant/qdrant/releases/tag/v{version}"
@@ -54,9 +60,8 @@
 - name: etcd
   cron-enabled: true   # wave 2
   files: [images/etcd/melange.yaml]
-  source: { type: github-releases-latest, repo: etcd-io/etcd, strip-v: true, pin-major: 3 }
+  source: { type: github-releases-latest, repo: etcd-io/etcd, strip-v: true }
   tarball: { url: "https://github.com/etcd-io/etcd/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/etcd-io/etcd/releases"
     notes: "https://github.com/etcd-io/etcd/releases/tag/v{version}"
@@ -64,9 +69,8 @@
 - name: jaeger
   cron-enabled: true   # wave 2
   files: [images/jaeger/melange.yaml]
-  source: { type: github-releases-latest, repo: jaegertracing/jaeger, strip-v: true, pin-major: 2 }
+  source: { type: github-releases-latest, repo: jaegertracing/jaeger, strip-v: true }
   tarball: { url: "https://github.com/jaegertracing/jaeger/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/jaegertracing/jaeger/releases"
     notes: "https://github.com/jaegertracing/jaeger/releases/tag/v{version}"
@@ -74,9 +78,8 @@
 - name: prometheus
   cron-enabled: true   # wave 2
   files: [images/prometheus/melange.yaml]
-  source: { type: github-releases-latest, repo: prometheus/prometheus, strip-v: true, pin-major: 3 }
+  source: { type: github-releases-latest, repo: prometheus/prometheus, strip-v: true }
   tarball: { url: "https://github.com/prometheus/prometheus/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/prometheus/prometheus/releases"
     notes: "https://github.com/prometheus/prometheus/releases/tag/v{version}"
@@ -84,9 +87,8 @@
 - name: alertmanager
   cron-enabled: true
   files: [images/alertmanager/melange.yaml]
-  source: { type: github-releases-latest, repo: prometheus/alertmanager, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: prometheus/alertmanager, strip-v: true }
   tarball: { url: "https://github.com/prometheus/alertmanager/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/prometheus/alertmanager/releases"
     notes: "https://github.com/prometheus/alertmanager/releases/tag/v{version}"
@@ -94,11 +96,10 @@
 - name: rabbitmq
   cron-enabled: true   # wave 3
   files: [images/rabbitmq/melange.yaml]
-  source: { type: github-releases-latest, repo: rabbitmq/rabbitmq-server, strip-v: true, pin-major: 4 }
+  source: { type: github-releases-latest, repo: rabbitmq/rabbitmq-server, strip-v: true }
   tarball:
     url: "https://github.com/rabbitmq/rabbitmq-server/releases/download/v{version}/rabbitmq-server-generic-unix-{version}.tar.xz"
     field: sha256
-  major-issue: true
   links:
     releases: "https://github.com/rabbitmq/rabbitmq-server/releases"
     notes: "https://github.com/rabbitmq/rabbitmq-server/releases/tag/v{version}"
@@ -106,9 +107,8 @@
 - name: valkey
   cron-enabled: true   # wave 3
   files: [images/valkey/melange.yaml]
-  source: { type: github-releases-latest, repo: valkey-io/valkey, strip-v: true, pin-major: 9 }
+  source: { type: github-releases-latest, repo: valkey-io/valkey, strip-v: true }
   tarball: { url: "https://github.com/valkey-io/valkey/archive/refs/tags/{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/valkey-io/valkey/releases"
     notes: "https://github.com/valkey-io/valkey/releases/tag/{version}"
@@ -116,9 +116,8 @@
 - name: victoria-metrics
   cron-enabled: true   # wave 1
   files: [images/victoria-metrics/melange.yaml]
-  source: { type: github-releases-latest, repo: VictoriaMetrics/VictoriaMetrics, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: VictoriaMetrics/VictoriaMetrics, strip-v: true }
   tarball: { url: "https://github.com/VictoriaMetrics/VictoriaMetrics/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/VictoriaMetrics/VictoriaMetrics/releases"
     notes: "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v{version}"
@@ -135,9 +134,8 @@
 - name: opentofu
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/opentofu/melange.yaml]
-  source: { type: github-releases-latest, repo: opentofu/opentofu, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: opentofu/opentofu, strip-v: true }
   tarball: { url: "https://github.com/opentofu/opentofu/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/opentofu/opentofu/releases"
     notes: "https://github.com/opentofu/opentofu/releases/tag/v{version}"
@@ -145,9 +143,8 @@
 - name: trivy
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/trivy/melange.yaml]
-  source: { type: github-releases-latest, repo: aquasecurity/trivy, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: aquasecurity/trivy, strip-v: true }
   tarball: { url: "https://github.com/aquasecurity/trivy/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/aquasecurity/trivy/releases"
     notes: "https://github.com/aquasecurity/trivy/releases/tag/v{version}"
@@ -155,9 +152,8 @@
 - name: cosign
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/cosign/melange.yaml]
-  source: { type: github-releases-latest, repo: sigstore/cosign, strip-v: true, pin-major: 3 }
+  source: { type: github-releases-latest, repo: sigstore/cosign, strip-v: true }
   tarball: { url: "https://github.com/sigstore/cosign/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/sigstore/cosign/releases"
     notes: "https://github.com/sigstore/cosign/releases/tag/v{version}"
@@ -165,9 +161,8 @@
 - name: syft
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/syft/melange.yaml]
-  source: { type: github-releases-latest, repo: anchore/syft, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: anchore/syft, strip-v: true }
   tarball: { url: "https://github.com/anchore/syft/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/anchore/syft/releases"
     notes: "https://github.com/anchore/syft/releases/tag/v{version}"
@@ -175,9 +170,8 @@
 - name: grype
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/grype/melange.yaml]
-  source: { type: github-releases-latest, repo: anchore/grype, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: anchore/grype, strip-v: true }
   tarball: { url: "https://github.com/anchore/grype/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/anchore/grype/releases"
     notes: "https://github.com/anchore/grype/releases/tag/v{version}"
@@ -185,9 +179,8 @@
 - name: oras
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/oras/melange.yaml]
-  source: { type: github-releases-latest, repo: oras-project/oras, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: oras-project/oras, strip-v: true }
   tarball: { url: "https://github.com/oras-project/oras/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/oras-project/oras/releases"
     notes: "https://github.com/oras-project/oras/releases/tag/v{version}"
@@ -195,9 +188,8 @@
 - name: gitleaks
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/gitleaks/melange.yaml]
-  source: { type: github-releases-latest, repo: gitleaks/gitleaks, strip-v: true, pin-major: 8 }
+  source: { type: github-releases-latest, repo: gitleaks/gitleaks, strip-v: true }
   tarball: { url: "https://github.com/gitleaks/gitleaks/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/gitleaks/gitleaks/releases"
     notes: "https://github.com/gitleaks/gitleaks/releases/tag/v{version}"
@@ -205,9 +197,8 @@
 - name: step-cli
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/step-cli/melange.yaml]
-  source: { type: github-releases-latest, repo: smallstep/cli, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: smallstep/cli, strip-v: true }
   tarball: { url: "https://github.com/smallstep/cli/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/smallstep/cli/releases"
     notes: "https://github.com/smallstep/cli/releases/tag/v{version}"
@@ -215,9 +206,8 @@
 - name: opa
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/opa/melange.yaml]
-  source: { type: github-releases-latest, repo: open-policy-agent/opa, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: open-policy-agent/opa, strip-v: true }
   tarball: { url: "https://github.com/open-policy-agent/opa/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/open-policy-agent/opa/releases"
     notes: "https://github.com/open-policy-agent/opa/releases/tag/v{version}"
@@ -226,9 +216,8 @@
 - name: osv-scanner
   cron-enabled: true   # wave 9 (validated 2026-07-12)
   files: [images/osv-scanner/melange.yaml]
-  source: { type: github-releases-latest, repo: google/osv-scanner, strip-v: true, pin-major: 2 }
+  source: { type: github-releases-latest, repo: google/osv-scanner, strip-v: true }
   tarball: { url: "https://github.com/google/osv-scanner/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/google/osv-scanner/releases"
     notes: "https://github.com/google/osv-scanner/releases/tag/v{version}"
@@ -236,9 +225,8 @@
 - name: notation
   cron-enabled: true   # wave 9 (validated 2026-07-12)
   files: [images/notation/melange.yaml]
-  source: { type: github-releases-latest, repo: notaryproject/notation, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: notaryproject/notation, strip-v: true }
   tarball: { url: "https://github.com/notaryproject/notation/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/notaryproject/notation/releases"
     notes: "https://github.com/notaryproject/notation/releases/tag/v{version}"
@@ -246,9 +234,8 @@
 - name: conftest
   cron-enabled: true   # wave 9 (validated 2026-07-12)
   files: [images/conftest/melange.yaml]
-  source: { type: github-releases-latest, repo: open-policy-agent/conftest, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: open-policy-agent/conftest, strip-v: true }
   tarball: { url: "https://github.com/open-policy-agent/conftest/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/open-policy-agent/conftest/releases"
     notes: "https://github.com/open-policy-agent/conftest/releases/tag/v{version}"
@@ -256,9 +243,8 @@
 - name: kubeconform
   cron-enabled: true   # wave 9 (validated 2026-07-12)
   files: [images/kubeconform/melange.yaml]
-  source: { type: github-releases-latest, repo: yannh/kubeconform, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: yannh/kubeconform, strip-v: true }
   tarball: { url: "https://github.com/yannh/kubeconform/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/yannh/kubeconform/releases"
     notes: "https://github.com/yannh/kubeconform/releases/tag/v{version}"
@@ -266,9 +252,8 @@
 - name: kube-bench
   cron-enabled: true   # wave 9 (validated 2026-07-12)
   files: [images/kube-bench/melange.yaml]
-  source: { type: github-releases-latest, repo: aquasecurity/kube-bench, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: aquasecurity/kube-bench, strip-v: true }
   tarball: { url: "https://github.com/aquasecurity/kube-bench/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/aquasecurity/kube-bench/releases"
     notes: "https://github.com/aquasecurity/kube-bench/releases/tag/v{version}"
@@ -276,9 +261,8 @@
 - name: trufflehog
   cron-enabled: true   # wave 9 (validated 2026-07-12)
   files: [images/trufflehog/melange.yaml]
-  source: { type: github-releases-latest, repo: trufflesecurity/trufflehog, strip-v: true, pin-major: 3 }
+  source: { type: github-releases-latest, repo: trufflesecurity/trufflehog, strip-v: true }
   tarball: { url: "https://github.com/trufflesecurity/trufflehog/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/trufflesecurity/trufflehog/releases"
     notes: "https://github.com/trufflesecurity/trufflehog/releases/tag/v{version}"
@@ -287,9 +271,8 @@
 - name: oauth2-proxy
   cron-enabled: true   # tier 1 (validated 2026-07-12)
   files: [images/oauth2-proxy/melange.yaml]
-  source: { type: github-releases-latest, repo: oauth2-proxy/oauth2-proxy, strip-v: true, pin-major: 7 }
+  source: { type: github-releases-latest, repo: oauth2-proxy/oauth2-proxy, strip-v: true }
   tarball: { url: "https://github.com/oauth2-proxy/oauth2-proxy/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/oauth2-proxy/oauth2-proxy/releases"
     notes: "https://github.com/oauth2-proxy/oauth2-proxy/releases/tag/v{version}"
@@ -297,9 +280,8 @@
 - name: flux
   cron-enabled: true   # tier 1 (validated 2026-07-12)
   files: [images/flux/melange.yaml]
-  source: { type: github-releases-latest, repo: fluxcd/flux2, strip-v: true, pin-major: 2 }
+  source: { type: github-releases-latest, repo: fluxcd/flux2, strip-v: true }
   tarball: { url: "https://github.com/fluxcd/flux2/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/fluxcd/flux2/releases"
     notes: "https://github.com/fluxcd/flux2/releases/tag/v{version}"
@@ -309,9 +291,8 @@
   files: [images/kustomize/melange.yaml]
   # kustomize is a monorepo — api/kyaml/ tags crowd out kustomize/vX from the
   # tags API, but /releases/latest returns the CLI release. strip the prefix.
-  source: { type: github-releases-latest, repo: kubernetes-sigs/kustomize, strip-prefix: 'kustomize/v', pin-major: 5 }
+  source: { type: github-releases-latest, repo: kubernetes-sigs/kustomize, strip-prefix: 'kustomize/v' }
   tarball: { url: "https://github.com/kubernetes-sigs/kustomize/archive/refs/tags/kustomize/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/kubernetes-sigs/kustomize/releases"
     notes: "https://github.com/kubernetes-sigs/kustomize/releases/tag/v{version}"
@@ -319,9 +300,8 @@
 - name: sops
   cron-enabled: true   # tier 1 (validated 2026-07-12)
   files: [images/sops/melange.yaml]
-  source: { type: github-releases-latest, repo: getsops/sops, strip-v: true, pin-major: 3 }
+  source: { type: github-releases-latest, repo: getsops/sops, strip-v: true }
   tarball: { url: "https://github.com/getsops/sops/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/getsops/sops/releases"
     notes: "https://github.com/getsops/sops/releases/tag/v{version}"
@@ -329,9 +309,8 @@
 - name: crane
   cron-enabled: true   # tier 1 (validated 2026-07-12)
   files: [images/crane/melange.yaml]
-  source: { type: github-releases-latest, repo: google/go-containerregistry, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: google/go-containerregistry, strip-v: true }
   tarball: { url: "https://github.com/google/go-containerregistry/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/google/go-containerregistry/releases"
     notes: "https://github.com/google/go-containerregistry/releases/tag/v{version}"
@@ -341,9 +320,8 @@
   files: [images/kubeseal/melange.yaml]
   # canonical repo is bitnami/sealed-secrets (bitnami-labs 301-redirects; the
   # resolver's raw curl won't follow it — same gotcha as eclipse/mosquitto).
-  source: { type: github-releases-latest, repo: bitnami/sealed-secrets, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: bitnami/sealed-secrets, strip-v: true }
   tarball: { url: "https://github.com/bitnami/sealed-secrets/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/bitnami/sealed-secrets/releases"
     notes: "https://github.com/bitnami/sealed-secrets/releases/tag/v{version}"
@@ -351,9 +329,8 @@
 - name: helmfile
   cron-enabled: true   # tier 2 (validated 2026-07-12)
   files: [images/helmfile/melange.yaml]
-  source: { type: github-releases-latest, repo: helmfile/helmfile, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: helmfile/helmfile, strip-v: true }
   tarball: { url: "https://github.com/helmfile/helmfile/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/helmfile/helmfile/releases"
     notes: "https://github.com/helmfile/helmfile/releases/tag/v{version}"
@@ -361,9 +338,8 @@
 - name: regctl
   cron-enabled: true   # tier 2 (validated 2026-07-12)
   files: [images/regctl/melange.yaml]
-  source: { type: github-releases-latest, repo: regclient/regclient, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: regclient/regclient, strip-v: true }
   tarball: { url: "https://github.com/regclient/regclient/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/regclient/regclient/releases"
     notes: "https://github.com/regclient/regclient/releases/tag/v{version}"
@@ -371,9 +347,8 @@
 - name: stern
   cron-enabled: true   # tier 2 (validated 2026-07-12)
   files: [images/stern/melange.yaml]
-  source: { type: github-releases-latest, repo: stern/stern, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: stern/stern, strip-v: true }
   tarball: { url: "https://github.com/stern/stern/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/stern/stern/releases"
     notes: "https://github.com/stern/stern/releases/tag/v{version}"
@@ -382,9 +357,8 @@
 - name: thanos
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/thanos/melange.yaml]
-  source: { type: github-releases-latest, repo: thanos-io/thanos, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: thanos-io/thanos, strip-v: true }
   tarball: { url: "https://github.com/thanos-io/thanos/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/thanos-io/thanos/releases"
     notes: "https://github.com/thanos-io/thanos/releases/tag/v{version}"
@@ -392,9 +366,8 @@
 - name: node-exporter
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/node-exporter/melange.yaml]
-  source: { type: github-releases-latest, repo: prometheus/node_exporter, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: prometheus/node_exporter, strip-v: true }
   tarball: { url: "https://github.com/prometheus/node_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/prometheus/node_exporter/releases"
     notes: "https://github.com/prometheus/node_exporter/releases/tag/v{version}"
@@ -402,9 +375,8 @@
 - name: kube-state-metrics
   cron-enabled: true   # onboarded 2026-08-14 (dispatch-validated)
   files: [images/kube-state-metrics/melange.yaml]
-  source: { type: github-releases-latest, repo: kubernetes/kube-state-metrics, strip-v: true, pin-major: 2 }
+  source: { type: github-releases-latest, repo: kubernetes/kube-state-metrics, strip-v: true }
   tarball: { url: "https://github.com/kubernetes/kube-state-metrics/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/kubernetes/kube-state-metrics/releases"
     notes: "https://github.com/kubernetes/kube-state-metrics/releases/tag/v{version}"
@@ -412,9 +384,8 @@
 - name: redis-exporter
   cron-enabled: true   # onboarded 2026-08-14 (dispatch-validated)
   files: [images/redis-exporter/melange.yaml]
-  source: { type: github-releases-latest, repo: oliver006/redis_exporter, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: oliver006/redis_exporter, strip-v: true }
   tarball: { url: "https://github.com/oliver006/redis_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/oliver006/redis_exporter/releases"
     notes: "https://github.com/oliver006/redis_exporter/releases/tag/v{version}"
@@ -424,9 +395,8 @@
   files: [images/vaultwarden/melange.yaml]
   # pattern is mandatory for github-tags (check-upstream.sh exits 1 without it).
   # Upstream tags are bare versions with no leading v, so no strip-prefix.
-  source: { type: github-tags, repo: dani-garcia/vaultwarden, pattern: '^[0-9]+\.[0-9]+\.[0-9]+$', pin-major: 1 }
+  source: { type: github-tags, repo: dani-garcia/vaultwarden, pattern: '^[0-9]+\.[0-9]+\.[0-9]+$' }
   tarball: { url: "https://github.com/dani-garcia/vaultwarden/archive/refs/tags/{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/dani-garcia/vaultwarden/releases"
     notes: "https://github.com/dani-garcia/vaultwarden/releases/tag/{version}"
@@ -436,9 +406,8 @@
   files: [images/flink/melange.yaml]
   # Upstream tags releases as release-X.Y.Z; pattern is mandatory for
   # github-tags (check-upstream.sh exits 1 without it).
-  source: { type: github-tags, repo: apache/flink, pattern: '^release-[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'release-', pin-major: 2 }
+  source: { type: github-tags, repo: apache/flink, pattern: '^release-[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'release-' }
   tarball: { url: "https://archive.apache.org/dist/flink/flink-{version}/flink-{version}-bin-scala_2.12.tgz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://flink.apache.org/downloads/"
     notes: "https://nightlies.apache.org/flink/flink-docs-release-{version}/"
@@ -446,9 +415,8 @@
 - name: blackbox-exporter
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/blackbox-exporter/melange.yaml]
-  source: { type: github-releases-latest, repo: prometheus/blackbox_exporter, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: prometheus/blackbox_exporter, strip-v: true }
   tarball: { url: "https://github.com/prometheus/blackbox_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/prometheus/blackbox_exporter/releases"
     notes: "https://github.com/prometheus/blackbox_exporter/releases/tag/v{version}"
@@ -456,9 +424,8 @@
 - name: pushgateway
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/pushgateway/melange.yaml]
-  source: { type: github-releases-latest, repo: prometheus/pushgateway, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: prometheus/pushgateway, strip-v: true }
   tarball: { url: "https://github.com/prometheus/pushgateway/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/prometheus/pushgateway/releases"
     notes: "https://github.com/prometheus/pushgateway/releases/tag/v{version}"
@@ -470,9 +437,8 @@
 - name: consul
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/consul/melange.yaml]
-  source: { type: github-releases-latest, repo: hashicorp/consul, strip-v: true, pin-major: 2 }
+  source: { type: github-releases-latest, repo: hashicorp/consul, strip-v: true }
   tarball: { url: "https://github.com/hashicorp/consul/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/hashicorp/consul/releases"
     notes: "https://github.com/hashicorp/consul/releases/tag/v{version}"
@@ -480,9 +446,8 @@
 - name: mailpit
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/mailpit/melange.yaml]
-  source: { type: github-releases-latest, repo: axllent/mailpit, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: axllent/mailpit, strip-v: true }
   tarball: { url: "https://github.com/axllent/mailpit/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/axllent/mailpit/releases"
     notes: "https://github.com/axllent/mailpit/releases/tag/v{version}"
@@ -490,9 +455,8 @@
 - name: registry
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/registry/melange.yaml]
-  source: { type: github-releases-latest, repo: distribution/distribution, strip-v: true, pin-major: 3 }
+  source: { type: github-releases-latest, repo: distribution/distribution, strip-v: true }
   tarball: { url: "https://github.com/distribution/distribution/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/distribution/distribution/releases"
     notes: "https://github.com/distribution/distribution/releases/tag/v{version}"
@@ -500,9 +464,8 @@
 - name: telegraf
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/telegraf/melange.yaml]
-  source: { type: github-releases-latest, repo: influxdata/telegraf, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: influxdata/telegraf, strip-v: true }
   tarball: { url: "https://github.com/influxdata/telegraf/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/influxdata/telegraf/releases"
     notes: "https://github.com/influxdata/telegraf/releases/tag/v{version}"
@@ -510,9 +473,8 @@
 - name: tempo
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/tempo/melange.yaml]
-  source: { type: github-releases-latest, repo: grafana/tempo, strip-v: true, pin-major: 3 }
+  source: { type: github-releases-latest, repo: grafana/tempo, strip-v: true }
   tarball: { url: "https://github.com/grafana/tempo/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/grafana/tempo/releases"
     notes: "https://github.com/grafana/tempo/releases/tag/v{version}"
@@ -522,9 +484,8 @@
 - name: kubectl
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/kubectl/melange.yaml]
-  source: { type: github-releases-latest, repo: kubernetes/kubernetes, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: kubernetes/kubernetes, strip-v: true }
   tarball: { url: "https://github.com/kubernetes/kubernetes/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/kubernetes/kubernetes/releases"
     notes: "https://github.com/kubernetes/kubernetes/releases/tag/v{version}"
@@ -535,9 +496,8 @@
 - name: mimir
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/mimir/melange.yaml]
-  source: { type: github-releases-latest, repo: grafana/mimir, strip-prefix: "mimir-", pin-major: 3 }
+  source: { type: github-releases-latest, repo: grafana/mimir, strip-prefix: "mimir-" }
   tarball: { url: "https://github.com/grafana/mimir/archive/refs/tags/mimir-{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/grafana/mimir/releases"
     notes: "https://github.com/grafana/mimir/releases/tag/mimir-{version}"
@@ -551,9 +511,8 @@
 - name: caddy
   cron-enabled: true   # wave 3
   files: [images/caddy/melange.yaml]
-  source: { type: github-tags, repo: caddyserver/caddy, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  source: { type: github-tags, repo: caddyserver/caddy, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://github.com/caddyserver/caddy/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/caddyserver/caddy/releases"
     notes: "https://github.com/caddyserver/caddy/releases/tag/v{version}"
@@ -561,9 +520,8 @@
 - name: coredns
   cron-enabled: true   # wave 3
   files: [images/coredns/melange.yaml]
-  source: { type: github-tags, repo: coredns/coredns, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 1 }
+  source: { type: github-tags, repo: coredns/coredns, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://github.com/coredns/coredns/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/coredns/coredns/releases"
     notes: "https://github.com/coredns/coredns/releases/tag/v{version}"
@@ -571,9 +529,8 @@
 - name: fluent-bit
   cron-enabled: true   # wave 4
   files: [images/fluent-bit/melange.yaml]
-  source: { type: github-tags, repo: fluent/fluent-bit, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 5 }
+  source: { type: github-tags, repo: fluent/fluent-bit, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://github.com/fluent/fluent-bit/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/fluent/fluent-bit/releases"
     notes: "https://github.com/fluent/fluent-bit/releases/tag/v{version}"
@@ -581,9 +538,8 @@
 - name: gitea
   cron-enabled: true   # wave 4
   files: [images/gitea/melange.yaml]
-  source: { type: github-tags, repo: go-gitea/gitea, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 1 }
+  source: { type: github-tags, repo: go-gitea/gitea, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://github.com/go-gitea/gitea/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/go-gitea/gitea/releases"
     notes: "https://github.com/go-gitea/gitea/releases/tag/v{version}"
@@ -591,9 +547,8 @@
 - name: haproxy
   cron-enabled: true   # wave 4
   files: [images/haproxy/melange.yaml]
-  source: { type: github-tags, repo: haproxy/haproxy, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
+  source: { type: github-tags, repo: haproxy/haproxy, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://www.haproxy.org/download/{minor}/src/haproxy-{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://www.haproxy.org/#down"
     notes: "https://www.haproxy.org/news.html"
@@ -601,9 +556,8 @@
 - name: keycloak
   cron-enabled: true   # wave 4
   files: [images/keycloak/melange.yaml]
-  source: { type: github-tags, repo: keycloak/keycloak, pattern: '^[0-9]+\.[0-9]+\.[0-9]+$', pin-major: 26 }
+  source: { type: github-tags, repo: keycloak/keycloak, pattern: '^[0-9]+\.[0-9]+\.[0-9]+$' }
   tarball: { url: "https://github.com/keycloak/keycloak/releases/download/{version}/keycloak-{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/keycloak/keycloak/releases"
     notes: "https://github.com/keycloak/keycloak/releases/tag/{version}"
@@ -611,9 +565,8 @@
 - name: loki
   cron-enabled: true   # wave 4
   files: [images/loki/melange.yaml]
-  source: { type: github-tags, repo: grafana/loki, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
+  source: { type: github-tags, repo: grafana/loki, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://github.com/grafana/loki/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/grafana/loki/releases"
     notes: "https://github.com/grafana/loki/releases/tag/v{version}"
@@ -621,9 +574,8 @@
 - name: nats
   cron-enabled: true   # wave 4
   files: [images/nats/melange.yaml]
-  source: { type: github-tags, repo: nats-io/nats-server, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  source: { type: github-tags, repo: nats-io/nats-server, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://github.com/nats-io/nats-server/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/nats-io/nats-server/releases"
     notes: "https://github.com/nats-io/nats-server/releases/tag/v{version}"
@@ -631,9 +583,8 @@
 - name: openbao
   cron-enabled: true   # wave 4
   files: [images/openbao/melange.yaml]
-  source: { type: github-tags, repo: openbao/openbao, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  source: { type: github-tags, repo: openbao/openbao, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://github.com/openbao/openbao/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/openbao/openbao/releases"
     notes: "https://github.com/openbao/openbao/releases/tag/v{version}"
@@ -641,22 +592,19 @@
 - name: traefik
   cron-enabled: true   # wave 4
   files: [images/traefik/melange.yaml]
-  source: { type: github-tags, repo: traefik/traefik, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
+  source: { type: github-tags, repo: traefik/traefik, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://github.com/traefik/traefik/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/traefik/traefik/releases"
     notes: "https://github.com/traefik/traefik/releases/tag/v{version}"
 
-# helm MUST use github-tags pinned to ^v3: releases/latest returns 4.x (Helm 4
-# shipped), so releases-latest would never bump the 3.x line — it'd only ever
-# flag the new major. github-tags with a v3 pattern tracks 3.x patches.
+# helm tracks latest across majors (default policy). The tag pattern only filters
+# out pre-release/rc tags; it deliberately does not constrain the major.
 - name: helm
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/helm/melange.yaml]
-  source: { type: github-tags, repo: helm/helm, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 3 }
+  source: { type: github-tags, repo: helm/helm, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://github.com/helm/helm/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/helm/helm/releases"
     notes: "https://github.com/helm/helm/releases/tag/v{version}"
@@ -668,9 +616,8 @@
 - name: mosquitto
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/mosquitto/melange.yaml]
-  source: { type: github-tags, repo: eclipse-mosquitto/mosquitto, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  source: { type: github-tags, repo: eclipse-mosquitto/mosquitto, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://mosquitto.org/files/source/mosquitto-{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/eclipse-mosquitto/mosquitto/releases"
     notes: "https://github.com/eclipse-mosquitto/mosquitto/blob/v{version}/ChangeLog.txt"
@@ -681,9 +628,8 @@
 - name: pgbouncer
   cron-enabled: true   # wave 10 (dispatch-validated 2026-07-16)
   files: [images/pgbouncer/melange.yaml]
-  source: { type: github-tags, repo: pgbouncer/pgbouncer, pattern: '^pgbouncer_[0-9]+_[0-9]+_[0-9]+$', strip-prefix: 'pgbouncer_', tag-rewrite: { from: '_', to: '.' }, pin-major: 1 }
+  source: { type: github-tags, repo: pgbouncer/pgbouncer, pattern: '^pgbouncer_[0-9]+_[0-9]+_[0-9]+$', strip-prefix: 'pgbouncer_', tag-rewrite: { from: '_', to: '.' } }
   tarball: { url: "https://www.pgbouncer.org/downloads/files/{version}/pgbouncer-{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/pgbouncer/pgbouncer/releases"
     notes: "https://github.com/pgbouncer/pgbouncer/releases/tag/pgbouncer_{version}"
@@ -693,9 +639,8 @@
 - name: unbound
   cron-enabled: true   # wave 10 (dispatch-validated 2026-07-16)
   files: [images/unbound/melange.yaml]
-  source: { type: github-tags, repo: NLnetLabs/unbound, pattern: '^release-[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'release-', pin-major: 1 }
+  source: { type: github-tags, repo: NLnetLabs/unbound, pattern: '^release-[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'release-' }
   tarball: { url: "https://nlnetlabs.nl/downloads/unbound/unbound-{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/NLnetLabs/unbound/releases"
     notes: "https://github.com/NLnetLabs/unbound/releases/tag/release-{version}"
@@ -703,9 +648,8 @@
 - name: keepalived
   cron-enabled: true   # wave 12 (check-upstream validated 2026-07-27: current=2.4.3 latest=2.4.3)
   files: [images/keepalived/melange.yaml]
-  source: { type: github-tags, repo: acassen/keepalived, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v', pin-major: 2 }
+  source: { type: github-tags, repo: acassen/keepalived, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://www.keepalived.org/software/keepalived-{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/acassen/keepalived/releases"
     notes: "https://github.com/acassen/keepalived/releases/tag/v{version}"
@@ -713,9 +657,8 @@
 - name: metrics-server
   cron-enabled: true   # wave 13 (check-upstream validated 2026-07-30: current=0.9.0 latest=0.9.0)
   files: [images/metrics-server/melange.yaml]
-  source: { type: github-releases-latest, repo: kubernetes-sigs/metrics-server, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: kubernetes-sigs/metrics-server, strip-v: true }
   tarball: { url: "https://github.com/kubernetes-sigs/metrics-server/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/kubernetes-sigs/metrics-server/releases"
     notes: "https://github.com/kubernetes-sigs/metrics-server/releases/tag/v{version}"
@@ -723,9 +666,8 @@
 - name: external-dns
   cron-enabled: true   # wave 11 (dispatch-validated 2026-07-18)
   files: [images/external-dns/melange.yaml]
-  source: { type: github-releases-latest, repo: kubernetes-sigs/external-dns, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: kubernetes-sigs/external-dns, strip-v: true }
   tarball: { url: "https://github.com/kubernetes-sigs/external-dns/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/kubernetes-sigs/external-dns/releases"
     notes: "https://github.com/kubernetes-sigs/external-dns/releases/tag/v{version}"
@@ -736,9 +678,8 @@
 - name: velero
   cron-enabled: true   # wave 11 (dispatch-validated 2026-07-18)
   files: [images/velero/melange.yaml]
-  source: { type: github-releases-latest, repo: velero-io/velero, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: velero-io/velero, strip-v: true }
   tarball: { url: "https://github.com/velero-io/velero/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/velero-io/velero/releases"
     notes: "https://github.com/velero-io/velero/releases/tag/v{version}"
@@ -746,9 +687,8 @@
 - name: kaniko
   cron-enabled: true   # wave 11 (dispatch-validated 2026-07-18)
   files: [images/kaniko/melange.yaml]
-  source: { type: github-releases-latest, repo: GoogleContainerTools/kaniko, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: GoogleContainerTools/kaniko, strip-v: true }
   tarball: { url: "https://github.com/GoogleContainerTools/kaniko/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/GoogleContainerTools/kaniko/releases"
     notes: "https://github.com/GoogleContainerTools/kaniko/releases/tag/v{version}"
@@ -757,9 +697,8 @@
 - name: step-ca
   cron-enabled: true   # wave 11 (dispatch-validated 2026-07-18)
   files: [images/step-ca/melange.yaml]
-  source: { type: github-releases-latest, repo: smallstep/certificates, strip-v: true, pin-major: 0 }
+  source: { type: github-releases-latest, repo: smallstep/certificates, strip-v: true }
   tarball: { url: "https://github.com/smallstep/certificates/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/smallstep/certificates/releases"
     notes: "https://github.com/smallstep/certificates/releases/tag/v{version}"
@@ -771,9 +710,8 @@
 - name: skopeo
   cron-enabled: true   # wave 11 (dispatch-validated 2026-07-18)
   files: [images/skopeo/melange.yaml]
-  source: { type: github-releases-latest, repo: podman-container-tools/skopeo, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: podman-container-tools/skopeo, strip-v: true }
   tarball: { url: "https://github.com/podman-container-tools/skopeo/archive/refs/tags/v{version}.tar.gz", field: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/podman-container-tools/skopeo/releases"
     notes: "https://github.com/podman-container-tools/skopeo/releases/tag/v{version}"
@@ -804,14 +742,12 @@
       - "https://dlcdn.apache.org/kafka/"
       - "https://downloads.apache.org/kafka/"
     pattern: 'href="[0-9]+\.[0-9]+\.[0-9]+/"'
-    pin-major: 4
   tarball:
     urls:
       - "https://dlcdn.apache.org/kafka/{version}/kafka_2.13-{version}.tgz"
       - "https://downloads.apache.org/kafka/{version}/kafka_2.13-{version}.tgz"
       - "https://archive.apache.org/dist/kafka/{version}/kafka_2.13-{version}.tgz"
     field: sha512
-  major-issue: true
   links:
     releases: "https://kafka.apache.org/downloads"
     notes: "https://archive.apache.org/dist/kafka/{version}/RELEASE_NOTES.html"
@@ -825,14 +761,12 @@
       - "https://downloads.apache.org/zookeeper/"
       - "https://dlcdn.apache.org/zookeeper/"
     pattern: 'href="zookeeper-([0-9]+\.[0-9]+\.[0-9]+)/"'
-    pin-major: 3
   tarball:
     urls:
       - "https://downloads.apache.org/zookeeper/zookeeper-{version}/apache-zookeeper-{version}-bin.tar.gz"
       - "https://dlcdn.apache.org/zookeeper/zookeeper-{version}/apache-zookeeper-{version}-bin.tar.gz"
       - "https://archive.apache.org/dist/zookeeper/zookeeper-{version}/apache-zookeeper-{version}-bin.tar.gz"
     field: sha512
-  major-issue: true
   links:
     releases: "https://zookeeper.apache.org/releases.html"
     notes: "https://archive.apache.org/dist/zookeeper/zookeeper-{version}/"
@@ -846,14 +780,12 @@
       - "https://downloads.apache.org/cassandra/"
       - "https://dlcdn.apache.org/cassandra/"
     pattern: 'href="([0-9]+\.[0-9]+\.[0-9]+)/"'
-    pin-major: 5
   tarball:
     urls:
       - "https://downloads.apache.org/cassandra/{version}/apache-cassandra-{version}-bin.tar.gz"
       - "https://dlcdn.apache.org/cassandra/{version}/apache-cassandra-{version}-bin.tar.gz"
       - "https://archive.apache.org/dist/cassandra/{version}/apache-cassandra-{version}-bin.tar.gz"
     field: sha512
-  major-issue: true
   links:
     releases: "https://cassandra.apache.org/download/"
     notes: "https://github.com/apache/cassandra/blob/cassandra-{version}/CHANGES.txt"
@@ -867,14 +799,12 @@
       - "https://downloads.apache.org/solr/solr/"
       - "https://dlcdn.apache.org/solr/solr/"
     pattern: 'href="([0-9]+\.[0-9]+\.[0-9]+)/"'
-    pin-major: 10
   tarball:
     urls:
       - "https://downloads.apache.org/solr/solr/{version}/solr-{version}.tgz"
       - "https://dlcdn.apache.org/solr/solr/{version}/solr-{version}.tgz"
       - "https://archive.apache.org/dist/solr/solr/{version}/solr-{version}.tgz"
     field: sha512
-  major-issue: true
   links:
     releases: "https://solr.apache.org/downloads.html"
     notes: "https://solr.apache.org/guide/solr/latest/index.html"
@@ -888,14 +818,12 @@
       - "https://downloads.apache.org/pulsar/"
       - "https://dlcdn.apache.org/pulsar/"
     pattern: 'href="pulsar-([0-9]+\.[0-9]+\.[0-9]+)/"'
-    pin-major: 4
   tarball:
     urls:
       - "https://downloads.apache.org/pulsar/pulsar-{version}/apache-pulsar-{version}-bin.tar.gz"
       - "https://dlcdn.apache.org/pulsar/pulsar-{version}/apache-pulsar-{version}-bin.tar.gz"
       - "https://archive.apache.org/dist/pulsar/pulsar-{version}/apache-pulsar-{version}-bin.tar.gz"
     field: sha512
-  major-issue: true
   links:
     releases: "https://pulsar.apache.org/download/"
     notes: "https://pulsar.apache.org/release-notes/"
@@ -913,14 +841,12 @@
       - "https://downloads.apache.org/tomcat/tomcat-11/"
       - "https://dlcdn.apache.org/tomcat/tomcat-11/"
     pattern: 'href="v(11\.[0-9]+\.[0-9]+)/"'
-    pin-major: 11
   tarball:
     urls:
       - "https://downloads.apache.org/tomcat/tomcat-11/v{version}/bin/apache-tomcat-{version}.tar.gz"
       - "https://dlcdn.apache.org/tomcat/tomcat-11/v{version}/bin/apache-tomcat-{version}.tar.gz"
       - "https://archive.apache.org/dist/tomcat/tomcat-11/v{version}/bin/apache-tomcat-{version}.tar.gz"
     field: sha512
-  major-issue: true
   links:
     releases: "https://tomcat.apache.org/download-11.cgi"
     notes: "https://tomcat.apache.org/tomcat-11.0-doc/changelog.html"
@@ -933,11 +859,9 @@
     type: scrape
     url: "https://download.redis.io/releases/"
     pattern: 'redis-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz'
-    pin-major: 8
   tarball:
     url: "https://github.com/redis/redis/archive/refs/tags/{version}.tar.gz"
     field: sha256
-  major-issue: true
   links:
     releases: "https://github.com/redis/redis/releases"
     notes: "https://github.com/redis/redis/releases/tag/{version}"
@@ -949,11 +873,9 @@
     type: scrape
     url: "https://www.memcached.org/"
     pattern: '<div id="ver">v[0-9]+\.[0-9]+\.[0-9]+</div>'
-    pin-major: 1
   tarball:
     url: "https://memcached.org/files/memcached-{version}.tar.gz"
     field: sha256
-  major-issue: true
   links:
     releases: "https://github.com/memcached/memcached/releases"
     notes: "https://github.com/memcached/memcached/releases/tag/{version}"
@@ -994,7 +916,6 @@
       - "https://www.php.net/releases/index.php?json&version={series}"
       - "https://www.php.net/releases/index.php?json&version=8"
     jq: '.version // empty'
-    pin-major: 8
   tarball:
     url: "https://www.php.net/distributions/php-{version}.tar.gz"
     field: sha256
@@ -1016,8 +937,6 @@
     url: "https://rubygems.org/api/v1/versions/rails/latest.json"
     jq: '.version'
     current-field: rails_version
-    pin-major: 8
-  major-issue: true
   links:
     releases: "https://rubygems.org/gems/rails"
     notes: "https://github.com/rails/rails/releases/tag/v{version}"
@@ -1031,11 +950,10 @@
 - name: envoy
   cron-enabled: true   # wave 7
   files: [images/envoy/melange.yaml]
-  source: { type: github-releases-latest, repo: envoyproxy/envoy, strip-v: true, pin-major: 1 }
+  source: { type: github-releases-latest, repo: envoyproxy/envoy, strip-v: true }
   tarballs:
     - { url: "https://github.com/envoyproxy/envoy/releases/download/v{version}/envoy-{version}-linux-x86_64",  field: sha256_x86, algo: sha256 }
     - { url: "https://github.com/envoyproxy/envoy/releases/download/v{version}/envoy-{version}-linux-aarch_64", field: sha256_arm, algo: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/envoyproxy/envoy/releases"
     notes: "https://github.com/envoyproxy/envoy/releases/tag/v{version}"
@@ -1046,11 +964,10 @@
 - name: deno
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/deno/melange.yaml]
-  source: { type: github-releases-latest, repo: denoland/deno, strip-v: true, pin-major: 2 }
+  source: { type: github-releases-latest, repo: denoland/deno, strip-v: true }
   tarballs:
     - { url: "https://github.com/denoland/deno/releases/download/v{version}/deno-x86_64-unknown-linux-gnu.zip",  field: sha256_x86, algo: sha256 }
     - { url: "https://github.com/denoland/deno/releases/download/v{version}/deno-aarch64-unknown-linux-gnu.zip", field: sha256_arm, algo: sha256 }
-  major-issue: true
   links:
     releases: "https://github.com/denoland/deno/releases"
     notes: "https://github.com/denoland/deno/releases/tag/v{version}"
@@ -1066,11 +983,10 @@
 - name: opensearch
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/opensearch/melange.yaml]
-  source: { type: github-tags, repo: opensearch-project/OpenSearch, pattern: '^([0-9]+\.[0-9]+\.[0-9]+)$', pin-major: 3 }
+  source: { type: github-tags, repo: opensearch-project/OpenSearch, pattern: '^([0-9]+\.[0-9]+\.[0-9]+)$' }
   tarballs:
     - { url: "https://artifacts.opensearch.org/releases/core/opensearch/{version}/opensearch-min-{version}-linux-x64.tar.gz",   field: sha512_x86, algo: sha512 }
     - { url: "https://artifacts.opensearch.org/releases/core/opensearch/{version}/opensearch-min-{version}-linux-arm64.tar.gz", field: sha512_arm, algo: sha512 }
-  major-issue: true
   links:
     releases: "https://github.com/opensearch-project/OpenSearch/releases"
     notes: "https://github.com/opensearch-project/OpenSearch/releases/tag/{version}"
@@ -1109,12 +1025,10 @@
     pattern: '^v[0-9]+([._][0-9]+){2}$'
     strip-prefix: 'v'
     tag-rewrite: { from: '_', to: '.' }
-    pin-major: 4
   tarball:
     # cache.ruby-lang.org expects the SERIES (4.0) directory; use {minor}.
     url: "https://cache.ruby-lang.org/pub/ruby/{minor}/ruby-{version}.tar.gz"
     field: sha256
-  major-issue: true
   links:
     releases: "https://www.ruby-lang.org/en/downloads/releases/"
     notes: "https://www.ruby-lang.org/en/news/"
