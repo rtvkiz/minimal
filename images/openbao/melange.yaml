@@ -11,7 +11,7 @@ package:
   # bare, as cpe:2.3:a:openbao:openbao:*, so none of them matched, and the
   # Wolfi secdb missed it too.
   name: openbao
-  version: 2.6.1
+  version: 2.6.2
   epoch: 0
   description: "Minimal OpenBao secret management server built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: 03d636690c92c653d5085bfb03f950754c7387d6e387fe4f18bc4cb3fc60e2d4
+  sha256: 097ef89f5d24174c57a56a2b6b529d66d7d4f237d42be175186c8683a9323ffc
 
 environment:
   contents:
