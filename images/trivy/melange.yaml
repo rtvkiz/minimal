@@ -40,7 +40,15 @@ environment:
       - ca-certificates-bundle
       - curl
       - build-base
-      - go
+      # Pinned to go-1.26, NOT the bare `go` provider. `go` is a virtual
+      # provider and apk takes the highest version, so the moment Wolfi
+      # published go-1.27 (2026-08-19) every image using bare `go` jumped
+      # toolchains silently. Only trivy broke, because only trivy builds with
+      # GOEXPERIMENT=jsonv2: it imports the stdlib `encoding/json/v2` and calls
+      # json.SkipFunc (pkg/x/json/json.go:109), which Go 1.27 changed —
+      # "undefined: json.SkipFunc". Upstream trivy 0.74.0 (current latest) has
+      # not adapted yet. Drop this pin once trivy builds clean on 1.27.
+      - go-1.26
       - git
 
 pipeline:

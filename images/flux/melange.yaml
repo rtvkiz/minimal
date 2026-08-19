@@ -40,7 +40,7 @@ environment:
       - ca-certificates-bundle
       - curl
       - build-base
-      - go
+      - go-1.26
       - git
       # flux embeds its install manifests via manifests/scripts/bundle.sh,
       # which runs `kustomize build` per controller base.

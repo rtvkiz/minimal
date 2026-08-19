@@ -46,7 +46,7 @@ environment:
       - ca-certificates-bundle
       - curl
       - build-base
-      - go
+      - go-1.26
       - git
 
 pipeline:
