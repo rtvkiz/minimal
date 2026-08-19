@@ -66,12 +66,36 @@ pipeline:
       export GOWORK=off
       _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
       _pgd_reqs() { awk '$1=="require" && $2=="(" {b=1;next} b && $1==")" {b=0;next} b && index($1,"/")>0 && substr($2,1,1)=="v" {print $1,$2;next} $1=="require" && NF>=3 && index($2,"/")>0 && substr($3,1,1)=="v" {print $2,$3}' "$1"; }
+      _pgd_filter() {  # drop pins the module graph already satisfies at >= the pin
+        # grype reports the FIRST fixed version, which for a backported fix sits on
+        # an older minor line than the graph already carries (etcd: grype said
+        # v3.5.33 while external-dns already resolved v3.6.10). Pinning that is a
+        # DOWNGRADE: go either refuses the whole batch ("requires X@v3.6.4, not
+        # X@v3.5.33") or accepts it and drags siblings back until the vendored
+        # source stops compiling (loki: dskit CompressionAlgorithm undefined).
+        # Neither is a fix — the module is already past the CVE — so skip it.
+        _keep=""
+        for _mv in "$@"; do
+          _m="${_mv%@*}"; _v="${_mv##*@}"
+          _cur=$(go list -m "$_m" 2>/dev/null | awk '{print $2}')
+          if [ -n "$_cur" ] && [ "$_cur" != "$_v" ]; then
+            _hi=$( { echo "$_cur"; echo "$_v"; } | sort -V | tail -1 )
+            if [ "$_hi" = "$_cur" ]; then
+              echo "pgd-graph: skipping ${_mv} — graph already at ${_cur}" >&2
+              continue
+            fi
+          fi
+          _keep="${_keep} ${_mv}"
+        done
+        printf '%s' "$_keep"
+      }
       for root in /home/build/telegraf-${{package.version}}; do
         [ -f "$root/go.mod" ] || continue
         ( set -e
           cd "$root"
           cp go.mod .pgd-orig.mod
-          _retry go get github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8 github.com/aws/aws-sdk-go-v2/service/s3@v1.99.0 github.com/cloudflare/circl@v1.6.3 github.com/containerd/containerd/v2@v2.2.1 github.com/containerd/containerd@v1.7.33 github.com/docker/cli@v29.2.1+incompatible github.com/go-chi/chi/v5@v5.3.0 github.com/go-git/go-billy/v5@v5.9.0 github.com/go-git/go-git/v5@v5.19.1 github.com/go-jose/go-jose/v4@v4.1.4 github.com/klauspost/compress@v1.18.7 github.com/moby/buildkit@v0.28.1 github.com/nwaples/rardecode/v2@v2.2.2 github.com/opencontainers/selinux@v1.13.1 github.com/ulikunitz/xz@v0.5.15 google.golang.org/grpc@v1.83.0 oras.land/oras-go/v2@v2.6.1 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.45.0 go.opentelemetry.io/otel/sdk@v1.45.0 go.opentelemetry.io/otel@v1.45.0 golang.org/x/crypto@v0.55.0 golang.org/x/net@v0.58.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.41.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.49.0
+          _PGDA=$(_pgd_filter github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8 github.com/aws/aws-sdk-go-v2/service/s3@v1.99.0 github.com/cloudflare/circl@v1.6.3 github.com/containerd/containerd/v2@v2.2.1 github.com/containerd/containerd@v1.7.33 github.com/docker/cli@v29.2.1+incompatible github.com/go-chi/chi/v5@v5.3.0 github.com/go-git/go-billy/v5@v5.9.0 github.com/go-git/go-git/v5@v5.19.1 github.com/go-jose/go-jose/v4@v4.1.4 github.com/klauspost/compress@v1.18.7 github.com/moby/buildkit@v0.28.1 github.com/nwaples/rardecode/v2@v2.2.2 github.com/opencontainers/selinux@v1.13.1 github.com/ulikunitz/xz@v0.5.15 google.golang.org/grpc@v1.83.0 oras.land/oras-go/v2@v2.6.1 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.45.0 go.opentelemetry.io/otel/sdk@v1.45.0 go.opentelemetry.io/otel@v1.45.0 golang.org/x/crypto@v0.55.0 golang.org/x/net@v0.58.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.41.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.49.0)
+          if [ -n "$_PGDA" ]; then _retry go get $_PGDA; fi
           go mod tidy -e
           # go mod tidy can downgrade a source-pinned require below what the
           # source shipped (e.g. a lockstep family like openbao's
