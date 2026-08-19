@@ -13,7 +13,7 @@ package:
   # product bare, as cpe:2.3:a:prometheus:prometheus:*, so none of them
   # matched, and the Wolfi secdb missed it too.
   name: prometheus
-  version: 3.13.2
+  version: 3.14.0
   epoch: 0
   description: "Minimal Prometheus monitoring server built from source"
   copyright:
@@ -31,7 +31,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: fb8eb45635c29b120cf54aa19a1b724348d49e385062ff519b8e0b4f457c26e1
+  sha256: 9294e72722fe8f90e54994ce36f331ea6176cb0edc4149cbf1d023bc89536505
 
 environment:
   contents:
