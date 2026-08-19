@@ -13,7 +13,7 @@ package:
   # cpe:2.3:a:kube-state-metrics:kube-state-metrics:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: kube-state-metrics
-  version: 2.19.1
+  version: 2.20.0
   epoch: 0
   description: "Minimal kube-state-metrics Kubernetes object-state exporter built from source"
   copyright:
@@ -31,7 +31,7 @@ package:
 
 vars:
   # SHA256 of kube-state-metrics source tarball - updated by update-versions.yml
-  sha256: d62da96bd2c0497aa866f396762f1c11f3f6a066bb4e86c8168d96ddcddb9025
+  sha256: d629314a4b8eaa64ef7e72ff87e0e1d2f62825b33e0cdfa37f642bc174d670f7
 
 environment:
   contents:
