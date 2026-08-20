@@ -5,6 +5,11 @@ on:
     # Check weekly on Mondays at 7am UTC
     - cron: '0 7 * * 1'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the toolchain-pin diff without writing or opening a PR"
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -363,3 +368,62 @@ jobs:
           ---
           Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml).")
           gh pr merge "$PR_URL" --auto --squash --delete-branch
+
+      # --- Toolchain pins in melange build environments ---------------------
+      # Separate from the per-language steps above: those bump the toolchain
+      # SHIPPED by an image (images/go/apko), this bumps the toolchain images
+      # are BUILT WITH (images/*/melange.yaml). Both matter — the second is what
+      # silently changed under us when Wolfi published go-1.27.
+      #
+      # Every run bumps every image, including ones a previous run held back, so
+      # a held-back pin clears itself once upstream catches up. CI's per-image
+      # build is the probe.
+      - name: Bump toolchain pins in build environments
+        id: toolchain
+        run: |
+          ./.github/scripts/bump-toolchain-pins.sh \
+            --packages /tmp/packages.txt \
+            ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
+
+      - name: Create toolchain PR
+        if: steps.toolchain.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SUMMARY: ${{ steps.toolchain.outputs.summary }}
+          SUFFIX: ${{ steps.toolchain.outputs.branch_suffix }}
+        run: |
+          BRANCH="update-toolchain-${SUFFIX}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          # Only the recipes — the script touches nothing else, and -A here could
+          # sweep in unrelated working-tree state from an earlier step.
+          git add images/
+          git commit -m "chore(toolchain): bump build-environment pins to ${SUFFIX}"
+          git push --force -u origin "$BRANCH"
+          # Reuse an open PR on this branch rather than stacking duplicates.
+          PR_URL=$(gh pr list --head "$BRANCH" --base main --state open --json url --jq '.[0].url // ""')
+          if [ -z "$PR_URL" ]; then
+            PR_URL=$(gh pr create \
+              --title "chore(toolchain): bump build-environment pins to ${SUFFIX}" \
+              --label dependencies \
+              --body "Bumps the language-toolchain packages that melange **builds with** (not the ones images ship).
+
+          ${SUMMARY}
+
+          Detected from the Wolfi APKINDEX. Build environments pin versioned packages rather than
+          the bare provider, because a bare provider resolves to the newest version and changes the
+          compiler mid-build — that is how go-1.27 landed unannounced on 2026-08-19 and broke
+          trivy. The check-toolchain-pins gate enforces the pinning; this PR is what moves it.
+
+          **CI is the probe.** Every image affected is rebuilt below. If everything is green this
+          merges automatically. If an image cannot build on the new toolchain, it should be reverted
+          to its previous pin and held back until upstream adapts — the rest still advance.
+
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml).")
+          fi
+          echo "PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
+          git checkout main
+          git checkout -- .
