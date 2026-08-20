@@ -20,7 +20,7 @@ contents:
     - wolfi-baselayout
 
     # Go runtime (same as prod)
-    - go-1.26
+    - go-1.27
 
     # Build tools (same as prod — already in go prod)
     - binutils
