@@ -12,7 +12,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:mimir:mimir:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: mimir
-  version: 3.1.4
+  version: 3.2.0
   epoch: 0
   description: "Minimal Grafana Mimir long-term Prometheus storage built from source"
   copyright:
@@ -30,7 +30,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: f429ba1899d48228ca38ef918b50b66f16e96fdb10c9b3c464eb222a7b8c708f
+  sha256: c36157e03482ff4f3a9c9b5e89297d55f49b584bd9a02f9a93f47ea1ba92d1a0
 
 environment:
   contents:
