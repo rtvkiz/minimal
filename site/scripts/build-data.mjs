@@ -88,7 +88,16 @@ async function fetchWithTimeout(url, opts = {}) {
 // -dev.yaml; dev = the one ending in -dev.yaml. Robust to non-standard names
 // (redis-slim/apko/redis.yaml, node-slim/apko/node.yaml, ...).
 function findApkoConfigs(name) {
-  const dir = join(REPO_DIR, name, 'apko');
+  // images/<name>/apko — #551 moved the image directories under images/ and this
+  // lookup kept the old top-level path. existsSync then failed for every image,
+  // so the function returned empty, every record was flagged "no apko config
+  // found" and marked degraded, and all 100 image pages rendered the
+  // Specifications section with no entrypoint/user/ports plus a banner saying
+  // data was unavailable. It failed silently because returning empty is the
+  // legitimate result for an image that genuinely has no apko config, so the
+  // generator "succeeded" every run and only the deploy log hinted at it
+  // ("100 images · 0 full · 100 degraded").
+  const dir = join(REPO_DIR, 'images', name, 'apko');
   const out = { prod: null, dev: null };
   if (!existsSync(dir)) return out;
   for (const f of readdirSync(dir)) {
