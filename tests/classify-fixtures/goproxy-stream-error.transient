@@ -1,0 +1,3 @@
+2026/08/20 19:14:10 WARN go: github.com/jaegertracing/jaeger/cmd/jaeger/internal/exporters/storageexporter imports
+2026/08/20 19:14:10 WARN     go.opentelemetry.io/collector/config/configretry: go.opentelemetry.io/collector/config/configretry@v1.61.0: read "https://proxy.golang.org/go.opentelemetry.io/collector/config/configretry/@v/v1.61.0.zip": stream error: stream ID 37; INTERNAL_ERROR; received from peer
+2026/08/20 19:14:11 ERRO failed to build package: unable to run package jaeger pipeline: task exited with code 1

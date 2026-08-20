@@ -39,6 +39,10 @@ if grep -qaE \
   || grep -qaE '(HTTP|status code|returned error:|^|[^0-9.])429 |429 Too Many Requests|Too Many Requests|rate limit' "$log" \
   || grep -qaE 'fulcio\.sigstore\.dev|rekor\.sigstore\.dev|signing bundle|error signing' "$log" \
   || grep -qaE 'connection reset by peer|i/o timeout|TLS handshake|unexpected EOF|no such host' "$log" \
+  `# Go module proxy: HTTP/2 stream resets mid-download. Observed 2026-08-20` \
+  `# taking out jaeger, otelcol, gitea and openbao in one scheduled run.` \
+  || grep -qaE 'proxy\.golang\.org.*(stream error|INTERNAL_ERROR|unexpected EOF|timeout)|stream error: stream ID [0-9]+' "$log" \
+  || grep -qaE 'go: .*: (Get|read) "https?://[^"]*": ' "$log" \
   || grep -qaE 'curl: \((22|35|52|56|92)\)|Recv failure|Could not resolve host' "$log" \
   `# sha256sum -c prints "<file>: FAILED"; melange prefixes it with a timestamp,` \
   `# so this cannot be anchored at line start.` \
