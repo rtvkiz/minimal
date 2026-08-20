@@ -1,0 +1,3 @@
+2026-08-17T13:45:38.5039162Z ##[warning]Failed to download action 'https://codeload.github.com/sigstore/cosign-installer/tar.gz/cad07c2e'. Error: Response status code does not indicate success: 429 (Too Many Requests).
+2026-08-17T13:46:26.5232194Z ##[error]Response status code does not indicate success: 429 (Too Many Requests).
+2026-08-17T13:46:26.5251679Z ##[error]Failed to download archive after 3 attempts.

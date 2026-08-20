@@ -1,0 +1,7 @@
+2026/08/19 23:12:05 INFO melange v0.41.1 with runner docker is building:
+2026/08/19 23:12:05 INFO populating workspace /tmp/melange-workspace-3787901085 from images/crane
+2026/08/19 23:12:06 ERRO failed to build package: unable to build guest: unable to lock image configuration: resolving apk packages: for arch "amd64": solving "build-base" constraint: resolving "build-base-1-r9.apk" deps:
+solving "make" constraint: resolving "make-4.4.1-r13.apk" deps:
+solving "so:ld-linux-x86-64.so.2" constraint: resolving "ld-linux-2.43-2.43-r14.apk" deps:
+solving "glibc-2.43=2.43-r14" constraint: nothing provides "glibc-2.43"
+##[error]Process completed with exit code 1.

@@ -1,0 +1,3 @@
+2026/08/19 19:18:59 WARN # github.com/aquasecurity/trivy/pkg/x/json
+2026/08/19 19:18:59 WARN pkg/x/json/json.go:109:16: undefined: json.SkipFunc
+2026/08/19 19:20:26 ERRO failed to build package: unable to run package trivy pipeline: exit status 1

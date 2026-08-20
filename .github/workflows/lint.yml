@@ -13,12 +13,14 @@ on:
       - '.github/workflows/**'
       - '.github/scripts/**'
       - 'scripts/**.sh'
+      - 'tests/**'
   push:
     branches: [main]
     paths:
       - '.github/workflows/**'
       - '.github/scripts/**'
       - 'scripts/**.sh'
+      - 'tests/**'
 
 permissions:
   contents: read
@@ -37,3 +39,9 @@ jobs:
       # actionlint. Reusing `make lint-workflows` keeps CI and local identical.
       - name: Lint workflows (actionlint + shellcheck)
         run: make lint-workflows
+
+      # The classifier decides whether a failed build authorises reverting an
+      # image's toolchain pin. A wrong "build" verdict silently pins an image
+      # backwards, so its fixtures are regression-tested on every change.
+      - name: Test build-failure classifier
+        run: make test-classifier

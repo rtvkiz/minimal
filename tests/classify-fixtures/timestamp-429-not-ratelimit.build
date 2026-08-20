@@ -1,0 +1,3 @@
+2026-08-19T19:12:42.0429512Z   fetch-tags: false
+2026-08-19T19:12:46.5429199Z 2026/08/19 19:12:46 INFO installing nss-hesiod (2.43-r13)
+2026-08-19T19:19:11.7429246Z WARN pkg/x/json/json.go:109:16: undefined: json.SkipFunc

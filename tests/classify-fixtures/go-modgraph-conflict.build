@@ -1,0 +1,2 @@
+2026/08/19 10:00:42 WARN go: github.com/projectcontour/contour@v1.33.5 indirectly requires go.etcd.io/etcd/client/pkg/v3@v3.6.4, not go.etcd.io/etcd/client/pkg/v3@v3.5.33
+2026/08/19 10:01:35 ERRO failed to build package: unable to run package external-dns pipeline: task exited with code 1

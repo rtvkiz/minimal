@@ -1,0 +1,3 @@
+2026/08/18 01:56:46 INFO populating workspace /tmp/melange-workspace-494642908 from images/rabbitmq
+2026/08/18 01:56:52 INFO /home/build/rabbitmq.tar.xz: FAILED
+2026/08/18 01:56:52 ERRO failed to build package: unable to run package rabbitmq pipeline: unable to run pipeline: task exited with code 1
