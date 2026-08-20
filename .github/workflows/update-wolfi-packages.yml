@@ -7,7 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Print the toolchain-pin diff without writing or opening a PR"
+        # Gates EVERY PR-creating step in this workflow, not just the toolchain
+        # one. A first version only gated the new step, so a dispatch billed as
+        # a dry run still let the Go step open and auto-merge PR #577 into main.
+        # An input named dry_run has to mean the whole workflow writes nothing.
+        description: "Report available updates without writing, pushing or opening any PR"
         type: boolean
         default: false
 
@@ -185,7 +189,7 @@ jobs:
 
       # --- Python PR ---
       - name: Create Python PR
-        if: steps.check.outputs.python_update == 'true'
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.check.outputs.python_update == 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -212,7 +216,7 @@ jobs:
 
       # --- Go PR ---
       - name: Create Go PR
-        if: steps.check.outputs.go_update == 'true'
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.check.outputs.go_update == 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -239,7 +243,7 @@ jobs:
 
       # --- Node.js PR ---
       - name: Create Node.js PR
-        if: steps.check.outputs.node_update == 'true'
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.check.outputs.node_update == 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -266,7 +270,7 @@ jobs:
 
       # --- .NET PR ---
       - name: Create .NET PR
-        if: steps.check.outputs.dotnet_update == 'true'
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.check.outputs.dotnet_update == 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -299,7 +303,7 @@ jobs:
 
       # --- OpenJDK PR ---
       - name: Create OpenJDK PR
-        if: steps.check.outputs.jdk_update == 'true'
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.check.outputs.jdk_update == 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -332,7 +336,7 @@ jobs:
 
       # --- PostgreSQL PR ---
       - name: Create PostgreSQL PR
-        if: steps.check.outputs.pg_update == 'true'
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.check.outputs.pg_update == 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -386,7 +390,7 @@ jobs:
             ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
 
       - name: Create toolchain PR
-        if: steps.toolchain.outputs.has_changes == 'true'
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.toolchain.outputs.has_changes == 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           SUMMARY: ${{ steps.toolchain.outputs.summary }}
