@@ -1,0 +1,106 @@
+name: Repair toolchain PR
+
+# Completes the self-healing loop for toolchain bumps.
+#
+#   update-wolfi-packages  bumps every build-environment pin and opens one PR
+#   Build Hardened Images  rebuilds every affected image — this is the probe
+#   THIS WORKFLOW          keeps what compiled, reverts only what genuinely did
+#                          not, so the PR goes green and merges on its own
+#
+# Without this, one incompatible image blocks the toolchain bump for the whole
+# catalogue until someone intervenes — the manual burden pinning was meant to
+# remove. With it, the held-back image simply stays on its old pin and clears
+# itself on a later release once upstream adapts.
+#
+# Only a genuine compile failure authorises a revert. Infrastructure failures
+# (Wolfi mid-migration index, Sigstore outages, GitHub 429s, mutated upstream
+# tarballs — all real here on 2026-08-19/20) leave the PR red to retry, because
+# a wrong revert is silent and permanent while a red PR is merely visible.
+
+on:
+  workflow_run:
+    workflows: ["Build Hardened Images"]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  repair:
+    # Only failed builds of a toolchain-bump branch.
+    if: >
+      github.event.workflow_run.conclusion == 'failure' &&
+      startsWith(github.event.workflow_run.head_branch, 'update-toolchain-')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+
+    steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547  # v1.12.0
+        with:
+          app-id: ${{ secrets.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+
+      - name: Checkout the bump branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Classify failures and revert only genuine incompatibilities
+        id: repair
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          ./.github/scripts/repair-toolchain-pr.sh \
+            "${{ github.event.workflow_run.id }}" \
+            "${{ github.event.workflow_run.head_branch }}"
+
+      - name: Push the repaired branch
+        if: steps.repair.outputs.repaired == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          REVERTED: ${{ steps.repair.outputs.reverted }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add images/
+          git commit -m "chore(toolchain): hold back ${REVERTED} on the previous pin
+
+          These images do not compile on the new toolchain. Every other image
+          keeps the bump. Each held image is retried automatically on the next
+          toolchain release, so this clears itself once upstream adapts."
+          git push origin "HEAD:${BRANCH}"
+          PR_URL=$(gh pr list --head "$BRANCH" --base main --state open --json url --jq '.[0].url // ""')
+          if [ -n "$PR_URL" ]; then
+            gh pr comment "$PR_URL" --body "Held back on the previous toolchain pin (build failure, not infrastructure): **${REVERTED}**
+
+          Every other image on this branch keeps the new toolchain. Held images are re-attempted on the next toolchain release and clear themselves once upstream adapts."
+          fi
+
+      - name: Explain why nothing was repaired
+        if: steps.repair.outputs.repaired != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          REASON: ${{ steps.repair.outputs.reason }}
+        run: |
+          PR_URL=$(gh pr list --head "$BRANCH" --base main --state open --json url --jq '.[0].url // ""')
+          [ -n "$PR_URL" ] || exit 0
+          case "$REASON" in
+            no-build-failures)
+              MSG="Build failed, but no image failed to **compile** — the failures look like infrastructure (registry, index, signing or network). Not reverting any pin: the right response is a retry. This PR stays red until the next build." ;;
+            too-many-failures)
+              MSG="More than half the bumped images fail to compile on this toolchain. That points at the release rather than the images, so nothing was auto-reverted — this one needs a human decision about whether to adopt it at all." ;;
+            nothing-advances)
+              MSG="Every bumped image failed to compile, so the branch would be identical to main. Nothing to merge; this bump should be retried on the next toolchain release." ;;
+            *)
+              MSG="No automatic repair was applied (${REASON})." ;;
+          esac
+          gh pr comment "$PR_URL" --body "$MSG"
