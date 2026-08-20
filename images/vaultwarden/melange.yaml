@@ -49,7 +49,7 @@ environment:
       - ca-certificates-bundle
       - curl
       - build-base
-      - rust
+      - rust-1.97
       - openssl-dev
       - pkgconf
       # No sqlite-dev: the `sqlite` cargo feature pulls libsqlite3-sys/bundled,

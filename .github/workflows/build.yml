@@ -322,6 +322,16 @@ jobs:
         # bespoke updater). Same check as local `make check-autoupdate`.
         run: make check-autoupdate
 
+      - name: Assert no build environment uses a bare toolchain provider
+        # Invariant: melange build environments pin the versioned toolchain
+        # package (go-1.26, nodejs-26, rust-1.97), never the bare provider.
+        # apk resolves a bare provider to the HIGHEST version, so `- go` changes
+        # compiler the moment Wolfi publishes a new minor — no PR, no signal.
+        # That is how go-1.27 landed mid-build on 2026-08-19 and took trivy (and
+        # four scheduled runs) down. Same check as local
+        # `make check-toolchain-pins`.
+        run: make check-toolchain-pins
+
       - name: Assert docs match the catalog
         # The README's image count sat at 96 while the catalog grew to 100 —
         # badge, nav link and heading — because nothing compared them.

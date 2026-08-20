@@ -40,7 +40,7 @@ environment:
       - ca-certificates-bundle
       - curl
       - build-base
-      - rust
+      - rust-1.97
       - cmake
       - protoc
       - protobuf-dev

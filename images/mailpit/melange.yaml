@@ -43,7 +43,7 @@ environment:
       - build-base
       - go-1.26
       - git
-      - nodejs
+      - nodejs-26
       - npm
 
 pipeline:

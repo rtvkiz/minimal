@@ -170,7 +170,7 @@ test-$(1)-dev:
 	@echo "✓ $(1) dev tests passed"
 endef
 
-.PHONY: all build scan clean help lint-workflows check-autoupdate
+.PHONY: all build scan clean help lint-workflows check-autoupdate check-toolchain-pins
 .PHONY: zookeeper zookeeper-melange test-zookeeper
 .PHONY: tomcat tomcat-melange test-tomcat
 .PHONY: pgbouncer pgbouncer-melange pgbouncer-dev test-pgbouncer test-pgbouncer-dev
@@ -4117,6 +4117,9 @@ check-packages-report:
 
 check-autoupdate:
 	@./scripts/check-autoupdate-coverage.sh
+
+check-toolchain-pins:
+	@./scripts/check-toolchain-pins.sh
 
 #------------------------------------------------------------------------------
 # HELP
