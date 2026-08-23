@@ -11,7 +11,7 @@ package:
   # bare, as cpe:2.3:a:mariadb:mariadb:*, so none of them matched, and the
   # Wolfi secdb missed it too.
   name: mariadb
-  version: 11.4.12
+  version: 11.4.13
   epoch: 0
   description: "Minimal MariaDB LTS server built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: 5ab7883db519bfcebfdd2aac09bc5544a12ce328f39edd46d0bf01690615ef6c
+  sha256: 1bb254b106d0a7ca871cfa18fa6e18d4b80a7430f9ec9d1571ec4271a13def96
 
 environment:
   contents:
