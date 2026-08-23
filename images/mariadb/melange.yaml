@@ -11,7 +11,7 @@ package:
   # bare, as cpe:2.3:a:mariadb:mariadb:*, so none of them matched, and the
   # Wolfi secdb missed it too.
   name: mariadb
-  version: 11.4.12
+  version: 11.4.13
   epoch: 0
   description: "Minimal MariaDB LTS server built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: 5ab7883db519bfcebfdd2aac09bc5544a12ce328f39edd46d0bf01690615ef6c
+  sha256: 1bb254b106d0a7ca871cfa18fa6e18d4b80a7430f9ec9d1571ec4271a13def96
 
 environment:
   contents:
@@ -79,6 +79,13 @@ pipeline:
   - runs: |
       cd /home/build/mariadb-${{package.version}}
       mkdir build && cd build
+
+      # PLUGIN_DUCKDB=NO: the duckdb storage engine is new in 11.4.13 and
+      # builds by default. Its ExternalProject patch step runs
+      # `bash -c "... git apply ..."` and the build env has neither bash nor
+      # git, so it dies with Error 127. Adding both would only trade the
+      # failure for a bundled OLAP engine we do not want in a minimal server
+      # image — so disable it, as with every other optional engine below.
       cmake .. \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
@@ -105,6 +112,7 @@ pipeline:
         -DPLUGIN_OQGRAPH=NO \
         -DPLUGIN_CONNECT=NO \
         -DPLUGIN_SPIDER=NO \
+        -DPLUGIN_DUCKDB=NO \
         -DPLUGIN_WSREP=NO \
         -DWITH_WSREP=OFF \
         -DWITHOUT_EXAMPLE_STORAGE_ENGINE=1 \
