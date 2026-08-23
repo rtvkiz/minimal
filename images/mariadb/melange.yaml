@@ -79,6 +79,13 @@ pipeline:
   - runs: |
       cd /home/build/mariadb-${{package.version}}
       mkdir build && cd build
+
+      # PLUGIN_DUCKDB=NO: the duckdb storage engine is new in 11.4.13 and
+      # builds by default. Its ExternalProject patch step runs
+      # `bash -c "... git apply ..."` and the build env has neither bash nor
+      # git, so it dies with Error 127. Adding both would only trade the
+      # failure for a bundled OLAP engine we do not want in a minimal server
+      # image — so disable it, as with every other optional engine below.
       cmake .. \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
@@ -105,6 +112,7 @@ pipeline:
         -DPLUGIN_OQGRAPH=NO \
         -DPLUGIN_CONNECT=NO \
         -DPLUGIN_SPIDER=NO \
+        -DPLUGIN_DUCKDB=NO \
         -DPLUGIN_WSREP=NO \
         -DWITH_WSREP=OFF \
         -DWITHOUT_EXAMPLE_STORAGE_ENGINE=1 \
