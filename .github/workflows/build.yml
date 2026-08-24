@@ -730,8 +730,14 @@ jobs:
           # whose fix needs a newer upstream version. See the script header.
           PROVENANCE='{}'
           if [ -f "$GRYPE_REPORT" ]; then
-            PROVENANCE=$(bash .github/scripts/reconcile-apk-provenance.sh "$GRYPE_REPORT" . ) || {
-              echo "::error::provenance reconciliation failed for ${{ matrix.name }}" >&2; exit 1; }
+            # Never fail the build over a reporting step. If reconciliation
+            # breaks we fall back to an empty provenance block, which makes
+            # every consumer report the RAW counts — over-reporting, not
+            # under-reporting. Loud warning, safe direction.
+            if ! PROVENANCE=$(bash .github/scripts/reconcile-apk-provenance.sh "$GRYPE_REPORT" . ); then
+              echo "::warning title=Provenance::${{ matrix.name }}: reconciliation failed; falling back to raw counts"
+              PROVENANCE='{}'
+            fi
 
             # needs_review = our own package, no corroboration in the contents,
             # but the fix requires a newer UPSTREAM version. Either we are
@@ -1434,8 +1440,14 @@ jobs:
           # whose fix needs a newer upstream version. See the script header.
           PROVENANCE='{}'
           if [ -f "$GRYPE_REPORT" ]; then
-            PROVENANCE=$(bash .github/scripts/reconcile-apk-provenance.sh "$GRYPE_REPORT" . ) || {
-              echo "::error::provenance reconciliation failed for ${{ matrix.name }}" >&2; exit 1; }
+            # Never fail the build over a reporting step. If reconciliation
+            # breaks we fall back to an empty provenance block, which makes
+            # every consumer report the RAW counts — over-reporting, not
+            # under-reporting. Loud warning, safe direction.
+            if ! PROVENANCE=$(bash .github/scripts/reconcile-apk-provenance.sh "$GRYPE_REPORT" . ); then
+              echo "::warning title=Provenance::${{ matrix.name }}: reconciliation failed; falling back to raw counts"
+              PROVENANCE='{}'
+            fi
 
             # needs_review = our own package, no corroboration in the contents,
             # but the fix requires a newer UPSTREAM version. Either we are
