@@ -43,8 +43,43 @@ echo "  images bumped on this branch: $bumped"
 
 # Collect every failed job, resolve it to an image, and classify its log.
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs?per_page=100" --paginate \
-  --jq '.jobs[] | select(.conclusion=="failure") | [(.id|tostring), .name] | @tsv' > "$tmp/failed.tsv" || true
+
+# Fetch every failed job.
+#
+# This query must never fail quietly. An empty result is indistinguishable from
+# "nothing failed", and the script would then report a clean, considered
+# "no image failed to compile" while having classified nothing at all. That is
+# exactly what happened on 2026-08-24: the app token could not read the Actions
+# API, gh returned an empty set, and the repair reported no compile failures for
+# a build with 11 failed jobs — including trivy, which genuinely could not
+# compile. A loud failure is recoverable; a confident wrong answer is not.
+# We fire the instant the run completes, and the jobs endpoint is not yet
+# consistent for a fresh attempt — it briefly reports no failed jobs at all.
+# That is what happened on 2026-08-24: the query came back empty and the repair
+# concluded "nothing failed" for a build where trivy could not compile. Retry
+# until the API agrees that something failed, then trust it.
+n_failed=0
+for attempt in 1 2 3 4 5 6; do
+  if ! gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs?per_page=100" --paginate \
+        --jq '.jobs[] | select(.conclusion=="failure") | [(.id|tostring), .name] | @tsv' \
+        > "$tmp/failed.tsv"; then
+    echo "::error::cannot read jobs for run ${RUN_ID} — the token needs actions:read" >&2
+    exit 1
+  fi
+  n_failed=$(wc -l < "$tmp/failed.tsv")
+  [ "$n_failed" -gt 0 ] && break
+  echo "  jobs endpoint reports 0 failures for a failed run (attempt ${attempt}) — waiting for it to settle"
+  sleep 20
+done
+
+if [ "$n_failed" -eq 0 ]; then
+  # We were triggered by a failed run, so at least one job must have failed.
+  # Zero after retries means the query is lying to us, not that the build was
+  # fine. Never conclude anything from a query we could not make.
+  echo "::error::run ${RUN_ID} concluded 'failure' but reports no failed jobs — refusing to draw any conclusion" >&2
+  exit 1
+fi
+echo "  failed jobs on that run: $n_failed"
 
 declare -A VERDICT=()
 while IFS=$'\t' read -r jid name; do
@@ -73,7 +108,7 @@ REVERT=$(echo "$REVERT" | xargs || true)
 HELD=$(echo "$HELD" | xargs || true)
 
 if [ -z "$REVERT" ]; then
-  echo "No image failed to COMPILE — remaining failures are ${HELD:-none}."
+  echo "No image failed to COMPILE — of $n_failed failed job(s), image verdicts were: ${HELD:-none (no per-image jobs failed)}."
   echo "Leaving the PR red: a retry is the right response to infrastructure, not a revert."
   { echo "repaired=false"; echo "reason=no-build-failures"; } >> "${GITHUB_OUTPUT:-/dev/null}"
   exit 0

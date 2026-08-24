@@ -51,10 +51,26 @@ jobs:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
 
+      # Run main's repair tooling, not the branch's. The bump branch is a
+      # snapshot from whenever the bot opened it, so a fix landed on main after
+      # that point would never reach the PR that needs it — on 2026-08-24 the
+      # branch kept re-running a version of this script that had already been
+      # fixed on main. --worktree keeps it out of the index, so the commit below
+      # still carries only images/.
+      - name: Use main's repair tooling
+        run: git restore --source=origin/main --worktree -- .github/scripts scripts
+
       - name: Classify failures and revert only genuine incompatibilities
         id: repair
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          # github.token, not the app token: this step only READS the Actions
+          # API (job list + logs), which the job-level `actions: read` grant
+          # above covers. The app installation does not carry Actions access, so
+          # the app token returned an empty job list and the repair concluded
+          # "nothing failed" for a build with 11 failures. deploy-site.yml reads
+          # the same API the same way. The app token is still used for the push
+          # and PR comment below, which do need to act as the app.
+          GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           ./.github/scripts/repair-toolchain-pr.sh \
