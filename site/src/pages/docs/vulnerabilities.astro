@@ -28,6 +28,37 @@ const repo = 'https://github.com/rtvkiz/minimal/blob/main';
         or by suppression.
       </p>
 
+      <h2 class="section-title" style="margin-top:44px" id="provenance">Why some advisories are withheld</h2>
+      <p>
+        These images are built from Wolfi packages, so their apk database identifies them as a Wolfi
+        system and the scanner looks up every installed package name in the distro advisory feed —
+        including the packages <em>we</em> build. That feed records fixes against <em>its own</em>
+        rebuild counter:
+      </p>
+      <pre class="kv-mono" style="padding:12px;overflow-x:auto"><code>installed   gitleaks 8.30.1-r0     our first build of 8.30.1
+"fixed in"  gitleaks 8.30.1-r13    their fourteenth build of 8.30.1</code></pre>
+      <p>
+        <code class="kv-mono">r0</code> is lower than <code class="kv-mono">r13</code>, so we are reported
+        as unpatched. But <code class="kv-mono">-rN</code> is a per-distro build counter, not a patch
+        level — both start at zero and they count different distributions&rsquo; build events. Comparing
+        them across distributions is not a meaningful operation.
+      </p>
+      <p>Each such finding is resolved on evidence, never by blanket suppression:</p>
+      <ul>
+        <li><b>Counted</b> — the vulnerable component is genuinely in the image: the scanner matched the
+          module, jar, gem or crate itself, or the same advisory also matched real binary contents.</li>
+        <li><b>Withheld</b> — our own package, nothing corroborating in the contents, and the fix is a
+          same-version rebuild. A rebuild at the same upstream version cannot patch the application&rsquo;s
+          own source, so the fix lives in a dependency or the compiler — which our from-source rebuild
+          already picks up.</li>
+        <li><b>Needs review</b> — our own package, uncorroborated, but the fix requires a genuinely
+          <em>newer upstream version</em>. That usually means we are behind. <b>Never withheld</b>, and
+          flagged on the image page.</li>
+      </ul>
+      <p class="small muted">
+        Nothing is deleted. Withheld counts are shown next to the totals so the exclusion can be audited,
+        and a finding that later gains corroboration moves back into the count on its own.
+      </p>
       <h2 class="section-title" style="margin-top:44px">Unscored advisories</h2>
       <p>
         Some findings show a severity of <b>Unknown</b>. That is not a gap in our reporting — it is how

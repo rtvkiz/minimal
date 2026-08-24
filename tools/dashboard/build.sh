@@ -293,7 +293,7 @@ JS
 #--- per-image detail pages + index row data ---------------------------------
 
 # Aggregate totals (raw + VEX-effective)
-TOTAL_CRIT=0; TOTAL_HIGH=0; TOTAL_MED=0; TOTAL_LOW=0; TOTAL_UNK=0
+TOTAL_CRIT=0; TOTAL_HIGH=0; TOTAL_MED=0; TOTAL_LOW=0; TOTAL_UNK=0; TOTAL_WITHHELD=0; TOTAL_REVIEW=0
 TOTAL_EFF_CRIT=0; TOTAL_EFF_HIGH=0; TOTAL_EFF_MED=0; TOTAL_EFF_LOW=0; TOTAL_EFF_UNK=0
 TOTAL_VEX_STMTS=0
 TOTAL_FIXABLE=0; TOTAL_IMAGES=0; CLEAN_IMAGES=0; CLEAN_EFF_IMAGES=0
@@ -321,14 +321,6 @@ for f in "$REPORTS_DIR"/grype-*.json; do
   # Fixable count: CVEs where grype knows a fix version exists
   FIXABLE=$(jq '[.matches[] | select((.vulnerability.fix.versions // []) | length > 0)] | length' "$f")
 
-  TOTAL_CRIT=$((TOTAL_CRIT + C))
-  TOTAL_HIGH=$((TOTAL_HIGH + H))
-  TOTAL_MED=$((TOTAL_MED + M))
-  TOTAL_LOW=$((TOTAL_LOW + L))
-  TOTAL_UNK=$((TOTAL_UNK + U))
-  TOTAL_FIXABLE=$((TOTAL_FIXABLE + FIXABLE))
-  [ "$T" -eq 0 ] && CLEAN_IMAGES=$((CLEAN_IMAGES + 1))
-
   # Optional meta — also carries VEX effective counts + suppressed CVE IDs
   META="$REPORTS_DIR/meta-$NAME.json"
   SUPPRESSED_JSON='[]'
@@ -345,6 +337,24 @@ for f in "$REPORTS_DIR"/grype-*.json; do
     # Unscored + negligible, mirroring how U is derived from the raw report.
     EU=$(jq -r '((.effective.negligible // 0) + (.effective.unknown // 0))' "$META")
     SUPPRESSED_JSON=$(jq -c '.vex.suppressed // []' "$META")
+    # Distro name-collision artefacts: our package name matched the Wolfi
+    # advisory feed, whose -rN rebuild counter is not comparable with our -r0.
+    # Withheld from the headline, reported here so the exclusion is auditable.
+    WITHHELD=$(jq -r '.provenance.unsubstantiated.total // 0' "$META")
+    REVIEW=$(jq -r '(.provenance.needs_review // []) | length' "$META")
+
+    # Headline severities come from the reconciled count, not the raw report,
+    # so this dashboard and the catalog site cannot disagree about how many
+    # CVEs an image has. Falls back to the raw figures computed above when an
+    # older meta has no provenance block.
+    if jq -e '.provenance.counted' "$META" >/dev/null 2>&1; then
+      C=$(jq -r '.provenance.counted.critical // 0' "$META")
+      H=$(jq -r '.provenance.counted.high     // 0' "$META")
+      M=$(jq -r '.provenance.counted.medium   // 0' "$META")
+      L=$(jq -r '.provenance.counted.low      // 0' "$META")
+      U=$(jq -r '((.provenance.counted.negligible // 0) + (.provenance.counted.unknown // 0))' "$META")
+      T=$(jq -r '.provenance.counted.total    // 0' "$META")
+    fi
     VEX_STMT_COUNT=$(jq -r '.vex.statements // 0' "$META")
     # VEX drift: count of suppressions that have gone stale or become fixable.
     # Surfaced so the published effective count can't quietly rest on rotten VEX.
@@ -354,8 +364,18 @@ for f in "$REPORTS_DIR"/grype-*.json; do
     BUILT_AT=""
     DIGEST=""
     # No meta → effective == raw
-    EC="$C"; EH="$H"; EM="$M"; EL="$L"; EU="$U"
+    EC="$C"; EH="$H"; EM="$M"; EL="$L"; EU="$U"; WITHHELD=0; REVIEW=0
   fi
+  TOTAL_CRIT=$((TOTAL_CRIT + C))
+  TOTAL_HIGH=$((TOTAL_HIGH + H))
+  TOTAL_MED=$((TOTAL_MED + M))
+  TOTAL_LOW=$((TOTAL_LOW + L))
+  TOTAL_UNK=$((TOTAL_UNK + U))
+  TOTAL_WITHHELD=$((TOTAL_WITHHELD + ${WITHHELD:-0}))
+  TOTAL_REVIEW=$((TOTAL_REVIEW + ${REVIEW:-0}))
+  TOTAL_FIXABLE=$((TOTAL_FIXABLE + FIXABLE))
+  [ "$T" -eq 0 ] && CLEAN_IMAGES=$((CLEAN_IMAGES + 1))
+
   ET=$((EC + EH + EM + EL + EU))
   SUPPRESSED_TOTAL=$((T - ET))
   [ "$SUPPRESSED_TOTAL" -lt 0 ] && SUPPRESSED_TOTAL=0
@@ -517,6 +537,10 @@ cat > "$SITE_DIR/index.html" <<HTML
   </div>
   <div class="chip $([ "$TOTAL_UNK" -gt 0 ] && echo unscored || echo zero)" title="Advisories with no CVSS severity — every Go GO-YYYY-NNNN arrives this way">
     <span class="label">Unscored</span><span class="value">${TOTAL_UNK}</span>
+  </div>
+  <div class="chip"><span class="label">Withheld</span><span class="value">${TOTAL_WITHHELD}</span></div>
+  <div class="chip $([ "$TOTAL_REVIEW" -gt 0 ] && echo medium || echo zero)">
+    <span class="label">Need review</span><span class="value">${TOTAL_REVIEW}</span>
   </div>
   <div class="chip"><span class="label">Fixable</span><span class="value">${TOTAL_FIXABLE}</span></div>
   <div class="chip zero"><span class="label">Clean images</span><span class="value">${CLEAN_IMAGES} / ${TOTAL_IMAGES}</span></div>

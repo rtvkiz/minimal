@@ -177,13 +177,32 @@ const sevOrder = ['critical', 'high', 'medium', 'low'] as const;
     <div class="tabpanel" data-panel="advisories" hidden>
       {v ? (
         v.total === 0 ? (
-          <p class="notice"><span class="pill clean">Clean</span> &nbsp; No known vulnerabilities in the latest scan.</p>
+          <>
+            <p class="notice"><span class="pill clean">Clean</span> &nbsp; No known vulnerabilities in the latest scan.</p>
+            {(v.excluded ?? 0) > 0 && (
+              <p class="small muted">
+                {v.excluded} advisor{v.excluded === 1 ? 'y was' : 'ies were'} withheld: they match this
+                image&rsquo;s package <em>name</em> in the distro feed, not anything in the image.
+                <a href="/docs/vulnerabilities/#provenance"> Why</a>.
+              </p>
+            )}
+          </>
         ) : (
           <>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
               {sevOrder.map((s) => v.counts[s] > 0 && <span class={`pill ${s}`}>{v.counts[s]} {s}</span>)}
               <span class="pill neutral">{v.fixable} fixable</span>
               {v.vex.statements > 0 && <span class="pill neutral">{v.vex.statements} VEX</span>}
+              {(v.excluded ?? 0) > 0 && (
+                <span class="pill neutral" title="Matched this image's package name in the distro advisory feed, with nothing corresponding in the image contents">
+                  {v.excluded} withheld
+                </span>
+              )}
+              {(v.needsReview?.length ?? 0) > 0 && (
+                <span class="pill medium" title="The distro records a fix in a newer upstream version — we may be behind, or upstream may have been forked">
+                  {v.needsReview!.length} need review
+                </span>
+              )}
             </div>
             <table class="data">
               <thead><tr><th>CVE</th><th>Severity</th><th>Package</th><th>Installed</th><th>Fixed in</th></tr></thead>

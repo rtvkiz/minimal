@@ -721,6 +721,28 @@ jobs:
             EFF_COUNTS="$RAW_COUNTS"
           fi
 
+          # Provenance split. Our images declare Wolfi provenance, so grype
+          # matches OUR OWN package names against Wolfi/Chainguard's advisory
+          # feed and compares our -r0 against their -rN rebuild counter. Those
+          # counters belong to different distros and are not comparable; on
+          # 2026-08-24 that produced 341 findings not present in any image.
+          # The script separates them on evidence and never hides a finding
+          # whose fix needs a newer upstream version. See the script header.
+          PROVENANCE='{}'
+          if [ -f "$GRYPE_REPORT" ]; then
+            PROVENANCE=$(bash .github/scripts/reconcile-apk-provenance.sh "$GRYPE_REPORT" . ) || {
+              echo "::error::provenance reconciliation failed for ${{ matrix.name }}" >&2; exit 1; }
+
+            # needs_review = our own package, no corroboration in the contents,
+            # but the fix requires a newer UPSTREAM version. Either we are
+            # genuinely stale or the distro has forked the project. Never
+            # auto-excluded, so surface it where someone will see it.
+            NREVIEW=$(jq '.needs_review | length' <<<"$PROVENANCE")
+            if [ "${NREVIEW:-0}" -gt 0 ]; then
+              echo "::warning title=Provenance review::${{ matrix.name }}: $NREVIEW advisory(ies) claim a fix in a newer upstream version — we may be stale, or upstream may have been forked"
+            fi
+          fi
+
           jq -n \
             --arg name "${{ matrix.name }}" \
             --argjson size "${SIZE_BYTES:-0}" \
@@ -732,6 +754,7 @@ jobs:
             --argjson suppressed "$SUPPRESSED_JSON" \
             --argjson statements "$STMT_COUNT" \
             --argjson drift "$VEX_DRIFT" \
+            --argjson provenance "$PROVENANCE" \
             '{
               name: $name,
               size_bytes: $size,
@@ -740,7 +763,8 @@ jobs:
               image_ref: $image_ref,
               raw: $raw,
               effective: $effective,
-              vex: { statements: $statements, suppressed: $suppressed, drift: $drift }
+              vex: { statements: $statements, suppressed: $suppressed, drift: $drift },
+              provenance: $provenance
             }' \
             > meta-${{ matrix.name }}.json
           cat meta-${{ matrix.name }}.json
@@ -1401,6 +1425,28 @@ jobs:
             EFF_COUNTS="$RAW_COUNTS"
           fi
 
+          # Provenance split. Our images declare Wolfi provenance, so grype
+          # matches OUR OWN package names against Wolfi/Chainguard's advisory
+          # feed and compares our -r0 against their -rN rebuild counter. Those
+          # counters belong to different distros and are not comparable; on
+          # 2026-08-24 that produced 341 findings not present in any image.
+          # The script separates them on evidence and never hides a finding
+          # whose fix needs a newer upstream version. See the script header.
+          PROVENANCE='{}'
+          if [ -f "$GRYPE_REPORT" ]; then
+            PROVENANCE=$(bash .github/scripts/reconcile-apk-provenance.sh "$GRYPE_REPORT" . ) || {
+              echo "::error::provenance reconciliation failed for ${{ matrix.name }}" >&2; exit 1; }
+
+            # needs_review = our own package, no corroboration in the contents,
+            # but the fix requires a newer UPSTREAM version. Either we are
+            # genuinely stale or the distro has forked the project. Never
+            # auto-excluded, so surface it where someone will see it.
+            NREVIEW=$(jq '.needs_review | length' <<<"$PROVENANCE")
+            if [ "${NREVIEW:-0}" -gt 0 ]; then
+              echo "::warning title=Provenance review::${{ matrix.name }}: $NREVIEW advisory(ies) claim a fix in a newer upstream version — we may be stale, or upstream may have been forked"
+            fi
+          fi
+
           jq -n \
             --arg name "${{ matrix.name }}" \
             --argjson size "${SIZE_BYTES:-0}" \
@@ -1412,6 +1458,7 @@ jobs:
             --argjson suppressed "$SUPPRESSED_JSON" \
             --argjson statements "$STMT_COUNT" \
             --argjson drift "$VEX_DRIFT" \
+            --argjson provenance "$PROVENANCE" \
             '{
               name: $name,
               size_bytes: $size,
@@ -1420,7 +1467,8 @@ jobs:
               image_ref: $image_ref,
               raw: $raw,
               effective: $effective,
-              vex: { statements: $statements, suppressed: $suppressed, drift: $drift }
+              vex: { statements: $statements, suppressed: $suppressed, drift: $drift },
+              provenance: $provenance
             }' \
             > meta-${{ matrix.name }}.json
           cat meta-${{ matrix.name }}.json

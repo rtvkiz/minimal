@@ -165,18 +165,28 @@ function enrichFromConfig(specs, name) {
 
 const SEV = ['Critical', 'High', 'Medium', 'Low', 'Negligible', 'Unknown'];
 
-function readGrype(name) {
+// `excluded` is the (package, id) set the provenance reconciliation decided is
+// not present in the image — our own package name matched against Wolfi's
+// advisory feed, where their -rN rebuild counter is compared against our -r0.
+// The pairs come from meta-<name>.json rather than being re-derived here, so
+// the rule lives in exactly one place (.github/scripts/reconcile-apk-provenance.sh)
+// and the site cannot drift from what the dashboard and job summary report.
+function readGrype(name, excludedPairs) {
   if (!REPORTS_DIR) return null;
   const p = join(REPORTS_DIR, `grype-${name}.json`);
   if (!existsSync(p)) return null;
   const doc = readJson(p);
   const matches = Array.isArray(doc.matches) ? doc.matches : [];
+  const excluded = new Set((excludedPairs || []).map((e) => `${e.package}\u0000${e.id}`));
   const counts = { critical: 0, high: 0, medium: 0, low: 0, negligible: 0, unknown: 0 };
   let fixable = 0;
+  let excludedCount = 0;
   const list = [];
   for (const m of matches) {
     const v = m.vulnerability || {};
     const a = m.artifact || {};
+    // Not shown and not counted, but tallied so the exclusion stays auditable.
+    if (excluded.has(`${a.name || ''}\u0000${v.id || ''}`)) { excludedCount++; continue; }
     const sev = String(v.severity || 'Unknown');
     const key = sev.toLowerCase();
     if (key in counts) counts[key]++;
@@ -194,7 +204,7 @@ function readGrype(name) {
   }
   const order = { Critical: 0, High: 1, Medium: 2, Low: 3, Negligible: 4, Unknown: 5 };
   list.sort((x, y) => (order[x.severity] - order[y.severity]) || x.id.localeCompare(y.id));
-  return { counts, fixable, total: list.length, list };
+  return { counts, fixable, total: list.length, excluded: excludedCount, list };
 }
 
 function readMeta(name) {
@@ -209,6 +219,7 @@ function readMeta(name) {
     builtAt: m.built_at || null,
     raw: m.raw || null,
     effective: m.effective || null,
+    provenance: m.provenance || null,
     vex: m.vex || { statements: 0, suppressed: [] },
   };
 }
@@ -362,8 +373,9 @@ async function buildImage(entry) {
   if (!record.dataStatus.apko) record.notes.push('no apko config found');
 
   // Reports (prod scan drives the headline numbers)
-  const grype = tryOr(() => readGrype(name), (e) => record.notes.push(`grype: ${e.message}`));
   const meta = tryOr(() => readMeta(name), (e) => record.notes.push(`meta: ${e.message}`));
+  const excludedPairs = (meta && meta.provenance && meta.provenance.excluded_pairs) || [];
+  const grype = tryOr(() => readGrype(name, excludedPairs), (e) => record.notes.push(`grype: ${e.message}`));
   const sbom = tryOr(() => readSbom(name), (e) => record.notes.push(`sbom: ${e.message}`));
 
   if (meta) {
@@ -380,6 +392,8 @@ async function buildImage(entry) {
       effective: meta && meta.effective ? meta.effective : null,
       fixable: grype.fixable,
       total: grype.total,
+      excluded: grype.excluded,
+      needsReview: (meta && meta.provenance && meta.provenance.needs_review) || [],
       vex: meta ? meta.vex : { statements: 0, suppressed: [] },
       list: grype.list,
     };
