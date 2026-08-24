@@ -687,20 +687,29 @@ jobs:
 
           # Severity counts — raw straight from grype, effective drops any
           # match whose .vulnerability.id is in the suppressed set.
+          #
+          # `total` is the COUNT OF MATCHES, not the sum of the named buckets.
+          # Grype emits a severity outside critical/high/medium/low for some
+          # feeds — every Go advisory (GO-YYYY-NNNN) arrives as "Unknown"
+          # because the Go vuln DB assigns no CVSS score. Summing four buckets
+          # silently dropped those: helm reported 0 while carrying
+          # GO-2026-5932 in golang.org/x/crypto. Counting matches directly
+          # means a severity we do not enumerate can never vanish again.
           counts() {
             local report="$1" suppressed="$2"
             jq --argjson sup "$suppressed" '
-              def sev_count(level):
-                [ .matches[]
-                  | select((.vulnerability.id | IN($sup[])) | not)
-                  | select(.vulnerability.severity | ascii_upcase == level)
-                ] | length;
-              {
-                critical: sev_count("CRITICAL"),
-                high:     sev_count("HIGH"),
-                medium:   sev_count("MEDIUM"),
-                low:      sev_count("LOW")
-              } | . + {total: (.critical + .high + .medium + .low)}
+              [ .matches[] | select((.vulnerability.id | IN($sup[])) | not) ] as $m
+              | def sev_count(level):
+                  [ $m[] | select(.vulnerability.severity | ascii_upcase == level) ] | length;
+                {
+                  critical:   sev_count("CRITICAL"),
+                  high:       sev_count("HIGH"),
+                  medium:     sev_count("MEDIUM"),
+                  low:        sev_count("LOW"),
+                  negligible: sev_count("NEGLIGIBLE"),
+                  unknown:    sev_count("UNKNOWN")
+                }
+                | . + {total: ($m | length)}
             ' "$report"
           }
 
@@ -708,7 +717,7 @@ jobs:
             RAW_COUNTS=$(counts "$GRYPE_REPORT" '[]')
             EFF_COUNTS=$(counts "$GRYPE_REPORT" "$SUPPRESSED_JSON")
           else
-            RAW_COUNTS='{"critical":0,"high":0,"medium":0,"low":0,"total":0}'
+            RAW_COUNTS='{"critical":0,"high":0,"medium":0,"low":0,"negligible":0,"unknown":0,"total":0}'
             EFF_COUNTS="$RAW_COUNTS"
           fi
 
@@ -746,12 +755,17 @@ jobs:
             exit 0
           fi
 
-          # Count vulnerabilities by severity (grype uses Title Case severity)
+          # Count vulnerabilities by severity (grype uses Title Case severity).
+          # TOTAL is the match count, not the sum of the named buckets — Go
+          # advisories (GO-YYYY-NNNN) carry no CVSS score and arrive as
+          # "Unknown", so summing four buckets under-reports them to zero.
           CRITICAL=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "CRITICAL")] | length' "$REPORT")
           HIGH=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "HIGH")] | length' "$REPORT")
           MEDIUM=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "MEDIUM")] | length' "$REPORT")
           LOW=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "LOW")] | length' "$REPORT")
-          TOTAL=$((CRITICAL + HIGH + MEDIUM + LOW))
+          NEGLIGIBLE=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "NEGLIGIBLE")] | length' "$REPORT")
+          UNKNOWN=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "UNKNOWN")] | length' "$REPORT")
+          TOTAL=$(jq '.matches | length' "$REPORT")
 
           # Header
           echo "## Security Scan: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
@@ -766,6 +780,9 @@ jobs:
           echo "| HIGH | $HIGH |" >> $GITHUB_STEP_SUMMARY
           echo "| MEDIUM | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
           echo "| LOW | $LOW |" >> $GITHUB_STEP_SUMMARY
+          echo "| NEGLIGIBLE | $NEGLIGIBLE |" >> $GITHUB_STEP_SUMMARY
+          echo "| UNKNOWN | $UNKNOWN |" >> $GITHUB_STEP_SUMMARY
+          echo "| **TOTAL** | **$TOTAL** |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "$TOTAL" -eq 0 ]; then
@@ -788,6 +805,24 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
           else
             echo "No CRITICAL or HIGH vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Unscored advisories. These carry no CVSS severity (the Go vuln DB
+          # assigns none), so they never appear in the CRITICAL/HIGH table
+          # above. List them explicitly or they are reported as a bare count
+          # with no way to tell what they are.
+          if [ "$UNKNOWN" -gt 0 ]; then
+            echo "### Unscored advisories (no CVSS severity)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Library | Advisory | Installed | Fixed |" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|----------|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+            jq -r '
+              [.matches[] | select(.vulnerability.severity | ascii_upcase == "UNKNOWN")]
+              | sort_by(.artifact.name, .vulnerability.id)
+              | .[]
+              | "| \(.artifact.name) | \(.vulnerability.id) | \(.artifact.version) | \((.vulnerability.fix.versions // [])[0] // "none") |"
+            ' "$REPORT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Upload vulnerability report
@@ -1332,20 +1367,29 @@ jobs:
 
           # Severity counts — raw straight from grype, effective drops any
           # match whose .vulnerability.id is in the suppressed set.
+          #
+          # `total` is the COUNT OF MATCHES, not the sum of the named buckets.
+          # Grype emits a severity outside critical/high/medium/low for some
+          # feeds — every Go advisory (GO-YYYY-NNNN) arrives as "Unknown"
+          # because the Go vuln DB assigns no CVSS score. Summing four buckets
+          # silently dropped those: helm reported 0 while carrying
+          # GO-2026-5932 in golang.org/x/crypto. Counting matches directly
+          # means a severity we do not enumerate can never vanish again.
           counts() {
             local report="$1" suppressed="$2"
             jq --argjson sup "$suppressed" '
-              def sev_count(level):
-                [ .matches[]
-                  | select((.vulnerability.id | IN($sup[])) | not)
-                  | select(.vulnerability.severity | ascii_upcase == level)
-                ] | length;
-              {
-                critical: sev_count("CRITICAL"),
-                high:     sev_count("HIGH"),
-                medium:   sev_count("MEDIUM"),
-                low:      sev_count("LOW")
-              } | . + {total: (.critical + .high + .medium + .low)}
+              [ .matches[] | select((.vulnerability.id | IN($sup[])) | not) ] as $m
+              | def sev_count(level):
+                  [ $m[] | select(.vulnerability.severity | ascii_upcase == level) ] | length;
+                {
+                  critical:   sev_count("CRITICAL"),
+                  high:       sev_count("HIGH"),
+                  medium:     sev_count("MEDIUM"),
+                  low:        sev_count("LOW"),
+                  negligible: sev_count("NEGLIGIBLE"),
+                  unknown:    sev_count("UNKNOWN")
+                }
+                | . + {total: ($m | length)}
             ' "$report"
           }
 
@@ -1353,7 +1397,7 @@ jobs:
             RAW_COUNTS=$(counts "$GRYPE_REPORT" '[]')
             EFF_COUNTS=$(counts "$GRYPE_REPORT" "$SUPPRESSED_JSON")
           else
-            RAW_COUNTS='{"critical":0,"high":0,"medium":0,"low":0,"total":0}'
+            RAW_COUNTS='{"critical":0,"high":0,"medium":0,"low":0,"negligible":0,"unknown":0,"total":0}'
             EFF_COUNTS="$RAW_COUNTS"
           fi
 
@@ -1391,12 +1435,17 @@ jobs:
             exit 0
           fi
 
-          # Count vulnerabilities by severity (grype uses Title Case severity)
+          # Count vulnerabilities by severity (grype uses Title Case severity).
+          # TOTAL is the match count, not the sum of the named buckets — Go
+          # advisories (GO-YYYY-NNNN) carry no CVSS score and arrive as
+          # "Unknown", so summing four buckets under-reports them to zero.
           CRITICAL=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "CRITICAL")] | length' "$REPORT")
           HIGH=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "HIGH")] | length' "$REPORT")
           MEDIUM=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "MEDIUM")] | length' "$REPORT")
           LOW=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "LOW")] | length' "$REPORT")
-          TOTAL=$((CRITICAL + HIGH + MEDIUM + LOW))
+          NEGLIGIBLE=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "NEGLIGIBLE")] | length' "$REPORT")
+          UNKNOWN=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "UNKNOWN")] | length' "$REPORT")
+          TOTAL=$(jq '.matches | length' "$REPORT")
 
           # Header
           echo "## Security Scan: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
@@ -1411,6 +1460,9 @@ jobs:
           echo "| HIGH | $HIGH |" >> $GITHUB_STEP_SUMMARY
           echo "| MEDIUM | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
           echo "| LOW | $LOW |" >> $GITHUB_STEP_SUMMARY
+          echo "| NEGLIGIBLE | $NEGLIGIBLE |" >> $GITHUB_STEP_SUMMARY
+          echo "| UNKNOWN | $UNKNOWN |" >> $GITHUB_STEP_SUMMARY
+          echo "| **TOTAL** | **$TOTAL** |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "$TOTAL" -eq 0 ]; then
@@ -1433,6 +1485,24 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
           else
             echo "No CRITICAL or HIGH vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Unscored advisories. These carry no CVSS severity (the Go vuln DB
+          # assigns none), so they never appear in the CRITICAL/HIGH table
+          # above. List them explicitly or they are reported as a bare count
+          # with no way to tell what they are.
+          if [ "$UNKNOWN" -gt 0 ]; then
+            echo "### Unscored advisories (no CVSS severity)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Library | Advisory | Installed | Fixed |" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|----------|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+            jq -r '
+              [.matches[] | select(.vulnerability.severity | ascii_upcase == "UNKNOWN")]
+              | sort_by(.artifact.name, .vulnerability.id)
+              | .[]
+              | "| \(.artifact.name) | \(.vulnerability.id) | \(.artifact.version) | \((.vulnerability.fix.versions // [])[0] // "none") |"
+            ' "$REPORT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Upload vulnerability report
