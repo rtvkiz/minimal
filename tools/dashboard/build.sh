@@ -136,6 +136,7 @@ h1 { font-size: 28px; margin: 0 0 4px; font-weight: 600; }
 .chip.high .value { color: var(--high); }
 .chip.medium .value { color: var(--medium); }
 .chip.low .value { color: var(--low); }
+.chip.unscored .value { color: var(--unscored, #8b7fd4); }
 .chip.zero .value { color: var(--zero); }
 
 /* Filter input */
@@ -292,8 +293,8 @@ JS
 #--- per-image detail pages + index row data ---------------------------------
 
 # Aggregate totals (raw + VEX-effective)
-TOTAL_CRIT=0; TOTAL_HIGH=0; TOTAL_MED=0; TOTAL_LOW=0
-TOTAL_EFF_CRIT=0; TOTAL_EFF_HIGH=0; TOTAL_EFF_MED=0; TOTAL_EFF_LOW=0
+TOTAL_CRIT=0; TOTAL_HIGH=0; TOTAL_MED=0; TOTAL_LOW=0; TOTAL_UNK=0
+TOTAL_EFF_CRIT=0; TOTAL_EFF_HIGH=0; TOTAL_EFF_MED=0; TOTAL_EFF_LOW=0; TOTAL_EFF_UNK=0
 TOTAL_VEX_STMTS=0
 TOTAL_FIXABLE=0; TOTAL_IMAGES=0; CLEAN_IMAGES=0; CLEAN_EFF_IMAGES=0
 
@@ -311,7 +312,11 @@ for f in "$REPORTS_DIR"/grype-*.json; do
   H=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "HIGH")] | length' "$f")
   M=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "MEDIUM")] | length' "$f")
   L=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "LOW")] | length' "$f")
-  T=$((C + H + M + L))
+  # U: advisories with no CVSS severity (every Go GO-YYYY-NNNN arrives this
+  # way). T is the match count, not C+H+M+L, so an unscored severity cannot
+  # silently vanish from the total the way it used to.
+  U=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase | (. != "CRITICAL" and . != "HIGH" and . != "MEDIUM" and . != "LOW"))] | length' "$f")
+  T=$(jq '.matches | length' "$f")
 
   # Fixable count: CVEs where grype knows a fix version exists
   FIXABLE=$(jq '[.matches[] | select((.vulnerability.fix.versions // []) | length > 0)] | length' "$f")
@@ -320,6 +325,7 @@ for f in "$REPORTS_DIR"/grype-*.json; do
   TOTAL_HIGH=$((TOTAL_HIGH + H))
   TOTAL_MED=$((TOTAL_MED + M))
   TOTAL_LOW=$((TOTAL_LOW + L))
+  TOTAL_UNK=$((TOTAL_UNK + U))
   TOTAL_FIXABLE=$((TOTAL_FIXABLE + FIXABLE))
   [ "$T" -eq 0 ] && CLEAN_IMAGES=$((CLEAN_IMAGES + 1))
 
@@ -336,6 +342,8 @@ for f in "$REPORTS_DIR"/grype-*.json; do
     EH=$(jq -r '.effective.high     // 0' "$META")
     EM=$(jq -r '.effective.medium   // 0' "$META")
     EL=$(jq -r '.effective.low      // 0' "$META")
+    # Unscored + negligible, mirroring how U is derived from the raw report.
+    EU=$(jq -r '((.effective.negligible // 0) + (.effective.unknown // 0))' "$META")
     SUPPRESSED_JSON=$(jq -c '.vex.suppressed // []' "$META")
     VEX_STMT_COUNT=$(jq -r '.vex.statements // 0' "$META")
     # VEX drift: count of suppressions that have gone stale or become fixable.
@@ -346,9 +354,9 @@ for f in "$REPORTS_DIR"/grype-*.json; do
     BUILT_AT=""
     DIGEST=""
     # No meta → effective == raw
-    EC="$C"; EH="$H"; EM="$M"; EL="$L"
+    EC="$C"; EH="$H"; EM="$M"; EL="$L"; EU="$U"
   fi
-  ET=$((EC + EH + EM + EL))
+  ET=$((EC + EH + EM + EL + EU))
   SUPPRESSED_TOTAL=$((T - ET))
   [ "$SUPPRESSED_TOTAL" -lt 0 ] && SUPPRESSED_TOTAL=0
 
@@ -356,6 +364,7 @@ for f in "$REPORTS_DIR"/grype-*.json; do
   TOTAL_EFF_HIGH=$((TOTAL_EFF_HIGH + EH))
   TOTAL_EFF_MED=$((TOTAL_EFF_MED + EM))
   TOTAL_EFF_LOW=$((TOTAL_EFF_LOW + EL))
+  TOTAL_EFF_UNK=$((TOTAL_EFF_UNK + EU))
   TOTAL_VEX_STMTS=$((TOTAL_VEX_STMTS + VEX_STMT_COUNT))
   [ "$ET" -eq 0 ] && CLEAN_EFF_IMAGES=$((CLEAN_EFF_IMAGES + 1))
   SIZE_DISPLAY=$([ "$SIZE_BYTES" -gt 0 ] && fmt_bytes "$SIZE_BYTES" || echo "—")
@@ -461,8 +470,8 @@ DETAIL
 done
 shopt -u nullglob
 
-TOTAL_ALL=$((TOTAL_CRIT + TOTAL_HIGH + TOTAL_MED + TOTAL_LOW))
-TOTAL_EFF_ALL=$((TOTAL_EFF_CRIT + TOTAL_EFF_HIGH + TOTAL_EFF_MED + TOTAL_EFF_LOW))
+TOTAL_ALL=$((TOTAL_CRIT + TOTAL_HIGH + TOTAL_MED + TOTAL_LOW + TOTAL_UNK))
+TOTAL_EFF_ALL=$((TOTAL_EFF_CRIT + TOTAL_EFF_HIGH + TOTAL_EFF_MED + TOTAL_EFF_LOW + TOTAL_EFF_UNK))
 
 # Totals row appended last
 printf '<tr class="totals"><td>Total (%d images)</td><td class="num critical">%d</td><td class="num high">%d</td><td class="num medium">%d</td><td class="num low">%d</td><td class="num">%d</td><td class="num">%d</td><td class="num">%d</td><td></td><td class="num">%d</td><td></td><td></td></tr>\n' \
@@ -505,6 +514,9 @@ cat > "$SITE_DIR/index.html" <<HTML
   </div>
   <div class="chip $([ "$TOTAL_LOW" -gt 0 ] && echo low || echo zero)">
     <span class="label">Low</span><span class="value">${TOTAL_LOW}</span>
+  </div>
+  <div class="chip $([ "$TOTAL_UNK" -gt 0 ] && echo unscored || echo zero)" title="Advisories with no CVSS severity — every Go GO-YYYY-NNNN arrives this way">
+    <span class="label">Unscored</span><span class="value">${TOTAL_UNK}</span>
   </div>
   <div class="chip"><span class="label">Fixable</span><span class="value">${TOTAL_FIXABLE}</span></div>
   <div class="chip zero"><span class="label">Clean images</span><span class="value">${CLEAN_IMAGES} / ${TOTAL_IMAGES}</span></div>

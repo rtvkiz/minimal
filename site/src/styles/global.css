@@ -167,6 +167,7 @@ section { padding: 56px 0; }
 .sev-high { background: var(--high); }
 .sev-medium { background: var(--medium); }
 .sev-low { background: var(--low); }
+.sev-unscored { background: var(--unscored, #8b7fd4); }
 .sev-clean { background: var(--clean); }
 
 .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 600; letter-spacing: 0.01em; }

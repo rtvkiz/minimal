@@ -28,6 +28,17 @@ const repo = 'https://github.com/rtvkiz/minimal/blob/main';
         or by suppression.
       </p>
 
+      <h2 class="section-title" style="margin-top:44px">Unscored advisories</h2>
+      <p>
+        Some findings show a severity of <b>Unknown</b>. That is not a gap in our reporting — it is how
+        the source feed publishes them. The <a href="https://go.dev/doc/security/vuln/database" rel="noopener">Go
+        vulnerability database</a> assigns no CVSS score, so every Go advisory
+        (<code class="kv-mono">GO-YYYY-NNNN</code>) arrives unscored.
+      </p>
+      <p class="small muted">
+        They are counted in the totals like any other finding. Summing only critical/high/medium/low would
+        report an image carrying them as clean, which is the one thing these numbers must never do.
+      </p>
       <h2 class="section-title" style="margin-top:44px">Suppressions cannot quietly rot</h2>
       <p>
         Anything can be suppressed once. The check that matters is whether a suppression is

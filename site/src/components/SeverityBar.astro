@@ -5,6 +5,10 @@ const { image, showLabel = true } = Astro.props;
 const v = image.vulnerabilities;
 const c = v ? v.counts : null;
 const total = v ? v.total : 0;
+// Advisories with no CVSS severity (every Go GO-YYYY-NNNN) plus negligible.
+// They count toward `total`, so without a segment of their own the bar renders
+// empty while the label reads "1 CVE".
+const unscored = c ? (c.unknown ?? 0) + (c.negligible ?? 0) : 0;
 const seg = (n: number) => (total > 0 ? `${(n / total) * 100}%` : '0');
 ---
 {c ? (
@@ -12,11 +16,12 @@ const seg = (n: number) => (total > 0 ? `${(n / total) * 100}%` : '0');
     showLabel ? <span class="pill clean">Clean</span> : <span class="sevbar"><span class="sev-clean" style="width:100%"></span></span>
   ) : (
     <span style="display:inline-flex;align-items:center;gap:8px">
-      <span class="sevbar" title={`${c.critical} critical · ${c.high} high · ${c.medium} medium · ${c.low} low`}>
+      <span class="sevbar" title={`${c.critical} critical · ${c.high} high · ${c.medium} medium · ${c.low} low · ${unscored} unscored`}>
         {c.critical > 0 && <span class="sev-critical" style={`width:${seg(c.critical)}`}></span>}
         {c.high > 0 && <span class="sev-high" style={`width:${seg(c.high)}`}></span>}
         {c.medium > 0 && <span class="sev-medium" style={`width:${seg(c.medium)}`}></span>}
         {c.low > 0 && <span class="sev-low" style={`width:${seg(c.low)}`}></span>}
+        {unscored > 0 && <span class="sev-unscored" style={`width:${seg(unscored)}`}></span>}
       </span>
       {showLabel && <span class="small muted">{total} CVE{total === 1 ? '' : 's'}</span>}
     </span>
