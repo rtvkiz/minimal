@@ -82,6 +82,8 @@ fi
 echo "  failed jobs on that run: $n_failed"
 
 declare -A VERDICT=()
+n_image_jobs=0
+n_classified=0
 while IFS=$'\t' read -r jid name; do
   [ -n "${jid:-}" ] || continue
   case "$name" in
@@ -90,7 +92,24 @@ while IFS=$'\t' read -r jid name; do
   esac
   img=$(printf '%s' "$name" | sed -n 's/^[a-z-]* (\([a-z0-9-]*\),.*/\1/p')
   [ -n "$img" ] || continue
-  gh api "repos/${REPO}/actions/jobs/${jid}/logs" > "$tmp/$jid.log" 2>/dev/null || continue
+  n_image_jobs=$((n_image_jobs + 1))
+
+  # Job logs are not always served the moment the run completes. The original
+  # `|| continue` skipped those jobs silently, so on 2026-08-24 all five of
+  # trivy's failed jobs were skipped and the run concluded that no image had
+  # failed to compile. Retry, and if a log truly cannot be read say so —
+  # an unclassified job must never masquerade as a passing one.
+  ok=""
+  for a in 1 2 3 4; do
+    if gh api "repos/${REPO}/actions/jobs/${jid}/logs" > "$tmp/$jid.log" 2>/dev/null &&
+       [ -s "$tmp/$jid.log" ]; then ok=1; break; fi
+    sleep 15
+  done
+  if [ -z "$ok" ]; then
+    echo "::warning::could not fetch logs for job ${jid} (${img}) — leaving it unclassified"
+    continue
+  fi
+  n_classified=$((n_classified + 1))
   v=$("$CLS" "$tmp/$jid.log")
   echo "  $img ($name): $v"
   # A compile error is decisive even if another job for the same image flaked:
@@ -99,6 +118,14 @@ while IFS=$'\t' read -r jid name; do
   elif [ -z "${VERDICT[$img]:-}" ]; then VERDICT[$img]="$v"
   fi
 done < "$tmp/failed.tsv"
+
+# Failed image jobs we could not read are not evidence of anything. Concluding
+# "nothing failed to compile" from zero readable logs is the exact mistake that
+# left trivy un-reverted twice.
+if [ "$n_image_jobs" -gt 0 ] && [ "$n_classified" -eq 0 ]; then
+  echo "::error::${n_image_jobs} image job(s) failed but none could be classified — refusing to draw any conclusion" >&2
+  exit 1
+fi
 
 REVERT=""; HELD=""
 for img in "${!VERDICT[@]}"; do
