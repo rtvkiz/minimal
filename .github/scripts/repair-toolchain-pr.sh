@@ -43,8 +43,31 @@ echo "  images bumped on this branch: $bumped"
 
 # Collect every failed job, resolve it to an image, and classify its log.
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs?per_page=100" --paginate \
-  --jq '.jobs[] | select(.conclusion=="failure") | [(.id|tostring), .name] | @tsv' > "$tmp/failed.tsv" || true
+
+# Fetch every failed job.
+#
+# This query must never fail quietly. An empty result is indistinguishable from
+# "nothing failed", and the script would then report a clean, considered
+# "no image failed to compile" while having classified nothing at all. That is
+# exactly what happened on 2026-08-24: the app token could not read the Actions
+# API, gh returned an empty set, and the repair reported no compile failures for
+# a build with 11 failed jobs — including trivy, which genuinely could not
+# compile. A loud failure is recoverable; a confident wrong answer is not.
+if ! gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs?per_page=100" --paginate \
+      --jq '.jobs[] | select(.conclusion=="failure") | [(.id|tostring), .name] | @tsv' \
+      > "$tmp/failed.tsv"; then
+  echo "::error::cannot read jobs for run ${RUN_ID} — the token needs actions:read" >&2
+  exit 1
+fi
+
+n_failed=$(wc -l < "$tmp/failed.tsv")
+if [ "$n_failed" -eq 0 ]; then
+  # We were triggered by a failed run, so at least one job must have failed.
+  # Zero means the query is lying to us, not that the build was fine.
+  echo "::error::run ${RUN_ID} concluded 'failure' but reports no failed jobs — refusing to draw any conclusion" >&2
+  exit 1
+fi
+echo "  failed jobs on that run: $n_failed"
 
 declare -A VERDICT=()
 while IFS=$'\t' read -r jid name; do
@@ -73,7 +96,7 @@ REVERT=$(echo "$REVERT" | xargs || true)
 HELD=$(echo "$HELD" | xargs || true)
 
 if [ -z "$REVERT" ]; then
-  echo "No image failed to COMPILE — remaining failures are ${HELD:-none}."
+  echo "No image failed to COMPILE — of $n_failed failed job(s), image verdicts were: ${HELD:-none (no per-image jobs failed)}."
   echo "Leaving the PR red: a retry is the right response to infrastructure, not a revert."
   { echo "repaired=false"; echo "reason=no-build-failures"; } >> "${GITHUB_OUTPUT:-/dev/null}"
   exit 0
