@@ -81,6 +81,35 @@ if [ "$n_failed" -eq 0 ]; then
 fi
 echo "  failed jobs on that run: $n_failed"
 
+# Download one job's log.
+#
+# Two portability traps, both of which cost a CI cycle each:
+#
+#  * gh >= 2.76 refuses to emit a response containing terminal escape
+#    sequences unless asked, and build logs are full of ANSI colour. Older gh
+#    does not know the flag at all. Try with, then without.
+#  * the job list and the log download do not necessarily accept the same
+#    credential — github.token reads the list but was refused the logs — so
+#    try every token we were given.
+#
+# Never send the error to /dev/null. Hiding it is what made the first four
+# failures of this script look like considered answers instead of breakage.
+fetch_job_log() {
+  local jid="$1" out="$2" err="$3" tok
+  for tok in "${GH_TOKEN:-}" "${APP_TOKEN:-}"; do
+    [ -n "$tok" ] || continue
+    if GH_TOKEN="$tok" gh api --allow-escape-sequences \
+         "repos/${REPO}/actions/jobs/${jid}/logs" > "$out" 2>"$err" && [ -s "$out" ]; then
+      return 0
+    fi
+    if GH_TOKEN="$tok" gh api \
+         "repos/${REPO}/actions/jobs/${jid}/logs" > "$out" 2>"$err" && [ -s "$out" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 declare -A VERDICT=()
 n_image_jobs=0
 n_classified=0
@@ -99,21 +128,9 @@ while IFS=$'\t' read -r jid name; do
   # trivy's failed jobs were skipped and the run concluded that no image had
   # failed to compile. Retry, and if a log truly cannot be read say so —
   # an unclassified job must never masquerade as a passing one.
-  # Try each token we have. The job list and the log download do not
-  # necessarily accept the same credential: github.token reads the job list
-  # fine but was refused the logs, so fall back to the app token rather than
-  # assuming either one covers both. Never discard the error — hiding it with
-  # 2>/dev/null is what made the earlier failures so hard to see.
   ok=""
   for a in 1 2 3 4; do
-    for tok in "${GH_TOKEN:-}" "${APP_TOKEN:-}"; do
-      [ -n "$tok" ] || continue
-      if GH_TOKEN="$tok" gh api "repos/${REPO}/actions/jobs/${jid}/logs" \
-           > "$tmp/$jid.log" 2>"$tmp/$jid.err" && [ -s "$tmp/$jid.log" ]; then
-        ok=1; break
-      fi
-    done
-    [ -n "$ok" ] && break
+    if fetch_job_log "$jid" "$tmp/$jid.log" "$tmp/$jid.err"; then ok=1; break; fi
     sleep 15
   done
   if [ -z "$ok" ]; then
