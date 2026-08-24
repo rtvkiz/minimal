@@ -51,6 +51,15 @@ jobs:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
 
+      # Run main's repair tooling, not the branch's. The bump branch is a
+      # snapshot from whenever the bot opened it, so a fix landed on main after
+      # that point would never reach the PR that needs it — on 2026-08-24 the
+      # branch kept re-running a version of this script that had already been
+      # fixed on main. --worktree keeps it out of the index, so the commit below
+      # still carries only images/.
+      - name: Use main's repair tooling
+        run: git restore --source=origin/main --worktree -- .github/scripts scripts
+
       - name: Classify failures and revert only genuine incompatibilities
         id: repair
         env:

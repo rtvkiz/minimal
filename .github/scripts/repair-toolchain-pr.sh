@@ -53,17 +53,29 @@ tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 # API, gh returned an empty set, and the repair reported no compile failures for
 # a build with 11 failed jobs — including trivy, which genuinely could not
 # compile. A loud failure is recoverable; a confident wrong answer is not.
-if ! gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs?per_page=100" --paginate \
-      --jq '.jobs[] | select(.conclusion=="failure") | [(.id|tostring), .name] | @tsv' \
-      > "$tmp/failed.tsv"; then
-  echo "::error::cannot read jobs for run ${RUN_ID} — the token needs actions:read" >&2
-  exit 1
-fi
+# We fire the instant the run completes, and the jobs endpoint is not yet
+# consistent for a fresh attempt — it briefly reports no failed jobs at all.
+# That is what happened on 2026-08-24: the query came back empty and the repair
+# concluded "nothing failed" for a build where trivy could not compile. Retry
+# until the API agrees that something failed, then trust it.
+n_failed=0
+for attempt in 1 2 3 4 5 6; do
+  if ! gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs?per_page=100" --paginate \
+        --jq '.jobs[] | select(.conclusion=="failure") | [(.id|tostring), .name] | @tsv' \
+        > "$tmp/failed.tsv"; then
+    echo "::error::cannot read jobs for run ${RUN_ID} — the token needs actions:read" >&2
+    exit 1
+  fi
+  n_failed=$(wc -l < "$tmp/failed.tsv")
+  [ "$n_failed" -gt 0 ] && break
+  echo "  jobs endpoint reports 0 failures for a failed run (attempt ${attempt}) — waiting for it to settle"
+  sleep 20
+done
 
-n_failed=$(wc -l < "$tmp/failed.tsv")
 if [ "$n_failed" -eq 0 ]; then
   # We were triggered by a failed run, so at least one job must have failed.
-  # Zero means the query is lying to us, not that the build was fine.
+  # Zero after retries means the query is lying to us, not that the build was
+  # fine. Never conclude anything from a query we could not make.
   echo "::error::run ${RUN_ID} concluded 'failure' but reports no failed jobs — refusing to draw any conclusion" >&2
   exit 1
 fi
