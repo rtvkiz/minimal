@@ -99,14 +99,25 @@ while IFS=$'\t' read -r jid name; do
   # trivy's failed jobs were skipped and the run concluded that no image had
   # failed to compile. Retry, and if a log truly cannot be read say so —
   # an unclassified job must never masquerade as a passing one.
+  # Try each token we have. The job list and the log download do not
+  # necessarily accept the same credential: github.token reads the job list
+  # fine but was refused the logs, so fall back to the app token rather than
+  # assuming either one covers both. Never discard the error — hiding it with
+  # 2>/dev/null is what made the earlier failures so hard to see.
   ok=""
   for a in 1 2 3 4; do
-    if gh api "repos/${REPO}/actions/jobs/${jid}/logs" > "$tmp/$jid.log" 2>/dev/null &&
-       [ -s "$tmp/$jid.log" ]; then ok=1; break; fi
+    for tok in "${GH_TOKEN:-}" "${APP_TOKEN:-}"; do
+      [ -n "$tok" ] || continue
+      if GH_TOKEN="$tok" gh api "repos/${REPO}/actions/jobs/${jid}/logs" \
+           > "$tmp/$jid.log" 2>"$tmp/$jid.err" && [ -s "$tmp/$jid.log" ]; then
+        ok=1; break
+      fi
+    done
+    [ -n "$ok" ] && break
     sleep 15
   done
   if [ -z "$ok" ]; then
-    echo "::warning::could not fetch logs for job ${jid} (${img}) — leaving it unclassified"
+    echo "::warning::could not fetch logs for job ${jid} (${img}) — leaving it unclassified: $(head -c 200 "$tmp/$jid.err" 2>/dev/null | tr '\n' ' ')"
     continue
   fi
   n_classified=$((n_classified + 1))

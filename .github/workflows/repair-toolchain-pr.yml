@@ -71,6 +71,9 @@ jobs:
           # the same API the same way. The app token is still used for the push
           # and PR comment below, which do need to act as the app.
           GH_TOKEN: ${{ github.token }}
+          # Fallback for the job-log download specifically: github.token reads
+          # the job list but was refused the logs. The script tries each.
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           ./.github/scripts/repair-toolchain-pr.sh \
