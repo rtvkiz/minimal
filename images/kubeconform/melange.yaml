@@ -48,7 +48,7 @@ environment:
 pipeline:
   - runs: |
       mkdir -p /home/build/kubeconform-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/yannh/kubeconform/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/kubeconform.tar.gz
 

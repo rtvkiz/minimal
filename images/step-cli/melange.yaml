@@ -50,7 +50,7 @@ pipeline:
   # archive's top-level dir is cli-<version>; --strip-components normalises it).
   - runs: |
       mkdir -p /home/build/step-cli-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/smallstep/cli/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/step-cli.tar.gz
 

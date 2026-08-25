@@ -52,7 +52,7 @@ pipeline:
   # Download and verify kubernetes source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/kubernetes/kubernetes/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/k8s.tar.gz
 

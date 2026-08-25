@@ -50,13 +50,13 @@ pipeline:
   # Download and verify the official Solr binary release
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
         "https://dlcdn.apache.org/solr/solr/${{package.version}}/solr-${{package.version}}.tgz" \
         -o /home/build/solr.tgz || \
-      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
         "https://downloads.apache.org/solr/solr/${{package.version}}/solr-${{package.version}}.tgz" \
         -o /home/build/solr.tgz || \
-      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
         "https://archive.apache.org/dist/solr/solr/${{package.version}}/solr-${{package.version}}.tgz" \
         -o /home/build/solr.tgz
 
@@ -112,7 +112,7 @@ pipeline:
         _n=0
         for _f in $(find "$JARROOT" -name "$_a-$_old$_sfx.jar"); do
           _d=$(dirname "$_f")
-          curl -sSfL --connect-timeout 10 --max-time 120 --retry 3 --retry-delay 5 \
+          curl -sSfL --connect-timeout 10 --max-time 120 --retry 8 --retry-all-errors \
             "$_url" -o "$_d/$_a-$_new$_sfx.jar"
           # A truncated or HTML error body would install silently and only fail at
           # runtime; every JAR is a zip, so check the magic bytes before deleting
@@ -197,7 +197,7 @@ pipeline:
             echo "patch-java-deps: no release of $_a for family target $_new" >&2
             exit 1
           fi
-          curl -sSfL --connect-timeout 10 --max-time 120 --retry 3 --retry-delay 5 \
+          curl -sSfL --connect-timeout 10 --max-time 120 --retry 8 --retry-all-errors \
             "$_u" -o "$(dirname "$_f")/$_a-$_tv.jar"
           case "$(head -c2 "$(dirname "$_f")/$_a-$_tv.jar")" in
             PK) ;;

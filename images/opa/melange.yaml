@@ -47,7 +47,7 @@ pipeline:
   # Download and verify opa source
   - runs: |
       mkdir -p /home/build/opa-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/open-policy-agent/opa/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/opa.tar.gz
 

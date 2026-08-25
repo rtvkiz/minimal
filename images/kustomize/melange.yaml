@@ -46,7 +46,7 @@ environment:
 pipeline:
   - runs: |
       mkdir -p /home/build/kustomize-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/kubernetes-sigs/kustomize/archive/refs/tags/kustomize/v${{package.version}}.tar.gz" \
         -o /home/build/kustomize.tar.gz
       echo "${{vars.sha256}}  /home/build/kustomize.tar.gz" | sha256sum -c -

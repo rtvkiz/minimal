@@ -52,13 +52,13 @@ pipeline:
   # Download and verify the official Cassandra binary release
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
         "https://dlcdn.apache.org/cassandra/${{package.version}}/apache-cassandra-${{package.version}}-bin.tar.gz" \
         -o /home/build/cass.tar.gz || \
-      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
         "https://downloads.apache.org/cassandra/${{package.version}}/apache-cassandra-${{package.version}}-bin.tar.gz" \
         -o /home/build/cass.tar.gz || \
-      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
         "https://archive.apache.org/dist/cassandra/${{package.version}}/apache-cassandra-${{package.version}}-bin.tar.gz" \
         -o /home/build/cass.tar.gz
 

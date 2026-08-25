@@ -50,7 +50,7 @@ pipeline:
   # configure — no autoreconf/autotools-dev needed).
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://www.pgbouncer.org/downloads/files/${{package.version}}/pgbouncer-${{package.version}}.tar.gz" \
         -o /home/build/pgbouncer.tar.gz
 

@@ -70,7 +70,7 @@ pipeline:
       for url in \
         "https://get.jenkins.io/war-stable/${{package.version}}/jenkins.war" \
         "https://archives.jenkins.io/war-stable/${{package.version}}/jenkins.war"; do
-        if curl -fsSL --connect-timeout 30 --max-time 600 --retry 5 --retry-all-errors "$url" -o "$war"; then
+        if curl -fsSL --connect-timeout 30 --max-time 600 --retry 8 --retry-all-errors "$url" -o "$war"; then
           ok=1; break
         fi
         echo "WARN: jenkins.war download failed from $url, trying next source"
@@ -90,7 +90,7 @@ pipeline:
       mkdir -p "$PDIR"
       PV=2.17.1-187.v0341274c2905
       _fetch_plugin() {  # $1=plugin $2=sha256
-        curl -fsSL --retry 5 --retry-all-errors \
+        curl -fsSL --retry 8 --retry-all-errors \
           "https://updates.jenkins.io/download/plugins/$1/${PV}/$1.hpi" -o "$PDIR/$1.hpi"
         echo "$2  $PDIR/$1.hpi" | sha256sum -c -
       }

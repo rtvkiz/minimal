@@ -48,13 +48,13 @@ environment:
 pipeline:
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
         "https://dlcdn.apache.org/tomcat/tomcat-11/v${{package.version}}/bin/apache-tomcat-${{package.version}}.tar.gz" \
         -o /home/build/tomcat.tar.gz || \
-      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
         "https://downloads.apache.org/tomcat/tomcat-11/v${{package.version}}/bin/apache-tomcat-${{package.version}}.tar.gz" \
         -o /home/build/tomcat.tar.gz || \
-      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
         "https://archive.apache.org/dist/tomcat/tomcat-11/v${{package.version}}/bin/apache-tomcat-${{package.version}}.tar.gz" \
         -o /home/build/tomcat.tar.gz
 

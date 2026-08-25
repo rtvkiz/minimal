@@ -45,7 +45,7 @@ environment:
 pipeline:
   - runs: |
       mkdir -p /home/build/sops-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/getsops/sops/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/sops.tar.gz
       echo "${{vars.sha256}}  /home/build/sops.tar.gz" | sha256sum -c -

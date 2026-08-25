@@ -52,7 +52,7 @@ pipeline:
   # Download and verify the source tarball.
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://www.keepalived.org/software/keepalived-${{package.version}}.tar.gz" \
         -o /home/build/keepalived.tar.gz
 
