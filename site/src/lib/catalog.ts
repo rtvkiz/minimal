@@ -41,11 +41,23 @@ export interface Cve {
   description: string | null;
 }
 
+export interface NeedsReview {
+  id: string;
+  package: string;
+  installed: string;
+  fixedIn?: string | null;
+  fixed_in?: string | null;
+}
+
 export interface Vulnerabilities {
   counts: Record<string, number>;
   effective: Record<string, number> | null;
   fixable: number;
   total: number;
+  /** Findings withheld as distro name-collision artefacts (see reconcile-apk-provenance.sh). */
+  excluded?: number;
+  /** Our own package, uncorroborated, but the fix needs a newer upstream version. */
+  needsReview?: NeedsReview[];
   vex: { statements: number; suppressed: string[] };
   list: Cve[];
 }
