@@ -49,7 +49,7 @@ environment:
 pipeline:
   - runs: |
       mkdir -p /home/build/flux-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/fluxcd/flux2/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/flux.tar.gz
       echo "${{vars.sha256}}  /home/build/flux.tar.gz" | sha256sum -c -

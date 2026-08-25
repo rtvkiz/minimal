@@ -332,6 +332,12 @@ jobs:
         # `make check-toolchain-pins`.
         run: make check-toolchain-pins
 
+      # Upstream mirrors rate-limit; curl's default backoff loses that race and
+      # turns a self-clearing 429 into a red main. Three in four days (kafka,
+      # opensearch, flink) before this gate existed.
+      - name: Check download retry backoff
+        run: make check-curl-retries
+
       - name: Assert docs match the catalog
         # The README's image count sat at 96 while the catalog grew to 100 —
         # badge, nav link and heading — because nothing compared them.

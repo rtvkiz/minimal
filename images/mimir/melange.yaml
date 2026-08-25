@@ -51,7 +51,7 @@ pipeline:
   # (not `vX.Y.Z`), and the extracted tree is `mimir-mimir-X.Y.Z`.
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors "https://github.com/grafana/mimir/archive/refs/tags/mimir-${{package.version}}.tar.gz" \
+      curl -fsSL --retry 8 --retry-all-errors "https://github.com/grafana/mimir/archive/refs/tags/mimir-${{package.version}}.tar.gz" \
         -o /home/build/mimir.tar.gz
 
       # Verify checksum

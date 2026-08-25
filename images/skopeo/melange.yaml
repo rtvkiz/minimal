@@ -51,7 +51,7 @@ pipeline:
   # Download and verify Skopeo source
   - runs: |
       mkdir -p /home/build/skopeo-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/podman-container-tools/skopeo/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/skopeo.tar.gz
 

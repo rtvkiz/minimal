@@ -52,7 +52,7 @@ pipeline:
   # matching the catalog's naming convention).
   - runs: |
       mkdir -p /home/build/redis-exporter-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/oliver006/redis_exporter/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/redis-exporter.tar.gz
 

@@ -51,13 +51,13 @@ pipeline:
   # Download and verify the official ZooKeeper binary release
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
         "https://dlcdn.apache.org/zookeeper/zookeeper-${{package.version}}/apache-zookeeper-${{package.version}}-bin.tar.gz" \
         -o /home/build/zk.tar.gz || \
-      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
         "https://downloads.apache.org/zookeeper/zookeeper-${{package.version}}/apache-zookeeper-${{package.version}}-bin.tar.gz" \
         -o /home/build/zk.tar.gz || \
-      curl -fsSL --connect-timeout 30 --retry 5 --retry-all-errors \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
         "https://archive.apache.org/dist/zookeeper/zookeeper-${{package.version}}/apache-zookeeper-${{package.version}}-bin.tar.gz" \
         -o /home/build/zk.tar.gz
 

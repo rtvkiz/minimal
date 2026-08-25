@@ -47,7 +47,7 @@ environment:
 pipeline:
   - runs: |
       mkdir -p /home/build/regctl-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/regclient/regclient/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/regctl.tar.gz
       echo "${{vars.sha256}}  /home/build/regctl.tar.gz" | sha256sum -c -

@@ -59,14 +59,14 @@ environment:
 pipeline:
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/dani-garcia/vaultwarden/archive/refs/tags/${{package.version}}.tar.gz" \
         -o /home/build/vaultwarden.tar.gz
       echo "${{vars.sha256}}  /home/build/vaultwarden.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf vaultwarden.tar.gz && rm vaultwarden.tar.gz
 
   - runs: |
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/dani-garcia/bw_web_builds/releases/download/v${{vars.web_vault_version}}/bw_web_v${{vars.web_vault_version}}.tar.gz" \
         -o /home/build/web-vault.tar.gz
       echo "${{vars.web_vault_sha256}}  /home/build/web-vault.tar.gz" | sha256sum -c -
