@@ -50,7 +50,7 @@ pipeline:
   # Download and verify Telegraf source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors "https://github.com/influxdata/telegraf/archive/refs/tags/v${{package.version}}.tar.gz" \
+      curl -fsSL --retry 8 --retry-all-errors "https://github.com/influxdata/telegraf/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/telegraf.tar.gz
 
       # Verify checksum

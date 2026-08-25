@@ -51,7 +51,7 @@ pipeline:
       # dlcdn carries only current releases; archive.apache.org keeps every
       # version, so a rebuild of an older tag still resolves.
       for base in https://dlcdn.apache.org/flink https://archive.apache.org/dist/flink; do
-        if curl -fsSL --retry 3 --retry-all-errors \
+        if curl -fsSL --retry 8 --retry-all-errors \
              "$base/flink-${{package.version}}/flink-${{package.version}}-bin-scala_${{vars.scala}}.tgz" \
              -o /home/build/flink.tgz; then
           break
@@ -117,7 +117,7 @@ pipeline:
         _n=0
         for _f in $(find "$JARROOT" -name "$_a-$_old$_sfx.jar"); do
           _d=$(dirname "$_f")
-          curl -sSfL --connect-timeout 10 --max-time 120 --retry 3 --retry-delay 5 \
+          curl -sSfL --connect-timeout 10 --max-time 120 --retry 8 --retry-all-errors \
             "$_url" -o "$_d/$_a-$_new$_sfx.jar"
           # A truncated or HTML error body would install silently and only fail at
           # runtime; every JAR is a zip, so check the magic bytes before deleting
@@ -183,7 +183,7 @@ pipeline:
             echo "patch-java-deps: no release of $_a for family target $_new" >&2
             exit 1
           fi
-          curl -sSfL --connect-timeout 10 --max-time 120 --retry 3 --retry-delay 5 \
+          curl -sSfL --connect-timeout 10 --max-time 120 --retry 8 --retry-all-errors \
             "$_u" -o "$(dirname "$_f")/$_a-$_tv.jar"
           case "$(head -c2 "$(dirname "$_f")/$_a-$_tv.jar")" in
             PK) ;;

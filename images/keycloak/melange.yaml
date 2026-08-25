@@ -48,7 +48,7 @@ environment:
 pipeline:
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors "https://github.com/keycloak/keycloak/releases/download/${{package.version}}/keycloak-${{package.version}}.tar.gz" \
+      curl -fsSL --retry 8 --retry-all-errors "https://github.com/keycloak/keycloak/releases/download/${{package.version}}/keycloak-${{package.version}}.tar.gz" \
         -o /home/build/keycloak.tar.gz
       echo "${{vars.sha256}}  /home/build/keycloak.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf keycloak.tar.gz && rm keycloak.tar.gz
@@ -129,7 +129,7 @@ pipeline:
           found=$(find "${{targets.destdir}}/opt/keycloak" -name "*$1-$3$_c.jar")
         fi
         [ -n "$found" ] || { echo "  $1 $3$_c not present (upstream may already ship >=$4)"; return 0; }
-        curl -fsSL --retry 5 --retry-all-errors \
+        curl -fsSL --retry 8 --retry-all-errors \
           "https://repo1.maven.org/maven2/$2/$1/$4/$1-$4$_c.jar" -o /tmp/_bj.jar
         echo "$5  /tmp/_bj.jar" | sha256sum -c -
         _stamp /tmp/_bj.jar "$2" "$1" "$4"

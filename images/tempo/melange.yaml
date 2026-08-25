@@ -47,7 +47,7 @@ pipeline:
   # Download and verify tempo source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/grafana/tempo/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/tempo.tar.gz
 

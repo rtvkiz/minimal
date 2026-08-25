@@ -48,7 +48,7 @@ pipeline:
   # Download and verify thanos source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/thanos-io/thanos/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/thanos.tar.gz
 

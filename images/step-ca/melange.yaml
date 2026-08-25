@@ -49,7 +49,7 @@ pipeline:
   # Download and verify step-ca source (repo: smallstep/certificates)
   - runs: |
       mkdir -p /home/build/step-ca-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/smallstep/certificates/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/step-ca.tar.gz
 

@@ -52,7 +52,7 @@ pipeline:
   # Download and verify Gitea source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors "https://github.com/go-gitea/gitea/archive/refs/tags/v${{package.version}}.tar.gz" \
+      curl -fsSL --retry 8 --retry-all-errors "https://github.com/go-gitea/gitea/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/gitea.tar.gz
 
       echo "${{vars.sha256}}  /home/build/gitea.tar.gz" | sha256sum -c -

@@ -48,7 +48,7 @@ pipeline:
   # Download and verify gitleaks source
   - runs: |
       mkdir -p /home/build/gitleaks-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/gitleaks/gitleaks/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/gitleaks.tar.gz
 

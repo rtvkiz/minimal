@@ -45,7 +45,7 @@ environment:
 pipeline:
   - runs: |
       mkdir -p /home/build/stern-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/stern/stern/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/stern.tar.gz
       echo "${{vars.sha256}}  /home/build/stern.tar.gz" | sha256sum -c -

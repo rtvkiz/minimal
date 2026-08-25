@@ -49,7 +49,7 @@ pipeline:
   # Download and verify osv-scanner source
   - runs: |
       mkdir -p /home/build/osv-scanner-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/google/osv-scanner/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/osv-scanner.tar.gz
 

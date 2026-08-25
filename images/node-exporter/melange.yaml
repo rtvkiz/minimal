@@ -49,7 +49,7 @@ pipeline:
   # Download and verify node_exporter source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/prometheus/node_exporter/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/node_exporter.tar.gz
 

@@ -47,7 +47,7 @@ pipeline:
   # Download and verify oras source
   - runs: |
       mkdir -p /home/build/oras-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/oras-project/oras/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/oras.tar.gz
 

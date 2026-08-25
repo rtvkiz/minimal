@@ -50,7 +50,7 @@ pipeline:
   # Download and verify ExternalDNS source
   - runs: |
       mkdir -p /home/build/external-dns-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/kubernetes-sigs/external-dns/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/external-dns.tar.gz
 

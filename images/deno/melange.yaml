@@ -60,7 +60,7 @@ pipeline:
         aarch64) ARCH_NAME="aarch64"; CHECKSUM="${{vars.sha256_arm}}" ;;
         *) echo "Unsupported arch: $BUILD_ARCH"; exit 1 ;;
       esac
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/denoland/deno/releases/download/v${{package.version}}/deno-${ARCH_NAME}-unknown-linux-gnu.zip" \
         -o /tmp/deno.zip
       echo "${CHECKSUM}  /tmp/deno.zip" | sha256sum -c -

@@ -49,7 +49,7 @@ pipeline:
   # Download and verify Velero source
   - runs: |
       mkdir -p /home/build/velero-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/velero-io/velero/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/velero.tar.gz
 

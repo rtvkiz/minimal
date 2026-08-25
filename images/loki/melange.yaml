@@ -46,7 +46,7 @@ environment:
 pipeline:
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors "https://github.com/grafana/loki/archive/refs/tags/v${{package.version}}.tar.gz" \
+      curl -fsSL --retry 8 --retry-all-errors "https://github.com/grafana/loki/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/loki.tar.gz
       echo "${{vars.sha256}}  /home/build/loki.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf loki.tar.gz && rm loki.tar.gz

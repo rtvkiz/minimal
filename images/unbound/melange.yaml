@@ -48,7 +48,7 @@ pipeline:
   # Download and verify the source tarball.
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://nlnetlabs.nl/downloads/unbound/unbound-${{package.version}}.tar.gz" \
         -o /home/build/unbound.tar.gz
 

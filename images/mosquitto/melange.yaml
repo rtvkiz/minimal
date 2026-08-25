@@ -48,7 +48,7 @@ pipeline:
   # Download and verify mosquitto source
   - runs: |
       mkdir -p /home/build
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://mosquitto.org/files/source/mosquitto-${{package.version}}.tar.gz" \
         -o /home/build/mosquitto.tar.gz
 

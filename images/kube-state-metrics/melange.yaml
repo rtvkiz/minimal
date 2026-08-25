@@ -51,7 +51,7 @@ pipeline:
   # Download and verify kube-state-metrics source
   - runs: |
       mkdir -p /home/build/kube-state-metrics-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/kubernetes/kube-state-metrics/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/kube-state-metrics.tar.gz
 

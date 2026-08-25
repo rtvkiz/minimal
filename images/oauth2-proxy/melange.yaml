@@ -50,7 +50,7 @@ pipeline:
   # Download and verify oauth2-proxy source
   - runs: |
       mkdir -p /home/build/oauth2-proxy-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/oauth2-proxy/oauth2-proxy/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/oauth2-proxy.tar.gz
 

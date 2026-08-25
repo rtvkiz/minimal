@@ -50,7 +50,7 @@ pipeline:
   # Download and verify metrics-server source
   - runs: |
       mkdir -p /home/build/metrics-server-${{package.version}}
-      curl -fsSL --retry 5 --retry-all-errors \
+      curl -fsSL --retry 8 --retry-all-errors \
         "https://github.com/kubernetes-sigs/metrics-server/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/metrics-server.tar.gz
 
