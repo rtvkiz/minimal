@@ -40,10 +40,10 @@ environment:
       - ca-certificates-bundle
       - curl
       - build-base
-      - go-1.26
+      - go-1.27
       - git
       # Frontend build dependencies
-      - nodejs-22
+      - nodejs-26
       - pnpm
       # SQLite support (CGO_ENABLED=1)
       - sqlite-dev
