@@ -103,6 +103,7 @@ STEP_VERSION ?= $(call melange_version,images/step-cli/melange.yaml)
 OPA_VERSION ?= $(call melange_version,images/opa/melange.yaml)
 OSV_SCANNER_VERSION ?= $(call melange_version,images/osv-scanner/melange.yaml)
 DEX_VERSION ?= $(call melange_version,images/dex/melange.yaml)
+SEAWEEDFS_VERSION ?= $(call melange_version,images/seaweedfs/melange.yaml)
 OAUTH2_PROXY_VERSION ?= $(call melange_version,images/oauth2-proxy/melange.yaml)
 FLUX_VERSION ?= $(call melange_version,images/flux/melange.yaml)
 KUSTOMIZE_VERSION ?= $(call melange_version,images/kustomize/melange.yaml)
@@ -210,6 +211,7 @@ endef
 .PHONY: opa opa-melange test-opa
 .PHONY: osv-scanner osv-scanner-melange test-osv-scanner
 .PHONY: dex dex-melange test-dex
+.PHONY: seaweedfs seaweedfs-melange test-seaweedfs
 .PHONY: oauth2-proxy oauth2-proxy-melange test-oauth2-proxy
 .PHONY: flux flux-melange test-flux
 .PHONY: kustomize kustomize-melange test-kustomize
@@ -2003,6 +2005,29 @@ osv-scanner: osv-scanner-melange
 	@rm -f osv-scanner.tar sbom-*.spdx.json
 	@echo "✓ minimal-osv-scanner built (source build)"
 
+seaweedfs-melange: keygen
+	@echo "Building SeaweedFS $(SEAWEEDFS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/seaweedfs/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ SeaweedFS package built from source"
+
+seaweedfs: seaweedfs-melange
+	@echo "Assembling minimal-seaweedfs image with apko..."
+	apko build images/seaweedfs/apko/seaweedfs.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-seaweedfs:$(VERSION) \
+		seaweedfs.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < seaweedfs.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-seaweedfs:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-seaweedfs:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-seaweedfs:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-seaweedfs:latest
+	@rm -f seaweedfs.tar sbom-*.spdx.json
+	@echo "✓ minimal-seaweedfs built (source build)"
+
 dex-melange: keygen
 	@echo "Building Dex $(DEX_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build images/dex/melange.yaml \
@@ -3663,6 +3688,12 @@ test-osv-scanner:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-osv-scanner:latest" && \
 		images/osv-scanner/test.sh
 	@echo "✓ osv-scanner tests passed"
+
+test-seaweedfs:
+	@echo "Testing seaweedfs image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-seaweedfs:latest" && \
+		images/seaweedfs/test.sh
+	@echo "✓ seaweedfs tests passed"
 
 test-dex:
 	@echo "Testing dex image..."

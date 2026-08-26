@@ -277,6 +277,16 @@
     releases: "https://github.com/dexidp/dex/releases"
     notes: "https://github.com/dexidp/dex/releases/tag/v{version}"
 
+- name: seaweedfs
+  cron-enabled: true   # validated 2026-08-25 (see PR)
+  files: [images/seaweedfs/melange.yaml]
+  # Upstream tags without a leading `v` (4.44), so no strip-v here.
+  source: { type: github-releases-latest, repo: seaweedfs/seaweedfs }
+  tarball: { url: "https://github.com/seaweedfs/seaweedfs/archive/refs/tags/{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/seaweedfs/seaweedfs/releases"
+    notes: "https://github.com/seaweedfs/seaweedfs/releases/tag/{version}"
+
 - name: oauth2-proxy
   cron-enabled: true   # tier 1 (validated 2026-07-12)
   files: [images/oauth2-proxy/melange.yaml]
