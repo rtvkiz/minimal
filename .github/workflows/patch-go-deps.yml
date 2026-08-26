@@ -137,6 +137,8 @@ jobs:
             [kube-bench]="/home/build/kube-bench-${D}{{package.version}}"
             [trufflehog]="/home/build/trufflehog-${D}{{package.version}}"
             [dex]="/home/build/dex-${D}{{package.version}}"
+            [rclone]="/home/build/rclone-${D}{{package.version}}"
+            [restic]="/home/build/restic-${D}{{package.version}}"
             [seaweedfs]="/home/build/seaweedfs-${D}{{package.version}}"
             [oauth2-proxy]="/home/build/oauth2-proxy-${D}{{package.version}}"
             [flux]="/home/build/flux-${D}{{package.version}}"
@@ -206,6 +208,8 @@ jobs:
             [kube-bench]="github.com/aquasecurity/kube-bench"
             [trufflehog]="github.com/trufflesecurity/trufflehog/v3"
             [dex]="github.com/dexidp/dex"
+            [rclone]="github.com/rclone/rclone"
+            [restic]="github.com/restic/restic"
             [seaweedfs]="github.com/seaweedfs/seaweedfs"
             [oauth2-proxy]="github.com/oauth2-proxy/oauth2-proxy/v7"
             [flux]="github.com/fluxcd/flux2/v2"
@@ -274,6 +278,8 @@ jobs:
             [kube-bench]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [trufflehog]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [dex]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [rclone]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [restic]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [seaweedfs]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [oauth2-proxy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [flux]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

@@ -104,6 +104,8 @@ OPA_VERSION ?= $(call melange_version,images/opa/melange.yaml)
 OSV_SCANNER_VERSION ?= $(call melange_version,images/osv-scanner/melange.yaml)
 DEX_VERSION ?= $(call melange_version,images/dex/melange.yaml)
 SEAWEEDFS_VERSION ?= $(call melange_version,images/seaweedfs/melange.yaml)
+RCLONE_VERSION ?= $(call melange_version,images/rclone/melange.yaml)
+RESTIC_VERSION ?= $(call melange_version,images/restic/melange.yaml)
 OAUTH2_PROXY_VERSION ?= $(call melange_version,images/oauth2-proxy/melange.yaml)
 FLUX_VERSION ?= $(call melange_version,images/flux/melange.yaml)
 KUSTOMIZE_VERSION ?= $(call melange_version,images/kustomize/melange.yaml)
@@ -212,6 +214,8 @@ endef
 .PHONY: osv-scanner osv-scanner-melange test-osv-scanner
 .PHONY: dex dex-melange test-dex
 .PHONY: seaweedfs seaweedfs-melange test-seaweedfs
+.PHONY: rclone rclone-melange test-rclone
+.PHONY: restic restic-melange test-restic
 .PHONY: oauth2-proxy oauth2-proxy-melange test-oauth2-proxy
 .PHONY: flux flux-melange test-flux
 .PHONY: kustomize kustomize-melange test-kustomize
@@ -2005,6 +2009,52 @@ osv-scanner: osv-scanner-melange
 	@rm -f osv-scanner.tar sbom-*.spdx.json
 	@echo "✓ minimal-osv-scanner built (source build)"
 
+rclone-melange: keygen
+	@echo "Building rclone $(RCLONE_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/rclone/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ rclone package built from source"
+
+rclone: rclone-melange
+	@echo "Assembling minimal-rclone image with apko..."
+	apko build images/rclone/apko/rclone.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-rclone:$(VERSION) \
+		rclone.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < rclone.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-rclone:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-rclone:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-rclone:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-rclone:latest
+	@rm -f rclone.tar sbom-*.spdx.json
+	@echo "✓ minimal-rclone built (source build)"
+
+restic-melange: keygen
+	@echo "Building restic $(RESTIC_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/restic/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ restic package built from source"
+
+restic: restic-melange
+	@echo "Assembling minimal-restic image with apko..."
+	apko build images/restic/apko/restic.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-restic:$(VERSION) \
+		restic.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < restic.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-restic:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-restic:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-restic:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-restic:latest
+	@rm -f restic.tar sbom-*.spdx.json
+	@echo "✓ minimal-restic built (source build)"
+
 seaweedfs-melange: keygen
 	@echo "Building SeaweedFS $(SEAWEEDFS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build images/seaweedfs/melange.yaml \
@@ -3688,6 +3738,18 @@ test-osv-scanner:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-osv-scanner:latest" && \
 		images/osv-scanner/test.sh
 	@echo "✓ osv-scanner tests passed"
+
+test-rclone:
+	@echo "Testing rclone image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-rclone:latest" && \
+		images/rclone/test.sh
+	@echo "✓ rclone tests passed"
+
+test-restic:
+	@echo "Testing restic image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-restic:latest" && \
+		images/restic/test.sh
+	@echo "✓ restic tests passed"
 
 test-seaweedfs:
 	@echo "Testing seaweedfs image..."

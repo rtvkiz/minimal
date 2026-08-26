@@ -1,0 +1,66 @@
+# Development variant of minimal-rclone.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - rclone
+    - ca-certificates-bundle
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+    - curl
+    - openssl
+    - bind-tools
+    - jq
+    - git
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+# rclone is configured per-invocation: pass flags, or mount a config at
+# /data/rclone.conf and point RCLONE_CONFIG at it. Built with CGO_ENABLED=0,
+# which drops the FUSE `mount` backend — that needs /dev/fuse and elevated
+# privileges a distroless image is not the right place for. Use `rclone serve`
+# or `sync`/`copy` instead.
+
+entrypoint:
+  command: /usr/bin/rclone
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+
+# Writable working directory. Both tools need somewhere to place caches and
+# config, and a nonroot process cannot create one at runtime.
+paths:
+  - path: /data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+
+annotations:
+  org.opencontainers.image.title: "minimal-rclone-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-rclone: same rclone + shell + curl/openssl/dig/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/rclone"
+  org.opencontainers.image.licenses: "MIT"
+
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64
