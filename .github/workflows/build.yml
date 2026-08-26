@@ -93,6 +93,7 @@ jobs:
             {"name":"kubeconform","variants":["prod","dev"]},
             {"name":"kube-bench","variants":["prod","dev"]},
             {"name":"trufflehog","variants":["prod","dev"]},
+            {"name":"dex","variants":["prod","dev"]},
             {"name":"oauth2-proxy","variants":["prod","dev"]},
             {"name":"flux","variants":["prod","dev"]},
             {"name":"kustomize","variants":["prod","dev"]},

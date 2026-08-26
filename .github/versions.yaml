@@ -268,6 +268,15 @@
     notes: "https://github.com/trufflesecurity/trufflehog/releases/tag/v{version}"
 
 # Tier 1 — Kubernetes / GitOps + proxies (docs/roadmap.md)
+- name: dex
+  cron-enabled: true   # validated 2026-08-25 (see PR)
+  files: [images/dex/melange.yaml]
+  source: { type: github-releases-latest, repo: dexidp/dex, strip-v: true }
+  tarball: { url: "https://github.com/dexidp/dex/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/dexidp/dex/releases"
+    notes: "https://github.com/dexidp/dex/releases/tag/v{version}"
+
 - name: oauth2-proxy
   cron-enabled: true   # tier 1 (validated 2026-07-12)
   files: [images/oauth2-proxy/melange.yaml]

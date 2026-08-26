@@ -136,6 +136,7 @@ jobs:
             [kubeconform]="/home/build/kubeconform-${D}{{package.version}}"
             [kube-bench]="/home/build/kube-bench-${D}{{package.version}}"
             [trufflehog]="/home/build/trufflehog-${D}{{package.version}}"
+            [dex]="/home/build/dex-${D}{{package.version}}"
             [oauth2-proxy]="/home/build/oauth2-proxy-${D}{{package.version}}"
             [flux]="/home/build/flux-${D}{{package.version}}"
             [external-dns]="/home/build/external-dns-${D}{{package.version}}"
@@ -203,6 +204,7 @@ jobs:
             [kubeconform]="github.com/yannh/kubeconform"
             [kube-bench]="github.com/aquasecurity/kube-bench"
             [trufflehog]="github.com/trufflesecurity/trufflehog/v3"
+            [dex]="github.com/dexidp/dex"
             [oauth2-proxy]="github.com/oauth2-proxy/oauth2-proxy/v7"
             [flux]="github.com/fluxcd/flux2/v2"
             [external-dns]="sigs.k8s.io/external-dns"
@@ -269,6 +271,7 @@ jobs:
             [kubeconform]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [kube-bench]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [trufflehog]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [dex]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [oauth2-proxy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [flux]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [external-dns]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

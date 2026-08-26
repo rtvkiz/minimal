@@ -1,0 +1,85 @@
+# Melange build configuration for minimal Dex
+# Pure Go from source. Single static `dex` binary (OpenID Connect identity
+# provider / OAuth 2.0 server that federates to upstream connectors such as
+# LDAP, SAML, GitHub, Google).
+# License: Apache-2.0 (the Dex authors).
+#
+# Web assets (login templates, static files, themes) are compiled INTO the
+# binary — cmd/../web/web.go carries `//go:embed static/* templates/* themes/*
+# robots.txt` — so there is nothing to install alongside it and no
+# frontend.dir to configure. That is what makes dex a clean single-binary
+# build despite serving a browser login UI.
+
+package:
+  # Named `dex` (not `dex-minimal`) so vulnerability scanners can identify it.
+  # Syft derives a package's CPE from its apk name, and every CPE it generated
+  # kept -minimal in the product field (cpe:2.3:a:dex:dex-minimal:*,
+  # cpe:2.3:a:dex-minimal:dex-minimal:*, ...). NVD indexes this product bare,
+  # as cpe:2.3:a:linuxfoundation:dex:*, so none of them matched.
+  name: dex
+  version: 2.45.1
+  epoch: 0
+  description: "Minimal Dex OpenID Connect identity provider built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `dex`, so without this apk could install Wolfi's build instead of
+    # this source-built one. provider-priority is evaluated BEFORE version in
+    # that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of dex source tarball - updated by update-versions.yml workflow
+  sha256: 6dc9bf768d67723d8117268d5177c7450519608f5403cd10e857c89465fa2b9e
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  # Download and verify dex source
+  - runs: |
+      mkdir -p /home/build/dex-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/dexidp/dex/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/dex.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/dex.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/dex.tar.gz -C /home/build/dex-${{package.version}} --strip-components=1
+      rm /home/build/dex.tar.gz
+
+  # Version is reported via main.version (see upstream Makefile LD_FLAGS).
+  # CGO_ENABLED=0 gives a static binary.
+  - runs: |
+      cd /home/build/dex-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= -X main.version=${{package.version}}" \
+        -o /home/build/dex-bin \
+        ./cmd/dex
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/dex-bin "${{targets.destdir}}/usr/bin/dex"
+      chmod 0755 "${{targets.destdir}}/usr/bin/dex"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying dex binary..."
+      "${{targets.destdir}}/usr/bin/dex" version
