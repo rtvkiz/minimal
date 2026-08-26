@@ -105,15 +105,30 @@ pipeline:
       # Central. A swap that finds no matching file is a hard error: it means the
       # bundled version moved and this block is stale, which must not be mistaken
       # for "nothing to do".
+      _BJ_MIRRORS="https://repo1.maven.org/maven2 https://maven-central.storage-download.googleapis.com/maven2 https://repo.maven.apache.org/maven2"
+      # Rotate mirrors BEFORE widening the wait. repo1.maven.org and
+      # repo.maven.apache.org both sit behind Cloudflare, so a WAF 403 refuses
+      # both; the googleapis mirror is separate infrastructure. Waiting one host
+      # out does not work — solr burned 9 attempts over 4m15s on 2026-08-26 and
+      # still failed, while the same artifact served fine minutes later.
+      _bj_fetch() {  # $1=full URL path after /maven2/  $2=output
+        for _r in 1 2 3 4; do
+          for _b in $_BJ_MIRRORS; do
+            if curl -sSfL --connect-timeout 15 --max-time 300 \
+                 --retry 2 --retry-all-errors "$_b/$1" -o "$2"; then return 0; fi
+          done
+          [ "$_r" -lt 4 ] && sleep $(( _r * 30 ))
+        done
+        echo "bundled-jar: all Maven mirrors refused $1" >&2; return 1
+      }
       jar_swap() {
         _g="$1"; _a="$2"; _old="$3"; _new="$4"; _cls="${5:-}"
         _sfx=""; [ -n "$_cls" ] && _sfx="-$_cls"
-        _url="https://repo1.maven.org/maven2/$(echo "$_g" | tr . /)/$_a/$_new/$_a-$_new$_sfx.jar"
+        _path="$(echo "$_g" | tr . /)/$_a/$_new/$_a-$_new$_sfx.jar"
         _n=0
         for _f in $(find "$JARROOT" -name "$_a-$_old$_sfx.jar"); do
           _d=$(dirname "$_f")
-          curl -sSfL --connect-timeout 10 --max-time 120 --retry 8 --retry-all-errors \
-            "$_url" -o "$_d/$_a-$_new$_sfx.jar"
+          _bj_fetch "$_path" "$_d/$_a-$_new$_sfx.jar"
           # A truncated or HTML error body would install silently and only fail at
           # runtime; every JAR is a zip, so check the magic bytes before deleting
           # the copy we are replacing.

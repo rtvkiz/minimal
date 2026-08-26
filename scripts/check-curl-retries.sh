@@ -40,7 +40,24 @@ mode="assert"
 fail=0
 found=0
 
+# A curl inside a MIRROR-ROTATION loop is exempt from the retry minimum.
+#
+# Rotating hosts is strictly better than waiting one out: a per-host 403/429
+# clears the moment you switch infrastructure, whereas nine attempts over four
+# minutes against a single host demonstrably did not (opensearch 2026-08-23,
+# solr 2026-08-26). Such a loop deliberately uses a SMALL per-attempt --retry so
+# it reaches the next mirror quickly, and gets its patience from the outer
+# rounds instead.
+#
+# Detection is structural, not a magic comment: find `for <var> in $<X>MIRRORS`
+# in the file, then exempt curls whose URL is built from that same $<var>.
+mirror_vars_for() {
+  grep -oE 'for[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+in[[:space:]]+\$[A-Za-z_][A-Za-z0-9_]*MIRRORS' "$1" 2>/dev/null |
+    awk '{print $2}' | sort -u
+}
+
 while IFS= read -r recipe; do
+  mirror_vars=$(mirror_vars_for "$recipe" || true)
   # Join backslash-continued lines so a curl invocation split across several
   # lines is examined as one command.
   joined=$(sed -e ':a' -e '/\\$/{N;s/\\\n//;ta' -e '}' "$recipe")
@@ -63,6 +80,23 @@ while IFS= read -r recipe; do
       *'#'*curl*) continue ;;
     esac
     printf '%s' "$line" | grep -qE '(^|[^-[:alnum:]])curl[[:space:]]' || continue
+
+    # Exempt if this curl fetches from a rotated mirror variable.
+    if [ -n "$mirror_vars" ]; then
+      _exempt=""
+      for v in $mirror_vars; do
+        case "$line" in *"\$$v/"*|*"\${$v}/"*) _exempt=1; break ;; esac
+      done
+      if [ -n "$_exempt" ]; then
+        # Still must retry on all errors — an HTTP error body is a "successful"
+        # transfer to curl otherwise.
+        printf '%s' "$line" | grep -q -- '--retry-all-errors' || {
+          fail=$((fail + 1))
+          echo "::error file=${recipe}::mirror-rotation fetch missing --retry-all-errors"
+        }
+        continue
+      fi
+    fi
 
     found=$((found + 1))
     n=$(printf '%s' "$line" | grep -oE -- '--retry[[:space:]]+[0-9]+' | grep -oE '[0-9]+' | head -1)
