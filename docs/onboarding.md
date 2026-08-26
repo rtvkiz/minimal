@@ -74,6 +74,10 @@ Tick every box. The ones marked **⛔ CI-enforced** will fail your PR if missing
 - [ ] **transitive-dep patching** — source-built only (§10):
       Go → three dicts in `patch-go-deps.yml` **or** add to `SKIP_IMAGES`;
       Ruby/Rust/Maven → `.github/patch-deps.yaml`
+- [ ] **`README.md`** — image count in the badge, its `alt` text, and the
+      "all N images" prose **⛔ check-docs fails the PR without it**.
+      `make check-docs` catches it locally; it is easy to miss because every
+      other local gate passes without it (dex/seaweedfs, PR #598).
 
 > **Why the checklist matters:** the "frozen-8" incident (8 source-built images
 > silently never getting version updates) and the #355 catalog-drift failure both
