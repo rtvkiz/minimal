@@ -9,7 +9,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:crane:crane:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: crane
-  version: 0.21.9
+  version: 0.22.0
   epoch: 0
   description: "Minimal crane OCI registry tool built from source"
   copyright:
@@ -26,7 +26,7 @@ package:
 
 vars:
   # SHA256 of crane source tarball - updated by update-versions.yml workflow
-  sha256: 6d8bce869afcc485b518cc0d59ea0ffe1090026db965806bc3be8793182528cc
+  sha256: 52f10d0154053b7bdc18bc451a6d3076f4442a664236cb91e8a1258bd210af09
 
 environment:
   contents:
