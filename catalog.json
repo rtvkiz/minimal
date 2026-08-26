@@ -509,6 +509,28 @@
       "summary": "Shell-less SeaweedFS distributed object store and filesystem, built from source via melange."
     },
     {
+      "name": "rclone",
+      "category": "Infrastructure",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "rclone",
+      "upstream_url": "https://rclone.org/",
+      "summary": "Shell-less rclone cloud storage sync tool (70+ object-store and cloud-drive backends), built from source via melange."
+    },
+    {
+      "name": "restic",
+      "category": "Infrastructure",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "restic",
+      "upstream_url": "https://restic.net/",
+      "summary": "Shell-less restic deduplicating, encrypted backup program, built from source via melange."
+    },
+    {
       "name": "oauth2-proxy",
       "category": "Web Servers & Proxies",
       "variants": [

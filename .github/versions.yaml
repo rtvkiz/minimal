@@ -277,6 +277,24 @@
     releases: "https://github.com/dexidp/dex/releases"
     notes: "https://github.com/dexidp/dex/releases/tag/v{version}"
 
+- name: rclone
+  cron-enabled: true   # validated 2026-08-26 (see PR)
+  files: [images/rclone/melange.yaml]
+  source: { type: github-releases-latest, repo: rclone/rclone, strip-v: true }
+  tarball: { url: "https://github.com/rclone/rclone/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/rclone/rclone/releases"
+    notes: "https://github.com/rclone/rclone/releases/tag/v{version}"
+
+- name: restic
+  cron-enabled: true   # validated 2026-08-26 (see PR)
+  files: [images/restic/melange.yaml]
+  source: { type: github-releases-latest, repo: restic/restic, strip-v: true }
+  tarball: { url: "https://github.com/restic/restic/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/restic/restic/releases"
+    notes: "https://github.com/restic/restic/releases/tag/v{version}"
+
 - name: seaweedfs
   cron-enabled: true   # validated 2026-08-25 (see PR)
   files: [images/seaweedfs/melange.yaml]
