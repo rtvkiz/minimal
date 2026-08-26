@@ -1,0 +1,84 @@
+# Melange build configuration for minimal SeaweedFS
+# Pure Go from source. Single static `weed` binary — SeaweedFS is one
+# multi-command executable (weed master / volume / filer / s3 / mount / …)
+# rather than a set of daemons, so one binary covers every role.
+# License: Apache-2.0 (Chris Lu / the SeaweedFS authors).
+#
+# Built from source rather than Wolfi's package because Wolfi lags upstream
+# (4.32 vs 4.44 at onboarding) and this catalogue tracks upstream latest.
+
+package:
+  # Named `seaweedfs` (not `seaweedfs-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:seaweedfs:seaweedfs-minimal:*, ...). NVD indexes this product
+  # bare, as cpe:2.3:a:seaweedfs:seaweedfs:*, so none of them matched.
+  name: seaweedfs
+  version: 4.44
+  epoch: 0
+  description: "Minimal SeaweedFS distributed object store and filesystem built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `seaweedfs`, so without this apk could install Wolfi's build instead
+    # of this source-built one. provider-priority is evaluated BEFORE version
+    # in that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of seaweedfs source tarball - updated by update-versions.yml workflow
+  sha256: fcf49f93f5e7393d579fc2a63547dae83e438e3b4861b58f27c31b059861823f
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  # Download and verify SeaweedFS source.
+  # Upstream tags this project WITHOUT a leading `v` (4.44, not v4.44).
+  - runs: |
+      mkdir -p /home/build/seaweedfs-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/seaweedfs/seaweedfs/archive/refs/tags/${{package.version}}.tar.gz" \
+        -o /home/build/seaweedfs.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/seaweedfs.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/seaweedfs.tar.gz -C /home/build/seaweedfs-${{package.version}} --strip-components=1
+      rm /home/build/seaweedfs.tar.gz
+
+  # The version is a source constant (weed/util/version: MAJOR_VERSION /
+  # MINOR_VERSION), so there is nothing to inject with -X — only COMMIT is
+  # ldflags-settable and it is cosmetic. CGO_ENABLED=0 gives a static binary.
+  - runs: |
+      cd /home/build/seaweedfs-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid=" \
+        -o /home/build/weed-bin \
+        ./weed
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/weed-bin "${{targets.destdir}}/usr/bin/weed"
+      chmod 0755 "${{targets.destdir}}/usr/bin/weed"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying weed binary..."
+      "${{targets.destdir}}/usr/bin/weed" version

@@ -1,0 +1,48 @@
+# Minimal Dex image - OpenID Connect identity provider, built from source via melange
+# Shell-less, distroless. CVE patching via daily rebuilds from upstream source.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - dex
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+# dex has no usable default configuration: `dex serve` requires a config file
+# path and exits immediately without one. apko cannot author file contents, so
+# the image deliberately ships none — mount your own at /etc/dex/config.yaml.
+#
+# Listeners are whatever that config declares; upstream's examples use 5556
+# (HTTP/OIDC), 5557 (gRPC) and 5558 (telemetry). Binding those as nonroot is
+# fine — all are above 1024.
+entrypoint:
+  command: /usr/bin/dex serve /etc/dex/config.yaml
+
+environment:
+  PATH: /usr/bin:/bin
+
+annotations:
+  org.opencontainers.image.title: "minimal-dex"
+  org.opencontainers.image.description: "Hardened shell-less Dex OpenID Connect identity provider built from source via melange with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/dex"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64
