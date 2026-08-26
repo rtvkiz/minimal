@@ -56,10 +56,46 @@ j() { jq -r "$1" <<<"$row"; }
 # Maven layout: /<group-path>/<artifact>/<version>/<artifact>-<version>.jar
 # $1=group-path $2=artifact $3=version
 # $4 = optional classifier (linux-x86_64, ...) for native/per-platform artifacts
-maven_url() {
+maven_path() {
   local sfx=""
   [ -n "${4:-}" ] && [ "${4:-}" != "-" ] && sfx="-$4"
-  printf 'https://repo1.maven.org/maven2/%s/%s/%s/%s-%s%s.jar' "$1" "$2" "$3" "$2" "$3" "$sfx"
+  printf '%s/%s/%s/%s-%s%s.jar' "$1" "$2" "$3" "$2" "$3" "$sfx"
+}
+maven_url() { printf 'https://repo1.maven.org/maven2/%s' "$(maven_path "$@")"; }
+
+# Maven Central mirrors, in preference order.
+#
+# repo1.maven.org and repo.maven.apache.org both resolve into Cloudflare's
+# range (2606:4700::/32), so a WAF-level 403 refuses BOTH — they are one host
+# for resilience purposes. maven-central.storage-download.googleapis.com is
+# Google infrastructure and is the mirror that actually rescues a block.
+MAVEN_MIRRORS='https://repo1.maven.org/maven2 https://maven-central.storage-download.googleapis.com/maven2 https://repo.maven.apache.org/maven2'
+
+# Fetch one Maven artifact, rotating mirrors BEFORE widening the wait.
+#
+# A per-host 403/429 clears in seconds by switching hosts; waiting one out does
+# not. Both times we lost, the backoff was working correctly and simply lost the
+# race against a block on a single host:
+#
+#   2026-08-23  opensearch  403, 9 attempts over 4m15s, all to one host
+#   2026-08-26  solr        403, 9 attempts over 4m15s, all to one host
+#
+# So every mirror is tried within the first few seconds, and the backoff only
+# grows once all of them have refused — which is the signal that the problem is
+# not host-specific.
+maven_fetch() {  # $1=path-after-/maven2/  $2=output file
+  local path="$1" out="$2" round base
+  for round in 1 2 3 4; do
+    for base in $MAVEN_MIRRORS; do
+      if curl -fsSL --connect-timeout 15 --max-time 300 \
+           --retry 2 --retry-all-errors "$base/$path" -o "$out"; then
+        return 0
+      fi
+    done
+    [ "$round" -lt 4 ] && sleep $(( round * 30 ))
+  done
+  echo "maven_fetch: all mirrors refused $path" >&2
+  return 1
 }
 published() { curl -fsSLI -o /dev/null --connect-timeout 20 --retry 2 --retry-all-errors "$(maven_url "$@")"; }
 
@@ -200,7 +236,7 @@ for i in $(seq 0 $((image_count - 1))); do
     fi
     echo "  fetching $artifact $fixv for sha256..."
     tmp=$(mktemp)
-    curl -fsSL --retry 5 --retry-all-errors "$(maven_url "$gpath" "$artifact" "$fixv")" -o "$tmp"
+    maven_fetch "$(maven_path "$gpath" "$artifact" "$fixv")" "$tmp"
     sha=$(sha256sum "$tmp" | awk '{print $1}'); rm -f "$tmp"
     SWAPS="${SWAPS}${artifact}|${gpath}|${inst}|${fixv}|${sha}"$'\n'
     seen[$artifact]=1
@@ -251,7 +287,7 @@ for i in $(seq 0 $((image_count - 1))); do
           published "$gpath" "$sib" "$fixv" || {
             echo "  family lift: $sib has no $fixv under $group, leaving it"; continue; }
           tmp=$(mktemp)
-          curl -fsSL --retry 5 --retry-all-errors "$(maven_url "$gpath" "$sib" "$fixv")" -o "$tmp"
+          maven_fetch "$(maven_path "$gpath" "$sib" "$fixv")" "$tmp"
           sha2=$(sha256sum "$tmp" | awk '{print $1}'); rm -f "$tmp"
           SWAPS="${SWAPS}${sib}|${gpath}|${sibver}|${fixv}|${sha2}|-"$'\n'
           seen2[$sib]=1
@@ -278,7 +314,7 @@ for i in $(seq 0 $((image_count - 1))); do
           published "$gpath" "$artifact" "$fixv" "$c" || {
             echo "  classifier: $artifact $fixv has no -$c on Central, leaving it"; continue; }
           tmp=$(mktemp)
-          curl -fsSL --retry 5 --retry-all-errors "$(maven_url "$gpath" "$artifact" "$fixv" "$c")" -o "$tmp"
+          maven_fetch "$(maven_path "$gpath" "$artifact" "$fixv" "$c")" "$tmp"
           sha3=$(sha256sum "$tmp" | awk '{print $1}'); rm -f "$tmp"
           CLS_ADD="${CLS_ADD}${artifact}|${gpath}|${inst}|${fixv}|${sha3}|${c}"$'\n'
           echo "  classifier: $artifact $inst -> $fixv ($c)"
@@ -369,6 +405,23 @@ for i in $(seq 0 $((image_count - 1))); do
     printf '  - runs: |\n'
     printf '      # Bundled-jar CVE fixes, sha256-pinned. Regenerated from grype by\n'
     printf '      # .github/scripts/patch-bundled-jars.sh — do not edit by hand.\n'
+    printf '      #\n'
+    printf '      # Mirrors are rotated BEFORE the wait is widened. repo1.maven.org and\n'
+    printf '      # repo.maven.apache.org both sit behind Cloudflare, so a WAF 403 refuses\n'
+    printf '      # both; the googleapis mirror is separate infrastructure. Waiting a single\n'
+    printf '      # host out does not work — opensearch (2026-08-23) and solr (2026-08-26)\n'
+    printf '      # each burned 9 attempts over 4m15s against one host and still failed.\n'
+    printf '      _BJ_MIRRORS="https://repo1.maven.org/maven2 https://maven-central.storage-download.googleapis.com/maven2 https://repo.maven.apache.org/maven2"\n'
+    printf '      _bj_fetch() {  # $1=path-after-/maven2/  $2=output\n'
+    printf '        for _r in 1 2 3 4; do\n'
+    printf '          for _b in $_BJ_MIRRORS; do\n'
+    printf '            if curl -fsSL --connect-timeout 15 --max-time 300 \\\n'
+    printf '                 --retry 2 --retry-all-errors "$_b/$1" -o "$2"; then return 0; fi\n'
+    printf '          done\n'
+    printf '          [ "$_r" -lt 4 ] && sleep $(( _r * 30 ))\n'
+    printf '        done\n'
+    printf '        echo "bundled-jar: all Maven mirrors refused $1" >&2; return 1\n'
+    printf '      }\n'
     if [ "$strategy" = "keep-filename" ]; then
       printf '      _stamp() {  # $1=jarfile $2=group-path $3=artifact $4=newver\n'
       printf '        # keep-filename leaves the old version in the filename, so a scanner only\n'
@@ -432,8 +485,7 @@ for i in $(seq 0 $((image_count - 1))); do
     printf '          found=$(find "${{targets.destdir}}/%s" -name "*$1-$3$_c.jar")\n' "$jar_root"
     printf '        fi\n'
     printf '        [ -n "$found" ] || { echo "  $1 $3$_c not present (upstream may already ship >=$4)"; return 0; }\n'
-    printf '        curl -fsSL --retry 5 --retry-all-errors \\\n'
-    printf '          "https://repo1.maven.org/maven2/$2/$1/$4/$1-$4$_c.jar" -o /tmp/_bj.jar\n'
+    printf '        _bj_fetch "$2/$1/$4/$1-$4$_c.jar" /tmp/_bj.jar\n'
     printf '        echo "$5  /tmp/_bj.jar" | sha256sum -c -\n'
     # Stamp AFTER the checksum so what we verify is the pristine Central artifact.
     if [ "$strategy" = "keep-filename" ]; then
