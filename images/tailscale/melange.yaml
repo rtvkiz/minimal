@@ -1,0 +1,92 @@
+# Melange build configuration for minimal Tailscale
+# Pure Go from source. Ships BOTH binaries the product needs: `tailscaled`
+# (the daemon that maintains the WireGuard mesh) and `tailscale` (the CLI that
+# talks to it over a local socket). They are one release and one module, so one
+# package carries both.
+# License: BSD-3-Clause (Tailscale Inc.).
+#
+# Built from source rather than Wolfi's package so the catalog tracks upstream
+# latest — Tailscale releases often, and a mesh VPN is a poor thing to be
+# behind on.
+
+package:
+  # Named `tailscale` (not `tailscale-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:tailscale:tailscale-minimal:*, ...). NVD indexes this product
+  # bare, as cpe:2.3:a:tailscale:tailscale:*, so none of them matched.
+  name: tailscale
+  version: 1.102.3
+  epoch: 0
+  description: "Minimal Tailscale WireGuard mesh VPN (tailscaled + CLI) built from source"
+  copyright:
+    - license: BSD-3-Clause
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `tailscale`, so without this apk could install Wolfi's build instead
+    # of this source-built one. provider-priority is evaluated BEFORE version
+    # in that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of tailscale source tarball - updated by update-versions.yml workflow
+  sha256: 0e94d961c31ce7d33e8b7ce4ac6fdbec83ee5658784eed69eb7fce300729d717
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  # Download and verify Tailscale source
+  - runs: |
+      mkdir -p /home/build/tailscale-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/tailscale/tailscale/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/tailscale.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/tailscale.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/tailscale.tar.gz -C /home/build/tailscale-${{package.version}} --strip-components=1
+      rm /home/build/tailscale.tar.gz
+
+  # Version is reported via tailscale.com/version.{long,short}Stamp — see
+  # upstream build_dist.sh. Both must be set or `tailscale version` prints a
+  # bare "date" placeholder. CGO_ENABLED=0 gives static binaries.
+  - runs: |
+      cd /home/build/tailscale-${{package.version}}
+      for _c in tailscale tailscaled; do
+        GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+          -trimpath \
+          -ldflags="-s -w -buildid= \
+            -X tailscale.com/version.longStamp=${{package.version}} \
+            -X tailscale.com/version.shortStamp=${{package.version}}" \
+          -o "/home/build/${_c}-bin" \
+          "./cmd/${_c}"
+      done
+
+  # Install binaries
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      for _c in tailscale tailscaled; do
+        cp "/home/build/${_c}-bin" "${{targets.destdir}}/usr/bin/${_c}"
+        chmod 0755 "${{targets.destdir}}/usr/bin/${_c}"
+      done
+
+  # Verify the build
+  - runs: |
+      echo "Verifying tailscale binaries..."
+      "${{targets.destdir}}/usr/bin/tailscale" version
+      "${{targets.destdir}}/usr/bin/tailscaled" --version

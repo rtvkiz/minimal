@@ -1,0 +1,55 @@
+# Development variant of minimal-descheduler.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - descheduler
+    - ca-certificates-bundle
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+    - curl
+    - openssl
+    - bind-tools
+    - jq
+    - git
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+# Runs in-cluster against the API server; configuration comes from a policy
+# ConfigMap mounted by the operator/Deployment, e.g.
+# `--policy-config-file=/policy-dir/policy.yaml`.
+
+entrypoint:
+  command: /usr/bin/descheduler
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+
+annotations:
+  org.opencontainers.image.title: "minimal-descheduler-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-descheduler: same binaries + shell + curl/openssl/dig/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/descheduler"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

@@ -106,6 +106,8 @@ DEX_VERSION ?= $(call melange_version,images/dex/melange.yaml)
 SEAWEEDFS_VERSION ?= $(call melange_version,images/seaweedfs/melange.yaml)
 RCLONE_VERSION ?= $(call melange_version,images/rclone/melange.yaml)
 RESTIC_VERSION ?= $(call melange_version,images/restic/melange.yaml)
+TAILSCALE_VERSION ?= $(call melange_version,images/tailscale/melange.yaml)
+DESCHEDULER_VERSION ?= $(call melange_version,images/descheduler/melange.yaml)
 OAUTH2_PROXY_VERSION ?= $(call melange_version,images/oauth2-proxy/melange.yaml)
 FLUX_VERSION ?= $(call melange_version,images/flux/melange.yaml)
 KUSTOMIZE_VERSION ?= $(call melange_version,images/kustomize/melange.yaml)
@@ -216,6 +218,8 @@ endef
 .PHONY: seaweedfs seaweedfs-melange test-seaweedfs
 .PHONY: rclone rclone-melange test-rclone
 .PHONY: restic restic-melange test-restic
+.PHONY: tailscale tailscale-melange test-tailscale
+.PHONY: descheduler descheduler-melange test-descheduler
 .PHONY: oauth2-proxy oauth2-proxy-melange test-oauth2-proxy
 .PHONY: flux flux-melange test-flux
 .PHONY: kustomize kustomize-melange test-kustomize
@@ -2032,6 +2036,52 @@ rclone: rclone-melange
 	@rm -f rclone.tar sbom-*.spdx.json
 	@echo "✓ minimal-rclone built (source build)"
 
+tailscale-melange: keygen
+	@echo "Building Tailscale $(TAILSCALE_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/tailscale/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Tailscale package built from source"
+
+tailscale: tailscale-melange
+	@echo "Assembling minimal-tailscale image with apko..."
+	apko build images/tailscale/apko/tailscale.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-tailscale:$(VERSION) \
+		tailscale.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < tailscale.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-tailscale:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-tailscale:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-tailscale:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-tailscale:latest
+	@rm -f tailscale.tar sbom-*.spdx.json
+	@echo "✓ minimal-tailscale built (source build)"
+
+descheduler-melange: keygen
+	@echo "Building descheduler $(DESCHEDULER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/descheduler/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ descheduler package built from source"
+
+descheduler: descheduler-melange
+	@echo "Assembling minimal-descheduler image with apko..."
+	apko build images/descheduler/apko/descheduler.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-descheduler:$(VERSION) \
+		descheduler.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < descheduler.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-descheduler:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-descheduler:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-descheduler:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-descheduler:latest
+	@rm -f descheduler.tar sbom-*.spdx.json
+	@echo "✓ minimal-descheduler built (source build)"
+
 restic-melange: keygen
 	@echo "Building restic $(RESTIC_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build images/restic/melange.yaml \
@@ -3744,6 +3794,18 @@ test-rclone:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-rclone:latest" && \
 		images/rclone/test.sh
 	@echo "✓ rclone tests passed"
+
+test-tailscale:
+	@echo "Testing tailscale image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-tailscale:latest" && \
+		images/tailscale/test.sh
+	@echo "✓ tailscale tests passed"
+
+test-descheduler:
+	@echo "Testing descheduler image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-descheduler:latest" && \
+		images/descheduler/test.sh
+	@echo "✓ descheduler tests passed"
 
 test-restic:
 	@echo "Testing restic image..."

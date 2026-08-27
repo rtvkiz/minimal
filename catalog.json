@@ -531,6 +531,28 @@
       "summary": "Shell-less restic deduplicating, encrypted backup program, built from source via melange."
     },
     {
+      "name": "tailscale",
+      "category": "Infrastructure",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "tailscale",
+      "upstream_url": "https://tailscale.com/",
+      "summary": "Shell-less Tailscale WireGuard mesh VPN (tailscaled daemon + CLI), built from source via melange."
+    },
+    {
+      "name": "descheduler",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "descheduler",
+      "upstream_url": "https://github.com/kubernetes-sigs/descheduler",
+      "summary": "Shell-less Kubernetes descheduler, built from source via melange."
+    },
+    {
       "name": "oauth2-proxy",
       "category": "Web Servers & Proxies",
       "variants": [

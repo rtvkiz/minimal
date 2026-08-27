@@ -277,6 +277,24 @@
     releases: "https://github.com/dexidp/dex/releases"
     notes: "https://github.com/dexidp/dex/releases/tag/v{version}"
 
+- name: tailscale
+  cron-enabled: true   # validated 2026-08-27 (see PR)
+  files: [images/tailscale/melange.yaml]
+  source: { type: github-releases-latest, repo: tailscale/tailscale, strip-v: true }
+  tarball: { url: "https://github.com/tailscale/tailscale/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/tailscale/tailscale/releases"
+    notes: "https://github.com/tailscale/tailscale/releases/tag/v{version}"
+
+- name: descheduler
+  cron-enabled: true   # validated 2026-08-27 (see PR)
+  files: [images/descheduler/melange.yaml]
+  source: { type: github-releases-latest, repo: kubernetes-sigs/descheduler, strip-v: true }
+  tarball: { url: "https://github.com/kubernetes-sigs/descheduler/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/kubernetes-sigs/descheduler/releases"
+    notes: "https://github.com/kubernetes-sigs/descheduler/releases/tag/v{version}"
+
 - name: rclone
   cron-enabled: true   # validated 2026-08-26 (see PR)
   files: [images/rclone/melange.yaml]

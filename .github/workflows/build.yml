@@ -94,6 +94,8 @@ jobs:
             {"name":"kube-bench","variants":["prod","dev"]},
             {"name":"trufflehog","variants":["prod","dev"]},
             {"name":"dex","variants":["prod","dev"]},
+            {"name":"tailscale","variants":["prod","dev"]},
+            {"name":"descheduler","variants":["prod","dev"]},
             {"name":"rclone","variants":["prod","dev"]},
             {"name":"restic","variants":["prod","dev"]},
             {"name":"seaweedfs","variants":["prod","dev"]},
