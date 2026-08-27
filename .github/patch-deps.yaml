@@ -136,6 +136,15 @@
     # These upstream binary distributions contain tightly coupled jar families
     # (Netty/Jackson, Lucene/Solr, BookKeeper/Pulsar). Scan them now, but require
     # an explicit compatibility review before promoting an artifact to auto.
+    #
+    # What that review means in practice: the image's smoke test must START the
+    # server and prove it serves, so a jar swap that breaks at runtime fails CI
+    # instead of shipping. Audited 2026-08-26:
+    #   zookeeper  boots and binds :2181                    -> ready to promote
+    #   kafka      loads the main class + StorageTool        -> partial
+    #   cassandra  `cassandra -v`, offline only              -> NOT sufficient
+    #   solr       `solr version`, offline only              -> NOT sufficient
+    # Strengthen the test first, then promote — not the other way round.
     - name: cassandra
       jar-root: opt/cassandra
       policy: report-only
@@ -154,5 +163,29 @@
     - name: flink
       jar-root: opt/flink
       policy: report-only
+      strategy: rename
+      splice-before: "update:"
+    # Added 2026-08-26. These three carry the largest remaining bundled-jar CVE
+    # backlog in the catalog (jenkins 27, kafka 22, zookeeper 22 — dominated by
+    # jackson-databind) and were simply never registered here, so the patcher
+    # had never looked at them. report-only for the same reason as the four
+    # above: promoting to auto requires a smoke test that actually BOOTS the
+    # server, and only zookeeper's does today (see the policy note below).
+    - name: jenkins
+      jar-root: usr/share/jenkins
+      policy: report-only
+      strategy: rename
+      splice-before: "update:"
+    - name: kafka
+      jar-root: opt/kafka
+      policy: report-only
+      strategy: rename
+      splice-before: "update:"
+    # AUTO. Promoted 2026-08-26 because its smoke test now clears the bar above:
+    # it boots the server AND completes a real client exchange (ruok -> imok on
+    # :2181), so a jar swap that breaks at class-load or at runtime fails CI
+    # instead of shipping. That test is the compatibility review.
+    - name: zookeeper
+      jar-root: opt/zookeeper
       strategy: rename
       splice-before: "update:"
