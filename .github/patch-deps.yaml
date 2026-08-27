@@ -140,35 +140,39 @@
     # What that review means in practice: the image's smoke test must START the
     # server and prove it serves, so a jar swap that breaks at runtime fails CI
     # instead of shipping. Audited 2026-08-26:
-    #   zookeeper  boots, binds :2181, ruok -> imok          -> AUTO
-    #   kafka      boots broker, topic create/list round-trip -> AUTO
-    #   cassandra  `cassandra -v`, offline only               -> report-only
-    #   solr       `solr version`, offline only               -> report-only
-    #   jenkins    offline only                               -> report-only
-    #   pulsar/flink  offline only                            -> report-only
-    # Strengthen the test first, then promote — not the other way round.
+    #   zookeeper  boots, binds :2181, ruok -> imok           -> AUTO
+    #   kafka      boots broker, topic create/list round-trip  -> AUTO
+    #   cassandra  boots, nodetool status waits for ^UN        -> AUTO
+    #   solr       boots, /solr/admin/info/system HTTP 200     -> AUTO
+    #   pulsar     boots, /admin/v2/brokers/health HTTP 200    -> AUTO
+    #   flink      boots, JobManager /overview                 -> AUTO
+    #   jenkins    never starts a container                    -> report-only
     #
-    # All of these CAN be booted; measured 2026-08-26 against the published
-    # images: solr 12s, kafka 8s, cassandra 43s to serving. So the remaining
-    # report-only entries are a matter of writing the test, not a limitation.
+    # Strengthen the test first, then promote — not the other way round. Only
+    # jenkins still fails that bar; everything else already booted its service
+    # and was held back on a misreading of its test, not on a real gap.
+    # AUTO. Promoted 2026-08-26 — its smoke test already boots and waits for a NORMAL node via `nodetool status`,
+    # which is the runtime safety net a jar swap needs.
     - name: cassandra
       jar-root: opt/cassandra
-      policy: report-only
       strategy: rename
       splice-before: "update:"
+    # AUTO. Promoted 2026-08-26 — its smoke test already boots and waits for HTTP 200 from /solr/admin/info/system,
+    # which is the runtime safety net a jar swap needs.
     - name: solr
       jar-root: opt/solr
-      policy: report-only
       strategy: rename
       splice-before: "update:"
+    # AUTO. Promoted 2026-08-26 — its smoke test already boots and waits for HTTP 200 from /admin/v2/brokers/health,
+    # which is the runtime safety net a jar swap needs.
     - name: pulsar
       jar-root: opt/pulsar
-      policy: report-only
       strategy: rename
       splice-before: "update:"
+    # AUTO. Promoted 2026-08-26 — its smoke test already boots and waits for the JobManager /overview endpoint,
+    # which is the runtime safety net a jar swap needs.
     - name: flink
       jar-root: opt/flink
-      policy: report-only
       strategy: rename
       splice-before: "update:"
     # Added 2026-08-26. These three carry the largest remaining bundled-jar CVE
