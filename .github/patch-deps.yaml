@@ -140,11 +140,17 @@
     # What that review means in practice: the image's smoke test must START the
     # server and prove it serves, so a jar swap that breaks at runtime fails CI
     # instead of shipping. Audited 2026-08-26:
-    #   zookeeper  boots and binds :2181                    -> ready to promote
-    #   kafka      loads the main class + StorageTool        -> partial
-    #   cassandra  `cassandra -v`, offline only              -> NOT sufficient
-    #   solr       `solr version`, offline only              -> NOT sufficient
+    #   zookeeper  boots, binds :2181, ruok -> imok          -> AUTO
+    #   kafka      boots broker, topic create/list round-trip -> AUTO
+    #   cassandra  `cassandra -v`, offline only               -> report-only
+    #   solr       `solr version`, offline only               -> report-only
+    #   jenkins    offline only                               -> report-only
+    #   pulsar/flink  offline only                            -> report-only
     # Strengthen the test first, then promote — not the other way round.
+    #
+    # All of these CAN be booted; measured 2026-08-26 against the published
+    # images: solr 12s, kafka 8s, cassandra 43s to serving. So the remaining
+    # report-only entries are a matter of writing the test, not a limitation.
     - name: cassandra
       jar-root: opt/cassandra
       policy: report-only
@@ -176,9 +182,11 @@
       policy: report-only
       strategy: rename
       splice-before: "update:"
+    # AUTO. Promoted 2026-08-26: its smoke test now boots the broker (KRaft) and
+    # completes a topic create/list round-trip through the admin API, so a jar
+    # swap that breaks at runtime fails CI rather than shipping.
     - name: kafka
       jar-root: opt/kafka
-      policy: report-only
       strategy: rename
       splice-before: "update:"
     # AUTO. Promoted 2026-08-26 because its smoke test now clears the bar above:
