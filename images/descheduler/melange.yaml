@@ -1,0 +1,89 @@
+# Melange build configuration for minimal descheduler
+# Pure Go from source. Single static `descheduler` binary — the Kubernetes SIG
+# component that evicts pods so the scheduler can place them better (rebalances
+# after node additions, taints, or drifted affinity).
+# License: Apache-2.0 (The Kubernetes Authors).
+
+package:
+  # Named `descheduler` (not `descheduler-minimal`) so vulnerability scanners
+  # can identify it. Syft derives a package's CPE from its apk name, and every
+  # CPE it generated kept -minimal in the product field
+  # (cpe:2.3:a:descheduler:descheduler-minimal:*, ...). NVD indexes this
+  # product bare, so none of them matched.
+  name: descheduler
+  version: 0.36.0
+  epoch: 0
+  description: "Minimal Kubernetes descheduler built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `descheduler`, so without this apk could install Wolfi's build
+    # instead of this source-built one. provider-priority is evaluated BEFORE
+    # version in that comparator, so this pins resolution permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of descheduler source tarball - updated by update-versions.yml workflow
+  sha256: 9b7fc9a457642f80c8683b96fafecc58e2229097399b300826bbb07d5de8effe
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      # go-1.26, not 1.27. descheduler vendors k8s.io/kube-openapi, which carries
+      # a copy of go-json-experiment and calls json.SkipFunc /
+      # json.DiscardUnknownMembers — both removed from encoding/json/v2 in
+      # go1.27, so the build fails with "undefined: json.SkipFunc". Same break
+      # that took trivy out on 2026-08-19; trivy is pinned here for the same
+      # reason. update-wolfi-packages retries the bump on each toolchain
+      # release and the repair loop holds this image back until upstream
+      # adapts, so the pin clears itself.
+      - go-1.26
+      - git
+
+pipeline:
+  # Download and verify descheduler source
+  - runs: |
+      mkdir -p /home/build/descheduler-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/kubernetes-sigs/descheduler/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/descheduler.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/descheduler.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/descheduler.tar.gz -C /home/build/descheduler-${{package.version}} --strip-components=1
+      rm /home/build/descheduler.tar.gz
+
+  # Version is reported via pkg/version (see upstream Makefile LDFLAG_LOCATION).
+  # Upstream prefixes the tag with `v`; keep that so `--version` matches what
+  # they publish. CGO_ENABLED=0 gives a static binary.
+  - runs: |
+      cd /home/build/descheduler-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X sigs.k8s.io/descheduler/pkg/version.version=v${{package.version}}" \
+        -o /home/build/descheduler-bin \
+        ./cmd/descheduler
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/descheduler-bin "${{targets.destdir}}/usr/bin/descheduler"
+      chmod 0755 "${{targets.destdir}}/usr/bin/descheduler"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying descheduler binary..."
+      "${{targets.destdir}}/usr/bin/descheduler" version
