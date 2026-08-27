@@ -146,11 +146,11 @@
     #   solr       boots, /solr/admin/info/system HTTP 200     -> AUTO
     #   pulsar     boots, /admin/v2/brokers/health HTTP 200    -> AUTO
     #   flink      boots, JobManager /overview                 -> AUTO
-    #   jenkins    never starts a container                    -> report-only
+    #   jenkins    boots, /login serves HTTP 200              -> AUTO
     #
-    # Strengthen the test first, then promote — not the other way round. Only
-    # jenkins still fails that bar; everything else already booted its service
-    # and was held back on a misreading of its test, not on a real gap.
+    # Strengthen the test first, then promote — not the other way round. All
+    # nine now clear that bar. Four of them already did and were held back on a
+    # misreading of their tests; kafka and jenkins needed the test written.
     # AUTO. Promoted 2026-08-26 — its smoke test already boots and waits for a NORMAL node via `nodetool status`,
     # which is the runtime safety net a jar swap needs.
     - name: cassandra
@@ -181,9 +181,10 @@
     # had never looked at them. report-only for the same reason as the four
     # above: promoting to auto requires a smoke test that actually BOOTS the
     # server, and only zookeeper's does today (see the policy note below).
+    # AUTO. Promoted 2026-08-26 once its smoke test learned to boot Jenkins and
+    # wait for /login to serve — it previously never started a container.
     - name: jenkins
       jar-root: usr/share/jenkins
-      policy: report-only
       strategy: rename
       splice-before: "update:"
     # AUTO. Promoted 2026-08-26: its smoke test now boots the broker (KRaft) and
