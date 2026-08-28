@@ -32,7 +32,14 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: 9298f565c2a9ba8a4e7f89c54be2c5d3fd960b5b304eb5515e15d29d2c15d4f7
+  # 2026-08-27: haproxy.org RE-ROLLED the 3.4.0 tarball without regenerating
+  # its own published .sha256/.md5, which still describe the artifact they no
+  # longer serve. Verified benign before changing this: extracted both the
+  # served tarball and the official git tag v3.4.0 — 1496 files each, identical
+  # except SUBVERS, which records the same commit 64a3353 at a different
+  # abbreviation length (-64a3353 vs -64a335366dc1). Same source, different
+  # packaging run.
+  sha256: 084aaba7fdf03e2fa64434ddbbf4f79ae9d8e07897898d9662fe478beedf4384
 
 environment:
   contents:
