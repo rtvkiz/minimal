@@ -10,7 +10,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:oras:oras:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: oras
-  version: 1.3.3
+  version: 1.3.4
   epoch: 0
   description: "Minimal ORAS (OCI Registry As Storage) CLI built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 of oras source tarball - updated by update-versions.yml workflow
-  sha256: 77170b1c2af19c4d9e0125c98b0709764534b9080de60b94fb3a2952bdce3ebf
+  sha256: 0967062b09d82c902e7f6bdd22fc6dd4577811bf46ba63dab8791ff047c55392
 
 environment:
   contents:
