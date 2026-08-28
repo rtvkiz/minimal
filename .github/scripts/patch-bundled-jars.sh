@@ -550,15 +550,25 @@ for i in $(seq 0 $((image_count - 1))); do
         key="${pfx}|${series}|${fixv}"
         [ -n "${guarded[$key]:-}" ] && continue
         guarded[$key]=1
-        # Artifacts the family lift declined are not stragglers — no such
-        # version exists to lift them to. Excluding them keeps the guard and
-        # the lift agreeing; without this they contradict each other and the
-        # build fails on a correct decision (kafka/cassandra, 2026-08-27).
+        # NOTE: do NOT exclude artifacts the family lift declined.
+        #
+        # That was tried on 2026-08-27 and was wrong. jackson-annotations
+        # publishes no 2.21.5 (it tracks the MINOR line: 2.21 exists, 2.21.5
+        # does not), so the lift declined it and the exclusion told the guard
+        # to ignore it. The build then went green and cassandra died at
+        # runtime instead:
+        #
+        #   NoClassDefFoundError: com/fasterxml/jackson/annotation/JsonSerializeAs
+        #   classpath: jackson-annotations-2.19.2.jar + jackson-databind-2.21.5.jar
+        #
+        # The guard was right. A sibling that cannot reach $fixv is exactly the
+        # incompatible-family case it exists to catch, and silencing it only
+        # moved a cheap build failure into an expensive runtime one.
+        #
+        # The real fix is for the lift to fall back to the newest version in
+        # the same series (annotations 2.19.2 -> 2.21) rather than declining.
+        # Until that exists, images whose families need it stay report-only.
         _excl=""
-        while IFS= read -r _d; do
-          [ -n "$_d" ] || continue
-          _excl="${_excl} ! -name \"${_d}-*.jar\""
-        done <<< "$(printf '%s' "$LIFT_DECLINED" | sort -u)"
         printf '      find "${{targets.destdir}}/%s" \\( -name "%s*-%s.*.jar" -o -name "%s*-%s.jar" \\) ! -name "*-%s.jar" ! -name "*-%s-*.jar"%s >> "$_strag" 2>/dev/null || true\n' \
           "$jar_root" "$pfx" "$series" "$pfx" "$series" "$fixv" "$fixv" "$_excl"
       done <<< "$SWAPS"

@@ -153,8 +153,14 @@
     # misreading of their tests; kafka and jenkins needed the test written.
     # AUTO. Promoted 2026-08-26 — its smoke test already boots and waits for a NORMAL node via `nodetool status`,
     # which is the runtime safety net a jar swap needs.
+    # BACK TO report-only 2026-08-28. Promoted 2026-08-26, reverted after the
+    # first real patch run (PR #608): jackson-annotations publishes no 2.21.5 (minor-line only), so databind 2.21.5 lands beside annotations 2.19.2 -> NoClassDefFoundError at boot.
+    # Needs the lift to fall back to the newest in-series version before it can
+    # be auto again. The smoke test caught this, which is the system working —
+    # but a build that cannot produce a coherent classpath should not run at all.
     - name: cassandra
       jar-root: opt/cassandra
+      policy: report-only
       strategy: rename
       splice-before: "update:"
     # AUTO. Promoted 2026-08-26 — its smoke test already boots and waits for HTTP 200 from /solr/admin/info/system,
@@ -190,8 +196,14 @@
     # AUTO. Promoted 2026-08-26: its smoke test now boots the broker (KRaft) and
     # completes a topic create/list round-trip through the admin API, so a jar
     # swap that breaks at runtime fails CI rather than shipping.
+    # BACK TO report-only 2026-08-28. Promoted 2026-08-26, reverted after the
+    # first real patch run (PR #608): bundles the same artifact at several versions (jetty-http 12.0.33 AND 12.0.34, jackson-core 2.21.1 AND 2.21.2); a swap keyed on one installed version leaves the other behind.
+    # Needs the lift to fall back to the newest in-series version before it can
+    # be auto again. The smoke test caught this, which is the system working —
+    # but a build that cannot produce a coherent classpath should not run at all.
     - name: kafka
       jar-root: opt/kafka
+      policy: report-only
       strategy: rename
       splice-before: "update:"
     # AUTO. Promoted 2026-08-26 because its smoke test now clears the bar above:
