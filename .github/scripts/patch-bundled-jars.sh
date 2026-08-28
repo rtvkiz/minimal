@@ -201,6 +201,7 @@ for i in $(seq 0 $((image_count - 1))); do
   # Resolve each fix to the newest *published* version that clears it, pin sha256.
   # SWAPS lines: "artifact|group-path|installed|newver|sha256"
   SWAPS=""
+  LIFT_DECLINED=""
   declare -A seen=()
   while IFS=$'\t' read -r artifact installed fix purl; do
     [ -n "$artifact" ] || continue
@@ -285,7 +286,14 @@ for i in $(seq 0 $((image_count - 1))); do
           case "$sib" in "$pfx"*) ;; *) continue ;; esac
           [ "$(printf '%s' "$sibver" | cut -d. -f1,2)" = "$series" ] || continue
           published "$gpath" "$sib" "$fixv" || {
-            echo "  family lift: $sib has no $fixv under $group, leaving it"; continue; }
+            # Not every module in a family publishes every patch release —
+            # jackson-annotations stops at 2.21 while jackson-databind goes to
+            # 2.21.5. Declining is correct, but the straggler guard below must
+            # be told, or it fails the build for the very artifact we just
+            # decided (rightly) to leave alone.
+            echo "  family lift: $sib has no $fixv under $group, leaving it"
+            LIFT_DECLINED="${LIFT_DECLINED}${sib}"$'\n'
+            continue; }
           tmp=$(mktemp)
           maven_fetch "$(maven_path "$gpath" "$sib" "$fixv")" "$tmp"
           sha2=$(sha256sum "$tmp" | awk '{print $1}'); rm -f "$tmp"
@@ -529,8 +537,17 @@ for i in $(seq 0 $((image_count - 1))); do
         key="${pfx}|${series}|${fixv}"
         [ -n "${guarded[$key]:-}" ] && continue
         guarded[$key]=1
-        printf '      find "${{targets.destdir}}/%s" \\( -name "%s*-%s.*.jar" -o -name "%s*-%s.jar" \\) ! -name "*-%s.jar" ! -name "*-%s-*.jar" >> "$_strag" 2>/dev/null || true\n' \
-          "$jar_root" "$pfx" "$series" "$pfx" "$series" "$fixv" "$fixv"
+        # Artifacts the family lift declined are not stragglers — no such
+        # version exists to lift them to. Excluding them keeps the guard and
+        # the lift agreeing; without this they contradict each other and the
+        # build fails on a correct decision (kafka/cassandra, 2026-08-27).
+        _excl=""
+        while IFS= read -r _d; do
+          [ -n "$_d" ] || continue
+          _excl="${_excl} ! -name \"${_d}-*.jar\""
+        done <<< "$(printf '%s' "$LIFT_DECLINED" | sort -u)"
+        printf '      find "${{targets.destdir}}/%s" \\( -name "%s*-%s.*.jar" -o -name "%s*-%s.jar" \\) ! -name "*-%s.jar" ! -name "*-%s-*.jar"%s >> "$_strag" 2>/dev/null || true\n' \
+          "$jar_root" "$pfx" "$series" "$pfx" "$series" "$fixv" "$fixv" "$_excl"
       done <<< "$SWAPS"
       unset guarded
       printf '      if [ -s "$_strag" ]; then\n'
