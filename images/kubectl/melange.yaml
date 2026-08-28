@@ -14,7 +14,7 @@ package:
   # bare, as cpe:2.3:a:kubectl:kubectl:*, so none of them matched, and the
   # Wolfi secdb missed it too.
   name: kubectl
-  version: 1.36.4
+  version: 1.37.0
   epoch: 0
   description: "Minimal kubectl CLI for Kubernetes built from source"
   copyright:
@@ -32,7 +32,7 @@ package:
 
 vars:
   # SHA256 of kubernetes source tarball - updated by update-versions.yml workflow
-  sha256: 86a216801ddba7098a50c6f3b3fe5fbc28ba34ea5b1daa66d81c2d5307c301ac
+  sha256: 956ddae3b12acc08a715aea0411a168a36d5989b3e7185deeb6bf46b7dac19cf
 
 environment:
   contents:
