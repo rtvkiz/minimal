@@ -278,14 +278,27 @@ for i in $(seq 0 $((image_count - 1))); do
         series="$(printf '%s' "$inst" | cut -d. -f1,2)"
         group="${gpath//\//.}"
         # Same group, same prefix, same major.minor series, wrong version.
-        while IFS=$'\t' read -r sib sibver; do
+        while IFS=$'\t' read -r sib sibver sibgroup; do
           [ -n "$sib" ] || continue
           [ "$sib" = "$artifact" ] && continue
           [ -n "${seen2[$sib]:-}" ] && continue
           [ "$sibver" = "$fixv" ] && continue
           case "$sib" in "$pfx"*) ;; *) continue ;; esac
           [ "$(printf '%s' "$sibver" | cut -d. -f1,2)" = "$series" ] || continue
-          published "$gpath" "$sib" "$fixv" || {
+          # Resolve each sibling under ITS OWN Maven group, not the flagged
+          # artifact's.
+          #
+          # Families span groups: Jackson lives in .core, .dataformat,
+          # .datatype, .module and .jakarta.rs; Jetty in org.eclipse.jetty and
+          # org.eclipse.jetty.ee10. The lift used to search only the flagged
+          # artifact's group while the straggler guard checks by NAME PREFIX
+          # across the whole jar root — so the guard kept finding siblings the
+          # lift structurally could not reach, and failed the build over them
+          # (kafka/cassandra, 2026-08-27..28: jackson-dataformat-csv,
+          # jackson-datatype-jdk8, jackson-module-blackbird, jetty-ee10-servlet
+          # all exist at the target version and were simply never considered).
+          sibgpath=$(printf '%s' "${sibgroup:-$group}" | tr . /)
+          published "$sibgpath" "$sib" "$fixv" || {
             # Not every module in a family publishes every patch release —
             # jackson-annotations stops at 2.21 while jackson-databind goes to
             # 2.21.5. Declining is correct, but the straggler guard below must
@@ -295,15 +308,15 @@ for i in $(seq 0 $((image_count - 1))); do
             LIFT_DECLINED="${LIFT_DECLINED}${sib}"$'\n'
             continue; }
           tmp=$(mktemp)
-          maven_fetch "$(maven_path "$gpath" "$sib" "$fixv")" "$tmp"
+          maven_fetch "$(maven_path "$sibgpath" "$sib" "$fixv")" "$tmp"
           sha2=$(sha256sum "$tmp" | awk '{print $1}'); rm -f "$tmp"
-          SWAPS="${SWAPS}${sib}|${gpath}|${sibver}|${fixv}|${sha2}|-"$'\n'
+          SWAPS="${SWAPS}${sib}|${sibgpath}|${sibver}|${fixv}|${sha2}|-"$'\n'
           seen2[$sib]=1
           echo "  family lift: $sib $sibver -> $fixv (no CVE of its own)"
-        done < <(jq -r --arg g "$group" '
+        done < <(jq -r '
             .artifacts[]? | select(.type == "java-archive")
-            | select((.purl // "") | test("pkg:maven/" + ($g | gsub("\\."; "\\.")) + "/"))
-            | [.name, .version] | @tsv' "$inv" 2>/dev/null)
+            | select((.purl // "") | startswith("pkg:maven/"))
+            | [.name, .version, (.purl | split("/")[1])] | @tsv' "$inv" 2>/dev/null)
       done <<< "$SWAPS"
       # --- classifier variants ------------------------------------------------
       # Native artifacts ship one jar per platform
