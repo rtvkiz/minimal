@@ -157,6 +157,103 @@ pipeline:
 
 # Automated version updates via wolfictl
 # Jenkins LTS uses release-monitor.org (releases don't follow standard GitHub tag pattern)
+  # patch-bundled-jars: auto-generated — do not edit manually
+  - runs: |
+      # Bundled-jar CVE fixes, sha256-pinned. Regenerated from grype by
+      # .github/scripts/patch-bundled-jars.sh — do not edit by hand.
+      #
+      # Mirrors are rotated BEFORE the wait is widened. repo1.maven.org and
+      # repo.maven.apache.org both sit behind Cloudflare, so a WAF 403 refuses
+      # both; the googleapis mirror is separate infrastructure. Waiting a single
+      # host out does not work — opensearch (2026-08-23) and solr (2026-08-26)
+      # each burned 9 attempts over 4m15s against one host and still failed.
+      _BJ_MIRRORS="https://repo1.maven.org/maven2 https://maven-central.storage-download.googleapis.com/maven2 https://repo.maven.apache.org/maven2"
+      _bj_fetch() {  # $1=path-after-/maven2/  $2=output
+        for _r in 1 2 3 4; do
+          for _b in $_BJ_MIRRORS; do
+            if curl -fsSL --connect-timeout 15 --max-time 300 \
+                 --retry 2 --retry-all-errors "$_b/$1" -o "$2"; then return 0; fi
+          done
+          [ "$_r" -lt 4 ] && sleep $(( _r * 30 ))
+        done
+        echo "bundled-jar: all Maven mirrors refused $1" >&2; return 1
+      }
+      _swap() {  # $1=artifact $2=group-path $3=oldver $4=newver $5=sha256 $6=mode $7=classifier|-
+        # $7 is a per-platform classifier (linux-x86_64, ...) or "-" for the plain
+        # jar. Native artifacts ship one jar per platform and the plain match skips
+        # them, which left a mixed netty in opensearch. Central publishes each
+        # classifier artifact, so they are pinned individually.
+        _c=""; [ "$7" = "-" ] || _c="-$7"
+        # rename: jar filename carries the version, match it exactly. keep-filename:
+        # filename stays the upstream version while contents change, so match any
+        # version of the artifact and overwrite in place. Two anchors on that
+        # match, both load-bearing: [0-9] pins the start of the version segment,
+        # or netty-codec matches netty-codec-http-*.jar and overwrites the http
+        # codec with the plain codec jar (keycloak died with NoClassDefFoundError
+        # FullHttpResponse); the ! -name excludes classifier jars
+        # (netty-transport-native-epoll-<v>-linux-x86_64.jar), whose content is
+        # NOT what $1-$4.jar holds — overwriting them drops the bundled .so.
+        if [ "$6" = "keep-filename" ]; then
+          if [ -n "$_c" ]; then found=$(find "${{targets.destdir}}/usr/share/jenkins" -name "*$1-[0-9]*$_c.jar")
+          else found=$(find "${{targets.destdir}}/usr/share/jenkins" -name "*$1-[0-9]*.jar" ! -name "*$1-[0-9]*-*.jar"); fi
+        else
+          found=$(find "${{targets.destdir}}/usr/share/jenkins" -name "*$1-$3$_c.jar")
+        fi
+        [ -n "$found" ] || { echo "  $1 $3$_c not present (upstream may already ship >=$4)"; return 0; }
+        _bj_fetch "$2/$1/$4/$1-$4$_c.jar" /tmp/_bj.jar
+        echo "$5  /tmp/_bj.jar" | sha256sum -c -
+        for f in $found; do
+          if [ "$6" = "keep-filename" ]; then
+            _have=$(_jarver "$f")
+            if _vge "$_have" "$4"; then echo "  $1 already at $_have (>= $4), leaving it"; continue; fi
+            cp /tmp/_bj.jar "$f"
+          else cp /tmp/_bj.jar "$(dirname "$f")/$1-$4$_c.jar"; rm -f "$f"; fi
+          echo "  patched $1 $3 -> $4 ($6$_c)"
+        done
+        rm -f /tmp/_bj.jar
+      }
+      _swap jackson-core tools/jackson/core 3.1.3 3.1.4 3bda1cd6eff0a8d47bdfcaeae7c2bd5311d6c8ed494ef5f3e51029bb44aa9bdf rename -
+      _swap jetty-ee9-security org/eclipse/jetty/ee9 12.1.8 12.1.10 728fb6e9910a01c8d49e01f096580b4e1c46b22d49af1a80acb3c5f4d2f72723 rename -
+      _swap jetty-security org/eclipse/jetty 12.1.8 12.1.10 2f34b7895cec4e3547a1b52e12e7e92b3f3a110bf3c17637f8743ca3f4e42f0c rename -
+      _swap jetty-server org/eclipse/jetty 12.1.8 12.1.10 4b0108e87abada7027123deca17186249413232dad0a2bd58a4e70a987b5354a rename -
+      _swap jetty-util org/eclipse/jetty 12.1.8 12.1.10 c52b4ff62cdacca8a399c611231129e6bd1074db7e3892e78cd106725cdd0ef1 rename -
+      _swap mina-core org/apache/mina 2.2.7 2.2.8 07a62c5b2fae3a61da693f7a5c6d6711a7ea09f318972d3e76ae8a5f032329f3 rename -
+      _swap jackson-databind tools/jackson/core 3.1.3 3.1.4 14034bfdf392b6ebec1b4bb6c1de29d604f0aa97251259a19d5f19af8719bb20 rename -
+      _swap jackson-dataformat-toml tools/jackson/dataformat 3.1.3 3.1.4 b15c504d7587ec2880f07b9e48b23dd8bae91fff4011eca2129e29cbbbeda519 rename -
+      _swap jackson-dataformat-xml tools/jackson/dataformat 3.1.3 3.1.4 840309252329c79dedc84b45179bc976934619d17c96cee69f4e07380d7e8705 rename -
+      _swap jackson-dataformat-yaml tools/jackson/dataformat 3.1.3 3.1.4 f583bd16b6d39a0ec900e37948507616bb651caea58fb882560d7e63efbe56db rename -
+      _swap jetty-alpn-java-server org/eclipse/jetty 12.1.8 12.1.10 cc002690501f4135d145d326a4b1b4c4872c710daf654ced9ef7028257c7925b rename -
+      _swap jetty-alpn-server org/eclipse/jetty 12.1.8 12.1.10 d00e8b8ecb3b9fe02f68dd31402af3ce67200e0dec6bf4e571a824a6284c1b65 rename -
+      _swap jetty-ee-webapp org/eclipse/jetty/ee 12.1.8 12.1.10 a75c0f3ec4aff18295e8ebeba5de07e67c22892f511e7637e6e51ba7b01f35e1 rename -
+      _swap jetty-ee9-nested org/eclipse/jetty/ee9 12.1.8 12.1.10 6b8d196d9788e0c6ec715ed29c5c0288cf64dea708205dd097b773c2649d99fb rename -
+      _swap jetty-ee9-servlet org/eclipse/jetty/ee9 12.1.8 12.1.10 71a0518e1e3eed5a47e1e8ad47012dc5e5a17194c8c805048f4848613f675b7a rename -
+      _swap jetty-ee9-webapp org/eclipse/jetty/ee9 12.1.8 12.1.10 af71494e00eddbdd893764ed62eef0f0589388af171cdc69b0aabe9a25b855b2 rename -
+      _swap jetty-ee9-websocket-jetty-api org/eclipse/jetty/ee9/websocket 12.1.8 12.1.10 cee65c41aaf12bf108bbdde5a382c43e5150568caf03217534428e0001a134ee rename -
+      _swap jetty-ee9-websocket-jetty-common org/eclipse/jetty/ee9/websocket 12.1.8 12.1.10 135d52a57bb4ef732e11e92741ef64114ef7a050ca63a6d5b7d6d3b3a6b2c8e1 rename -
+      _swap jetty-ee9-websocket-jetty-server org/eclipse/jetty/ee9/websocket 12.1.8 12.1.10 078d66eee17298356d5a3aebcc52a2539538dd66de503dabb0048e94b8400c8a rename -
+      _swap jetty-ee9-websocket-servlet org/eclipse/jetty/ee9/websocket 12.1.8 12.1.10 54c45a89862bcab48db713f5ef79f14eb4eafe73b28c59cbe098c6e82c8a8acf rename -
+      _swap jetty-http org/eclipse/jetty 12.1.8 12.1.10 090f276739fd9bf8c30511007caec669ea3804b1df1061c37f44467474bee71d rename -
+      _swap jetty-http2-common org/eclipse/jetty/http2 12.1.8 12.1.10 1e96e4a1137df8d3b92aab545da6ef81e585d5241ee58611188f6ff0e9779a99 rename -
+      _swap jetty-http2-hpack org/eclipse/jetty/http2 12.1.8 12.1.10 a8b7a048dc32619c432a558da33d7baa81b8a227fb821829bcc467afc0b06525 rename -
+      _swap jetty-http2-server org/eclipse/jetty/http2 12.1.8 12.1.10 f7c96249ea4f343fe28aebe7784e51f25e64501beb3dded6ef383bc066fb5cce rename -
+      _swap jetty-io org/eclipse/jetty 12.1.8 12.1.10 448fc0f8f6f5f7251fc46de8e3aae7da14bd7c571a8043dac3dc381d08228fa0 rename -
+      _swap jetty-jmx org/eclipse/jetty 12.1.8 12.1.10 baaaf76b139335125bfa51109c80d271de73f40ee8b5270674f56e90a66e9d81 rename -
+      _swap jetty-session org/eclipse/jetty 12.1.8 12.1.10 164649123d15a3f2be5c196e82aa652dff05c75362db71b0f4ab6bb35165020a rename -
+      _swap jetty-unixdomain-server org/eclipse/jetty 12.1.8 12.1.10 d2b8656d224d8235a2f0178bbd6e345c162d9a01f6887bdd144f58512ee531db rename -
+      _swap jetty-websocket-core-common org/eclipse/jetty/websocket 12.1.8 12.1.10 bc6397bf67feeb18d7851b5fbf817c4ed11016024481202e8db790bb5a8321e1 rename -
+      _swap jetty-websocket-core-server org/eclipse/jetty/websocket 12.1.8 12.1.10 ca9e5cdecde06d21d0637f7b0c15e40b90463290fa8c75d2c66b4bad6910608d rename -
+      _swap jetty-xml org/eclipse/jetty 12.1.8 12.1.10 d4660c9fa82eabfa9e5996eff5b36ae22e5e14430c3dcc485920aef889149a89 rename -
+      _strag=/tmp/_bj_stragglers; : > "$_strag"
+      find "${{targets.destdir}}/usr/share/jenkins" \( -name "jackson*-3.1.*.jar" -o -name "jackson*-3.1.jar" \) ! -name "*-3.1.4.jar" ! -name "*-3.1.4-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/usr/share/jenkins" \( -name "jetty*-12.1.*.jar" -o -name "jetty*-12.1.jar" \) ! -name "*-12.1.10.jar" ! -name "*-12.1.10-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/usr/share/jenkins" \( -name "mina*-2.2.*.jar" -o -name "mina*-2.2.jar" \) ! -name "*-2.2.8.jar" ! -name "*-2.2.8-*.jar" >> "$_strag" 2>/dev/null || true
+      if [ -s "$_strag" ]; then
+        echo "patch-bundled-jars: jars left on a superseded version:" >&2
+        sort -u "$_strag" >&2
+        rm -f "$_strag"; exit 1
+      fi
+      rm -f "$_strag"
+  # end-patch-bundled-jars
 update:
   enabled: true
   release-monitor:
