@@ -6,7 +6,7 @@ package:
   # Wolfi secdb either, so both of grype's matchers missed every CVE for this
   # package.
   name: envoy
-  version: 1.39.0
+  version: 1.39.1
   epoch: 0
   description: "Minimal Envoy proxy built from upstream releases"
   copyright:
@@ -23,8 +23,8 @@ package:
     provider-priority: 100
 
 vars:
-  sha256_x86: 4409dadc87931d8f8676314cbd83071cb65125fb4feac3f6335800580dfa9218
-  sha256_arm: ee53a4f5375566f15944dc9cb03afb1fc228df38f61737c677f139213215afcf
+  sha256_x86: 002c6e1c69ed0fa0ea381887247cadadfaec9481375fa8d8d2b1731eeabf40b8
+  sha256_arm: 8565ad0af4b1d1d3c986e5165c027add3073579182f398dd7f4d728d25e9ec62
 
 environment:
   contents:

@@ -56,13 +56,35 @@ jobs:
           #   - BLOCKED = failing/pending checks; nothing to do here.
           #   - CLEAN   = already mergeable; auto-merge will handle it.
           #   - UNKNOWN = not yet computed; next push/schedule catches it.
-          mapfile -t prs < <(
+          # Ask per-PR, not in one list query.
+          #
+          # `gh pr list --json mergeStateStatus` can return UNKNOWN indefinitely:
+          # GitHub computes mergeability lazily and a batch query does not
+          # reliably force it. This workflow reported "No behind auto-merge PRs
+          # — nothing to do" on EVERY run while four PRs sat BEHIND with
+          # auto-merge armed for 12+ hours (2026-08-28). It looked healthy
+          # because it always exited 0.
+          #
+          # `gh pr view <n>` forces the computation, so query candidates cheaply
+          # in one list call and then resolve each one individually. Log what
+          # each PR reports, so a future mismatch names itself instead of
+          # silently selecting nothing.
+          mapfile -t candidates < <(
             gh pr list --repo "$REPO" --base main --state open --limit 100 \
-              --json number,isDraft,autoMergeRequest,mergeStateStatus \
-              --jq '.[] | select(.isDraft == false
-                                 and .autoMergeRequest != null
-                                 and .mergeStateStatus == "BEHIND") | .number'
+              --json number,isDraft --jq '.[] | select(.isDraft == false) | .number'
           )
+
+          prs=()
+          for c in "${candidates[@]:-}"; do
+            [ -n "$c" ] || continue
+            info=$(gh pr view "$c" --repo "$REPO" \
+                     --json mergeStateStatus,autoMergeRequest \
+                     --jq '"\(.mergeStateStatus) \(.autoMergeRequest != null)"' 2>/dev/null) || {
+              echo "  PR #$c: could not read merge state, skipping"; continue; }
+            st=${info%% *}; am=${info##* }
+            echo "  PR #$c: mergeStateStatus=$st autoMerge=$am"
+            if [ "$st" = "BEHIND" ] && [ "$am" = "true" ]; then prs+=("$c"); fi
+          done
 
           if [ "${#prs[@]}" -eq 0 ]; then
             echo "No behind auto-merge PRs — nothing to do."
