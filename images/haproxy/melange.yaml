@@ -32,14 +32,22 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  # 2026-08-27: haproxy.org RE-ROLLED the 3.4.0 tarball without regenerating
-  # its own published .sha256/.md5, which still describe the artifact they no
-  # longer serve. Verified benign before changing this: extracted both the
-  # served tarball and the official git tag v3.4.0 — 1496 files each, identical
-  # except SUBVERS, which records the same commit 64a3353 at a different
-  # abbreviation length (-64a3353 vs -64a335366dc1). Same source, different
-  # packaging run.
-  sha256: 084aaba7fdf03e2fa64434ddbbf4f79ae9d8e07897898d9662fe478beedf4384
+  # Do not "fix" this by chasing whatever is being served today.
+  #
+  # 2026-08-27: haproxy.org briefly served a DIFFERENT 3.4.0 tarball (084aaba7)
+  # while its own published .sha256/.md5 still described this one. The content
+  # was verifiably the same commit — only SUBVERS differed, recording 64a3353
+  # at a different abbreviation length — so the re-roll was benign and the pin
+  # was moved to match what was being served.
+  #
+  # 2026-08-28: they reverted. The canonical artifact below is served again and
+  # matches their published checksum; the moved pin then failed the scheduled
+  # build. Restored.
+  #
+  # The lesson is to pin what upstream's OWN published checksum says, not what
+  # the CDN happens to return: a transient mismatch is upstream's problem to
+  # resolve, and a checksum failure is the correct response to it.
+  sha256: 9298f565c2a9ba8a4e7f89c54be2c5d3fd960b5b304eb5515e15d29d2c15d4f7
 
 environment:
   contents:
