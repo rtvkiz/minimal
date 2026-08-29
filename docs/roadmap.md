@@ -1,6 +1,9 @@
 # Image Roadmap — the road to 100 (demand-ranked)
 
-**Status: 96 / 100 images.** This is the source-of-truth plan for growing the catalog.
+**Status: 108 images — the 100 target is met.** This is the source-of-truth plan for
+growing the catalog. The tier tables below stay useful as the demand-ranked backlog;
+the "road to 100" batch section near the end is kept as a build log of how the first
+100 were reached, not as remaining work.
 It supersedes the batch order from earlier sessions, which was ordered by *build ease* and
 *GitHub popularity*. This version is ordered by **actual container demand first**, then
 build effort.
@@ -56,6 +59,7 @@ Single static Go binaries **and** genuinely run as containers. Best impact-per-e
 | [x] | helmfile | helmfile/helmfile | 🟢 MIT | — | 5k | declarative Helm, CD pipelines |
 | [x] | regctl | regclient/regclient | 🟢 Apache-2.0 | — | 2k | registry client, CI |
 | [x] | stern | stern/stern | 🟢 Apache-2.0 | — | 5k | multi-pod log tail (borderline: often local) |
+| [x] | kube-vip | kube-vip/kube-vip | 🟢 Apache-2.0 | — | 3k | control-plane VIP + LB for bare metal — shipped; runs as root (NET_ADMIN/NET_RAW for netlink+ARP) |
 
 ## Tier 3 — high demand, heavier builds (deliberate; fills thin DB/proxy/app categories)
 
@@ -72,6 +76,7 @@ by effort. Fills the catalog's thinnest categories (databases, proxies, apps).
 | [ ] | kvrocks | apache/kvrocks | 🟢 Apache-2.0 | C++ | 3.5M | 4k | Redis-on-RocksDB |
 | [x] | patroni | patroni/patroni | 🟢 MIT | Python | — | 9k | Postgres HA — shipped; first Python-daemon pattern |
 | [ ] | woodpecker | woodpecker-ci/woodpecker | 🟢 Apache-2.0 | Go+frontend | 2.7M | 7k | CI server (has web UI) |
+| [x] | zipkin | openzipkin/zipkin | 🟢 Apache-2.0 | JVM-jlink | 60M | 17k | distributed tracing — shipped; Spring Boot fat jar EXPLODED so its 157 bundled jars are scannable/patchable |
 
 ## Deferred / heavier efforts (own project, not a batch)
 
@@ -111,7 +116,8 @@ Policy filter = buildable under the shell-less/minimal thesis: ✅ static-Go bin
 C daemon (no *runtime* compiler — the varnish lesson) · JVM-jlink · interpreter ·
 binary-repackage. Excluded from the 100-path: frontend-in-bwrap (grafana/argocd/uptime-kuma),
 runtime-compiler (varnish), tangled force-bump graphs, huge-disk C++ (clickhouse), and
-🔴 SSPL/BUSL/EULA. At the current 96-image catalog, 4 images remain to reach 100.
+🔴 SSPL/BUSL/EULA. This section is a completed build log — the 100 target was reached and
+the catalog now stands at 108.
 
 ### Batch F — static Go (the crank) → 88   [DONE]
 | Image | Upstream | License | Build notes |
