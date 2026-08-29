@@ -1,0 +1,89 @@
+# Melange build configuration for minimal kube-vip
+# Pure Go from source. Single static `kube-vip` binary — provides a virtual IP
+# and load balancer for the Kubernetes control plane (and optionally for
+# LoadBalancer Services) on bare metal, without an external LB appliance.
+# License: Apache-2.0 (the kube-vip authors).
+
+package:
+  # Named `kube-vip` (not `kube-vip-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:kube-vip:kube-vip-minimal:*, ...). NVD indexes this product
+  # bare, so none of them matched.
+  name: kube-vip
+  version: 1.2.3
+  epoch: 0
+  description: "Minimal kube-vip Kubernetes control-plane VIP and load balancer built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `kube-vip`, so without this apk could install Wolfi's build instead
+    # of this source-built one. provider-priority is evaluated BEFORE version
+    # in that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of kube-vip source tarball - updated by update-versions.yml workflow
+  sha256: 5a694c8444cf866216e9d25e745ef998d527e3c4e71ee99554340d5443879f3b
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      # go-1.27 is safe here despite k8s.io/kube-openapi being in the module
+      # graph. That module is what forced descheduler down to go-1.26: its
+      # vendored go-json-experiment copy calls encoding/json/v2 APIs
+      # (json.SkipFunc, json.DiscardUnknownMembers) that go1.27 removed.
+      # kube-vip only carries it as an INDIRECT dependency and never imports
+      # the offending package, so `go build .` never compiles it. Verified by
+      # building green on go-1.27 (2026-08-29). If a future release starts
+      # importing it, the build fails loudly here — drop to go-1.26 then, as
+      # descheduler did.
+      - go-1.27
+      - git
+
+pipeline:
+  # Download and verify kube-vip source
+  - runs: |
+      mkdir -p /home/build/kube-vip-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/kube-vip/kube-vip/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/kube-vip.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/kube-vip.tar.gz" | sha256sum -c -
+
+      tar xzf /home/build/kube-vip.tar.gz -C /home/build/kube-vip-${{package.version}} --strip-components=1
+      rm /home/build/kube-vip.tar.gz
+
+  # Version is reported via main.Version (see upstream Makefile LDFLAGS); the
+  # main package is at the repo root, not under cmd/. CGO_ENABLED=0 gives a
+  # static binary — upstream passes -extldflags -static for the same reason.
+  - runs: |
+      cd /home/build/kube-vip-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= -X main.Version=v${{package.version}}" \
+        -o /home/build/kube-vip-bin \
+        .
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/kube-vip-bin "${{targets.destdir}}/usr/bin/kube-vip"
+      chmod 0755 "${{targets.destdir}}/usr/bin/kube-vip"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying kube-vip binary..."
+      "${{targets.destdir}}/usr/bin/kube-vip" version

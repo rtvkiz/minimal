@@ -103,6 +103,8 @@ STEP_VERSION ?= $(call melange_version,images/step-cli/melange.yaml)
 OPA_VERSION ?= $(call melange_version,images/opa/melange.yaml)
 OSV_SCANNER_VERSION ?= $(call melange_version,images/osv-scanner/melange.yaml)
 DEX_VERSION ?= $(call melange_version,images/dex/melange.yaml)
+KUBE_VIP_VERSION ?= $(call melange_version,images/kube-vip/melange.yaml)
+ZIPKIN_VERSION ?= $(call melange_version,images/zipkin/melange.yaml)
 SEAWEEDFS_VERSION ?= $(call melange_version,images/seaweedfs/melange.yaml)
 RCLONE_VERSION ?= $(call melange_version,images/rclone/melange.yaml)
 RESTIC_VERSION ?= $(call melange_version,images/restic/melange.yaml)
@@ -215,6 +217,8 @@ endef
 .PHONY: opa opa-melange test-opa
 .PHONY: osv-scanner osv-scanner-melange test-osv-scanner
 .PHONY: dex dex-melange test-dex
+.PHONY: kube-vip kube-vip-melange test-kube-vip
+.PHONY: zipkin zipkin-melange test-zipkin
 .PHONY: seaweedfs seaweedfs-melange test-seaweedfs
 .PHONY: rclone rclone-melange test-rclone
 .PHONY: restic restic-melange test-restic
@@ -2151,6 +2155,52 @@ dex: dex-melange
 	@rm -f dex.tar sbom-*.spdx.json
 	@echo "✓ minimal-dex built (source build)"
 
+kube-vip-melange: keygen
+	@echo "Building kube-vip $(KUBE_VIP_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/kube-vip/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ kube-vip package built from source"
+
+kube-vip: kube-vip-melange
+	@echo "Assembling minimal-kube-vip image with apko..."
+	apko build images/kube-vip/apko/kube-vip.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-kube-vip:$(VERSION) \
+		kube-vip.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < kube-vip.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kube-vip:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kube-vip:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kube-vip:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kube-vip:latest
+	@rm -f kube-vip.tar sbom-*.spdx.json
+	@echo "✓ minimal-kube-vip built (source build)"
+
+zipkin-melange: keygen
+	@echo "Building Zipkin $(ZIPKIN_VERSION) via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/zipkin/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Zipkin package built"
+
+zipkin: zipkin-melange
+	@echo "Assembling minimal-zipkin image with apko..."
+	apko build images/zipkin/apko/zipkin.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-zipkin:$(VERSION) \
+		zipkin.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < zipkin.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-zipkin:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-zipkin:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-zipkin:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-zipkin:latest
+	@rm -f zipkin.tar sbom-*.spdx.json
+	@echo "✓ minimal-zipkin built"
+
 oauth2-proxy-melange: keygen
 	@echo "Building OAuth2 Proxy $(OAUTH2_PROXY_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build images/oauth2-proxy/melange.yaml \
@@ -3824,6 +3874,18 @@ test-dex:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-dex:latest" && \
 		images/dex/test.sh
 	@echo "✓ dex tests passed"
+
+test-kube-vip:
+	@echo "Testing kube-vip image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kube-vip:latest" && \
+		images/kube-vip/test.sh
+	@echo "✓ kube-vip tests passed"
+
+test-zipkin:
+	@echo "Testing zipkin image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-zipkin:latest" && \
+		images/zipkin/test.sh
+	@echo "✓ zipkin tests passed"
 
 test-oauth2-proxy:
 	@echo "Testing oauth2-proxy image..."

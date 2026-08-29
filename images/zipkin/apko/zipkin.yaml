@@ -1,0 +1,65 @@
+# Minimal Zipkin image - distributed tracing server, official exec jar exploded
+# onto a custom jlink JRE via melange.
+# Shell-less, distroless. CVE patching via daily rebuilds + bundled-jar swaps.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - zipkin
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+# Exploded Spring Boot launch. `-cp /opt/zipkin` (not `-jar`) is what runs an
+# unpacked archive; the launcher then scans BOOT-INF/lib for dependencies.
+# Verified from a foreign working directory, so this does not depend on cwd.
+entrypoint:
+  command: /usr/bin/java -cp /opt/zipkin org.springframework.boot.loader.launch.JarLauncher
+
+environment:
+  JAVA_HOME: /usr/lib/jvm/java-21-minimal
+  PATH: /usr/lib/jvm/java-21-minimal/bin:/usr/bin:/bin
+  # In-memory storage by default: no external dependency, so the image is
+  # useful the moment it starts. Set STORAGE_TYPE=elasticsearch/mysql/cassandra3
+  # (plus that backend's env vars) for anything persistent — in-memory spans are
+  # lost on restart and bounded by heap.
+  STORAGE_TYPE: mem
+  # 9411 is Zipkin's registered port for both the API and the UI. Above 1024,
+  # so it binds fine as nonroot.
+  SERVER_PORT: "9411"
+  # Container-aware heap sizing; the JVM otherwise reads the host's RAM.
+  JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
+
+paths:
+  # Spring Boot and the JVM both want a writable temp dir; the image runs
+  # nonroot, so it must be world-writable + sticky like a normal /tmp.
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-zipkin"
+  org.opencontainers.image.description: "Hardened shell-less Zipkin distributed tracing server on a custom jlink JRE with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/zipkin"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

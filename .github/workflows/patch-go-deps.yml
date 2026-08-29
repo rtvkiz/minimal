@@ -139,6 +139,7 @@ jobs:
             [dex]="/home/build/dex-${D}{{package.version}}"
             [tailscale]="/home/build/tailscale-${D}{{package.version}}"
             [descheduler]="/home/build/descheduler-${D}{{package.version}}"
+            [kube-vip]="/home/build/kube-vip-${D}{{package.version}}"
             [rclone]="/home/build/rclone-${D}{{package.version}}"
             [restic]="/home/build/restic-${D}{{package.version}}"
             [seaweedfs]="/home/build/seaweedfs-${D}{{package.version}}"
@@ -212,6 +213,7 @@ jobs:
             [dex]="github.com/dexidp/dex"
             [tailscale]="tailscale.com"
             [descheduler]="sigs.k8s.io/descheduler"
+            [kube-vip]="github.com/kube-vip/kube-vip"
             [rclone]="github.com/rclone/rclone"
             [restic]="github.com/restic/restic"
             [seaweedfs]="github.com/seaweedfs/seaweedfs"
@@ -284,6 +286,7 @@ jobs:
             [dex]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [tailscale]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [descheduler]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kube-vip]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [rclone]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [restic]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [seaweedfs]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

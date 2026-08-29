@@ -553,6 +553,17 @@
       "summary": "Shell-less Kubernetes descheduler, built from source via melange."
     },
     {
+      "name": "kube-vip",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "kube-vip",
+      "upstream_url": "https://kube-vip.io/",
+      "summary": "Shell-less kube-vip control-plane VIP and load balancer, built from source via melange."
+    },
+    {
       "name": "oauth2-proxy",
       "category": "Web Servers & Proxies",
       "variants": [
@@ -628,6 +639,17 @@
       "primary_package": "jaeger",
       "upstream_url": "https://www.jaegertracing.io",
       "summary": "Jaeger distributed tracing backend built from source via melange."
+    },
+    {
+      "name": "zipkin",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "zipkin",
+      "upstream_url": "https://zipkin.io/",
+      "summary": "Shell-less Zipkin distributed tracing server on a custom jlink JRE."
     },
     {
       "name": "loki",

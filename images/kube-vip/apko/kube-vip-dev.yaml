@@ -1,0 +1,51 @@
+# Development variant of minimal-kube-vip.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - kube-vip
+    - ca-certificates-bundle
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+    - curl
+    - openssl
+    - bind-tools
+    - jq
+    - git
+    # Network troubleshooting — the whole point of this image is manipulating
+    # interfaces and ARP, so the dev variant carries the tools to inspect that.
+    - iproute2
+    - iputils
+
+# Root for the same reason as prod (netlink / ARP / BGP need CAP_NET_ADMIN and
+# CAP_NET_RAW, which Kubernetes only grants to uid 0 without file or ambient
+# caps). See the comment in kube-vip.yaml.
+accounts:
+  run-as: 0
+
+entrypoint:
+  command: /usr/bin/kube-vip
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+
+annotations:
+  org.opencontainers.image.title: "minimal-kube-vip-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-kube-vip: same kube-vip + shell + curl/openssl/dig/jq/git/ip. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kube-vip"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

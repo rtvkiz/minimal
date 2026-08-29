@@ -214,3 +214,22 @@
       jar-root: opt/zookeeper
       strategy: rename
       splice-before: "update:"
+    # report-only at onboarding (2026-08-29). Zipkin ships a Spring Boot fat jar
+    # that this image explodes onto disk, so all 157 bundled dependencies are
+    # visible and swappable — but they are exactly the tightly coupled families
+    # (Spring, Jackson, Netty, Armeria) that broke cassandra and kafka in PR
+    # #608: jackson-annotations publishes no matching micro release, so a
+    # databind bump lands beside a stale annotations jar and the context fails
+    # to refresh. Same unfixed lift limitation, same expected outcome, so it
+    # starts reporting rather than patching.
+    #
+    # Its smoke test already clears the promotion bar — it boots the server and
+    # completes a span ingest -> query round-trip, and the layout is proven
+    # rename-safe (the launcher scans BOOT-INF/lib rather than trusting
+    # classpath.idx; see images/zipkin/melange.yaml). Promote to auto once the
+    # lift falls back to the newest in-series version.
+    - name: zipkin
+      jar-root: opt/zipkin
+      policy: report-only
+      strategy: rename
+      splice-before: "  # Verify the build."

@@ -1,0 +1,63 @@
+# Minimal kube-vip image - Kubernetes control-plane VIP / load balancer,
+# built from source via melange.
+# Shell-less, distroless. CVE patching via daily rebuilds from upstream source.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - kube-vip
+    - ca-certificates-bundle
+
+# Runs as ROOT — deliberate, and the "unless the service genuinely needs it"
+# exception in docs/onboarding.md.
+#
+# `kube-vip manager` does raw network work: it adds and removes the virtual IP
+# on a host interface (netlink), answers ARP for it, and optionally speaks BGP
+# and adjusts nftables. That needs CAP_NET_ADMIN and CAP_NET_RAW.
+#
+# Dropping to a nonroot uid does NOT work here even when the caps are granted.
+# Kubernetes puts securityContext capabilities into the container's bounding
+# and permitted sets only for uid 0; for any other uid the permitted set comes
+# up empty unless the binary carries file capabilities or ambient caps are set,
+# neither of which apko can author. A nonroot kube-vip therefore starts and
+# then fails at the first netlink call — the failure is at VIP-assignment time,
+# not at boot, which makes it especially unpleasant to debug.
+#
+# Upstream ships the same way. Deploy it with an explicit capability set rather
+# than as a privileged container:
+#
+#   securityContext:
+#     capabilities:
+#       add: ["NET_ADMIN", "NET_RAW"]
+#
+# The read-only manifest/sample subcommands need none of this and run fine
+# under any uid you override with.
+accounts:
+  run-as: 0
+
+# No default subcommand: kube-vip is multi-mode (manager / manifest / sample /
+# kubeadm) and `manager` requires flags describing the interface, VIP and
+# election mode, which cannot be guessed. Supply the subcommand as container
+# args, as upstream's static-pod manifest does.
+entrypoint:
+  command: /usr/bin/kube-vip
+
+environment:
+  PATH: /usr/bin:/bin
+
+annotations:
+  org.opencontainers.image.title: "minimal-kube-vip"
+  org.opencontainers.image.description: "Hardened shell-less kube-vip Kubernetes control-plane VIP and load balancer built from source via melange with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kube-vip"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

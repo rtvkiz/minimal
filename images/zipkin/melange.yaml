@@ -1,0 +1,175 @@
+# Melange build configuration for minimal Zipkin
+# Official Spring Boot executable jar + custom JRE via jlink (solr/kafka JVM
+# pattern). Zipkin is a distributed tracing system: it collects, stores and
+# queries spans, and serves the trace-explorer UI.
+# License: Apache-2.0 (the OpenZipkin authors).
+#
+# Upstream publishes ONLY a fat "exec" jar to Maven Central — there is no
+# binary tarball and no exploded distribution — so that jar is the source of
+# record here, as jenkins.war is for jenkins.
+#
+# The jar is UNPACKED at build time rather than shipped whole. That is the
+# whole point: a Spring Boot fat jar nests its 157 dependency jars inside
+# BOOT-INF/lib/ *within* the outer archive, where neither syft nor the
+# bundled-jar patcher can see them — every one of those CVEs would be invisible
+# and unfixable. Exploded, each is an ordinary file on disk: syft inventories
+# them and .github/patch-deps.yaml can swap a vulnerable one for its fixed
+# release.
+#
+# Running exploded is a supported Spring Boot mode (`java -cp <dir>
+# org.springframework.boot.loader.launch.JarLauncher`). Verified 2026-08-29 on
+# the jlinked JRE below: boots, /health reports UP, /api/v2/services responds.
+#
+# The launcher resolves BOOT-INF/lib by SCANNING the directory, not by reading
+# BOOT-INF/classpath.idx. Verified by experiment: renaming
+# jackson-databind-2.21.2.jar still boots, while deleting it fails with
+# `NoClassDefFoundError: com/fasterxml/jackson/databind/Module`. So the jar is
+# genuinely load-bearing and a rename is still resolved — which is what makes
+# `strategy: rename` safe for this image in .github/patch-deps.yaml. Do not
+# switch it to keep-filename on the assumption that classpath.idx is strict.
+
+package:
+  # Named `zipkin` (not `zipkin-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and a
+  # -minimal suffix lands in the CPE product field
+  # (cpe:2.3:a:zipkin:zipkin-minimal:*, ...), which NVD does not index — so
+  # none of the CPEs would match.
+  name: zipkin
+  version: 3.6.1
+  epoch: 0
+  description: "Minimal Zipkin distributed tracing server with custom JRE (jlink)"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `zipkin` TODAY (3.5.1-r14 as of 2026-08-29), so without this apk
+    # could install Wolfi's build instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently — and keeps doing so even if
+    # Wolfi's version overtakes ours.
+    #
+    # Sharing the name with a Wolfi package also means grype's apk-matcher
+    # attributes Wolfi's `zipkin` advisories to our apk: it keys on
+    # distro+name+version only, so every CVE fixed in a Wolfi rebuild lands on
+    # our r0 as a name-collision artifact (130 of 213 matches on the first
+    # scan, "fixed in 3.6.1-r6/-r10"). Those are claims about Wolfi's package,
+    # not findings in this image, and .github/scripts/reconcile-apk-provenance.sh
+    # is what separates them from the real bundled-jar findings.
+    provider-priority: 100
+
+vars:
+  # SHA256 of zipkin-server-{version}-exec.jar - updated by update-versions.yml
+  sha256: d8326e0ed4f43855dba81228f688554706e52578a7c782d9a90b73f8680654a1
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      # Full JDK 21 needed for jlink (build-time only). The jar targets Java 17
+      # (MANIFEST Java-Version: 17), so 21 satisfies it with room to spare.
+      - openjdk-21-default-jdk
+      - openjdk-21-jmods
+      # binutils provides objcopy required by jlink --strip-debug
+      - binutils
+
+pipeline:
+  # Download and verify the official executable jar.
+  #
+  # Mirror rotation BEFORE widening the wait: repo1.maven.org and
+  # repo.maven.apache.org both sit behind Cloudflare, so a WAF 403 refuses
+  # both; the googleapis mirror is separate infrastructure. Waiting one host
+  # out demonstrably does not work (solr burned 9 attempts over 4m15s on
+  # 2026-08-26 and still failed on an artifact that served fine minutes later).
+  - runs: |
+      mkdir -p /home/build
+      _ZK_MIRRORS="https://repo1.maven.org/maven2 https://maven-central.storage-download.googleapis.com/maven2 https://repo.maven.apache.org/maven2"
+      _path="io/zipkin/zipkin-server/${{package.version}}/zipkin-server-${{package.version}}-exec.jar"
+      ok=0
+      for _r in 1 2 3 4; do
+        for _b in $_ZK_MIRRORS; do
+          if curl -fsSL --connect-timeout 15 --max-time 900 \
+               --retry 2 --retry-all-errors "$_b/$_path" -o /home/build/zipkin-exec.jar; then
+            ok=1; break
+          fi
+        done
+        [ "$ok" = 1 ] && break
+        [ "$_r" -lt 4 ] && sleep $(( _r * 30 ))
+      done
+      [ "$ok" = 1 ] || { echo "ERROR: all Maven mirrors refused $_path"; exit 1; }
+
+      echo "${{vars.sha256}}  /home/build/zipkin-exec.jar" | sha256sum -c -
+
+  # Explode the fat jar so every bundled dependency is a real file on disk.
+  # See the header: this is what makes the 157 nested jars scannable and
+  # patchable instead of invisible.
+  - runs: |
+      mkdir -p /home/build/zipkin-exploded
+      cd /home/build/zipkin-exploded
+      # busybox unzip is present; the jar is a plain zip.
+      unzip -qq /home/build/zipkin-exec.jar
+      rm -f /home/build/zipkin-exec.jar
+
+      # Fail loudly if the archive shape changed — a silently empty BOOT-INF
+      # would produce an image that only fails at boot.
+      [ -d BOOT-INF/lib ] || { echo "ERROR: BOOT-INF/lib missing"; exit 1; }
+      [ -d BOOT-INF/classes ] || { echo "ERROR: BOOT-INF/classes missing"; exit 1; }
+      [ -d org/springframework/boot/loader ] || { echo "ERROR: Spring Boot loader missing"; exit 1; }
+      n=$(find BOOT-INF/lib -name '*.jar' | wc -l)
+      echo "bundled jars: $n"
+      [ "$n" -gt 100 ] || { echo "ERROR: only $n bundled jars, expected >100"; exit 1; }
+
+  # Custom minimal JRE (Java 21). Module set verified 2026-08-29 by booting
+  # this exact exploded layout on a JRE jlinked with precisely these modules:
+  # Spring Boot + Armeria need the servlet/HTTP stack (java.net.http,
+  # jdk.httpserver), broad reflection (java.desktop for java.beans,
+  # java.instrument), crypto + jgss/sasl for TLS/auth, management(.agent)/jfr
+  # for JMX and observability endpoints, java.sql + java.transaction.xa for the
+  # JDBC storage backends, jdk.unsupported for Netty's sun.misc.Unsafe use,
+  # and java.prefs which Spring pulls in during context refresh.
+  - runs: |
+      JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      $JAVA_HOME/bin/jlink \
+        --module-path $JAVA_HOME/jmods \
+        --add-modules java.base,java.compiler,java.desktop,java.instrument,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.prefs,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.transaction.xa,java.xml,java.xml.crypto,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.httpserver,jdk.jfr,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.net,jdk.security.auth,jdk.unsupported,jdk.zipfs \
+        --strip-debug \
+        --no-man-pages \
+        --no-header-files \
+        --compress=zip-6 \
+        --output /home/build/custom-jre
+
+  - runs: |
+      # Custom JRE
+      mkdir -p "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+      cp -a /home/build/custom-jre/* "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      # Relative symlink: an absolute one dangles during melange's verify step,
+      # which runs against destdir rather than a mounted root.
+      ln -sf ../lib/jvm/java-21-minimal/bin/java "${{targets.destdir}}/usr/bin/java"
+
+      # Exploded Zipkin
+      mkdir -p "${{targets.destdir}}/opt/zipkin"
+      cp -a /home/build/zipkin-exploded/. "${{targets.destdir}}/opt/zipkin/"
+
+  # Verify the build. Use the direct JRE path, not /usr/bin/java — that is a
+  # symlink which does not resolve inside destdir at verify time.
+  - runs: |
+      echo "Verifying custom JRE..."
+      "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/bin/java" -version
+
+      echo "Verifying exploded Zipkin layout..."
+      test -f "${{targets.destdir}}/opt/zipkin/BOOT-INF/classpath.idx"
+      test -d "${{targets.destdir}}/opt/zipkin/BOOT-INF/classes/zipkin"
+      ls "${{targets.destdir}}/opt/zipkin/BOOT-INF/lib"/*.jar >/dev/null
+      echo "bundled jars: $(find "${{targets.destdir}}/opt/zipkin/BOOT-INF/lib" -name '*.jar' | wc -l)"
+
+      echo "Verifying the launcher class is present..."
+      test -f "${{targets.destdir}}/opt/zipkin/org/springframework/boot/loader/launch/JarLauncher.class"

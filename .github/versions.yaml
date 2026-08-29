@@ -295,6 +295,28 @@
     releases: "https://github.com/kubernetes-sigs/descheduler/releases"
     notes: "https://github.com/kubernetes-sigs/descheduler/releases/tag/v{version}"
 
+
+- name: kube-vip
+  cron-enabled: true   # validated 2026-08-29 (see PR)
+  files: [images/kube-vip/melange.yaml]
+  source: { type: github-releases-latest, repo: kube-vip/kube-vip, strip-v: true }
+  tarball: { url: "https://github.com/kube-vip/kube-vip/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/kube-vip/kube-vip/releases"
+    notes: "https://github.com/kube-vip/kube-vip/releases/tag/v{version}"
+
+- name: zipkin
+  cron-enabled: true   # validated 2026-08-29 (see PR)
+  files: [images/zipkin/melange.yaml]
+  source: { type: github-releases-latest, repo: openzipkin/zipkin, strip-v: true }
+  # Upstream publishes no binary tarball — the Spring Boot "exec" jar on Maven
+  # Central IS the distribution, so that is what gets checksummed.
+  tarball:
+    url: "https://repo1.maven.org/maven2/io/zipkin/zipkin-server/{version}/zipkin-server-{version}-exec.jar"
+    field: sha256
+  links:
+    releases: "https://github.com/openzipkin/zipkin/releases"
+    notes: "https://github.com/openzipkin/zipkin/releases/tag/{version}"
 - name: rclone
   cron-enabled: true   # validated 2026-08-26 (see PR)
   files: [images/rclone/melange.yaml]
