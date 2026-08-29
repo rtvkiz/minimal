@@ -127,6 +127,103 @@ pipeline:
       ls "${{targets.destdir}}"/opt/pulsar/lib/org.apache.pulsar-pulsar-broker-*.jar
       test -f "${{targets.destdir}}/opt/pulsar/conf/standalone.conf"
 
+  # patch-bundled-jars: auto-generated — do not edit manually
+  - runs: |
+      # Bundled-jar CVE fixes, sha256-pinned. Regenerated from grype by
+      # .github/scripts/patch-bundled-jars.sh — do not edit by hand.
+      #
+      # Mirrors are rotated BEFORE the wait is widened. repo1.maven.org and
+      # repo.maven.apache.org both sit behind Cloudflare, so a WAF 403 refuses
+      # both; the googleapis mirror is separate infrastructure. Waiting a single
+      # host out does not work — opensearch (2026-08-23) and solr (2026-08-26)
+      # each burned 9 attempts over 4m15s against one host and still failed.
+      _BJ_MIRRORS="https://repo1.maven.org/maven2 https://maven-central.storage-download.googleapis.com/maven2 https://repo.maven.apache.org/maven2"
+      _bj_fetch() {  # $1=path-after-/maven2/  $2=output
+        for _r in 1 2 3 4; do
+          for _b in $_BJ_MIRRORS; do
+            if curl -fsSL --connect-timeout 15 --max-time 300 \
+                 --retry 2 --retry-all-errors "$_b/$1" -o "$2"; then return 0; fi
+          done
+          [ "$_r" -lt 4 ] && sleep $(( _r * 30 ))
+        done
+        echo "bundled-jar: all Maven mirrors refused $1" >&2; return 1
+      }
+      _swap() {  # $1=artifact $2=group-path $3=oldver $4=newver $5=sha256 $6=mode $7=classifier|-
+        # $7 is a per-platform classifier (linux-x86_64, ...) or "-" for the plain
+        # jar. Native artifacts ship one jar per platform and the plain match skips
+        # them, which left a mixed netty in opensearch. Central publishes each
+        # classifier artifact, so they are pinned individually.
+        _c=""; [ "$7" = "-" ] || _c="-$7"
+        # rename: jar filename carries the version, match it exactly. keep-filename:
+        # filename stays the upstream version while contents change, so match any
+        # version of the artifact and overwrite in place. Two anchors on that
+        # match, both load-bearing: [0-9] pins the start of the version segment,
+        # or netty-codec matches netty-codec-http-*.jar and overwrites the http
+        # codec with the plain codec jar (keycloak died with NoClassDefFoundError
+        # FullHttpResponse); the ! -name excludes classifier jars
+        # (netty-transport-native-epoll-<v>-linux-x86_64.jar), whose content is
+        # NOT what $1-$4.jar holds — overwriting them drops the bundled .so.
+        if [ "$6" = "keep-filename" ]; then
+          if [ -n "$_c" ]; then found=$(find "${{targets.destdir}}/opt/pulsar" -name "*$1-[0-9]*$_c.jar")
+          else found=$(find "${{targets.destdir}}/opt/pulsar" -name "*$1-[0-9]*.jar" ! -name "*$1-[0-9]*-*.jar"); fi
+        else
+          found=$(find "${{targets.destdir}}/opt/pulsar" -name "*$1-$3$_c.jar")
+        fi
+        [ -n "$found" ] || { echo "  $1 $3$_c not present (upstream may already ship >=$4)"; return 0; }
+        _bj_fetch "$2/$1/$4/$1-$4$_c.jar" /tmp/_bj.jar
+        echo "$5  /tmp/_bj.jar" | sha256sum -c -
+        for f in $found; do
+          if [ "$6" = "keep-filename" ]; then
+            _have=$(_jarver "$f")
+            if _vge "$_have" "$4"; then echo "  $1 already at $_have (>= $4), leaving it"; continue; fi
+            cp /tmp/_bj.jar "$f"
+          else cp /tmp/_bj.jar "$(dirname "$f")/$1-$4$_c.jar"; rm -f "$f"; fi
+          echo "  patched $1 $3 -> $4 ($6$_c)"
+        done
+        rm -f /tmp/_bj.jar
+      }
+      _swap async-http-client org/asynchttpclient 2.15.0 2.16.0 ddc11cdd96d5e58c4f8647834e68f228e9f03f5f976d0e603effd5de5b1c131a rename -
+      _swap log4j-api org/apache/logging/log4j 2.25.4 2.25.5 64777f73ea0b3104c04eb82befbdccc30a425a19e83ad06cb2f93aa303511863 rename -
+      _swap lz4-java at/yawk/lz4 1.10.3 1.11.1 e5e31b195fcc7e9c5da4b191af3b0082ee616c13f61cbd79409ffa65e4dd5c47 rename -
+      _swap netty-codec-http io/netty 4.1.136.Final 4.1.137.Final 0535bb5a736472bef5c948d15eb273c4ab9f796656fc7c5d6b982ad92bddbd49 rename -
+      _swap async-http-client-netty-utils org/asynchttpclient 2.15.0 2.16.0 a33e4543cdadce76614c6cecff52b0765e655d32e389496c37594a01f62b6690 rename -
+      _swap log4j-core org/apache/logging/log4j 2.25.4 2.25.5 050c4f85deb48b055e9c041ac39043fbb79ce477841a11a1eb2969c86c6a0072 rename -
+      _swap log4j-layout-template-json org/apache/logging/log4j 2.25.4 2.25.5 27c37313e20c16bf0178e38d9d1a5c7320e34c03aa35bc2c66a589ea14abf545 rename -
+      _swap log4j-slf4j2-impl org/apache/logging/log4j 2.25.4 2.25.5 8cab16dd6fc4c8f14c1c473022cb217512f2bbb2d59a70f8ec90a268d64d8831 rename -
+      _swap log4j-web org/apache/logging/log4j 2.25.4 2.25.5 9cf04225fab77a5d433dcad2ee62b8341cc0546d0e6941515bb9f8d5a199377c rename -
+      _swap netty-buffer io/netty 4.1.136.Final 4.1.137.Final f474b14c7734f15e0540394cb6f39d67777b7581a42919e4ac89d253d4efd929 rename -
+      _swap netty-codec io/netty 4.1.136.Final 4.1.137.Final 9987b6a660b0a6b1f0d791485dae33180b3d1c63687c006fe6d3fd025e9e3798 rename -
+      _swap netty-codec-dns io/netty 4.1.136.Final 4.1.137.Final 2d9a33ce41bd9f6f607df95039e42518a1fca16f83c9bbfe72beb57df6e2489f rename -
+      _swap netty-codec-haproxy io/netty 4.1.136.Final 4.1.137.Final 5ffa58b94c5ac48fb7e41843c18acf7a268e90b5b85423987829c9291ce3a5df rename -
+      _swap netty-codec-http2 io/netty 4.1.136.Final 4.1.137.Final 576ddcfb51b78e86f145c9a52b60e500b1a1d5a257cafec8aa5416ffba044b49 rename -
+      _swap netty-codec-socks io/netty 4.1.136.Final 4.1.137.Final 4a6190e08988c058bfeef2b5965e71946439c771abf721c68f4039b4e7b023e8 rename -
+      _swap netty-common io/netty 4.1.136.Final 4.1.137.Final d31926b01adcc07af86f5e27b81b6d6c115df17d366e835d1fc3f5a1924e7e52 rename -
+      _swap netty-handler io/netty 4.1.136.Final 4.1.137.Final d0e4c6ee4779f59f6ab2fb5d388e4f57147c82270164b37945764bb9bda96a44 rename -
+      _swap netty-handler-proxy io/netty 4.1.136.Final 4.1.137.Final 843de10c4cef34cbc1a5344090f1b57db532fbebf141559862da675f6b656df4 rename -
+      _swap netty-resolver io/netty 4.1.136.Final 4.1.137.Final b4cf2aeedd9fc7c8c439bbfe574f63cfe5b83392e88bbc07ca0e8424b7cff955 rename -
+      _swap netty-resolver-dns io/netty 4.1.136.Final 4.1.137.Final 898d63ca62ed68ff46543c5344f969424b417f1e8d082fe2bb0181ba10144194 rename -
+      _swap netty-resolver-dns-classes-macos io/netty 4.1.136.Final 4.1.137.Final 92d0a542954475f563ea58221d864884ba6753c50c1f17985b1045e990bf094c rename -
+      _swap netty-resolver-dns-native-macos io/netty 4.1.136.Final 4.1.137.Final eb2cc7d70e13482b43d7ade6a32eed804d7d3d30251994ecbcdb6ba6fe0d6061 rename -
+      _swap netty-transport io/netty 4.1.136.Final 4.1.137.Final 6251adc2a2921572382732a2db188d4f4f2251fd6ebb49c5d44bbf33d6bfb1a7 rename -
+      _swap netty-transport-classes-epoll io/netty 4.1.136.Final 4.1.137.Final 55049554b799dc8e53bf234fffa36e001f7b5b65c32994b9bd59fc6356f1c52f rename -
+      _swap netty-transport-native-epoll io/netty 4.1.136.Final 4.1.137.Final b2eb04dbb6ec6cc8fc00aed37bb86b7aed1ccb87722eda44c90652a7d41fbdfe rename -
+      _swap netty-transport-native-unix-common io/netty 4.1.136.Final 4.1.137.Final 8056e7637f9948f953314894cf995ab664711b66c73c4cd5b593ae84f0b1048c rename -
+      _swap netty-resolver-dns-native-macos io/netty 4.1.136.Final 4.1.137.Final 777e1e9f0337e04388e9f9bd9ff5270e607423be72306b381fd380418b06b9ac rename osx-aarch_64
+      _swap netty-resolver-dns-native-macos io/netty 4.1.136.Final 4.1.137.Final bc8a5616ab33f0e640bc6174eea770ccfca8ed0e9891ff3bb3ae638255bc006e rename osx-x86_64
+      _swap netty-transport-native-epoll io/netty 4.1.136.Final 4.1.137.Final 82fb63a2dc90c0bddb81e04065a1c06fb4c5be722ad5d64b46491daf8b6f9a01 rename linux-aarch_64
+      _swap netty-transport-native-epoll io/netty 4.1.136.Final 4.1.137.Final 185db6053e0e9573d36fa4eb6567b26139afaa4daa7bf5a068e661568304542b rename linux-x86_64
+      _strag=/tmp/_bj_stragglers; : > "$_strag"
+      find "${{targets.destdir}}/opt/pulsar" \( -name "async*-2.15.*.jar" -o -name "async*-2.15.jar" \) ! -name "*-2.16.0.jar" ! -name "*-2.16.0-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "log4j*-2.25.*.jar" -o -name "log4j*-2.25.jar" \) ! -name "*-2.25.5.jar" ! -name "*-2.25.5-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "lz4*-1.10.*.jar" -o -name "lz4*-1.10.jar" \) ! -name "*-1.11.1.jar" ! -name "*-1.11.1-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "netty*-4.1.*.jar" -o -name "netty*-4.1.jar" \) ! -name "*-4.1.137.Final.jar" ! -name "*-4.1.137.Final-*.jar" >> "$_strag" 2>/dev/null || true
+      if [ -s "$_strag" ]; then
+        echo "patch-bundled-jars: jars left on a superseded version:" >&2
+        sort -u "$_strag" >&2
+        rm -f "$_strag"; exit 1
+      fi
+      rm -f "$_strag"
+  # end-patch-bundled-jars
 update:
   enabled: true
   github:
