@@ -10,7 +10,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:grype:grype:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: grype
-  version: 0.117.0
+  version: 0.118.0
   epoch: 0
   description: "Minimal Grype (vulnerability scanner for images & filesystems) built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 of grype source tarball - updated by update-versions.yml workflow
-  sha256: 314a955453e4f69b3cee1a1982eed8e779ff8ae70e017d37a211d734b9083a94
+  sha256: 6963758836cd46fd019d4c5e2eb903ec26960c34814a35058ebea56971dc592c
 
 environment:
   contents:

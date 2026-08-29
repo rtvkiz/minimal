@@ -338,9 +338,8 @@ pipeline:
         rm -f /tmp/_bj.jar
       }
       _swap httpclient5 org/apache/httpcomponents/client5 5.2.1 5.6.3 80712ff129210d7c73d9fcc1195cbee5c3c34744965c7a05ea107b3648922f18 rename -
-      _swap log4j-api org/apache/logging/log4j 2.25.4 2.25.5 64777f73ea0b3104c04eb82befbdccc30a425a19e83ad06cb2f93aa303511863 rename -
-      _swap netty-codec-http io/netty 4.2.16.Final 4.2.17.Final a5bde91ac82ab90579df6559c0bd7ea6ae37460e3f18116ab4122194283b3669 rename -
       _swap log4j-1.2-api org/apache/logging/log4j 2.25.4 2.25.5 4dd812dc5a6343f542a9e0046b1ec78ecf10bdd5a8c15745101cdd8b9aa24974 rename -
+      _swap log4j-api org/apache/logging/log4j 2.25.4 2.25.5 64777f73ea0b3104c04eb82befbdccc30a425a19e83ad06cb2f93aa303511863 rename -
       _swap log4j-core org/apache/logging/log4j 2.25.4 2.25.5 050c4f85deb48b055e9c041ac39043fbb79ce477841a11a1eb2969c86c6a0072 rename -
       _swap log4j-layout-template-json org/apache/logging/log4j 2.25.4 2.25.5 27c37313e20c16bf0178e38d9d1a5c7320e34c03aa35bc2c66a589ea14abf545 rename -
       _swap log4j-slf4j2-impl org/apache/logging/log4j 2.25.4 2.25.5 8cab16dd6fc4c8f14c1c473022cb217512f2bbb2d59a70f8ec90a268d64d8831 rename -
@@ -349,16 +348,17 @@ pipeline:
       _swap netty-codec-base io/netty 4.2.16.Final 4.2.17.Final 3b92bc3b7d231fa6f4889b2b9281cae6b634428b8121fb1b9b5fccba1543d352 rename -
       _swap netty-codec-compression io/netty 4.2.16.Final 4.2.17.Final 425b287a1f36986a5c8edd76379a49decdf99d284f3454f3fa607a073bfb2c18 rename -
       _swap netty-codec-http2 io/netty 4.2.16.Final 4.2.17.Final 450af97424cf58d2d72ad4d476d9e290f2fdf69fa181c289a6e6dd176bb86a7b rename -
+      _swap netty-codec-http io/netty 4.2.16.Final 4.2.17.Final a5bde91ac82ab90579df6559c0bd7ea6ae37460e3f18116ab4122194283b3669 rename -
       _swap netty-codec-socks io/netty 4.2.16.Final 4.2.17.Final 6b5760cc512cee1f7515e25010892471f3995045f84cd6c1d1b6e6cee534733c rename -
       _swap netty-common io/netty 4.2.16.Final 4.2.17.Final 502aae2a6680e9bca3558a3fa098f06dc4d87340b8b714e925a6d690871c092a rename -
-      _swap netty-handler io/netty 4.2.16.Final 4.2.17.Final 4df11c7520b556c5e2c84b939182699d48fcbb09e97a6bb5e1c0b6835227d126 rename -
       _swap netty-handler-proxy io/netty 4.2.16.Final 4.2.17.Final 94089bea6ba6f3248725f2bf233aa2bc70ac1547c21b9bdfc7548f710a845aa0 rename -
+      _swap netty-handler io/netty 4.2.16.Final 4.2.17.Final 4df11c7520b556c5e2c84b939182699d48fcbb09e97a6bb5e1c0b6835227d126 rename -
       _swap netty-resolver io/netty 4.2.16.Final 4.2.17.Final 7a4b599b9c0c29a505d3b7311f142df883fb27d0f67495a7cbaf533b0e456623 rename -
-      _swap netty-transport io/netty 4.2.16.Final 4.2.17.Final d2409ce3a735cbab4188d0ea5d82abed823a6a07a8389f49af4a9e1243a562bc rename -
       _swap netty-transport-classes-epoll io/netty 4.2.16.Final 4.2.17.Final 4e21d8a2e3429d9de967a716d58119f57585786bd2f7213bf5b27770425269de rename -
       _swap netty-transport-native-epoll io/netty 4.2.16.Final 4.2.17.Final 2ec723390beed7009d1083fa9890fba35ecd13fa66aba47dbf385aa134b91dae rename -
-      _swap netty-transport-native-unix-common io/netty 4.2.16.Final 4.2.17.Final e01aa467b9104de54a57c08c290f70b22e53ec97cf5583c87c112170ef5832cc rename -
       _swap netty-transport-native-epoll io/netty 4.2.16.Final 4.2.17.Final c295b1d7f46e3c7375c93fa4c8abcc3944398c5e4eb53e31587cbbf0bf559d4f rename linux-x86_64
+      _swap netty-transport-native-unix-common io/netty 4.2.16.Final 4.2.17.Final e01aa467b9104de54a57c08c290f70b22e53ec97cf5583c87c112170ef5832cc rename -
+      _swap netty-transport io/netty 4.2.16.Final 4.2.17.Final d2409ce3a735cbab4188d0ea5d82abed823a6a07a8389f49af4a9e1243a562bc rename -
       _strag=/tmp/_bj_stragglers; : > "$_strag"
       find "${{targets.destdir}}/opt/solr" \( -name "httpclient5*-5.2.*.jar" -o -name "httpclient5*-5.2.jar" \) ! -name "*-5.6.3.jar" ! -name "*-5.6.3-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/solr" \( -name "log4j*-2.25.*.jar" -o -name "log4j*-2.25.jar" \) ! -name "*-2.25.5.jar" ! -name "*-2.25.5-*.jar" >> "$_strag" 2>/dev/null || true
