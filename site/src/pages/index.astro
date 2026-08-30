@@ -10,10 +10,10 @@ const featured = featuredNames
   .map((n) => images.find((i) => i.name === n))
   .filter((i): i is NonNullable<typeof i> => Boolean(i));
 
-const verifyCmd = `# Pull — public, no login, no rate limit
+const verifyCmd = `# Pull — public, no login, no Docker Hub pull limits
 docker pull ghcr.io/rtvkiz/minimal-python:latest
 
-# Verify build provenance (SLSA L3)
+# Verify build provenance (SLSA v1.0, Build L2)
 gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz`;
 ---
 <Layout>
@@ -22,9 +22,9 @@ gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz`
       <span class="eyebrow">Open source · MIT licensed</span>
       <h1>Hardened container images</h1>
       <p class="lead">
-        Free. Signed. Verifiable. Small images built from source and rebuilt every six hours —
-        each one cosign-signed with an SPDX SBOM and SLSA Level 3 provenance. No account, no
-        rate limits.
+        Free. Signed. Verifiable. Small images — most built from source — rebuilt every six
+        hours, each one cosign-signed with an SPDX SBOM and SLSA v1.0 build provenance. No
+        account, no Docker Hub pull limits.
       </p>
       <div class="cta">
         <a class="btn btn-primary" href="/images">Browse {stats.images} images →</a>
@@ -32,7 +32,7 @@ gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz`
       </div>
       <div class="stats" style="margin-top:36px">
         <div class="stat"><div class="num">{stats.images}</div><div class="lbl">Images</div></div>
-        <div class="stat"><div class="num">L3</div><div class="lbl">SLSA provenance</div></div>
+        <div class="stat"><div class="num">L2</div><div class="lbl">SLSA provenance</div></div>
         <div class="stat"><div class="num">6h</div><div class="lbl">Rebuild cadence</div></div>
         <div class="stat"><div class="num">$0</div><div class="lbl">Cost</div></div>
       </div>
@@ -52,12 +52,12 @@ gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz`
   <section style="background:var(--bg-alt)">
     <div class="container">
       <h2 class="section-title">What every image ships with</h2>
-      <p class="section-sub">Signed, scanned, and reproducible — the same guarantees on every tag.</p>
+      <p class="section-sub">Signed, scanned, and rebuilt on a schedule — the same guarantees on every production tag.</p>
       <div class="verify-grid">
         <div class="feature"><h3>Cosign keyless signature</h3><p>Verifiable against the public Rekor transparency log — no keys to manage.</p></div>
         <div class="feature"><h3>SPDX SBOM attestation</h3><p>Every package, version and license, attached as an in-toto attestation.</p></div>
         <div class="feature"><h3>SLSA v1.0 provenance</h3><p>Cryptographic proof of which workflow, commit and runner built the image.</p></div>
-        <div class="feature"><h3>Daily CVE scans</h3><p>Grype results published here and in the GitHub Security tab.</p></div>
+        <div class="feature"><h3>CVE scan every rebuild</h3><p>Grype runs on every production image each cycle; results published here and in the GitHub Security tab.</p></div>
         <div class="feature"><h3>Non-root by default</h3><p>Runs as UID 65532 unless the upstream insists otherwise.</p></div>
         <div class="feature"><h3>No shell where possible</h3><p>Most images don't ship /bin/sh, shrinking the attack surface.</p></div>
       </div>

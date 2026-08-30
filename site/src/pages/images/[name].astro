@@ -228,7 +228,7 @@ const sevOrder = ['critical', 'high', 'medium', 'low'] as const;
     <!-- PROVENANCE -->
     <div class="tabpanel" data-panel="provenance" hidden>
       <p class="section-sub">Everything is verifiable without an account. Copy and run:</p>
-      <h3 style="font-size:1rem;margin:20px 0 8px">Build provenance (SLSA L3)</h3>
+      <h3 style="font-size:1rem;margin:20px 0 8px">Build provenance (SLSA v1.0, Build L2)</h3>
       <CopyButton code={`gh attestation verify oci://${image.repo}:latest --owner rtvkiz`} />
       <h3 style="font-size:1rem;margin:24px 0 8px">Cosign signature</h3>
       <CopyButton code={`cosign verify \\
