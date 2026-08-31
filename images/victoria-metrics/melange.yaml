@@ -12,7 +12,7 @@ package:
   # cpe:2.3:a:victoria-metrics:victoria-metrics:*, so none of them matched, and
   # the Wolfi secdb missed it too.
   name: victoria-metrics
-  version: 1.150.0
+  version: 1.151.0
   epoch: 0
   description: "Minimal VictoriaMetrics time-series database built from source"
   copyright:
@@ -29,7 +29,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: 0692a0841ddbf8b715f3920a1d1926db541f5db84107361ee1c954fcf9761ba6
+  sha256: 196c757a382f473fd0c1d1388253197e79548c7f1ee656c4e2215aafd5c16080
 
 environment:
   contents:
