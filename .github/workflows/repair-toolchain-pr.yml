@@ -118,8 +118,21 @@ jobs:
             too-many-failures)
               MSG="More than half the bumped images fail to compile on this toolchain. That points at the release rather than the images, so nothing was auto-reverted — this one needs a human decision about whether to adopt it at all." ;;
             nothing-advances)
-              MSG="Every bumped image failed to compile, so the branch would be identical to main. Nothing to merge; this bump should be retried on the next toolchain release." ;;
+              MSG="Every bumped image failed to compile, so the branch would be identical to main. Nothing to merge; closing. The bump is retried automatically on the next toolchain release." ;;
             *)
               MSG="No automatic repair was applied (${REASON})." ;;
           esac
           gh pr comment "$PR_URL" --body "$MSG"
+
+          # Only "nothing advances" is terminal for THIS branch: the bump had
+          # nothing left to offer, so leaving the PR open just re-runs a full
+          # image build on every auto-update-PR-branches tick and keeps a red PR
+          # on the board forever (go-1.27 did exactly that). update-wolfi-packages
+          # force-pushes the branch and reopens a PR on the next toolchain
+          # release, so closing here is how the loop returns to normal.
+          #
+          # The other reasons stay open on purpose: no-build-failures wants a
+          # retry, and too-many-failures is waiting on a human decision.
+          if [ "$REASON" = "nothing-advances" ]; then
+            gh pr close "$PR_URL" --delete-branch
+          fi

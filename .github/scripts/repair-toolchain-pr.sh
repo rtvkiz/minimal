@@ -37,9 +37,14 @@ MAX_REVERT_SHARE=50
 
 echo "Repairing $BRANCH from failed run $RUN_ID"
 
-bumped=$(git diff --name-only "origin/main...HEAD" -- images/ | wc -l)
+# Count distinct IMAGES, not changed files. An image whose bump touches two
+# files would otherwise inflate the denominator of the share guard below and
+# make a genuine incompatibility look like a bad toolchain release.
+mapfile -t BUMPED_IMAGES < <(git diff --name-only "origin/main...HEAD" -- images/ \
+  | sed -n 's#^images/\([^/]*\)/.*#\1#p' | sort -u)
+bumped=${#BUMPED_IMAGES[@]}
 [ "$bumped" -gt 0 ] || { echo "branch has no image changes; nothing to repair"; exit 0; }
-echo "  images bumped on this branch: $bumped"
+echo "  images bumped on this branch: $bumped (${BUMPED_IMAGES[*]})"
 
 # Collect every failed job, resolve it to an image, and classify its log.
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
@@ -172,6 +177,24 @@ fi
 n_revert=$(printf '%s\n' "$REVERT" | wc -w)
 share=$(( n_revert * 100 / bumped ))
 echo "  compile failures: $n_revert/$bumped (${share}%)"
+
+# Every bumped image failed, so there is nothing left to keep — reverting them
+# all would just reproduce main. That is NOT a verdict on the toolchain release.
+# On a RETRY branch the bumped set is only the images held back last time, so
+# "all of them still fail" is the expected outcome while upstream catches up.
+#
+# This must be decided BEFORE the share guard below. Testing share first meant a
+# retry branch always tripped "too-many-failures" (2/2 = 100%) and asked a human
+# to judge a release that nothing is actually wrong with, when the real answer is
+# "nothing to revert, wait for the next one". That is what left PR #629
+# (go-1.27, holding trivy + descheduler) permanently red while re-running a
+# 13-minute build every ~4h on the auto-update-PR-branches schedule.
+if [ "$n_revert" -ge "$bumped" ]; then
+  echo "Every bumped image failed to compile — nothing advances. Closing the PR."
+  { echo "repaired=false"; echo "reason=nothing-advances"; } >> "${GITHUB_OUTPUT:-/dev/null}"
+  exit 0
+fi
+
 if [ "$share" -gt "$MAX_REVERT_SHARE" ]; then
   echo "More than ${MAX_REVERT_SHARE}% of bumped images fail to compile — the toolchain"
   echo "release looks bad, not the images. Not auto-reverting; leaving this for review."
