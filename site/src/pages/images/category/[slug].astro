@@ -1,0 +1,74 @@
+---
+import Layout from '../../../components/Layout.astro';
+import ImageCard from '../../../components/ImageCard.astro';
+import { byCategory, categories, categorySlug, images } from '../../../lib/catalog';
+
+// One indexable URL per category. /images groups by category already, but only
+// client-side, so "hardened database container images" had no page to rank —
+// the whole catalogue competed for it as one URL.
+export function getStaticPaths() {
+  const grouped = byCategory();
+  return categories.map((category) => ({
+    params: { slug: categorySlug(category) },
+    props: { category, items: grouped[category] ?? [] },
+  }));
+}
+
+const { category, items } = Astro.props;
+
+// Plain-English framing per category, so each page says something a directory
+// listing does not. Keyed by category name; falls back to a generic line.
+const blurbs: Record<string, string> = {
+  'Languages & Runtimes': 'Base images for building and running applications — most shipping without a shell or package manager, each with a -dev companion carrying the toolchain for your builder stage.',
+  'Databases': 'Datastores and database tooling. These run as non-root by default, so check volume ownership before cutting over an existing data directory.',
+  'Caches, Queues & Messaging': 'Brokers, queues and caches — the stateful middle of most architectures, where a smaller attack surface matters and images are usually long-running.',
+  'Web Servers & Proxies': 'Edge and ingress software: web servers, reverse proxies, load balancers and auth gateways, all built to run as a non-root user.',
+  'Observability': 'Metrics, logs and traces — collectors, stores and exporters. Typically run as sidecars or DaemonSets, so image size and CVE count are multiplied across a fleet.',
+  'Infrastructure': 'DNS, networking, storage and certificate tooling that underpins a cluster rather than serving traffic directly.',
+  'Kubernetes, CI & IaC': 'Cluster tooling, CI utilities and supply-chain scanners. Most are single static binaries, which makes them the smallest images in the catalog.',
+  'Apps': 'End-user applications packaged as hardened images, for self-hosting without pulling in a full distribution.',
+};
+const blurb = blurbs[category] ?? `Hardened ${category.toLowerCase()} container images.`;
+
+const title = `Hardened ${category} container images — free and signed`;
+const description = `${items.length} free, hardened ${category.toLowerCase()} container images. MIT-licensed, cosign-signed with SBOM and build provenance, rebuilt every 6 hours. No account required.`;
+
+const schema = [{
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: `Hardened ${category} container images`,
+  numberOfItems: items.length,
+  itemListElement: items.map((img: any, i: number) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: `minimal-${img.name}`,
+    url: new URL(`/images/${img.name}`, Astro.site).href,
+  })),
+}];
+---
+<Layout title={title} description={description} schema={schema} breadcrumbs={[{ name: 'Images', href: '/images' }]}>
+  <section>
+    <div class="container">
+      <p style="margin:0 0 6px"><a href="/images" class="small muted">← All {images.length} images</a></p>
+      <h1 class="section-title">{category}</h1>
+      <p class="section-sub">{blurb}</p>
+
+      <div class="grid" style="margin-top:28px">
+        {items.map((img: any) => <ImageCard image={img} />)}
+      </div>
+
+      <h2 class="section-title" style="margin-top:44px;font-size:1.15rem">Other categories</h2>
+      <div class="facets" style="margin-top:12px">
+        {categories.filter((c) => c !== category).map((c) => (
+          <a class="facet" href={`/images/category/${categorySlug(c)}`}>{c}</a>
+        ))}
+      </div>
+
+      <p class="small muted" style="margin-top:32px">
+        Every image here is checkable from your terminal — see <a href="/about">how to verify</a> —
+        and compared against other hardened-image providers with published scan data on the
+        <a href="/compare">comparison pages</a>.
+      </p>
+    </div>
+  </section>
+</Layout>
