@@ -330,6 +330,17 @@ jobs:
         # bespoke updater). Same check as local `make check-autoupdate`.
         run: make check-autoupdate
 
+      - name: Assert the website's factual claims still hold
+        # Invariant: nothing on minimalcontainers.com contradicts this repo, and
+        # no retracted claim comes back. A page renders identically whether its
+        # numbers are right or wrong, so nothing failed when /about kept saying
+        # Docker Hardened had "Hundreds" of images months after Docker released
+        # 1,000+ free, or when a page shipped claiming bitnami/helm exists (it
+        # 404s). Offline only here — competitor repo lookups need --online and
+        # must not make a third party's outage fail our build. Same check as
+        # local `make check-site-claims`.
+        run: make check-site-claims
+
       - name: Assert no build environment uses a bare toolchain provider
         # Invariant: melange build environments pin the versioned toolchain
         # package (go-1.26, nodejs-26, rust-1.97), never the bare provider.

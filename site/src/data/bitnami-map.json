@@ -37,10 +37,6 @@
       "minimal": "haproxy"
     },
     {
-      "bitnami": "helm",
-      "minimal": "helm"
-    },
-    {
       "bitnami": "jenkins",
       "minimal": "jenkins"
     },
@@ -168,5 +164,7 @@
     "os-shell",
     "spark",
     "wordpress"
-  ]
+  ],
+  "verified": "2026-09-01",
+  "verifiedMethod": "Each bitnami/<name> repository confirmed to exist via the Docker Hub API."
 }
