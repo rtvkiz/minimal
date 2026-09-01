@@ -3,17 +3,19 @@
   "type": "module",
   "version": "0.1.0",
   "private": true,
-  "description": "Catalog site for minimal hardened container images — minimalcontainers.com",
+  "description": "Catalog site for minimal hardened container images \u2014 minimalcontainers.com",
   "scripts": {
-    "data": "node scripts/build-data.mjs",
-    "predev": "node scripts/build-data.mjs",
+    "data": "node scripts/build-data.mjs && node scripts/build-comparison.mjs && node scripts/build-og.mjs",
+    "predev": "node scripts/build-data.mjs && node scripts/build-comparison.mjs && node scripts/build-og.mjs",
     "dev": "astro dev",
-    "prebuild": "node scripts/build-data.mjs",
+    "prebuild": "node scripts/build-data.mjs && node scripts/build-comparison.mjs && node scripts/build-og.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.4",
     "astro": "^5.6.1",
     "yaml": "^2.7.0"
   }

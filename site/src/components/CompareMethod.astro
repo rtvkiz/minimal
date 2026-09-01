@@ -1,0 +1,29 @@
+---
+// The methodology block. It appears in full on every page that quotes a number,
+// because a comparison without its method is marketing, not evidence.
+export interface Props { data: any; }
+const { data } = Astro.props;
+---
+<h2 class="section-title" style="margin-top:44px">How these numbers were produced</h2>
+<ul>
+  <li>Scanner: <b>{data.scanner}</b>, vulnerability DB schema {data.dbSchema}, built {data.dbBuilt}.</li>
+  <li>DB checksum: <code class="kv-mono" style="word-break:break-all">{data.dbChecksum}</code></li>
+  <li>Platform: <code class="kv-mono">{data.platform}</code>. Scan date: <b>{data.scanDate}</b>.</li>
+  <li>Production <code class="kv-mono">latest</code> tags were resolved to immutable digests before scanning, so the run is repeatable.</li>
+  <li>Every image was scanned with the same Grype binary and the same frozen database.</li>
+  <li>Raw Grype findings. No vendor VEX suppression was applied to anyone, including us.</li>
+  <li>Only publicly pullable images were scanned. No paid or private registry credentials were used.</li>
+</ul>
+<p>
+  The full {data.csvRows}-row dataset, including the resolved reference and digest for every
+  provider/image pair, is here: <a href={data.csvPath}>cve-comparison-{data.scanDate}.csv</a>.
+  Every figure on this page is derived from that file.
+</p>
+<h3 style="font-size:1.05rem;margin-top:28px">What this does not prove</h3>
+<p>
+  <code class="kv-mono">latest</code> does not guarantee the same application version or feature
+  set across vendors, so an individual outlier should be version- and feature-matched before it
+  is treated as a product-level claim. A scanner reports known findings visible to one database
+  snapshot; a low count is not proof that an image is free of vulnerabilities. An image a vendor
+  does not publish is counted as <b>not available</b> — never as zero.
+</p>

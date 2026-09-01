@@ -250,3 +250,52 @@ table.data td.mono { font-family: var(--mono); font-size: 0.82rem; color: var(--
   .nav { gap: 16px; }
   .nav a:not(.nav-cta) { display: none; }
 }
+
+/* ---------------------------------------------------------------------------
+   Article prose — rendered Markdown from the blog collection. Scoped to
+   .prose so it cannot leak into the hand-authored .astro pages, which do their
+   own spacing.
+   --------------------------------------------------------------------------- */
+.prose { line-height: 1.7; }
+.prose > * + * { margin-top: 18px; }
+.prose h2 {
+  font-size: 1.25rem;
+  font-weight: 640;
+  letter-spacing: -0.01em;
+  color: var(--fg-strong);
+  margin-top: 44px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+.prose h3 { font-size: 1.05rem; font-weight: 600; color: var(--fg-strong); margin-top: 30px; }
+.prose ul, .prose ol { padding-left: 22px; }
+.prose li + li { margin-top: 8px; }
+.prose code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.88em;
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 1px 5px;
+}
+.prose pre {
+  background: var(--code-bg);
+  color: #e6edf3;
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.prose pre code { background: none; border: 0; padding: 0; font-size: inherit; color: inherit; }
+.prose table { width: 100%; border-collapse: collapse; font-size: 0.92rem; display: block; overflow-x: auto; }
+.prose th, .prose td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+.prose th { font-weight: 600; color: var(--fg-strong); white-space: nowrap; }
+.prose blockquote {
+  border-left: 3px solid var(--accent-line);
+  background: var(--accent-soft);
+  padding: 12px 18px;
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  color: var(--accent-ink);
+}
+.prose blockquote > * + * { margin-top: 10px; }

@@ -1,0 +1,43 @@
+---
+import Layout from '../../components/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.published.localeCompare(a.data.published));
+
+const fmt = (d: string) =>
+  new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+---
+<Layout
+  title="Blog — migration guides and scan data for hardened container images"
+  description="Migration guides, published vulnerability-scan comparisons and notes on how Minimal builds and updates hardened container images.">
+  <section>
+    <div class="container-narrow">
+      <h1 class="section-title">Blog</h1>
+      <p class="section-sub">
+        Migration guides and published scan data. Everything here is reproducible from the
+        <a href="https://github.com/rtvkiz/minimal" rel="noopener">public repo</a>.
+      </p>
+
+      {posts.length === 0 && <p class="notice" style="margin-top:24px">No posts yet.</p>}
+
+      <div style="margin-top:28px">
+        {posts.map((p) => (
+          <article style="padding:22px 0;border-bottom:1px solid var(--border)">
+            <p class="small muted" style="margin:0 0 6px">
+              <time datetime={p.data.published}>{fmt(p.data.published)}</time>
+            </p>
+            <h2 style="font-size:1.15rem;margin:0 0 8px">
+              <a href={`/blog/${p.id}`}>{p.data.title}</a>
+            </h2>
+            <p class="small muted" style="margin:0">{p.data.description}</p>
+          </article>
+        ))}
+      </div>
+
+      <p class="small muted" style="margin-top:28px">
+        Subscribe via <a href="/rss.xml">RSS</a>.
+      </p>
+    </div>
+  </section>
+</Layout>

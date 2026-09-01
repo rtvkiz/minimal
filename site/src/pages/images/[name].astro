@@ -16,8 +16,27 @@ const prod = image.variants.prod || image.variants[variantKeys[0]];
 
 // severity pill counts
 const sevOrder = ['critical', 'high', 'medium', 'low'] as const;
+
+// SEO title/description.
+//
+// "<name> — Minimal Containers" matched no query anyone types; the searches that
+// exist are "hardened <name> container image" and "distroless <name>". The brand
+// moves to og:site_name instead of occupying the front of every title.
+//
+// catalog.json `summary` is 23-77 chars and near-identical in shape across the
+// catalogue ("Shell-less X built on Wolfi."), which reads as boilerplate at
+// meta-description length. Compose it up to a useful length with the facts that
+// differ per image. Replace this with a real per-image `description` field in
+// catalog.json when one exists.
+const pageTitle = `${image.name} — hardened, minimal container image`;
+const pullRef = prod?.pullRef ?? `ghcr.io/rtvkiz/minimal-${image.name}`;
+const pageDescription = [
+  image.summary,
+  `Signed, SBOM-attested${image.size ? `, ${image.size.human} compressed` : ''}, rebuilt every 6 hours.`,
+  `Free and public — pull ${pullRef.split(':')[0]} with no account.`,
+].join(' ');
 ---
-<Layout title={`${image.name} — Minimal Containers`} description={image.summary}>
+<Layout title={pageTitle} description={pageDescription}>
   <div class="detail-head">
     <div class="container">
       <p style="margin:0 0 6px"><a href="/images" class="small muted">← All images</a></p>
