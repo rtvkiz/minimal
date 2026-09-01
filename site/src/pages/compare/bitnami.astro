@@ -6,7 +6,7 @@ import { images } from '../../lib/catalog';
 
 const title = 'Bitnami alternative — free hardened replacements for deprecated Bitnami images';
 const description =
-  `Bitnami moved its free versioned images to an unmaintained legacy repo. Minimal publishes free, signed, MIT-licensed replacements for ${map.pairs.length} of the most-used Bitnami images.`;
+  `Bitnami moved its free versioned images to an unmaintained legacy repo. Minimal publishes free, signed, MIT-licensed replacements for ${map.pairs.length} of the ${map.bitnamiImages} images Bitnami builds.`;
 
 const schema = [{
   '@context': 'https://schema.org',
@@ -33,9 +33,11 @@ const schema = [{
         being patched.
       </p>
       <p>
-        Minimal covers <b>{map.pairs.length}</b> of the most commonly used Bitnami images, free,
-        with no account and no paid tier. Check the mapping below before you plan anything —
-        there are real gaps, and they are listed too.
+        Bitnami builds <b>{map.bitnamiImages}</b> images. Minimal has an equivalent for
+        <b>{map.pairs.length}</b> of them, free, with no account and no paid tier — which leaves
+        <b>{map.gapCount}</b> with no replacement here. Both lists are below, generated from
+        Bitnami's own repository rather than compiled by hand, and ordered by Docker Hub pull
+        count so the ones people actually run come first.
       </p>
 
       <h2 class="section-title" style="margin-top:44px">Direct replacements</h2>
@@ -45,12 +47,13 @@ const schema = [{
       </p>
       <div style="overflow-x:auto">
         <table class="data">
-          <thead><tr><th>Bitnami image</th><th>Minimal replacement</th></tr></thead>
+          <thead><tr><th>Bitnami image</th><th>Minimal replacement</th><th style="text-align:right">Bitnami pulls</th></tr></thead>
           <tbody>
             {map.pairs.map((p) => (
               <tr>
                 <td class="kv-mono">bitnami/{p.bitnami}</td>
                 <td><a href={`/images/${p.minimal}`}>minimal-{p.minimal}</a></td>
+                <td style="text-align:right" class="kv-mono">{p.pulls ? p.pulls.toLocaleString('en-GB') : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -59,18 +62,28 @@ const schema = [{
 
       <h2 class="section-title" style="margin-top:44px">What Minimal does not cover</h2>
       <p>
-        These common Bitnami images have <b>no</b> Minimal equivalent. If you depend on one, this
-        catalog does not solve your problem and you should plan accordingly:
+        {map.gapCount} of Bitnami's {map.bitnamiImages} images have no Minimal equivalent. The
+        most-pulled of them:
       </p>
-      <ul>
-        <li><b>grafana</b>, <b>airflow</b>, <b>spark</b>, <b>wordpress</b> — not in the catalog today.</li>
-        <li><b>mongodb</b>, <b>elasticsearch</b> — deliberately excluded on licensing grounds (SSPL and
-          the Elastic License are not open source). <a href="/images/opensearch">opensearch</a> is the
-          closest available substitute for Elasticsearch.</li>
-        <li><b>influxdb</b>, <b>clickhouse</b> — not currently built.</li>
-        <li><b>os-shell</b>, <b>git</b> — utility images used by Bitnami charts as init containers.
-          There is no direct replacement; a <code class="kv-mono">-dev</code> variant is the nearest thing.</li>
-      </ul>
+      <div style="overflow-x:auto">
+        <table class="data">
+          <thead><tr><th>Bitnami image</th><th style="text-align:right">Pulls</th></tr></thead>
+          <tbody>
+            {map.topGaps.map((g: any) => (
+              <tr>
+                <td class="kv-mono">bitnami/{g.bitnami}</td>
+                <td style="text-align:right" class="kv-mono">{g.pulls ? g.pulls.toLocaleString('en-GB') : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted" style="margin-top:14px">
+        Two of these are deliberate rather than pending: <b>mongodb</b> (SSPL) and
+        <b>elasticsearch</b> (Elastic License) are not open source, so they will not be added.
+        <a href="/images/opensearch">opensearch</a> is the closest available substitute for
+        Elasticsearch. The rest are simply not built yet.
+      </p>
 
       <h2 class="section-title" style="margin-top:44px">The three things that will break</h2>
       <p>
@@ -118,9 +131,12 @@ grype ghcr.io/rtvkiz/minimal-postgres-slim:latest`} />
       </p>
 
       <p class="small muted" style="margin-top:32px">
-        Every <code class="kv-mono">bitnami/&lt;name&gt;</code> repository named on this page was
-        confirmed to exist via the Docker Hub API on {map.verified}.
-        Bitnami's catalog changes are documented by Broadcom in
+        This page is generated, not written. The image list comes from
+        <a href="https://github.com/bitnami/containers" rel="noopener nofollow">bitnami/containers</a>
+        (one directory per image Bitnami builds); pull counts and pullability come from the Docker
+        Hub API. A row appears only when both sources agree — {map.excludedNotPullable.length} images
+        Bitnami builds have no pullable Docker Hub repository and are excluded. Generated
+        {map.generated}. Bitnami's catalog changes are documented by Broadcom in
         <a href="https://github.com/bitnami/containers/issues/83267" rel="noopener nofollow">bitnami/containers #83267</a>.
         Details there change; that issue, not this page, is the authority on what Bitnami currently
         publishes. Statements about Minimal are checkable from the <a href="/about">verify page</a>.

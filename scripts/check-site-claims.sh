@@ -107,8 +107,10 @@ for f in "$SITE"/pages/compare/*.astro "$SITE"/pages/about.astro; do
   if [ -z "$d" ] && grep -q 'data\.scanDate' "$f"; then
     d=$(jq -r '.scanDate' "$SITE"/data/comparison.json)
   fi
-  if [ -z "$d" ] && grep -q 'map\.verified' "$f"; then
-    d=$(jq -r '.verified // empty' "$SITE"/data/bitnami-map.json)
+  # Accept whatever field the dataset uses for its own date; the page renaming
+  # map.verified -> map.generated must not read as "undated".
+  if [ -z "$d" ] && grep -qE 'map\.(verified|generated)' "$f"; then
+    d=$(jq -r '.generated // .verified // empty' "$SITE"/data/bitnami-map.json)
   fi
   if [ -z "$d" ]; then
     note "$(basename "$f") makes competitor claims with no review date"
