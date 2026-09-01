@@ -6,11 +6,17 @@ export interface Props {
   description?: string;
   /** Set on dated content (blog posts) so search engines see a publish date. */
   published?: string;
+  /** JSON-LD objects for this page. Rendered as one script per entry. */
+  schema?: object[];
+  /** Trail for BreadcrumbList, excluding Home (added here) and the current page. */
+  breadcrumbs?: { name: string; href: string }[];
 }
 const {
   title = 'Minimal Containers — free, hardened container images',
   description = 'Small, hardened, MIT-licensed container images. Cosign-signed, SBOM-attested, with SLSA v1.0 build provenance. No account, no Docker Hub pull limits.',
   published,
+  schema = [],
+  breadcrumbs,
 } = Astro.props;
 const year = new Date().getFullYear();
 
@@ -19,6 +25,25 @@ const year = new Date().getFullYear();
 // one is authoritative instead of leaving it to be guessed.
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const ogImage = new URL('/og.png', Astro.site).href;
+
+// BreadcrumbList. Home is always the first crumb and the current page the last,
+// so callers pass only the middle of the trail.
+const crumbs = breadcrumbs && [
+  { name: 'Home', href: '/' },
+  ...breadcrumbs,
+  { name: title, href: Astro.url.pathname },
+];
+const breadcrumbSchema = crumbs && {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: crumbs.map((c, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: c.name,
+    item: new URL(c.href, Astro.site).href,
+  })),
+};
+const allSchema = [...schema, ...(breadcrumbSchema ? [breadcrumbSchema] : [])];
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -39,6 +64,9 @@ const ogImage = new URL('/og.png', Astro.site).href;
   <meta name="twitter:description" content={description} />
   <meta name="twitter:image" content={ogImage} />
   {published && <meta property="article:published_time" content={published} />}
+  {allSchema.map((s) => (
+    <script type="application/ld+json" set:html={JSON.stringify(s)} />
+  ))}
   <link rel="icon" type="image/svg+xml" href="/icon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -1,0 +1,172 @@
+{
+  "pairs": [
+    {
+      "bitnami": "alertmanager",
+      "minimal": "alertmanager"
+    },
+    {
+      "bitnami": "apache",
+      "minimal": "httpd"
+    },
+    {
+      "bitnami": "cassandra",
+      "minimal": "cassandra"
+    },
+    {
+      "bitnami": "consul",
+      "minimal": "consul"
+    },
+    {
+      "bitnami": "etcd",
+      "minimal": "etcd"
+    },
+    {
+      "bitnami": "external-dns",
+      "minimal": "external-dns"
+    },
+    {
+      "bitnami": "fluent-bit",
+      "minimal": "fluent-bit"
+    },
+    {
+      "bitnami": "gitea",
+      "minimal": "gitea"
+    },
+    {
+      "bitnami": "haproxy",
+      "minimal": "haproxy"
+    },
+    {
+      "bitnami": "helm",
+      "minimal": "helm"
+    },
+    {
+      "bitnami": "jenkins",
+      "minimal": "jenkins"
+    },
+    {
+      "bitnami": "kafka",
+      "minimal": "kafka"
+    },
+    {
+      "bitnami": "keycloak",
+      "minimal": "keycloak"
+    },
+    {
+      "bitnami": "kube-state-metrics",
+      "minimal": "kube-state-metrics"
+    },
+    {
+      "bitnami": "kubectl",
+      "minimal": "kubectl"
+    },
+    {
+      "bitnami": "mariadb",
+      "minimal": "mariadb"
+    },
+    {
+      "bitnami": "memcached",
+      "minimal": "memcached"
+    },
+    {
+      "bitnami": "metrics-server",
+      "minimal": "metrics-server"
+    },
+    {
+      "bitnami": "minio",
+      "minimal": "minio"
+    },
+    {
+      "bitnami": "mysql",
+      "minimal": "mysql"
+    },
+    {
+      "bitnami": "nats",
+      "minimal": "nats"
+    },
+    {
+      "bitnami": "nginx",
+      "minimal": "nginx"
+    },
+    {
+      "bitnami": "node",
+      "minimal": "node-slim"
+    },
+    {
+      "bitnami": "node-exporter",
+      "minimal": "node-exporter"
+    },
+    {
+      "bitnami": "oauth2-proxy",
+      "minimal": "oauth2-proxy"
+    },
+    {
+      "bitnami": "opensearch",
+      "minimal": "opensearch"
+    },
+    {
+      "bitnami": "pgbouncer",
+      "minimal": "pgbouncer"
+    },
+    {
+      "bitnami": "php-fpm",
+      "minimal": "php"
+    },
+    {
+      "bitnami": "postgresql",
+      "minimal": "postgres-slim"
+    },
+    {
+      "bitnami": "prometheus",
+      "minimal": "prometheus"
+    },
+    {
+      "bitnami": "python",
+      "minimal": "python"
+    },
+    {
+      "bitnami": "rabbitmq",
+      "minimal": "rabbitmq"
+    },
+    {
+      "bitnami": "redis",
+      "minimal": "redis-slim"
+    },
+    {
+      "bitnami": "ruby",
+      "minimal": "ruby"
+    },
+    {
+      "bitnami": "solr",
+      "minimal": "solr"
+    },
+    {
+      "bitnami": "thanos",
+      "minimal": "thanos"
+    },
+    {
+      "bitnami": "tomcat",
+      "minimal": "tomcat"
+    },
+    {
+      "bitnami": "valkey",
+      "minimal": "valkey"
+    },
+    {
+      "bitnami": "zookeeper",
+      "minimal": "zookeeper"
+    }
+  ],
+  "missing": [
+    "airflow",
+    "clickhouse",
+    "elasticsearch",
+    "git",
+    "grafana",
+    "influxdb",
+    "mongodb",
+    "os-shell",
+    "spark",
+    "wordpress"
+  ]
+}

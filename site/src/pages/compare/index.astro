@@ -1,21 +1,41 @@
 ---
 import Layout from '../../components/Layout.astro';
 import data from '../../data/comparison.json';
+import bitnami from '../../data/bitnami-map.json';
 import { images } from '../../lib/catalog';
 
 const title = 'Hardened container image alternatives — Chainguard, Minimus, Docker Hardened compared';
 const description =
   `An evidence-based comparison of free hardened container images. ${data.minimus.compared} images scanned head-to-head with the same Grype build, including the images where Minimal loses.`;
+
+const datasetSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Dataset',
+  name: `Container image vulnerability comparison, ${data.scanDate}`,
+  description: `Grype scan results for Minimal, Minimus and publicly pullable Chainguard container images, scanned with ${data.scanner} against a single frozen vulnerability database on ${data.scanDate}.`,
+  url: new URL('/compare', Astro.site).href,
+  license: 'https://spdx.org/licenses/MIT.html',
+  isAccessibleForFree: true,
+  creator: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
+  dateCreated: data.scanDate,
+  measurementTechnique: `${data.scanner}, vulnerability DB schema ${data.dbSchema}, platform ${data.platform}`,
+  variableMeasured: 'Unique CVE identifiers per container image',
+  distribution: [{
+    '@type': 'DataDownload',
+    encodingFormat: 'text/csv',
+    contentUrl: new URL(data.csvPath, Astro.site).href,
+  }],
+};
 ---
-<Layout title={title} description={description}>
+<Layout title={title} description={description} schema={[datasetSchema]} breadcrumbs={[]}>
   <section>
     <div class="container-narrow">
       <h1 class="section-title">Comparing hardened container images</h1>
       <p class="section-sub">
-        If you are looking for a Chainguard alternative, a Minimus alternative, or simply a free
-        source of hardened base images, this section is the honest version: the same scanner, the
-        same database, the same day, published with the raw dataset and with the images where
-        Minimal comes off worse left in.
+        If you are looking for a Chainguard alternative, a Minimus alternative, a replacement for
+        the deprecated Bitnami images, or simply a free source of hardened base images, this
+        section is the honest version: the same scanner, the same database, the same day,
+        published with the raw dataset and with the images where Minimal comes off worse left in.
       </p>
 
       <div class="grid" style="margin-top:28px">
@@ -25,6 +45,14 @@ const description =
             {data.chainguard.compared} images with a free, publicly pullable Chainguard equivalent.
             Minimal lower on {data.chainguard.lower}, tied on {data.chainguard.tie},
             higher on {data.chainguard.higher}.
+          </p>
+        </a>
+        <a class="card" href="/compare/bitnami">
+          <h2 style="font-size:1.1rem;margin:0 0 6px">Replacing Bitnami images</h2>
+          <p class="small muted" style="margin:0">
+            Bitnami's free versioned images moved to an unmaintained legacy repo in August 2025.
+            Free replacements for {bitnami.pairs.length} of the most-used ones — and the gaps
+            where there is none.
           </p>
         </a>
         <a class="card" href="/compare/minimus">

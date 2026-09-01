@@ -3,8 +3,27 @@ import Layout from '../../components/Layout.astro';
 import ImageCard from '../../components/ImageCard.astro';
 import { byCategory, categories, images } from '../../lib/catalog';
 const grouped = byCategory();
+
+// ItemList tells a crawler this is a catalogue and what is in it, rather than
+// leaving it to infer structure from a wall of cards.
+const schema = [{
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Minimal Containers image directory',
+  numberOfItems: images.length,
+  itemListElement: images.map((img, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: `minimal-${img.name}`,
+    url: new URL(`/images/${img.name}`, Astro.site).href,
+  })),
+}];
 ---
-<Layout title="Image directory — Minimal Containers" description="Browse all hardened container images.">
+<Layout
+  title={`All ${images.length} hardened container images — free and signed`}
+  description={`Browse ${images.length} free, hardened container images across ${categories.length} categories — databases, proxies, observability, Kubernetes tooling and language runtimes. MIT-licensed, signed, rebuilt every 6 hours.`}
+  schema={schema}
+  breadcrumbs={[]}>
   <section>
     <div class="container">
       <h1 class="section-title">Image directory</h1>
