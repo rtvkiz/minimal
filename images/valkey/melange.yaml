@@ -12,7 +12,7 @@ package:
   # bare, as cpe:2.3:a:valkey:valkey:*, so none of them matched, and the Wolfi
   # secdb missed it too.
   name: valkey
-  version: 9.1.1
+  version: 9.1.2
   epoch: 0
   description: "Minimal Valkey server and CLI built from source"
   copyright:
@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: 7d7232acd1b8a49b4e05d07a00b3ca8c801ae06ab633ca6a3423bc5f385ab7ee
+  sha256: 19c23908e7d57e8d91ef85b41f5646307582f10f4f0fb999bbf89ed24ec9c983
 
 environment:
   contents:
