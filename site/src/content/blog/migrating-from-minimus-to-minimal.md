@@ -1,151 +1,138 @@
 ---
 title: "Migrating from Minimus to Minimal"
-description: "A step-by-step guide to moving container images from Minimus to Minimal: mapping image references, handling non-root and shell-less images, pinning tags, and verifying signatures and SBOMs."
+description: "What actually breaks when you move a container image to Minimal: the missing shell, the non-root UID, and the tag you should not have pinned. With the commands to verify what you pulled."
 published: "2026-08-31"
 ---
 
-If you are already running hardened images, most of the work of switching is
-mechanical: change the reference, fix the two or three assumptions your
-Dockerfile makes about the base, and verify what you pulled. This guide walks
-that path for Minimal.
+Swapping one hardened base for another is mostly a find-and-replace. The
+interesting part is the small number of things that break afterward, and they
+are the same ones every time: something calls `/bin/sh`, something writes to a
+directory it does not own, or someone pinned `:latest` and got moved across a
+major version.
 
-A note on scope up front. This describes what **Minimal** expects and
-guarantees, with each claim checkable from the commands below. It does not
-document Minimus's internals — their documentation is the authority on that,
-and asserting details of someone else's images that we have not verified is how
-comparison content becomes wrong. Where your current base differs, the checklist
-in step 3 is designed to surface it rather than assume it.
+This covers what Minimal does. It does not describe Minimus's internals — their
+docs are the authority there, and guessing at someone else's images is how
+comparison content ends up wrong.
 
-## 1. Map the image reference
+## Change the reference
 
-Minimal publishes to GitHub Container Registry, one repository per image, with a
-`minimal-` prefix:
-
-```
-ghcr.io/rtvkiz/minimal-<name>:<tag>
-```
-
-So the substitution is usually a single line in a Dockerfile or Helm values file:
+One repository per image on GHCR, `minimal-` prefixed:
 
 ```diff
 -FROM <your-current-registry>/python:latest
 +FROM ghcr.io/rtvkiz/minimal-python:latest
 ```
 
-Pulls need no account and no login:
+No login, no account:
 
 ```
 docker pull ghcr.io/rtvkiz/minimal-python:latest
 ```
 
-Names follow the upstream project (`nginx`, `redis-slim`, `postgres-slim`,
-`kafka`). Browse the [image directory](/images) for the full list — the catalogue
-is deliberately smaller than a commercial vendor's, so **check your images are
-covered before you start**. If something you depend on is missing, that is the
-blocker, and it is better found now than halfway through.
+Names follow the upstream project — `nginx`, `redis-slim`, `postgres-slim`,
+`kafka`. Before you go further, check the [image directory](/images) and confirm
+everything you depend on is actually there. The catalog is deliberately smaller
+than a commercial vendor's. Finding the gap now is much cheaper than finding it
+with half your services moved.
 
-## 2. Pick the right tag
+## Pick a tag that will not surprise you
 
-Do not carry `:latest` into production out of habit. `:latest` on Minimal moves
-across major versions, which is almost never what a deployment wants.
+`:latest` on Minimal crosses major versions. That is rarely what a deployment
+wants, so decide deliberately:
 
-| You want | Pin | Behaviour |
+| You want | Pin | Behavior |
 | --- | --- | --- |
 | A byte-identical artifact | `minimal-caddy@sha256:…` | Immutable, never moves |
-| Patches, no breaking upgrades | `minimal-caddy:2` | Newest release in that major line |
+| Patches without breaking upgrades | `minimal-caddy:2` | Newest release in that major line |
 | Tighter still | `minimal-caddy:2.11` | Newest patch in that minor line |
 
-Pinning a major line is the usual answer: you keep receiving security rebuilds
-without being moved across an upstream breaking release. An exact version tag
-never moves forward at all, which means it also stops receiving fixes. Full
-detail is in [tags and pinning](/docs/tags).
+Most people want the major line. You keep getting security rebuilds and you
+never get moved across an upstream breaking release. Note that an exact version
+tag like `:2.11.4-r0` is not the safe conservative choice it looks like — it
+never moves, which also means it never picks up a fix. [Tags and
+pinning](/docs/tags) has the rest.
 
-## 3. Check the three assumptions that actually break builds
+## Then fix the things that break
 
-This is where migrations fail, and the causes are nearly always the same three.
+### No shell
 
-### There is no shell in production images
+Most production images have no shell and no package manager. Anything using the
+shell form fails immediately, and the error is usually some variation of:
 
-Most Minimal production images ship without a shell or package manager. That
-breaks anything of this shape:
-
-```dockerfile
-RUN apt-get update && apt-get install -y curl
 ```
+exec: "/bin/sh": stat /bin/sh: no such file or directory
+```
+
+So this stops working:
 
 ```yaml
 command: ["/bin/sh", "-c", "exec myapp --flag"]
 ```
 
-Two fixes, in order of preference:
+Two ways out. The better one is to keep the shell in the builder stage only —
+every image has a `-dev` companion carrying a shell, package manager and
+toolchain, which exists for exactly this:
 
-1. **Build in a `-dev` variant, ship in the production one.** Every image has a
-   `-dev` companion with a shell, package manager and toolchain, intended
-   exactly for the builder stage of a multi-stage build:
+```dockerfile
+FROM ghcr.io/rtvkiz/minimal-node-slim:latest-dev AS build
+WORKDIR /src
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
 
-   ```dockerfile
-   FROM ghcr.io/rtvkiz/minimal-node-slim:latest-dev AS build
-   WORKDIR /src
-   COPY package*.json ./
-   RUN npm ci
-   COPY . .
-   RUN npm run build
+FROM ghcr.io/rtvkiz/minimal-node-slim:latest
+COPY --from=build --chown=65532:65532 /src/dist /app
+ENTRYPOINT ["node", "/app/server.js"]
+```
 
-   FROM ghcr.io/rtvkiz/minimal-node-slim:latest
-   COPY --from=build --chown=65532:65532 /src/dist /app
-   ENTRYPOINT ["node", "/app/server.js"]
-   ```
+The other is to drop the wrapper entirely and use exec form, so nothing needs a
+shell to start. If you were relying on the shell for variable expansion or
+pipes, that logic has to move into your entrypoint binary or an init container.
 
-2. **Drop the shell wrapper.** Use exec-form `ENTRYPOINT`/`command` so no `/bin/sh`
-   is needed to start the process. If you need shell features — variable
-   expansion, pipes, `&&` — move that logic into your entrypoint binary or an
-   init container.
+> Shipping the `-dev` variant to production is not a fix. It carries the shell
+> and toolchain you were trying to get rid of.
 
-> Do not "fix" this by shipping the `-dev` variant to production. It exists for
-> builders and debugging, and it deliberately carries a shell and toolchain you
-> do not want on a running workload.
+### Non-root by default
 
-### Images run as non-root
+Production images run as UID `65532`. A handful that need kernel capabilities
+(kube-vip, for one) differ, and every image's page lists the UID it actually
+uses.
 
-Production images run as a non-root user, UID `65532`. A small number that need
-kernel capabilities to do their job (kube-vip, for instance) are the exception,
-and every image's page lists the UID it actually runs as. Anything writing to a
-path owned by root fails. Common fixes:
+What this breaks is writes to root-owned paths, which surface as a plain
+`permission denied` somewhere unhelpful. Usually one of these fixes it:
 
-- Write to a volume or `emptyDir` your workload owns, not to `/`.
+- Write to a volume or `emptyDir` the workload owns rather than into `/`.
 - Set `fsGroup` in the pod security context so mounted volumes are group-writable.
-- If you build on top of a Minimal image and need to `COPY` files the process
-  will write to, use `COPY --chown=65532:65532`.
+- `COPY --chown=65532:65532` for files your process needs to write to later.
 
-Check the exact user and architecture for any image on its page in the
-[directory](/images) — each one lists the UID it runs as.
+### Paths that moved
 
-### Paths and entrypoints may differ
-
-Config file locations and entrypoints follow the upstream project's conventions,
-which will not always match a repackaged image you were using before. The fastest
-way to find out is to look, using the dev variant:
+Config locations and entrypoints follow upstream conventions, which may not
+match whatever repackaged image you were on before. Rather than guess, go and
+look:
 
 ```
 docker run --rm -it --entrypoint /bin/sh ghcr.io/rtvkiz/minimal-nginx:latest-dev
 ```
 
-Then compare against the **Specifications** and **Packages** tabs on that image's
-page, which list the entrypoint, exposed ports and the full package inventory.
+The **Specifications** and **Packages** tabs on each image's page list the
+entrypoint, exposed ports and full package inventory if you would rather read
+than poke.
 
-## 4. Verify what you pulled
+## Verify what you pulled
 
-The reason to use hardened images at all is that the claims are checkable. Do
-this once as part of the migration, and ideally keep it in CI.
+Worth doing once during the migration and then leaving in CI, since the whole
+argument for hardened images is that you do not have to take anyone's word for
+it.
 
-Build provenance — proves the image came from the workflow in the public repo,
-at a specific commit:
+Provenance, which ties the image to the workflow and commit that built it:
 
 ```
 gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz
 ```
 
-The SBOM, as an SPDX attestation:
+The SBOM:
 
 ```
 cosign verify-attestation --type spdxjson \
@@ -155,42 +142,40 @@ cosign verify-attestation --type spdxjson \
   | jq -r '.payload | @base64d | fromjson | .predicate' > python-sbom.spdx.json
 ```
 
-Minimal publishes SLSA v1.0 **Build L2** provenance. Not L3 — L3 needs a
-reusable workflow isolating the build from its caller, and this project does not
-have that yet. If your compliance programme requires L3, that is a real reason to
-stay on a commercial vendor.
+That is SLSA v1.0 **Build L2**, not L3. L3 needs a reusable workflow isolating
+the build from its caller and this project does not have one yet. If your
+compliance program requires L3, that is a genuine reason not to migrate.
 
-## 5. Scan it yourself before you commit
-
-Do not take our comparison on faith — reproduce it:
+## Scan it before you commit to it
 
 ```
 grype ghcr.io/rtvkiz/minimal-python:latest
 ```
 
-We publish the [full head-to-head scan data](/compare/minimus), including the
-raw CSV and the images where **Minimal comes off worse**. Solr is the clearest
-current example: it carries materially more findings than the Minimus
-equivalent, most of it in bundled Java libraries. If Solr is on your critical
-path, that row should inform your decision, and it is why we publish it rather
-than quietly omitting it.
+The [full head-to-head data](/compare/minimus) is published, raw CSV included,
+and it contains the images where Minimal comes off worse. Solr is the current
+example: materially more findings than the Minimus equivalent, most of it in
+bundled Java libraries. If Solr is on your critical path, that is a reason to
+wait, and you should know it from us rather than discover it yourself.
 
-## 6. Roll out gradually
+## Rolling it out
 
-1. Migrate one low-risk service first — an internal tool or a batch job.
-2. Run it through your normal test suite, watching for the three failure modes
-   in step 3 rather than for subtle runtime differences.
-3. Add the verification from step 4 to CI so a bad or unsigned image cannot ship.
-4. Migrate the rest in batches, by image family rather than by service, so each
-   batch exercises one base at a time.
+Start with something you can afford to break — an internal tool, a batch job —
+and run it through your normal tests. You are watching for the three failure
+modes above, not for subtle runtime differences; if it starts and serves
+traffic, it is almost certainly fine.
 
-## When not to migrate
+After that, move in batches grouped by base image rather than by service. Each
+batch then exercises one runtime at a time, so when something does break you
+know which base to blame.
 
-Worth stating plainly. Stay where you are if you need thousands of images, a
-support contract with an SLA, FedRAMP or STIG artefacts, SLSA Build L3, or CVE
-remediation someone is contractually obliged to deliver. Minimal is a small,
-auditable, MIT-licensed catalogue that costs nothing and asks for no account. It
-is not a commercial product and does not replace one.
+## When to stay where you are
 
-If that trade is the one you want, start with the [image directory](/images) and
-the [comparison data](/compare).
+If you need thousands of images, an SLA, FedRAMP or STIG artifacts, SLSA Build
+L3, or CVE remediation somebody is contractually obliged to deliver, buy the
+commercial product. Minimal is a small MIT-licensed catalog that costs nothing
+and asks for no account. It is not a substitute for a vendor relationship and
+does not pretend to be.
+
+If that trade suits you, the [image directory](/images) and the [comparison
+data](/compare) are the places to start.
