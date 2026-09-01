@@ -10,8 +10,27 @@ const title = 'Minimus alternative — Minimal vs Minimus, scanned head-to-head'
 const description =
   `A free Minimus alternative with published scan data: ${s.compared} images scanned with one Grype build on ${data.scanDate}. Minimal lower on ${s.lower}, tied on ${s.tie}, higher on ${s.higher}.`;
 const worst = [...s.pairs].filter((p: any) => p.delta > 0).reverse();
+
+const datasetSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Dataset',
+  name: `Container image vulnerability comparison, ${data.scanDate}`,
+  description: `Grype scan results for Minimal, Minimus and publicly pullable Chainguard container images, scanned with ${data.scanner} against a single frozen vulnerability database on ${data.scanDate}.`,
+  url: new URL('/compare', Astro.site).href,
+  license: 'https://spdx.org/licenses/MIT.html',
+  isAccessibleForFree: true,
+  creator: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
+  dateCreated: data.scanDate,
+  measurementTechnique: `${data.scanner}, vulnerability DB schema ${data.dbSchema}, platform ${data.platform}`,
+  variableMeasured: 'Unique CVE identifiers per container image',
+  distribution: [{
+    '@type': 'DataDownload',
+    encodingFormat: 'text/csv',
+    contentUrl: new URL(data.csvPath, Astro.site).href,
+  }],
+};
 ---
-<Layout title={title} description={description}>
+<Layout title={title} description={description} schema={[datasetSchema]} breadcrumbs={[{ name: 'Compare', href: '/compare' }]}>
   <section>
     <div class="container-narrow">
       <h1 class="section-title">Minimal vs Minimus</h1>

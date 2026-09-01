@@ -1,0 +1,128 @@
+---
+import Layout from '../../components/Layout.astro';
+import CopyButton from '../../components/CopyButton.astro';
+import map from '../../data/bitnami-map.json';
+import { images } from '../../lib/catalog';
+
+const title = 'Bitnami alternative — free hardened replacements for deprecated Bitnami images';
+const description =
+  `Bitnami moved its free versioned images to an unmaintained legacy repo. Minimal publishes free, signed, MIT-licensed replacements for ${map.pairs.length} of the most-used Bitnami images.`;
+
+const schema = [{
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Bitnami image replacements',
+  numberOfItems: map.pairs.length,
+  itemListElement: map.pairs.map((p, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: `${p.bitnami} → minimal-${p.minimal}`,
+    url: new URL(`/images/${p.minimal}`, Astro.site).href,
+  })),
+}];
+---
+<Layout title={title} description={description} schema={schema} breadcrumbs={[{ name: 'Compare', href: '/compare' }]}>
+  <section>
+    <div class="container-narrow">
+      <h1 class="section-title">Replacing deprecated Bitnami images</h1>
+      <p class="section-sub">
+        In August 2025 Bitnami moved its free versioned container images to
+        <code class="kv-mono">bitnamilegacy</code>, which receives no further updates or security
+        fixes, and put maintained images behind Bitnami Secure Images. If you are still pulling
+        from <code class="kv-mono">docker.io/bitnami</code>, you are running software that stopped
+        being patched.
+      </p>
+      <p>
+        Minimal covers <b>{map.pairs.length}</b> of the most commonly used Bitnami images, free,
+        with no account and no paid tier. Check the mapping below before you plan anything —
+        there are real gaps, and they are listed too.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Direct replacements</h2>
+      <p class="small muted">
+        Same upstream software. Configuration and paths follow the upstream project's conventions
+        rather than Bitnami's, so read the migration notes below before swapping.
+      </p>
+      <div style="overflow-x:auto">
+        <table class="data">
+          <thead><tr><th>Bitnami image</th><th>Minimal replacement</th></tr></thead>
+          <tbody>
+            {map.pairs.map((p) => (
+              <tr>
+                <td class="kv-mono">bitnami/{p.bitnami}</td>
+                <td><a href={`/images/${p.minimal}`}>minimal-{p.minimal}</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 class="section-title" style="margin-top:44px">What Minimal does not cover</h2>
+      <p>
+        These common Bitnami images have <b>no</b> Minimal equivalent. If you depend on one, this
+        catalog does not solve your problem and you should plan accordingly:
+      </p>
+      <ul>
+        <li><b>grafana</b>, <b>airflow</b>, <b>spark</b>, <b>wordpress</b> — not in the catalog today.</li>
+        <li><b>mongodb</b>, <b>elasticsearch</b> — deliberately excluded on licensing grounds (SSPL and
+          the Elastic License are not open source). <a href="/images/opensearch">opensearch</a> is the
+          closest available substitute for Elasticsearch.</li>
+        <li><b>influxdb</b>, <b>clickhouse</b> — not currently built.</li>
+        <li><b>os-shell</b>, <b>git</b> — utility images used by Bitnami charts as init containers.
+          There is no direct replacement; a <code class="kv-mono">-dev</code> variant is the nearest thing.</li>
+      </ul>
+
+      <h2 class="section-title" style="margin-top:44px">The three things that will break</h2>
+      <p>
+        A Bitnami image is not shaped like a Minimal one, so this is not a pure reference swap.
+        Expect these:
+      </p>
+      <h3 style="font-size:1.05rem;margin-top:24px">Bitnami's <code class="kv-mono">/opt/bitnami</code> paths do not exist</h3>
+      <p>
+        Bitnami standardises config, data and binaries under <code class="kv-mono">/opt/bitnami/&lt;app&gt;</code>.
+        Minimal follows each project's own upstream layout instead. Any volume mount, config path or
+        <code class="kv-mono">command</code> referencing <code class="kv-mono">/opt/bitnami</code> needs rewriting.
+        Each image's <b>Specifications</b> tab lists its actual entrypoint and paths.
+      </p>
+      <h3 style="font-size:1.05rem;margin-top:24px">No shell, so Bitnami's entrypoint scripts do not port</h3>
+      <p>
+        Bitnami images ship a shell and a substantial <code class="kv-mono">libentrypoint.sh</code> layer that
+        renders config from environment variables. Minimal production images have no shell at all, so
+        that pattern cannot be carried across — configure the software directly, or render config in an
+        init container.
+      </p>
+      <h3 style="font-size:1.05rem;margin-top:24px">Different non-root UID</h3>
+      <p>
+        Bitnami images conventionally run as UID <code class="kv-mono">1001</code>. Minimal uses
+        <code class="kv-mono">65532</code>. Existing volumes written by a Bitnami container will be owned by
+        the wrong UID, so set <code class="kv-mono">fsGroup</code> or chown the data before cutting over.
+        <b>On a database volume, test this on a copy first.</b>
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">A note on Helm charts</h2>
+      <p>
+        Most Bitnami usage is via Bitnami Helm charts, and those charts assume the Bitnami image
+        layout throughout — the paths, the entrypoint scripts and the UID above. Overriding
+        <code class="kv-mono">image.repository</code> to point at a Minimal image will generally not work
+        on its own. Migrating the chart is a larger job than migrating the image, and this page does
+        not pretend otherwise.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Try one</h2>
+      <CopyButton code={`docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest
+grype ghcr.io/rtvkiz/minimal-postgres-slim:latest`} />
+      <p style="margin-top:20px">
+        The general migration steps — tags, verification, rollout order — are in
+        <a href="/blog/migrating-from-minimus-to-minimal">the migration guide</a>, and apply
+        whichever base you are coming from. Full catalog: <a href="/images">{images.length} images</a>.
+      </p>
+
+      <p class="small muted" style="margin-top:32px">
+        Bitnami's catalog changes are documented by Broadcom in
+        <a href="https://github.com/bitnami/containers/issues/83267" rel="noopener nofollow">bitnami/containers #83267</a>.
+        Details there change; that issue, not this page, is the authority on what Bitnami currently
+        publishes. Statements about Minimal are checkable from the <a href="/about">verify page</a>.
+      </p>
+    </div>
+  </section>
+</Layout>

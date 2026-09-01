@@ -35,8 +35,33 @@ const pageDescription = [
   `Signed, SBOM-attested${image.size ? `, ${image.size.human} compressed` : ''}, rebuilt every 6 hours.`,
   `Free and public — pull ${pullRef.split(':')[0]} with no account.`,
 ].join(' ');
+
+// SoftwareApplication is the closest schema.org type for a distributable
+// container image: it carries the free-of-charge offer, the operating system
+// and the download reference, which is what a rich result needs.
+const schema = [{
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: `minimal-${image.name}`,
+  applicationCategory: 'DeveloperApplication',
+  description: image.summary,
+  operatingSystem: 'Linux',
+  url: new URL(`/images/${image.name}`, Astro.site).href,
+  downloadUrl: `https://${pullRef.split(':')[0]}`,
+  softwareHelp: new URL('/docs', Astro.site).href,
+  license: 'https://spdx.org/licenses/MIT.html',
+  isAccessibleForFree: true,
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  ...(prod?.specs?.archs?.length ? { processorRequirements: prod.specs.archs.join(', ') } : {}),
+  ...(image.builtAt ? { dateModified: image.builtAt } : {}),
+  maintainer: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
+}];
 ---
-<Layout title={pageTitle} description={pageDescription}>
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  schema={schema}
+  breadcrumbs={[{ name: 'Images', href: '/images' }, { name: image.category, href: '/images' }]}>
   <div class="detail-head">
     <div class="container">
       <p style="margin:0 0 6px"><a href="/images" class="small muted">← All images</a></p>
@@ -97,7 +122,7 @@ const pageDescription = [
     </div>
 
     <!-- SPECIFICATIONS -->
-    <div class="tabpanel" data-panel="specs" hidden>
+    <div class="tabpanel" data-panel="specs">
       {variantKeys.map((vk) => {
         const s = image.variants[vk].specs;
         return (
@@ -137,7 +162,7 @@ const pageDescription = [
     </div>
 
     <!-- TAGS -->
-    <div class="tabpanel" data-panel="tags" hidden>
+    <div class="tabpanel" data-panel="tags">
       {image.tagsStatus === 'none' || image.tags.length === 0 ? (
         <p class="notice warn">Tag list unavailable{image.tagsStatus === 'partial' ? ' (registry temporarily unavailable)' : ''}. Pull <code class="kv-mono">{image.repo}:latest</code>.</p>
       ) : (
@@ -160,7 +185,7 @@ const pageDescription = [
     </div>
 
     <!-- PACKAGES -->
-    <div class="tabpanel" data-panel="packages" hidden>
+    <div class="tabpanel" data-panel="packages">
       {image.packages ? (
         <>
           <p class="section-sub">{image.packages.length} packages in the image, resolved from the SPDX SBOM.</p>
@@ -193,7 +218,7 @@ const pageDescription = [
     </div>
 
     <!-- ADVISORIES -->
-    <div class="tabpanel" data-panel="advisories" hidden>
+    <div class="tabpanel" data-panel="advisories">
       {v ? (
         v.total === 0 ? (
           <>
@@ -245,7 +270,7 @@ const pageDescription = [
     </div>
 
     <!-- PROVENANCE -->
-    <div class="tabpanel" data-panel="provenance" hidden>
+    <div class="tabpanel" data-panel="provenance">
       <p class="section-sub">Everything is verifiable without an account. Copy and run:</p>
       <h3 style="font-size:1rem;margin:20px 0 8px">Build provenance (SLSA v1.0, Build L2)</h3>
       <CopyButton code={`gh attestation verify oci://${image.repo}:latest --owner rtvkiz`} />
@@ -263,6 +288,31 @@ const pageDescription = [
       <p class="small muted" style="margin-top:20px">Signatures are logged in the public <a href="https://rekor.sigstore.dev" rel="noopener">Rekor</a> transparency log.</p>
     </div>
   </div>
+
+  <script is:inline>
+    // Collapse the panels as early as possible. This runs during parse, before
+    // first paint, so JS users see the normal tab UI with no flash of the full
+    // document. It is deliberately NOT a `hidden` attribute in the markup:
+    // crawlers that do not execute JS — which most AI/LLM crawlers do not —
+    // would then only ever receive the Overview panel. On nginx that was 212 of
+    // the page's 458 words; the rest was delivered as display:none.
+    (function () {
+      var panels = document.querySelectorAll('.tabpanel');
+      var initial = location.hash.replace('#', '') || 'overview';
+      var known = false;
+      for (var i = 0; i < panels.length; i++) {
+        if (panels[i].getAttribute('data-panel') === initial) known = true;
+      }
+      if (!known) initial = 'overview';
+      for (var j = 0; j < panels.length; j++) {
+        panels[j].hidden = panels[j].getAttribute('data-panel') !== initial;
+      }
+      var tabs = document.querySelectorAll('.tab');
+      for (var k = 0; k < tabs.length; k++) {
+        tabs[k].setAttribute('aria-selected', String(tabs[k].getAttribute('data-tab') === initial));
+      }
+    })();
+  </script>
 </Layout>
 
 <script>

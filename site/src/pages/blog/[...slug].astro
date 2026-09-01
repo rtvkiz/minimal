@@ -12,8 +12,25 @@ const { Content } = await render(post);
 
 const fmt = (d: string) =>
   new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+const schema = [{
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: post.data.published,
+  dateModified: post.data.updated ?? post.data.published,
+  url: new URL(`/blog/${post.id}`, Astro.site).href,
+  author: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
+  publisher: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
+}];
 ---
-<Layout title={`${post.data.title} — Minimal Containers`} description={post.data.description} published={post.data.published}>
+<Layout
+  title={`${post.data.title} — Minimal Containers`}
+  description={post.data.description}
+  published={post.data.published}
+  schema={schema}
+  breadcrumbs={[{ name: 'Blog', href: '/blog' }]}>
   <section>
     <div class="container-narrow">
       <p style="margin:0 0 6px"><a href="/blog" class="small muted">← Blog</a></p>

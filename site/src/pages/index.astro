@@ -15,8 +15,26 @@ docker pull ghcr.io/rtvkiz/minimal-python:latest
 
 # Verify build provenance (SLSA v1.0, Build L2)
 gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz`;
+
+const schema = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Minimal Containers',
+    url: 'https://minimalcontainers.com',
+    logo: 'https://minimalcontainers.com/icon.svg',
+    description: `Free, hardened, MIT-licensed container images — ${stats.images} of them, rebuilt every 6 hours.`,
+    sameAs: ['https://github.com/rtvkiz/minimal'],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Minimal Containers',
+    url: 'https://minimalcontainers.com',
+  },
+];
 ---
-<Layout>
+<Layout schema={schema}>
   <section class="hero">
     <div class="container">
       <span class="eyebrow">Open source · MIT licensed</span>
