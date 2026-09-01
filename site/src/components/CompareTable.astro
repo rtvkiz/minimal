@@ -1,0 +1,41 @@
+---
+// Head-to-head unique-CVE table for one rival, rendered from comparison.json.
+// Rows where we lose are marked as plainly as rows where we win — a comparison
+// that only shows its wins is the kind of claim this project had to retract
+// once already, and a reader can recompute every row from the linked CSV.
+export interface Props {
+  set: any;
+  rivalLabel: string;
+  limit?: number;
+}
+const { set, rivalLabel, limit } = Astro.props;
+const rows = limit ? set.pairs.slice(0, limit) : set.pairs;
+---
+<div style="overflow-x:auto">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Image</th>
+        <th style="text-align:right">Minimal</th>
+        <th style="text-align:right">{rivalLabel}</th>
+        <th style="text-align:right">Δ</th>
+        <th style="text-align:right">Minimal crit/high</th>
+        <th style="text-align:right">{rivalLabel} crit/high</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((p: any) => (
+        <tr>
+          <td><a href={`/images/${p.image}`}>{p.image}</a></td>
+          <td style="text-align:right">{p.ours}</td>
+          <td style="text-align:right">{p.theirs}</td>
+          <td style={`text-align:right;font-weight:600;color:${p.delta < 0 ? 'var(--clean)' : p.delta > 0 ? 'var(--high)' : 'var(--subtle)'}`}>
+            {p.delta === 0 ? '—' : p.delta > 0 ? `+${p.delta}` : p.delta}
+          </td>
+          <td style="text-align:right" class="kv-mono">{p.oursCritical} / {p.oursHigh}</td>
+          <td style="text-align:right" class="kv-mono">{p.theirsCritical} / {p.theirsHigh}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>

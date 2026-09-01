@@ -1,0 +1,89 @@
+---
+import Layout from '../../components/Layout.astro';
+import CompareTable from '../../components/CompareTable.astro';
+import CompareMethod from '../../components/CompareMethod.astro';
+import CopyButton from '../../components/CopyButton.astro';
+import data from '../../data/comparison.json';
+import { images } from '../../lib/catalog';
+
+const s = data.chainguard;
+const title = 'Chainguard alternative — free hardened images, compared with scan data';
+const description =
+  `A free Chainguard alternative: ${images.length} MIT-licensed hardened images, no account, no paid tier. ${s.compared} images scanned head-to-head with one Grype build on ${data.scanDate}.`;
+---
+<Layout title={title} description={description}>
+  <section>
+    <div class="container-narrow">
+      <h1 class="section-title">Minimal vs Chainguard</h1>
+      <p class="section-sub">
+        Chainguard largely created this category, and Minimal is built on Wolfi and apko — their
+        open-source work. This is not a claim to replace them. It is a measured answer to one
+        specific question: if you want hardened images without a paid tier, what do you actually
+        give up?
+      </p>
+
+      <h2 class="section-title" style="margin-top:36px">The honest framing</h2>
+      <p>
+        Chainguard's free tier publishes a limited set of images; the full catalog is
+        commercial. When this scan ran on {data.scanDate}, only <b>{s.compared}</b> of Minimal's
+        images had a free, publicly pullable Chainguard equivalent to compare against — so this
+        table is narrow by construction, and that is the most important caveat on the page.
+        The remaining images are marked not available, never scored as wins.
+      </p>
+
+      <div class="stats" style="margin-top:28px">
+        <div class="stat"><div class="num">{s.lower}</div><div class="lbl">Minimal lower</div></div>
+        <div class="stat"><div class="num">{s.tie}</div><div class="lbl">Tied</div></div>
+        <div class="stat"><div class="num">{s.higher}</div><div class="lbl">Minimal higher</div></div>
+        <div class="stat"><div class="num">{s.compared}</div><div class="lbl">Images compared</div></div>
+      </div>
+      <p style="margin-top:24px">
+        Across those {s.compared} images Minimal totalled <b>{s.oursTotal}</b> unique CVEs against
+        <b>{s.theirsTotal}</b>. Most rows are ties at or near zero, which is the honest headline:
+        on the images where both are free, the two are broadly comparable.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Full head-to-head</h2>
+      <p class="small muted">Δ is Minimal minus Chainguard, so negative is better for Minimal.</p>
+      <CompareTable set={s} rivalLabel="Chainguard" />
+
+      <h2 class="section-title" style="margin-top:44px">What you give up, and what you gain</h2>
+      <table class="data">
+        <thead><tr><th></th><th>Minimal</th><th>Chainguard</th></tr></thead>
+        <tbody>
+          <tr><td><b>Catalogue size</b></td><td>{images.length}</td><td>Thousands</td></tr>
+          <tr><td><b>Cost</b></td><td>$0, whole catalog</td><td>Free tier; paid for the full catalog</td></tr>
+          <tr><td><b>Auth to pull</b></td><td>No</td><td>No (free tier)</td></tr>
+          <tr><td><b>Build recipes public</b></td><td>Yes, MIT, one repo</td><td>Yes</td></tr>
+          <tr><td><b>Signing, SBOM, provenance</b></td><td>Yes — SLSA v1.0 Build L2</td><td>Yes</td></tr>
+          <tr><td><b>Rebuild cadence</b></td><td>Every 6 hours</td><td>Daily or faster</td></tr>
+          <tr><td><b>Support contract / compliance paperwork</b></td><td>No</td><td>Yes</td></tr>
+        </tbody>
+      </table>
+      <p class="small muted" style="margin-top:14px">
+        Chainguard details verified {data.scanDate} from their public documentation and by pulling
+        from their free tier; they change often, so check for yourself rather than taking this
+        table's word for it. Minimal's own column is checkable with the commands on the
+        <a href="/about">verify page</a>.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">When Chainguard is the right answer</h2>
+      <p>
+        If you need thousands of images, FedRAMP or STIG artifacts, SLSA Build L3, a vendor SLA,
+        or CVE remediation someone is contractually obliged to deliver — buy the product. Minimal
+        offers none of that, and pretending otherwise would be the kind of claim this project has
+        already had to retract once.
+      </p>
+      <p>
+        Minimal fits when you want a catalog small enough to read end to end, every recipe in one
+        MIT-licensed repo, at zero cost and with no account.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Trying it</h2>
+      <CopyButton code={`docker pull ghcr.io/rtvkiz/minimal-python:latest
+grype ghcr.io/rtvkiz/minimal-python:latest`} />
+
+      <CompareMethod data={data} />
+    </div>
+  </section>
+</Layout>

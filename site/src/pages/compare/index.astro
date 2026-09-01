@@ -1,0 +1,66 @@
+---
+import Layout from '../../components/Layout.astro';
+import data from '../../data/comparison.json';
+import { images } from '../../lib/catalog';
+
+const title = 'Hardened container image alternatives — Chainguard, Minimus, Docker Hardened compared';
+const description =
+  `An evidence-based comparison of free hardened container images. ${data.minimus.compared} images scanned head-to-head with the same Grype build, including the images where Minimal loses.`;
+---
+<Layout title={title} description={description}>
+  <section>
+    <div class="container-narrow">
+      <h1 class="section-title">Comparing hardened container images</h1>
+      <p class="section-sub">
+        If you are looking for a Chainguard alternative, a Minimus alternative, or simply a free
+        source of hardened base images, this section is the honest version: the same scanner, the
+        same database, the same day, published with the raw dataset and with the images where
+        Minimal comes off worse left in.
+      </p>
+
+      <div class="grid" style="margin-top:28px">
+        <a class="card" href="/compare/chainguard">
+          <h2 style="font-size:1.1rem;margin:0 0 6px">Minimal vs Chainguard</h2>
+          <p class="small muted" style="margin:0">
+            {data.chainguard.compared} images with a free, publicly pullable Chainguard equivalent.
+            Minimal lower on {data.chainguard.lower}, tied on {data.chainguard.tie},
+            higher on {data.chainguard.higher}.
+          </p>
+        </a>
+        <a class="card" href="/compare/minimus">
+          <h2 style="font-size:1.1rem;margin:0 0 6px">Minimal vs Minimus</h2>
+          <p class="small muted" style="margin:0">
+            {data.minimus.compared} images compared. Minimal lower on {data.minimus.lower},
+            tied on {data.minimus.tie}, higher on {data.minimus.higher}.
+          </p>
+        </a>
+      </div>
+
+      <h2 class="section-title" style="margin-top:44px">Which one should you actually use?</h2>
+      <p>
+        Reach for <b>Minimal</b> if you want a small, auditable catalog — {images.length} images,
+        every recipe MIT-licensed and in one public repo — at no cost, with no account and no
+        paid tier, and you are willing to trade catalog breadth for that.
+      </p>
+      <p>
+        Reach for a <b>commercial vendor</b> if you need thousands of images, a support contract,
+        FedRAMP or STIG paperwork, SLSA Build L3, or someone contractually obliged to answer the
+        phone. Those are real requirements and this project does not meet them. Minimal publishes
+        SLSA v1.0 <b>Build L2</b> provenance, and says so rather than rounding up.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Why publish the losses</h2>
+      <p>
+        Because a comparison you cannot check is worth nothing. Solr is the clearest example:
+        Minimal's Solr image carries substantially <i>more</i> findings than Minimus's, and that
+        row is in the table with the same prominence as the wins. The raw CSV is published so you
+        can recompute all of it, and the method is stated so you can disagree with it precisely.
+      </p>
+
+      <p class="small muted" style="margin-top:28px">
+        Scan date {data.scanDate} · {data.scanner} · full dataset:
+        <a href={data.csvPath}>cve-comparison-{data.scanDate}.csv</a>
+      </p>
+    </div>
+  </section>
+</Layout>

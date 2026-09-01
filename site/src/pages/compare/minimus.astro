@@ -1,0 +1,91 @@
+---
+import Layout from '../../components/Layout.astro';
+import CompareTable from '../../components/CompareTable.astro';
+import CompareMethod from '../../components/CompareMethod.astro';
+import CopyButton from '../../components/CopyButton.astro';
+import data from '../../data/comparison.json';
+
+const s = data.minimus;
+const title = 'Minimus alternative — Minimal vs Minimus, scanned head-to-head';
+const description =
+  `A free Minimus alternative with published scan data: ${s.compared} images scanned with one Grype build on ${data.scanDate}. Minimal lower on ${s.lower}, tied on ${s.tie}, higher on ${s.higher}.`;
+const worst = [...s.pairs].filter((p: any) => p.delta > 0).reverse();
+---
+<Layout title={title} description={description}>
+  <section>
+    <div class="container-narrow">
+      <h1 class="section-title">Minimal vs Minimus</h1>
+      <p class="section-sub">
+        Both projects ship small, hardened, low-CVE container images. This page is the measured
+        comparison: {s.compared} images for which both publish an equivalent, scanned with the
+        same Grype binary against the same frozen database on {data.scanDate}.
+      </p>
+
+      <div class="stats" style="margin-top:28px">
+        <div class="stat"><div class="num">{s.lower}</div><div class="lbl">Minimal lower</div></div>
+        <div class="stat"><div class="num">{s.tie}</div><div class="lbl">Tied</div></div>
+        <div class="stat"><div class="num">{s.higher}</div><div class="lbl">Minimal higher</div></div>
+        <div class="stat"><div class="num">{s.compared}</div><div class="lbl">Images compared</div></div>
+      </div>
+
+      <p style="margin-top:24px">
+        Summed across those {s.compared} images, Minimal carries <b>{s.oursTotal}</b> unique CVEs
+        against Minimus's <b>{s.theirsTotal}</b>. That total is dominated by a handful of images
+        on both sides, so the per-image table below matters more than the sum.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Where Minimal is worse</h2>
+      <p>
+        Leading with this because it is the part a vendor comparison normally hides. On
+        {worst.length} of {s.compared} images Minimal reports more unique CVEs than Minimus:
+      </p>
+      <CompareTable set={{ pairs: worst }} rivalLabel="Minimus" />
+      <p class="small muted" style="margin-top:14px">
+        Solr is the real outlier and a genuine finding against us — most of its gap traces to
+        bundled Java libraries, with a large share of findings associated with a single
+        <code class="kv-mono">netty-codec-http</code> version. Minimus's Solr image does not expose
+        that artifact to the scanner, so part of the difference may be different bundled modules
+        rather than only patch levels. Either way it is ours to fix, and it is tracked.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Full head-to-head</h2>
+      <p class="small muted">
+        Every image where both projects publish an equivalent, best result first. Δ is Minimal
+        minus Minimus, so negative is better for Minimal.
+      </p>
+      <CompareTable set={s} rivalLabel="Minimus" />
+      <p class="small muted" style="margin-top:14px">
+        Minimal also publishes {s.rivalUnavailable} scanned images with no equivalent in this
+        comparison set. Those are excluded entirely rather than scored as wins.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">The differences that are not CVE counts</h2>
+      <table class="data">
+        <tbody>
+          <tr><td><b>Cost</b></td><td>Minimal is $0 for the entire catalog, with no tier above it.</td></tr>
+          <tr><td><b>Licence</b></td><td>Every Minimal build recipe is MIT-licensed and in one public repo.</td></tr>
+          <tr><td><b>Auth</b></td><td>Minimal images pull from GHCR with no account.</td></tr>
+          <tr><td><b>Rebuild cadence</b></td><td>Minimal rebuilds the whole catalog every 6 hours.</td></tr>
+          <tr><td><b>Provenance</b></td><td>Minimal publishes cosign signatures, an SPDX SBOM and SLSA v1.0 Build L2 provenance.</td></tr>
+          <tr><td><b>Catalogue size</b></td><td>Minimal is deliberately small. If breadth is what you need, it is the wrong tool.</td></tr>
+        </tbody>
+      </table>
+      <p class="small muted" style="margin-top:14px">
+        Statements above describe Minimal, and each is checkable with the commands on the
+        <a href="/about">verify page</a>. We deliberately do not characterise Minimus's pricing,
+        licensing or roadmap here — those change, and their site is the authority on them.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Trying it</h2>
+      <p>Pull any image and scan it yourself with the same tool used above:</p>
+      <CopyButton code={`docker pull ghcr.io/rtvkiz/minimal-python:latest
+grype ghcr.io/rtvkiz/minimal-python:latest`} />
+      <p style="margin-top:20px">
+        Migrating an existing deployment? See
+        <a href="/blog/migrating-from-minimus-to-minimal">migrating from Minimus to Minimal</a>.
+      </p>
+
+      <CompareMethod data={data} />
+    </div>
+  </section>
+</Layout>

@@ -4,12 +4,21 @@ import { dataset } from '../lib/catalog';
 export interface Props {
   title?: string;
   description?: string;
+  /** Set on dated content (blog posts) so search engines see a publish date. */
+  published?: string;
 }
 const {
   title = 'Minimal Containers — free, hardened container images',
   description = 'Small, hardened, MIT-licensed container images. Cosign-signed, SBOM-attested, with SLSA v1.0 build provenance. No account, no Docker Hub pull limits.',
+  published,
 } = Astro.props;
 const year = new Date().getFullYear();
+
+// Absolute, self-referencing canonical. GitHub Pages serves /images/nginx as a
+// 301 to /images/nginx/, so both forms exist for a crawler; this names which
+// one is authoritative instead of leaving it to be guessed.
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const ogImage = new URL('/og.png', Astro.site).href;
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -18,9 +27,18 @@ const year = new Date().getFullYear();
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{title}</title>
   <meta name="description" content={description} />
+  <link rel="canonical" href={canonical} />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
-  <meta property="og:type" content="website" />
+  <meta property="og:type" content={published ? 'article' : 'website'} />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:site_name" content="Minimal Containers" />
+  <meta property="og:image" content={ogImage} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
+  {published && <meta property="article:published_time" content={published} />}
   <link rel="icon" type="image/svg+xml" href="/icon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -44,6 +62,8 @@ const year = new Date().getFullYear();
       <nav class="nav">
         <a href="/images">Images</a>
         <a href="/docs">Docs</a>
+        <a href="/compare">Compare</a>
+        <a href="/blog">Blog</a>
         <a href="/about">Verify</a>
         <a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a>
       </nav>
