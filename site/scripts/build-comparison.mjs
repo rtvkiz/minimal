@@ -4,14 +4,26 @@
 // /data/cve-comparison-2026-07-24.csv so a reader can recompute every number on
 // these pages. This script only reshapes it — it must never introduce a figure
 // that is not derivable from that file.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const SCAN_DATE = '2026-07-24';
 
-const csv = readFileSync(join(root, 'public/data/cve-comparison-2026-07-24.csv'), 'utf8').trim();
+// Use the newest dated scan, and derive the date from the filename rather than
+// hard-coding it. Runs are archived rather than overwritten, so the benchmark
+// is a citable series; picking the latest automatically is what stops the site
+// silently continuing to render a stale one after a refresh lands.
+const dataDir = join(root, 'public/data');
+const scans = readdirSync(dataDir)
+  .map((f) => /^cve-comparison-(\d{4}-\d{2}-\d{2})\.csv$/.exec(f))
+  .filter(Boolean)
+  .sort((a, b) => a[1].localeCompare(b[1]));
+if (scans.length === 0) throw new Error('no cve-comparison-<date>.csv in public/data');
+const [csvFile, SCAN_DATE] = [scans.at(-1)[0], scans.at(-1)[1]];
+console.log(`  using ${csvFile} (${scans.length} archived run(s))`);
+
+const csv = readFileSync(join(dataDir, csvFile), 'utf8').trim();
 const [head, ...lines] = csv.split('\n');
 const cols = head.split(',');
 const rows = lines.map((l) => Object.fromEntries(l.split(',').map((v, i) => [cols[i], v])));
@@ -59,14 +71,35 @@ function compare(rival) {
   };
 }
 
-const out = {
-  scanDate: SCAN_DATE,
+// method-<date>.json is written by tools/cve-compare/run.sh. Fall back to the
+// figures for the original hand-run scan only when it is absent, so the values
+// are never silently invented for a run we cannot describe.
+let method = {
   scanner: 'Grype 0.109.1',
   dbSchema: 'v6.1.9',
   dbBuilt: '2026-07-23 07:03:49 UTC',
   dbChecksum: '4089fed48894694510d7e5e2f7b9c261bc636eae459ae881f479a2e61c946046',
+};
+try {
+  const m = JSON.parse(readFileSync(join(dataDir, `method-${SCAN_DATE}.json`), 'utf8'));
+  method = {
+    scanner: `Grype ${m.version}`,
+    dbSchema: m.db_schema ?? method.dbSchema,
+    dbBuilt: m.db_built ?? method.dbBuilt,
+    dbChecksum: m.db_checksum ?? method.dbChecksum,
+  };
+} catch {
+  if (SCAN_DATE !== '2026-07-24') {
+    throw new Error(`method-${SCAN_DATE}.json missing — refusing to describe a scan we cannot verify`);
+  }
+}
+
+const out = {
+  scanDate: SCAN_DATE,
+  ...method,
   platform: 'linux/amd64',
-  csvPath: '/data/cve-comparison-2026-07-24.csv',
+  csvPath: `/data/${csvFile}`,
+  archivedRuns: scans.map((s) => s[1]),
   csvRows: rows.length,
   minimus: compare('minimus'),
   chainguard: compare('chainguard'),
