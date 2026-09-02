@@ -1,0 +1,105 @@
+name: Refresh site data
+
+# Regenerate the datasets the website's factual pages are built from, and open a
+# PR when they have changed.
+#
+# WHY. The comparison and replacement pages make claims about the outside world:
+# what Bitnami publishes, how many CVEs each provider's images carry. Those facts
+# drift, and a page renders identically whether its numbers are current or two
+# years old. /about claimed Docker Hardened had "Hundreds" of images for months
+# after Docker released 1,000+ free, under a footnote saying it had been
+# verified. Nothing failed, because nothing was checking.
+#
+# The site build deliberately does NOT do this: it would put ~380 third-party
+# requests between a developer and a working preview, and a rate-limited Docker
+# Hub would then break the build. Refresh on a schedule, commit the result, and
+# let the build stay hermetic.
+#
+# The PR is the point. These datasets drive public claims about other projects,
+# so a human reads the diff before it ships.
+
+on:
+  schedule:
+    # Weekly, Monday 04:20 UTC. Off the hour to avoid the GitHub cron stampede,
+    # and clear of the 6-hourly image build.
+    - cron: '20 4 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547  # v1.12.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        with:
+          node-version: '22'
+
+      - name: Regenerate the Bitnami replacement map
+        working-directory: site
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/build-bitnami-map.mjs
+
+      - name: Verify the site's claims still hold
+        # Both modes: the offline checks must pass, and --online re-confirms that
+        # every competitor repository the site names still resolves. Running it
+        # here rather than only in CI is the point — this is the job that would
+        # notice a vendor renaming or withdrawing an image.
+        run: ./scripts/check-site-claims.sh --online
+
+      - name: Rebuild the site to prove the new data renders
+        working-directory: site
+        run: |
+          npm ci
+          npm run build
+
+      - name: Open a PR if anything changed
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          if git diff --quiet -- site/src/data; then
+            echo "No change in site data — nothing to do."
+            exit 0
+          fi
+
+          BRANCH="refresh-site-data-$(date -u +%Y%m%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          # Only the datasets. The build also writes images.json and og.png,
+          # which the deploy regenerates and must not ride along in this PR.
+          git add site/src/data/bitnami-map.json
+          git commit -m "chore(site): refresh generated comparison data
+
+          Regenerated from source: the Bitnami image list from
+          github.com/bitnami/containers, pull counts from the Docker Hub API.
+          Opened automatically because the upstream data changed."
+          git push --force -u origin "$BRANCH"
+
+          SUMMARY=$(jq -r '"\(.bitnamiImages) Bitnami images, \(.pairs | length) with a Minimal equivalent, \(.gapCount) without."' site/src/data/bitnami-map.json)
+          gh pr create --base main --head "$BRANCH" \
+            --title "chore(site): refresh generated comparison data" \
+            --body "Upstream data behind the public comparison pages has changed.
+
+          **Now:** ${SUMMARY}
+
+          Generated from github.com/bitnami/containers (image list) and the Docker Hub API (pull counts and pullability). A row ships only when both sources agree.
+
+          \`check-site-claims.sh --online\` passed and the site builds. **Read the diff before merging** — these numbers become public claims about another project."

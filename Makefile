@@ -4372,6 +4372,14 @@ check-toolchain-pins:
 check-curl-retries:
 	@./scripts/check-curl-retries.sh
 
+# Verify the website's factual claims against this repo. --online additionally
+# checks that competitor repositories we name actually exist.
+check-site-claims:
+	@./scripts/check-site-claims.sh
+
+check-site-claims-online:
+	@./scripts/check-site-claims.sh --online
+
 test-classifier:
 	@./tests/test-classify-build-failure.sh
 

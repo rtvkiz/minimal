@@ -1,7 +1,7 @@
 ---
 import Layout from '../../components/Layout.astro';
 import ImageCard from '../../components/ImageCard.astro';
-import { byCategory, categories, images } from '../../lib/catalog';
+import { byCategory, categories, categorySlug, images } from '../../lib/catalog';
 const grouped = byCategory();
 
 // ItemList tells a crawler this is a catalogue and what is in it, rather than
@@ -42,7 +42,9 @@ const schema = [{
       <div id="catalog" style="margin-top:24px">
         {categories.map((c) => (
           <div class="cat-group" data-category={c}>
-            <h2 class="section-title" style="font-size:1.15rem;margin-top:28px">{c}</h2>
+            <h2 class="section-title" style="font-size:1.15rem;margin-top:28px">
+              <a href={`/images/category/${categorySlug(c)}`}>{c}</a>
+            </h2>
             <div class="grid">
               {grouped[c].map((img) => <ImageCard image={img} />)}
             </div>

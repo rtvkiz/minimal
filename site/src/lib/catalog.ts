@@ -130,3 +130,18 @@ export function siteStats() {
     hasScanData: dataset.hasScanData,
   };
 }
+
+// URL-safe slug for a category, e.g. "Kubernetes, CI & IaC" -> "kubernetes-ci-iac".
+// Used for the /images/category/<slug> landing pages, which give each category a
+// real indexable URL instead of a client-side filter on /images.
+export function categorySlug(category: string): string {
+  return category
+    .toLowerCase()
+    .replace(/&/g, ' ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+export function categoryFromSlug(slug: string): string | undefined {
+  return categories.find((c) => categorySlug(c) === slug);
+}

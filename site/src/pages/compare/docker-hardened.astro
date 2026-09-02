@@ -1,0 +1,77 @@
+---
+import Layout from '../../components/Layout.astro';
+import CopyButton from '../../components/CopyButton.astro';
+import { images } from '../../lib/catalog';
+
+const title = 'Docker Hardened Images alternative — an honest comparison';
+const description =
+  'Docker released 1,000+ hardened images free under Apache-2.0 in December 2025. Where a 108-image MIT-licensed catalog still makes sense, and where it does not.';
+---
+<Layout title={title} description={description} breadcrumbs={[{ name: 'Compare', href: '/compare' }]}>
+  <section>
+    <div class="container-narrow">
+      <h1 class="section-title">Minimal vs Docker Hardened Images</h1>
+      <p class="section-sub">
+        This is the comparison where Minimal has the weakest case, so it is worth being direct
+        about it rather than burying the fact.
+      </p>
+
+      <h2 class="section-title" style="margin-top:36px">What changed in December 2025</h2>
+      <p>
+        Docker made <b>over 1,000 hardened images free under an Apache-2.0 licence</b>, pullable
+        without an account. Paid tiers remain for SLA-backed critical-CVE remediation, FIPS
+        compliance, DoD STIG artifacts and extended lifecycle support beyond upstream EOL.
+      </p>
+      <p>
+        That removes &ldquo;free hardened images&rdquo; as a differentiator for anyone. It is a
+        genuinely good outcome for the ecosystem, and it means the reason to use this project has
+        to be something other than price.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Where Docker is the better choice</h2>
+      <ul>
+        <li><b>Breadth.</b> 1,000+ images against {images.length}. If your stack is not fully covered here — and the <a href="/images">directory</a> is the place to check — that ends the discussion.</li>
+        <li><b>Compliance evidence.</b> FIPS validation and STIG artifacts are things Minimal does not produce and has no path to producing.</li>
+        <li><b>Remediation you can hold someone to.</b> A contractual fix window for critical CVEs. Here you have a 6-hour rebuild cadence and no obligation behind it.</li>
+        <li><b>Lifecycle support.</b> Paid coverage for software past upstream EOL. Minimal follows upstream and stops when upstream stops.</li>
+        <li><b>SLSA Build L3.</b> Minimal publishes Build L2 and says so.</li>
+      </ul>
+
+      <h2 class="section-title" style="margin-top:44px">Where Minimal still has a case</h2>
+      <ul>
+        <li><b>You can read the whole thing.</b> {images.length} images, every build recipe MIT-licensed in <a href="https://github.com/rtvkiz/minimal" rel="noopener">one repo</a>. Auditing a catalog this size end to end is a day's work, not a project.</li>
+        <li><b>No vendor in the loop.</b> Not a free tier of a commercial product with a pricing page attached — there is no paid tier to be moved onto, and MIT recipes mean you can fork and self-host the whole pipeline if the project stops.</li>
+        <li><b>Modifiable by design.</b> The point is partly that you can take the melange and apko recipes and build your own catalog with your own controls. Docker's images are Apache-2.0 too, but the pipeline that produces them is not the product.</li>
+        <li><b>Published comparison data.</b> Scan results against other providers with the raw dataset and the losing rows included — see <a href="/compare/minimus">Minimus</a> and <a href="/compare/chainguard">Chainguard</a>.</li>
+      </ul>
+
+      <h2 class="section-title" style="margin-top:44px">What we have not measured</h2>
+      <p>
+        There is no head-to-head scan comparison against Docker Hardened Images on this site yet.
+        The <a href="/compare">published dataset</a> covers Minimus and publicly pullable
+        Chainguard images only, and adding a provider means re-running the whole scan with the same
+        frozen database rather than quoting figures from different days. Until that runs, this page
+        makes no claim about relative CVE counts in either direction.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Honest summary</h2>
+      <p>
+        If you want a supported catalog that covers everything, use Docker's — it is free, it is
+        Apache-2.0, and it is broader than this will ever be. Use Minimal if you specifically want a
+        small catalog you can audit completely, recipes you can fork, and no vendor relationship at
+        all. Those are narrower reasons than &ldquo;it's free&rdquo;, and they are the real ones.
+      </p>
+
+      <CopyButton code={`docker pull ghcr.io/rtvkiz/minimal-python:latest
+grype ghcr.io/rtvkiz/minimal-python:latest`} />
+
+      <p class="small muted" style="margin-top:28px">
+        Docker's announcement and current terms are the authority on what Docker Hardened Images
+        include; details change, so check
+        <a href="https://www.docker.com/products/hardened-images" rel="noopener nofollow">docker.com/products/hardened-images</a>
+        rather than this page. Claims about Minimal are checkable from the
+        <a href="/about">verify page</a>. Last reviewed 2026-09-01.
+      </p>
+    </div>
+  </section>
+</Layout>

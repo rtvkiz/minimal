@@ -2,7 +2,7 @@
 import Layout from '../../components/Layout.astro';
 import CopyButton from '../../components/CopyButton.astro';
 import SeverityBar from '../../components/SeverityBar.astro';
-import { images, getImage } from '../../lib/catalog';
+import { images, getImage, categorySlug } from '../../lib/catalog';
 
 export function getStaticPaths() {
   return images.map((img) => ({ params: { name: img.name }, props: { image: img } }));
@@ -36,6 +36,10 @@ const pageDescription = [
   `Free and public — pull ${pullRef.split(':')[0]} with no account.`,
 ].join(' ');
 
+const siblings = images
+  .filter((i) => i.category === image.category && i.name !== image.name)
+  .slice(0, 8);
+
 // SoftwareApplication is the closest schema.org type for a distributable
 // container image: it carries the free-of-charge offer, the operating system
 // and the download reference, which is what a rich result needs.
@@ -67,7 +71,7 @@ const schema = [{
       <p style="margin:0 0 6px"><a href="/images" class="small muted">← All images</a></p>
       <h1>
         {image.name}
-        <span class="cat">{image.category}</span>
+        <a class="cat" href={`/images/category/${categorySlug(image.category)}`}>{image.category}</a>
       </h1>
       <p class="summary">{image.summary}</p>
       <div class="quickfacts">
@@ -286,6 +290,28 @@ const schema = [{
   ${image.repo}:latest \\
   | jq -r '.payload | @base64d | fromjson | .predicate'`} />
       <p class="small muted" style="margin-top:20px">Signatures are logged in the public <a href="https://rekor.sigstore.dev" rel="noopener">Rekor</a> transparency log.</p>
+    </div>
+    <!-- Cross-links. Before this, the 108 leaf pages linked only upward to
+         /images: no sibling links, and nothing pointing at /compare or /blog,
+         which left the comparison pages reachable only from the nav. -->
+    <div style="margin-top:48px;padding-top:28px;border-top:1px solid var(--border)">
+      {siblings.length > 0 && (
+        <>
+          <h2 class="section-title" style="font-size:1.05rem">
+            More <a href={`/images/category/${categorySlug(image.category)}`}>{image.category}</a> images
+          </h2>
+          <div class="facets" style="margin-top:12px">
+            {siblings.map((s) => <a class="facet" href={`/images/${s.name}`}>{s.name}</a>)}
+          </div>
+        </>
+      )}
+      <p class="small muted" style="margin-top:22px">
+        Weighing this against another provider? The
+        <a href="/compare">comparison pages</a> publish head-to-head scan data with the raw
+        dataset, including the images where Minimal comes off worse — or read the
+        <a href="/blog/migrating-from-minimus-to-minimal">migration guide</a> for what actually
+        breaks when you switch.
+      </p>
     </div>
   </div>
 
