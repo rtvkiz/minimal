@@ -6,6 +6,9 @@
   "dbChecksum": "4089fed48894694510d7e5e2f7b9c261bc636eae459ae881f479a2e61c946046",
   "platform": "linux/amd64",
   "csvPath": "/data/cve-comparison-2026-07-24.csv",
+  "archivedRuns": [
+    "2026-07-24"
+  ],
   "csvRows": 273,
   "minimus": {
     "rival": "minimus",

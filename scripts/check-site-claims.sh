@@ -35,7 +35,17 @@ done
 
 fail=0
 pass=0
+warn=0
+# note() = a claim is WRONG. Fails the build.
 note() { printf '  \033[33m!\033[0m %s\n' "$1"; fail=$((fail+1)); }
+# soft() = a claim is honest but going stale. Warns without failing.
+#
+# The distinction matters. This runs in validate-catalog, so a hard failure here
+# blocks every PR in the repo — including image builds that have nothing to do
+# with the website. Scan data being 36 days old is not a false statement: the
+# page prints its own scan date. Treating it as one would make the whole gate
+# something people route around, which is how a gate stops working.
+soft() { printf '  \033[36m~\033[0m %s\n' "$1"; warn=$((warn+1)); }
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$1"; pass=$((pass+1)); }
 
 SITE=site/src
@@ -124,7 +134,25 @@ for f in "$SITE"/pages/compare/*.astro "$SITE"/pages/about.astro; do
   fi
 done
 
-# --- 5. Competitor repositories we name must exist (network) ----------------
+# --- 5. The published scan data must not be stale ---------------------------
+# The comparison pages exist to show CURRENT vulnerability counts. The first
+# dataset sat frozen for 39 days while the Grype DB moved daily and nothing
+# complained, because a stale page renders exactly like a fresh one.
+# cve-comparison.yml refreshes fortnightly; this fails if two cycles are missed.
+SCAN_STALE_DAYS=${SCAN_STALE_DAYS:-35}
+scan_date=$(jq -r '.scanDate // empty' "$SITE"/data/comparison.json 2>/dev/null || true)
+if [ -z "$scan_date" ]; then
+  note "comparison.json has no scanDate — cannot tell how old the published figures are"
+else
+  scan_age=$(( (now - $(date -d "$scan_date" +%s 2>/dev/null || echo "$now")) / 86400 ))
+  if [ "$scan_age" -gt "$SCAN_STALE_DAYS" ]; then
+    soft "published scan data is ${scan_age}d old (limit ${SCAN_STALE_DAYS}d) — run the 'CVE comparison refresh' workflow"
+  else
+    ok "published scan data is ${scan_age}d old (${scan_date})"
+  fi
+fi
+
+# --- 6. Competitor repositories we name must exist (network) ----------------
 if [ "$ONLINE" = 1 ]; then
   echo "Checking named competitor repositories…"
   miss=0
@@ -142,10 +170,12 @@ else
 fi
 
 echo
+summary="$pass passed"
+[ "$warn" -gt 0 ] && summary="$summary, $warn warning(s)"
 if [ "$fail" -eq 0 ]; then
-  echo "✓ site claims: $pass checks passed"
+  echo "✓ site claims: $summary"
   exit 0
 fi
-echo "✗ site claims: $fail finding(s), $pass passed"
+echo "✗ site claims: $fail finding(s), $summary"
 [ "$MODE" = report ] && exit 0
 exit 1
