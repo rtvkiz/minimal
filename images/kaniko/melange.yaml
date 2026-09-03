@@ -67,8 +67,28 @@ pipeline:
   - runs: |
       export GOWORK=off
       _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      _pgd_workfix() {  # raise an enclosing go.work above every member's go directive
+        # A go.work whose `go` directive sits below a bumped member's requirement
+        # hard-fails every go command in the tree — even under GOWORK=off — before
+        # the build is reached. x/crypto v0.56.0 declares go 1.26.0, which stranded
+        # prometheus (go.work at 1.25.8) and etcd (1.26). Raise the workspace to the
+        # build toolchain first so a bump can never sit above it; the explicit
+        # go.work argument keeps `go work edit` working under GOWORK=off. No-op for
+        # the majority of images, which ship no workspace at all.
+        _d="$1"
+        while [ -n "$_d" ] && [ "$_d" != "/" ]; do
+          if [ -f "$_d/go.work" ]; then
+            _gv=$(go env GOVERSION | sed 's/^go//')
+            echo "pgd-work: raising $_d/go.work go directive to $_gv"
+            ( cd "$_d" && go work edit -go="$_gv" go.work ) || true
+            return 0
+          fi
+          _d=$(dirname "$_d")
+        done
+      }
       for root in /home/build/kaniko-${{package.version}}; do
         [ -f "$root/go.mod" ] || continue
+        _pgd_workfix "$root"
         ( set -e
           cd "$root"
           cp go.mod .pgd-base.mod
@@ -78,7 +98,7 @@ pipeline:
           # vendored code first (logged, not silent). Patches everything safely
           # patchable now instead of skipping the image wholesale.
           KEPT=""
-          for fix in  github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8 github.com/aws/aws-sdk-go-v2/service/s3@v1.97.3 github.com/cloudflare/circl@v1.6.3 github.com/containerd/containerd/v2@v2.2.5 github.com/containerd/containerd@v1.7.33 github.com/docker/cli@v29.2.1+incompatible github.com/go-git/go-billy/v5@v5.9.0 github.com/go-git/go-git/v5@v5.19.2 github.com/go-jose/go-jose/v4@v4.1.4 github.com/klauspost/compress@v1.18.7 github.com/moby/buildkit@v0.28.1 github.com/moby/go-archive@v0.3.0 github.com/nwaples/rardecode/v2@v2.2.0 github.com/opencontainers/selinux@v1.13.1 github.com/ulikunitz/xz@v0.5.15 google.golang.org/grpc@v1.83.1 oras.land/oras-go/v2@v2.6.1 go.opentelemetry.io/otel/sdk@v1.46.0 go.opentelemetry.io/otel@v1.46.0 golang.org/x/crypto@v0.55.0 golang.org/x/net@v0.58.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.41.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.49.0; do
+          for fix in  github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8 github.com/aws/aws-sdk-go-v2/service/s3@v1.97.3 github.com/cloudflare/circl@v1.6.3 github.com/containerd/containerd/v2@v2.2.5 github.com/containerd/containerd@v1.7.33 github.com/docker/cli@v29.2.1+incompatible github.com/go-git/go-billy/v5@v5.9.0 github.com/go-git/go-git/v5@v5.19.2 github.com/go-jose/go-jose/v4@v4.1.4 github.com/klauspost/compress@v1.18.7 github.com/moby/buildkit@v0.28.1 github.com/moby/go-archive@v0.3.0 github.com/nwaples/rardecode/v2@v2.2.0 github.com/opencontainers/selinux@v1.13.1 github.com/ulikunitz/xz@v0.5.15 google.golang.org/grpc@v1.83.1 oras.land/oras-go/v2@v2.6.1 go.opentelemetry.io/otel/sdk@v1.46.0 go.opentelemetry.io/otel@v1.46.0 golang.org/x/crypto@v0.56.0 golang.org/x/net@v0.58.0 golang.org/x/sys@v0.47.0 golang.org/x/text@v0.41.0 golang.org/x/term@v0.45.0 golang.org/x/time@v0.15.0 golang.org/x/sync@v0.22.0 golang.org/x/tools@v0.49.0; do
             cp .pgd-base.mod go.mod
             [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true
             if go get $KEPT "$fix" >/dev/null 2>&1 && GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/executor >/dev/null 2>&1; then
