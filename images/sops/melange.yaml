@@ -80,8 +80,28 @@ pipeline:
         done
         printf '%s' "$_keep"
       }
+      _pgd_workfix() {  # raise an enclosing go.work above every member's go directive
+        # A go.work whose `go` directive sits below a bumped member's requirement
+        # hard-fails every go command in the tree — even under GOWORK=off — before
+        # the build is reached. x/crypto v0.56.0 declares go 1.26.0, which stranded
+        # prometheus (go.work at 1.25.8) and etcd (1.26). Raise the workspace to the
+        # build toolchain first so a bump can never sit above it; the explicit
+        # go.work argument keeps `go work edit` working under GOWORK=off. No-op for
+        # the majority of images, which ship no workspace at all.
+        _d="$1"
+        while [ -n "$_d" ] && [ "$_d" != "/" ]; do
+          if [ -f "$_d/go.work" ]; then
+            _gv=$(go env GOVERSION | sed 's/^go//')
+            echo "pgd-work: raising $_d/go.work go directive to $_gv"
+            ( cd "$_d" && go work edit -go="$_gv" go.work ) || true
+            return 0
+          fi
+          _d=$(dirname "$_d")
+        done
+      }
       for root in /home/build/sops-${{package.version}}; do
         [ -f "$root/go.mod" ] || continue
+        _pgd_workfix "$root"
         ( set -e
           cd "$root"
           cp go.mod .pgd-orig.mod
