@@ -11,7 +11,7 @@ package:
   # product bare, as cpe:2.3:a:trufflehog:trufflehog:*, so none of them
   # matched, and the Wolfi secdb missed it too.
   name: trufflehog
-  version: 3.97.2
+  version: 3.97.4
   epoch: 0
   description: "TruffleHog secret scanner built from source"
   copyright:
@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 of trufflehog source tarball - updated by update-versions.yml workflow
-  sha256: 38a25b3b59350fca55c029379704ca2ce8ad21a43b0c038b1b3f3f24db0a5ec5
+  sha256: b1346ded49f6283005284c56b98b5c3603c0f5077c0d4fcd083beda9dfba3268
 
 environment:
   contents:
