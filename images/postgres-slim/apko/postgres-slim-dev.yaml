@@ -19,12 +19,6 @@ contents:
     - postgresql-18-client
     - postgresql-18-client-base
     - postgresql-18-contrib
-    # TEMPORARY (2026-08-29): pinned revision — same Wolfi constraint deadlock
-    # as the prod config. postgresql-18 18.6-r0 requires EXACTLY ecpg=18.6-r0,
-    # but Wolfi shipped ecpg-18 18.6-r1 without rebuilding postgresql, so apko
-    # picks r1 for cmd:ecpg and then fails the exact pin. Remove together with
-    # the prod pin once Wolfi ships a matching postgresql-18.
-    - ecpg-18=18.6-r0
     - libpq-18
     - pgaudit-18
 
