@@ -69,10 +69,19 @@ while IFS= read -r recipe; do
     esac
 
     # Skip anything that is not actually fetching a payload:
-    #   -I / --head        availability probe, deliberately fast
+    #   -I / --head        availability probe, no payload to lose
     #   --with-curl etc.   a configure flag that merely contains the word
+    #
+    # `-sI` is here alongside `-sfI` for probes that must read the status code
+    # rather than just succeed/fail. Dropping `-f` is what makes that possible:
+    # with it, curl exits non-zero on 403 and the caller cannot tell a rate
+    # limit from a genuine 404 — which is exactly how solr died claiming
+    # "no release of log4j-web 2.25.4" for a version that exists. Those probes
+    # (solr/flink `_probe`) implement status-aware retry in shell instead, so
+    # `--retry` here would be worse than useless: without `-f` curl counts an
+    # HTTP error as a successful transfer and would never retry it anyway.
     case "$line" in
-      *' -sfI '*|*' -I '*|*--head*) continue ;;
+      *' -sfI '*|*' -sI '*|*' -I '*|*--head*) continue ;;
       *--with-curl*|*-lcurl*) continue ;;
     esac
     # Must be an invocation, not a mention inside a comment.
