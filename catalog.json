@@ -22,7 +22,8 @@
       ],
       "primary_package": "python-3",
       "upstream_url": "https://www.python.org",
-      "summary": "Shell-less Python 3 runtime built on Wolfi."
+      "summary": "Shell-less Python 3 runtime built on Wolfi.",
+      "description": "CPython 3 runtime for running Python services in production. No shell and no package manager in the image, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "node-slim",
@@ -33,7 +34,8 @@
       ],
       "primary_package": "nodejs",
       "upstream_url": "https://nodejs.org",
-      "summary": "Shell-less Node.js runtime built on Wolfi."
+      "summary": "Shell-less Node.js runtime built on Wolfi.",
+      "description": "Node.js JavaScript runtime for server-side apps and APIs. Shipped without a shell or package manager, cosign-signed, and rebuilt every 6 hours from Wolfi."
     },
     {
       "name": "bun",
@@ -44,7 +46,8 @@
       ],
       "primary_package": "bun",
       "upstream_url": "https://bun.sh",
-      "summary": "Shell-less Bun JavaScript runtime built on Wolfi."
+      "summary": "Shell-less Bun JavaScript runtime built on Wolfi.",
+      "description": "Bun, the fast all-in-one JavaScript runtime and bundler. Shell-less image with no package manager, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "go",
@@ -55,7 +58,8 @@
       ],
       "primary_package": "go",
       "upstream_url": "https://go.dev",
-      "summary": "Go builder image built on Wolfi."
+      "summary": "Go builder image built on Wolfi.",
+      "description": "Go toolchain image for compiling Go services in CI and multi-stage builds. Tracks upstream Go releases, cosign-signed with SLSA v1.0 build provenance."
     },
     {
       "name": "java",
@@ -66,7 +70,8 @@
       ],
       "primary_package": "openjdk-21",
       "upstream_url": "https://openjdk.org",
-      "summary": "Shell-less OpenJDK 21 JRE built on Wolfi."
+      "summary": "Shell-less OpenJDK 21 JRE built on Wolfi.",
+      "description": "OpenJDK 21 JRE for running JVM services. No shell and no package manager, cosign-signed with SBOM attestations, rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "ruby",
@@ -77,7 +82,8 @@
       ],
       "primary_package": "ruby",
       "upstream_url": "https://www.ruby-lang.org",
-      "summary": "Ruby runtime built from source via melange."
+      "summary": "Ruby runtime built from source via melange.",
+      "description": "Ruby interpreter for running Rack, Sinatra and Rails workloads. Compiled from upstream source, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "php",
@@ -88,7 +94,8 @@
       ],
       "primary_package": "php",
       "upstream_url": "https://www.php.net",
-      "summary": "PHP runtime built from source via melange."
+      "summary": "PHP runtime built from source via melange.",
+      "description": "PHP runtime for web applications and CLI scripts. Compiled from upstream source with a minimal extension set, cosign-signed and rebuilt every 6 hours."
     },
     {
       "name": "dotnet",
@@ -99,7 +106,8 @@
       ],
       "primary_package": "dotnet-runtime",
       "upstream_url": "https://dotnet.microsoft.com",
-      "summary": ".NET runtime built on Wolfi."
+      "summary": ".NET runtime built on Wolfi.",
+      "description": ".NET runtime for running compiled C# and F# services. Minimal Wolfi base with no shell, signed and SBOM-attested, rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "deno",
@@ -110,7 +118,8 @@
       ],
       "primary_package": "deno",
       "upstream_url": "https://deno.com",
-      "summary": "Shell-less Deno TypeScript runtime built on Wolfi."
+      "summary": "Shell-less Deno TypeScript runtime built on Wolfi.",
+      "description": "Deno, the secure TypeScript and JavaScript runtime with sandboxed permissions. Shell-less image, cosign-signed with SLSA build provenance, rebuilt 6-hourly."
     },
     {
       "name": "mysql",
@@ -121,7 +130,8 @@
       ],
       "primary_package": "mysql",
       "upstream_url": "https://www.mysql.com",
-      "summary": "MySQL LTS built from source via melange."
+      "summary": "MySQL LTS built from source via melange.",
+      "description": "MySQL LTS relational database server. Compiled from upstream source against current Wolfi libraries, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "mariadb",
@@ -132,7 +142,8 @@
       ],
       "primary_package": "mariadb",
       "upstream_url": "https://mariadb.org",
-      "summary": "MariaDB LTS built from source via melange."
+      "summary": "MariaDB LTS built from source via melange.",
+      "description": "MariaDB LTS relational database, a drop-in MySQL alternative. Built from upstream source, cosign-signed with SBOM attestations and 6-hourly CVE rebuilds."
     },
     {
       "name": "postgres-slim",
@@ -143,7 +154,8 @@
       ],
       "primary_package": "postgresql",
       "upstream_url": "https://www.postgresql.org",
-      "summary": "PostgreSQL built on Wolfi."
+      "summary": "PostgreSQL built on Wolfi.",
+      "description": "PostgreSQL relational database server, slimmed to the runtime essentials. No shell, cosign-signed and SBOM-attested, rebuilt every 6 hours from Wolfi."
     },
     {
       "name": "patroni",
@@ -154,7 +166,8 @@
       ],
       "primary_package": "patroni",
       "upstream_url": "https://patroni.readthedocs.io",
-      "summary": "Shell-less Patroni PostgreSQL high-availability supervisor built on Wolfi."
+      "summary": "Shell-less Patroni PostgreSQL high-availability supervisor built on Wolfi.",
+      "description": "Patroni supervisor for PostgreSQL high availability with automatic failover. Shell-less, signed and SBOM-attested, rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "pgbouncer",
@@ -165,7 +178,8 @@
       ],
       "primary_package": "pgbouncer",
       "upstream_url": "https://www.pgbouncer.org",
-      "summary": "Shell-less PgBouncer PostgreSQL connection pooler built from source via melange."
+      "summary": "Shell-less PgBouncer PostgreSQL connection pooler built from source via melange.",
+      "description": "PgBouncer lightweight connection pooler for PostgreSQL. Built from upstream source, shell-less and non-root ready, signed and rebuilt every 6 hours."
     },
     {
       "name": "unbound",
@@ -176,7 +190,8 @@
       ],
       "primary_package": "unbound",
       "upstream_url": "https://www.nlnetlabs.nl/projects/unbound/",
-      "summary": "Shell-less Unbound validating recursive DNS resolver built from source via melange."
+      "summary": "Shell-less Unbound validating recursive DNS resolver built from source via melange.",
+      "description": "Unbound validating, recursive, caching DNS resolver with DNSSEC. Compiled from source, shell-less, cosign-signed and rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "dnsmasq",
@@ -187,7 +202,8 @@
       ],
       "primary_package": "dnsmasq",
       "upstream_url": "https://thekelleys.org.uk/dnsmasq/doc.html",
-      "summary": "Shell-less dnsmasq DNS forwarder/cache and DHCP server built on Wolfi."
+      "summary": "Shell-less dnsmasq DNS forwarder/cache and DHCP server built on Wolfi.",
+      "description": "dnsmasq lightweight DNS forwarder, cache and DHCP server for small networks. Shell-less image, signed and SBOM-attested, rebuilt every 6 hours from Wolfi."
     },
     {
       "name": "keepalived",
@@ -198,7 +214,8 @@
       ],
       "primary_package": "keepalived",
       "upstream_url": "https://www.keepalived.org/",
-      "summary": "Shell-less Keepalived VRRP failover and LVS load balancer built from source via melange."
+      "summary": "Shell-less Keepalived VRRP failover and LVS load balancer built from source via melange.",
+      "description": "Keepalived VRRP failover and LVS load balancing for high-availability clusters. Built from source, shell-less, signed and rebuilt every 6 hours."
     },
     {
       "name": "external-dns",
@@ -209,7 +226,8 @@
       ],
       "primary_package": "external-dns",
       "upstream_url": "https://kubernetes-sigs.github.io/external-dns/",
-      "summary": "Shell-less ExternalDNS Kubernetes DNS controller built from source via melange."
+      "summary": "Shell-less ExternalDNS Kubernetes DNS controller built from source via melange.",
+      "description": "ExternalDNS controller syncing Kubernetes Services and Ingresses to your DNS provider. Shell-less Go binary, signed with SLSA provenance, rebuilt 6-hourly."
     },
     {
       "name": "velero",
@@ -220,7 +238,8 @@
       ],
       "primary_package": "velero",
       "upstream_url": "https://velero.io",
-      "summary": "Shell-less Velero Kubernetes backup and restore tool built from source via melange."
+      "summary": "Shell-less Velero Kubernetes backup and restore tool built from source via melange.",
+      "description": "Velero backup, restore and migration for Kubernetes clusters and persistent volumes. Shell-less, cosign-signed with SBOM attestations, rebuilt every 6 hours."
     },
     {
       "name": "kaniko",
@@ -231,7 +250,8 @@
       ],
       "primary_package": "kaniko",
       "upstream_url": "https://github.com/GoogleContainerTools/kaniko",
-      "summary": "Shell-less Kaniko container image builder (executor) built from source via melange."
+      "summary": "Shell-less Kaniko container image builder (executor) built from source via melange.",
+      "description": "Kaniko executor for building container images inside Kubernetes without a Docker daemon. Shell-less, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "step-ca",
@@ -242,7 +262,8 @@
       ],
       "primary_package": "step-ca",
       "upstream_url": "https://smallstep.com/docs/step-ca/",
-      "summary": "Shell-less step-ca online certificate authority built from source via melange."
+      "summary": "Shell-less step-ca online certificate authority built from source via melange.",
+      "description": "step-ca online certificate authority issuing short-lived X.509 and SSH certificates. Built from source, shell-less, signed and rebuilt every 6 hours."
     },
     {
       "name": "skopeo",
@@ -253,7 +274,8 @@
       ],
       "primary_package": "skopeo",
       "upstream_url": "https://github.com/containers/skopeo",
-      "summary": "Shell-less Skopeo container image inspection/copy tool built from source via melange."
+      "summary": "Shell-less Skopeo container image inspection/copy tool built from source via melange.",
+      "description": "Skopeo for inspecting, copying and signing container images between registries. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt 6-hourly."
     },
     {
       "name": "sqlite",
@@ -264,7 +286,8 @@
       ],
       "primary_package": "sqlite",
       "upstream_url": "https://www.sqlite.org",
-      "summary": "Shell-less SQLite built on Wolfi."
+      "summary": "Shell-less SQLite built on Wolfi.",
+      "description": "SQLite embedded SQL database engine and CLI shell. Minimal Wolfi base with no package manager, cosign-signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "opensearch",
@@ -275,7 +298,8 @@
       ],
       "primary_package": "opensearch",
       "upstream_url": "https://opensearch.org",
-      "summary": "OpenSearch 3.x on Wolfi with OpenJDK 21."
+      "summary": "OpenSearch 3.x on Wolfi with OpenJDK 21.",
+      "description": "OpenSearch 3.x search and analytics engine on OpenJDK 21. Apache 2.0 licensed, cosign-signed with SBOM attestations, rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "redis-slim",
@@ -286,7 +310,8 @@
       ],
       "primary_package": "redis",
       "upstream_url": "https://redis.io",
-      "summary": "Shell-less Redis built from source via melange."
+      "summary": "Shell-less Redis built from source via melange.",
+      "description": "Redis in-memory data store for caching, queues and pub/sub. Compiled from upstream source, shell-less, signed and rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "valkey",
@@ -297,7 +322,8 @@
       ],
       "primary_package": "valkey",
       "upstream_url": "https://valkey.io",
-      "summary": "Shell-less Valkey built from source via melange."
+      "summary": "Shell-less Valkey built from source via melange.",
+      "description": "Valkey in-memory data store, the BSD-licensed Redis fork. Built from upstream source, shell-less, cosign-signed and rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "memcached",
@@ -308,7 +334,8 @@
       ],
       "primary_package": "memcached",
       "upstream_url": "https://memcached.org",
-      "summary": "Shell-less Memcached built from source via melange."
+      "summary": "Shell-less Memcached built from source via melange.",
+      "description": "Memcached distributed memory object caching system. Compiled from upstream source, shell-less, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "kafka",
@@ -319,7 +346,8 @@
       ],
       "primary_package": "kafka",
       "upstream_url": "https://kafka.apache.org",
-      "summary": "Apache Kafka with custom jlink JRE, KRaft mode."
+      "summary": "Apache Kafka with custom jlink JRE, KRaft mode.",
+      "description": "Apache Kafka event streaming platform in KRaft mode, no ZooKeeper required. Custom jlink JRE trims the runtime; signed, SBOM-attested and rebuilt 6-hourly."
     },
     {
       "name": "zookeeper",
@@ -330,7 +358,8 @@
       ],
       "primary_package": "zookeeper",
       "upstream_url": "https://zookeeper.apache.org",
-      "summary": "Apache ZooKeeper coordination service with custom jlink JRE."
+      "summary": "Apache ZooKeeper coordination service with custom jlink JRE.",
+      "description": "Apache ZooKeeper coordination service for distributed configuration and leader election. Custom jlink JRE, cosign-signed, rebuilt every 6 hours."
     },
     {
       "name": "cassandra",
@@ -341,7 +370,8 @@
       ],
       "primary_package": "cassandra",
       "upstream_url": "https://cassandra.apache.org",
-      "summary": "Apache Cassandra wide-column database with custom jlink JRE."
+      "summary": "Apache Cassandra wide-column database with custom jlink JRE.",
+      "description": "Apache Cassandra distributed wide-column database for high-write workloads. Runs on a custom jlink JRE, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "solr",
@@ -352,7 +382,8 @@
       ],
       "primary_package": "solr",
       "upstream_url": "https://solr.apache.org",
-      "summary": "Apache Solr search server with custom jlink JRE."
+      "summary": "Apache Solr search server with custom jlink JRE.",
+      "description": "Apache Solr enterprise search platform built on Lucene. Custom jlink JRE keeps the runtime small; cosign-signed with SBOM attestations and 6-hourly rebuilds."
     },
     {
       "name": "flink",
@@ -363,7 +394,8 @@
       ],
       "primary_package": "flink",
       "upstream_url": "https://flink.apache.org",
-      "summary": "Hardened Apache Flink stream processing engine with a custom jlink JRE."
+      "summary": "Hardened Apache Flink stream processing engine with a custom jlink JRE.",
+      "description": "Apache Flink stateful stream processing engine for real-time pipelines. Custom jlink JRE, cosign-signed with SBOM attestations, rebuilt every 6 hours."
     },
     {
       "name": "pulsar",
@@ -374,7 +406,8 @@
       ],
       "primary_package": "pulsar",
       "upstream_url": "https://pulsar.apache.org",
-      "summary": "Apache Pulsar messaging and streaming server with custom jlink JRE."
+      "summary": "Apache Pulsar messaging and streaming server with custom jlink JRE.",
+      "description": "Apache Pulsar distributed messaging and event streaming with tiered storage. Runs on a custom jlink JRE, signed and rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "tomcat",
@@ -385,7 +418,8 @@
       ],
       "primary_package": "tomcat",
       "upstream_url": "https://tomcat.apache.org",
-      "summary": "Hardened Apache Tomcat servlet container with custom jlink JRE (default webapps removed)."
+      "summary": "Hardened Apache Tomcat servlet container with custom jlink JRE (default webapps removed).",
+      "description": "Apache Tomcat servlet container with the default webapps removed. Custom jlink JRE, cosign-signed with SBOM attestations, rebuilt every 6 hours."
     },
     {
       "name": "rabbitmq",
@@ -396,7 +430,8 @@
       ],
       "primary_package": "rabbitmq",
       "upstream_url": "https://www.rabbitmq.com",
-      "summary": "RabbitMQ with Wolfi Erlang/OTP."
+      "summary": "RabbitMQ with Wolfi Erlang/OTP.",
+      "description": "RabbitMQ message broker speaking AMQP, MQTT and STOMP. Built on Wolfi Erlang/OTP, cosign-signed with SBOM attestations, rebuilt every 6 hours."
     },
     {
       "name": "nats",
@@ -407,7 +442,8 @@
       ],
       "primary_package": "nats-server",
       "upstream_url": "https://nats.io",
-      "summary": "Shell-less NATS server built from source via melange."
+      "summary": "Shell-less NATS server built from source via melange.",
+      "description": "NATS server for high-throughput cloud-native messaging and JetStream persistence. Shell-less Go binary, signed with SLSA provenance, rebuilt every 6 hours."
     },
     {
       "name": "mosquitto",
@@ -418,7 +454,8 @@
       ],
       "primary_package": "mosquitto",
       "upstream_url": "https://mosquitto.org",
-      "summary": "Shell-less Eclipse Mosquitto MQTT broker."
+      "summary": "Shell-less Eclipse Mosquitto MQTT broker.",
+      "description": "Eclipse Mosquitto MQTT broker for IoT and device messaging. Shell-less, compiled from upstream source, signed and rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "nginx",
@@ -429,7 +466,8 @@
       ],
       "primary_package": "nginx-mainline",
       "upstream_url": "https://nginx.org",
-      "summary": "Shell-less Nginx built on Wolfi."
+      "summary": "Shell-less Nginx built on Wolfi.",
+      "description": "Nginx web server, reverse proxy and load balancer on the mainline branch. No shell or package manager, cosign-signed and rebuilt every 6 hours from Wolfi."
     },
     {
       "name": "httpd",
@@ -440,7 +478,8 @@
       ],
       "primary_package": "apache2",
       "upstream_url": "https://httpd.apache.org",
-      "summary": "Apache HTTP Server built on Wolfi."
+      "summary": "Apache HTTP Server built on Wolfi.",
+      "description": "Apache HTTP Server for static sites, reverse proxying and mod_* workloads. Minimal Wolfi base, cosign-signed with SBOM attestations, rebuilt every 6 hours."
     },
     {
       "name": "caddy",
@@ -451,7 +490,8 @@
       ],
       "primary_package": "caddy",
       "upstream_url": "https://caddyserver.com",
-      "summary": "Shell-less Caddy web server built from source via melange."
+      "summary": "Shell-less Caddy web server built from source via melange.",
+      "description": "Caddy web server with automatic HTTPS and Let's Encrypt certificates. Shell-less Go binary built from source, signed and rebuilt every 6 hours."
     },
     {
       "name": "haproxy",
@@ -462,7 +502,8 @@
       ],
       "primary_package": "haproxy",
       "upstream_url": "https://www.haproxy.org",
-      "summary": "Shell-less HAProxy built from source via melange."
+      "summary": "Shell-less HAProxy built from source via melange.",
+      "description": "HAProxy TCP and HTTP load balancer for high-traffic sites. Compiled from upstream source, shell-less, cosign-signed and rebuilt every 6 hours against CVEs."
     },
     {
       "name": "traefik",
@@ -473,7 +514,8 @@
       ],
       "primary_package": "traefik",
       "upstream_url": "https://traefik.io",
-      "summary": "Shell-less Traefik reverse proxy built from source via melange."
+      "summary": "Shell-less Traefik reverse proxy built from source via melange.",
+      "description": "Traefik cloud-native reverse proxy with automatic service discovery and TLS. Shell-less, signed with SLSA build provenance, rebuilt every 6 hours."
     },
     {
       "name": "envoy",
@@ -484,7 +526,8 @@
       ],
       "primary_package": "envoy",
       "upstream_url": "https://www.envoyproxy.io",
-      "summary": "Shell-less Envoy proxy."
+      "summary": "Shell-less Envoy proxy.",
+      "description": "Envoy L7 proxy and service-mesh data plane with gRPC and observability built in. Shell-less image, cosign-signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "dex",
@@ -495,7 +538,8 @@
       ],
       "primary_package": "dex",
       "upstream_url": "https://dexidp.io/",
-      "summary": "Shell-less Dex OpenID Connect identity provider, built from source via melange."
+      "summary": "Shell-less Dex OpenID Connect identity provider, built from source via melange.",
+      "description": "Dex OpenID Connect identity provider federating LDAP, SAML and GitHub logins. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "seaweedfs",
@@ -506,7 +550,8 @@
       ],
       "primary_package": "seaweedfs",
       "upstream_url": "https://seaweedfs.com/",
-      "summary": "Shell-less SeaweedFS distributed object store and filesystem, built from source via melange."
+      "summary": "Shell-less SeaweedFS distributed object store and filesystem, built from source via melange.",
+      "description": "SeaweedFS distributed object store and filesystem for billions of small files. Shell-less, built from source, signed and rebuilt every 6 hours."
     },
     {
       "name": "rclone",
@@ -517,7 +562,8 @@
       ],
       "primary_package": "rclone",
       "upstream_url": "https://rclone.org/",
-      "summary": "Shell-less rclone cloud storage sync tool (70+ object-store and cloud-drive backends), built from source via melange."
+      "summary": "Shell-less rclone cloud storage sync tool (70+ object-store and cloud-drive backends), built from source via melange.",
+      "description": "rclone syncing files across 70+ object stores and cloud drives. Shell-less Go binary built from source, cosign-signed and rebuilt every 6 hours."
     },
     {
       "name": "restic",
@@ -528,7 +574,8 @@
       ],
       "primary_package": "restic",
       "upstream_url": "https://restic.net/",
-      "summary": "Shell-less restic deduplicating, encrypted backup program, built from source via melange."
+      "summary": "Shell-less restic deduplicating, encrypted backup program, built from source via melange.",
+      "description": "restic fast, deduplicating, encrypted backup program for servers and volumes. Shell-less, built from source, signed and rebuilt every 6 hours against CVEs."
     },
     {
       "name": "tailscale",
@@ -539,7 +586,8 @@
       ],
       "primary_package": "tailscale",
       "upstream_url": "https://tailscale.com/",
-      "summary": "Shell-less Tailscale WireGuard mesh VPN (tailscaled daemon + CLI), built from source via melange."
+      "summary": "Shell-less Tailscale WireGuard mesh VPN (tailscaled daemon + CLI), built from source via melange.",
+      "description": "Tailscale WireGuard mesh VPN with the tailscaled daemon and CLI. Shell-less Go build from source, cosign-signed with SLSA provenance, rebuilt 6-hourly."
     },
     {
       "name": "descheduler",
@@ -550,7 +598,8 @@
       ],
       "primary_package": "descheduler",
       "upstream_url": "https://github.com/kubernetes-sigs/descheduler",
-      "summary": "Shell-less Kubernetes descheduler, built from source via melange."
+      "summary": "Shell-less Kubernetes descheduler, built from source via melange.",
+      "description": "Kubernetes descheduler evicting pods to rebalance nodes against your policies. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "kube-vip",
@@ -561,7 +610,8 @@
       ],
       "primary_package": "kube-vip",
       "upstream_url": "https://kube-vip.io/",
-      "summary": "Shell-less kube-vip control-plane VIP and load balancer, built from source via melange."
+      "summary": "Shell-less kube-vip control-plane VIP and load balancer, built from source via melange.",
+      "description": "kube-vip providing a control-plane virtual IP and service load balancer for Kubernetes. Shell-less, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "oauth2-proxy",
@@ -572,7 +622,8 @@
       ],
       "primary_package": "oauth2-proxy",
       "upstream_url": "https://oauth2-proxy.github.io/oauth2-proxy/",
-      "summary": "Shell-less OAuth2 Proxy (OIDC/OAuth2 authenticating reverse proxy), built from source via melange."
+      "summary": "Shell-less OAuth2 Proxy (OIDC/OAuth2 authenticating reverse proxy), built from source via melange.",
+      "description": "OAuth2 Proxy adding OIDC and OAuth2 authentication in front of any upstream app. Shell-less Go binary, signed with SLSA provenance, rebuilt 6-hourly."
     },
     {
       "name": "prometheus",
@@ -583,7 +634,8 @@
       ],
       "primary_package": "prometheus",
       "upstream_url": "https://prometheus.io",
-      "summary": "Prometheus monitoring server built from source via melange."
+      "summary": "Prometheus monitoring server built from source via melange.",
+      "description": "Prometheus monitoring server scraping and storing time-series metrics with PromQL. Built from source, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "alertmanager",
@@ -594,7 +646,8 @@
       ],
       "primary_package": "alertmanager",
       "upstream_url": "https://prometheus.io/docs/alerting/latest/alertmanager/",
-      "summary": "Prometheus Alertmanager built from source via melange."
+      "summary": "Prometheus Alertmanager built from source via melange.",
+      "description": "Prometheus Alertmanager handling alert dedup, grouping, silencing and routing. Built from upstream source, cosign-signed, rebuilt every 6 hours."
     },
     {
       "name": "victoria-metrics",
@@ -605,7 +658,8 @@
       ],
       "primary_package": "victoria-metrics",
       "upstream_url": "https://victoriametrics.com",
-      "summary": "VictoriaMetrics time-series database built from source via melange."
+      "summary": "VictoriaMetrics time-series database built from source via melange.",
+      "description": "VictoriaMetrics fast time-series database and Prometheus long-term storage. Built from source, signed with SLSA provenance, rebuilt every 6 hours."
     },
     {
       "name": "thanos",
@@ -616,7 +670,8 @@
       ],
       "primary_package": "thanos",
       "upstream_url": "https://thanos.io",
-      "summary": "Shell-less Thanos HA Prometheus long-term storage."
+      "summary": "Shell-less Thanos HA Prometheus long-term storage.",
+      "description": "Thanos adding HA, global query and unlimited retention to Prometheus via object storage. Shell-less, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "mimir",
@@ -627,7 +682,8 @@
       ],
       "primary_package": "mimir",
       "upstream_url": "https://grafana.com/oss/mimir/",
-      "summary": "Grafana Mimir long-term Prometheus storage."
+      "summary": "Grafana Mimir long-term Prometheus storage.",
+      "description": "Grafana Mimir horizontally scalable long-term Prometheus storage. Built from source, cosign-signed with SBOM attestations, rebuilt every 6 hours."
     },
     {
       "name": "jaeger",
@@ -638,7 +694,8 @@
       ],
       "primary_package": "jaeger",
       "upstream_url": "https://www.jaegertracing.io",
-      "summary": "Jaeger distributed tracing backend built from source via melange."
+      "summary": "Jaeger distributed tracing backend built from source via melange.",
+      "description": "Jaeger distributed tracing backend for collecting, storing and querying spans. Built from upstream source, signed and rebuilt every 6 hours against CVEs."
     },
     {
       "name": "zipkin",
@@ -649,7 +706,8 @@
       ],
       "primary_package": "zipkin",
       "upstream_url": "https://zipkin.io/",
-      "summary": "Shell-less Zipkin distributed tracing server on a custom jlink JRE."
+      "summary": "Shell-less Zipkin distributed tracing server on a custom jlink JRE.",
+      "description": "Zipkin distributed tracing server for latency analysis across microservices. Runs on a custom jlink JRE, cosign-signed, rebuilt every 6 hours."
     },
     {
       "name": "loki",
@@ -660,7 +718,8 @@
       ],
       "primary_package": "loki",
       "upstream_url": "https://grafana.com/oss/loki/",
-      "summary": "Loki log aggregation server built from source via melange."
+      "summary": "Loki log aggregation server built from source via melange.",
+      "description": "Grafana Loki log aggregation indexing labels instead of full text. Built from upstream source, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "tempo",
@@ -671,7 +730,8 @@
       ],
       "primary_package": "tempo",
       "upstream_url": "https://grafana.com/oss/tempo/",
-      "summary": "Shell-less Grafana Tempo distributed tracing backend."
+      "summary": "Shell-less Grafana Tempo distributed tracing backend.",
+      "description": "Grafana Tempo distributed tracing backend storing traces in object storage. Shell-less, cosign-signed with SLSA provenance, rebuilt every 6 hours."
     },
     {
       "name": "otelcol",
@@ -682,7 +742,8 @@
       ],
       "primary_package": "otelcol",
       "upstream_url": "https://opentelemetry.io/docs/collector/",
-      "summary": "OpenTelemetry Collector built from source via melange."
+      "summary": "OpenTelemetry Collector built from source via melange.",
+      "description": "OpenTelemetry Collector receiving, processing and exporting traces, metrics and logs. Built from source, signed and rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "fluent-bit",
@@ -693,7 +754,8 @@
       ],
       "primary_package": "fluent-bit",
       "upstream_url": "https://fluentbit.io",
-      "summary": "Fluent Bit log processor and forwarder built from source via melange."
+      "summary": "Fluent Bit log processor and forwarder built from source via melange.",
+      "description": "Fluent Bit lightweight log and metrics processor and forwarder for edge and Kubernetes. Built from source, signed and rebuilt every 6 hours."
     },
     {
       "name": "telegraf",
@@ -704,7 +766,8 @@
       ],
       "primary_package": "telegraf",
       "upstream_url": "https://www.influxdata.com/time-series-platform/telegraf/",
-      "summary": "Telegraf metrics collection agent built from source via melange."
+      "summary": "Telegraf metrics collection agent built from source via melange.",
+      "description": "Telegraf plugin-driven agent collecting metrics from systems, containers and APIs. Built from upstream source, cosign-signed, rebuilt every 6 hours."
     },
     {
       "name": "vector",
@@ -715,7 +778,8 @@
       ],
       "primary_package": "vector",
       "upstream_url": "https://vector.dev",
-      "summary": "Shell-less Vector observability data pipeline built on Wolfi."
+      "summary": "Shell-less Vector observability data pipeline built on Wolfi.",
+      "description": "Vector high-performance observability pipeline for logs, metrics and traces. Shell-less Wolfi build, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "node-exporter",
@@ -726,7 +790,8 @@
       ],
       "primary_package": "node-exporter",
       "upstream_url": "https://github.com/prometheus/node_exporter",
-      "summary": "Shell-less Prometheus Node Exporter for hardware and OS metrics."
+      "summary": "Shell-less Prometheus Node Exporter for hardware and OS metrics.",
+      "description": "Prometheus Node Exporter publishing hardware and OS metrics from Linux hosts. Shell-less Go binary, signed with SLSA provenance, rebuilt 6-hourly."
     },
     {
       "name": "blackbox-exporter",
@@ -737,7 +802,8 @@
       ],
       "primary_package": "blackbox-exporter",
       "upstream_url": "https://github.com/prometheus/blackbox_exporter",
-      "summary": "Shell-less Prometheus Blackbox Exporter for endpoint probing."
+      "summary": "Shell-less Prometheus Blackbox Exporter for endpoint probing.",
+      "description": "Prometheus Blackbox Exporter probing endpoints over HTTP, TCP, DNS and ICMP. Shell-less, cosign-signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "kube-state-metrics",
@@ -748,7 +814,8 @@
       ],
       "primary_package": "kube-state-metrics",
       "upstream_url": "https://github.com/kubernetes/kube-state-metrics",
-      "summary": "Shell-less kube-state-metrics for Kubernetes object metrics."
+      "summary": "Shell-less kube-state-metrics for Kubernetes object metrics.",
+      "description": "kube-state-metrics exposing Prometheus metrics about Kubernetes object state. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "redis-exporter",
@@ -759,7 +826,8 @@
       ],
       "primary_package": "redis-exporter",
       "upstream_url": "https://github.com/oliver006/redis_exporter",
-      "summary": "Shell-less Redis Exporter for Prometheus metrics."
+      "summary": "Shell-less Redis Exporter for Prometheus metrics.",
+      "description": "Redis Exporter publishing Redis and Valkey instance metrics to Prometheus. Shell-less Go binary, cosign-signed, rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "pushgateway",
@@ -770,7 +838,8 @@
       ],
       "primary_package": "pushgateway",
       "upstream_url": "https://github.com/prometheus/pushgateway",
-      "summary": "Shell-less Prometheus Pushgateway for ephemeral and batch job metrics."
+      "summary": "Shell-less Prometheus Pushgateway for ephemeral and batch job metrics.",
+      "description": "Prometheus Pushgateway accepting metrics from ephemeral and batch jobs. Shell-less Go binary, signed with SLSA build provenance, rebuilt every 6 hours."
     },
     {
       "name": "coredns",
@@ -781,7 +850,8 @@
       ],
       "primary_package": "coredns",
       "upstream_url": "https://coredns.io",
-      "summary": "CoreDNS DNS server built from source via melange."
+      "summary": "CoreDNS DNS server built from source via melange.",
+      "description": "CoreDNS pluggable DNS server and the default Kubernetes cluster resolver. Built from upstream source, shell-less, signed and rebuilt every 6 hours."
     },
     {
       "name": "etcd",
@@ -792,7 +862,8 @@
       ],
       "primary_package": "etcd",
       "upstream_url": "https://etcd.io",
-      "summary": "etcd distributed key-value store built from source via melange."
+      "summary": "etcd distributed key-value store built from source via melange.",
+      "description": "etcd distributed key-value store backing Kubernetes control planes. Built from upstream source, cosign-signed with SBOM attestations, rebuilt 6-hourly."
     },
     {
       "name": "openbao",
@@ -803,7 +874,8 @@
       ],
       "primary_package": "openbao",
       "upstream_url": "https://openbao.org",
-      "summary": "OpenBao secret management server (Vault fork, MPL 2.0)."
+      "summary": "OpenBao secret management server (Vault fork, MPL 2.0).",
+      "description": "OpenBao secrets management and encryption service, the MPL-2.0 Vault fork. Built from source, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "keycloak",
@@ -814,7 +886,8 @@
       ],
       "primary_package": "keycloak",
       "upstream_url": "https://www.keycloak.org",
-      "summary": "Keycloak identity and access management server."
+      "summary": "Keycloak identity and access management server.",
+      "description": "Keycloak identity and access management with OIDC, SAML and social login. Cosign-signed with SBOM attestations, rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "qdrant",
@@ -825,7 +898,8 @@
       ],
       "primary_package": "qdrant",
       "upstream_url": "https://qdrant.tech",
-      "summary": "Qdrant vector search engine built from source via melange."
+      "summary": "Qdrant vector search engine built from source via melange.",
+      "description": "Qdrant vector search engine for embeddings, semantic search and RAG. Built from upstream source, signed with SLSA provenance, rebuilt every 6 hours."
     },
     {
       "name": "vaultwarden",
@@ -836,7 +910,8 @@
       ],
       "primary_package": "vaultwarden",
       "upstream_url": "https://github.com/dani-garcia/vaultwarden",
-      "summary": "Shell-less Vaultwarden Bitwarden-compatible server built from source."
+      "summary": "Shell-less Vaultwarden Bitwarden-compatible server built from source.",
+      "description": "Vaultwarden lightweight Bitwarden-compatible password manager server. Shell-less Rust build from source, signed and rebuilt every 6 hours against CVEs."
     },
     {
       "name": "registry",
@@ -847,7 +922,8 @@
       ],
       "primary_package": "registry",
       "upstream_url": "https://distribution.github.io/distribution/",
-      "summary": "Shell-less OCI distribution registry (Docker Registry v2)."
+      "summary": "Shell-less OCI distribution registry (Docker Registry v2).",
+      "description": "OCI distribution registry (Docker Registry v2) for hosting container images. Shell-less, built from source, signed and rebuilt every 6 hours."
     },
     {
       "name": "consul",
@@ -858,7 +934,8 @@
       ],
       "primary_package": "consul",
       "upstream_url": "https://www.consul.io",
-      "summary": "Shell-less HashiCorp Consul (BUSL-1.1) built from source via melange."
+      "summary": "Shell-less HashiCorp Consul (BUSL-1.1) built from source via melange.",
+      "description": "HashiCorp Consul service discovery, health checking and service mesh. Built from upstream source under BUSL-1.1, signed and rebuilt every 6 hours."
     },
     {
       "name": "helm",
@@ -869,7 +946,8 @@
       ],
       "primary_package": "helm",
       "upstream_url": "https://helm.sh",
-      "summary": "Shell-less Helm CLI built from source via melange."
+      "summary": "Shell-less Helm CLI built from source via melange.",
+      "description": "Helm CLI for templating, installing and upgrading Kubernetes chart releases. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt 6-hourly."
     },
     {
       "name": "kubectl",
@@ -880,7 +958,8 @@
       ],
       "primary_package": "kubectl",
       "upstream_url": "https://kubernetes.io/docs/reference/kubectl/",
-      "summary": "Shell-less kubectl CLI built from source via melange."
+      "summary": "Shell-less kubectl CLI built from source via melange.",
+      "description": "kubectl command-line client for managing Kubernetes clusters. Shell-less Go binary built from source, signed with SLSA provenance, rebuilt every 6 hours."
     },
     {
       "name": "metrics-server",
@@ -891,7 +970,8 @@
       ],
       "primary_package": "metrics-server",
       "upstream_url": "https://github.com/kubernetes-sigs/metrics-server",
-      "summary": "Kubernetes metrics-server for kubectl top and HPA, built from source via melange."
+      "summary": "Kubernetes metrics-server for kubectl top and HPA, built from source via melange.",
+      "description": "Kubernetes metrics-server supplying resource metrics for kubectl top and HPA. Built from source, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "opentofu",
@@ -902,7 +982,8 @@
       ],
       "primary_package": "opentofu",
       "upstream_url": "https://opentofu.org",
-      "summary": "Shell-less OpenTofu (Terraform-compatible IaC) built from source via melange."
+      "summary": "Shell-less OpenTofu (Terraform-compatible IaC) built from source via melange.",
+      "description": "OpenTofu Terraform-compatible infrastructure-as-code CLI under MPL 2.0. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt 6-hourly."
     },
     {
       "name": "trivy",
@@ -913,7 +994,8 @@
       ],
       "primary_package": "trivy",
       "upstream_url": "https://trivy.dev",
-      "summary": "Shell-less Trivy vulnerability, IaC and secret scanner."
+      "summary": "Shell-less Trivy vulnerability, IaC and secret scanner.",
+      "description": "Trivy scanner for vulnerabilities, misconfiguration, secrets and licences. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "cosign",
@@ -924,7 +1006,8 @@
       ],
       "primary_package": "cosign",
       "upstream_url": "https://www.sigstore.dev",
-      "summary": "Shell-less Sigstore Cosign container signing & verification, built from source via melange."
+      "summary": "Shell-less Sigstore Cosign container signing & verification, built from source via melange.",
+      "description": "Sigstore Cosign for signing and verifying container images and OCI artifacts. Shell-less, built from source, signed and rebuilt every 6 hours."
     },
     {
       "name": "syft",
@@ -935,7 +1018,8 @@
       ],
       "primary_package": "syft",
       "upstream_url": "https://github.com/anchore/syft",
-      "summary": "Shell-less Syft SBOM generator, built from source via melange."
+      "summary": "Shell-less Syft SBOM generator, built from source via melange.",
+      "description": "Syft generating SBOMs in SPDX and CycloneDX from images and filesystems. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt 6-hourly."
     },
     {
       "name": "grype",
@@ -946,7 +1030,8 @@
       ],
       "primary_package": "grype",
       "upstream_url": "https://github.com/anchore/grype",
-      "summary": "Shell-less Grype vulnerability scanner, built from source via melange."
+      "summary": "Shell-less Grype vulnerability scanner, built from source via melange.",
+      "description": "Grype scanning container images and filesystems for known vulnerabilities. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "osv-scanner",
@@ -957,7 +1042,8 @@
       ],
       "primary_package": "osv-scanner",
       "upstream_url": "https://google.github.io/osv-scanner/",
-      "summary": "Shell-less OSV-Scanner dependency vulnerability scanner, built from source via melange."
+      "summary": "Shell-less OSV-Scanner dependency vulnerability scanner, built from source via melange.",
+      "description": "OSV-Scanner matching project dependencies against the OSV vulnerability database. Shell-less Go binary, signed and rebuilt every 6 hours against CVEs."
     },
     {
       "name": "oras",
@@ -968,7 +1054,8 @@
       ],
       "primary_package": "oras",
       "upstream_url": "https://oras.land",
-      "summary": "Shell-less ORAS OCI registry client, built from source via melange."
+      "summary": "Shell-less ORAS OCI registry client, built from source via melange.",
+      "description": "ORAS CLI for pushing and pulling arbitrary artifacts to OCI registries. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt every 6 hours."
     },
     {
       "name": "notation",
@@ -979,7 +1066,8 @@
       ],
       "primary_package": "notation",
       "upstream_url": "https://notaryproject.dev",
-      "summary": "Shell-less Notation OCI artifact signing/verification CLI, built from source via melange."
+      "summary": "Shell-less Notation OCI artifact signing/verification CLI, built from source via melange.",
+      "description": "Notation CLI signing and verifying OCI artifacts under the Notary Project spec. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "conftest",
@@ -990,7 +1078,8 @@
       ],
       "primary_package": "conftest",
       "upstream_url": "https://www.conftest.dev",
-      "summary": "Shell-less Conftest OPA config-policy testing CLI, built from source via melange."
+      "summary": "Shell-less Conftest OPA config-policy testing CLI, built from source via melange.",
+      "description": "Conftest testing configuration files against Rego policies with Open Policy Agent. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "kubeconform",
@@ -1001,7 +1090,8 @@
       ],
       "primary_package": "kubeconform",
       "upstream_url": "https://github.com/yannh/kubeconform",
-      "summary": "Shell-less Kubeconform Kubernetes manifest validator, built from source via melange."
+      "summary": "Shell-less Kubeconform Kubernetes manifest validator, built from source via melange.",
+      "description": "Kubeconform validating Kubernetes manifests against the schema fast and offline. Shell-less Go binary, cosign-signed, rebuilt every 6 hours."
     },
     {
       "name": "kube-bench",
@@ -1012,7 +1102,8 @@
       ],
       "primary_package": "kube-bench",
       "upstream_url": "https://github.com/aquasecurity/kube-bench",
-      "summary": "Shell-less kube-bench CIS Kubernetes benchmark checker, built from source via melange."
+      "summary": "Shell-less kube-bench CIS Kubernetes benchmark checker, built from source via melange.",
+      "description": "kube-bench checking Kubernetes clusters against the CIS Kubernetes Benchmark. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "trufflehog",
@@ -1023,7 +1114,8 @@
       ],
       "primary_package": "trufflehog",
       "upstream_url": "https://trufflesecurity.com",
-      "summary": "Shell-less TruffleHog secret scanner, built from source via melange."
+      "summary": "Shell-less TruffleHog secret scanner, built from source via melange.",
+      "description": "TruffleHog finding and verifying leaked credentials across git history and files. Shell-less Go binary, signed and rebuilt every 6 hours against CVEs."
     },
     {
       "name": "flux",
@@ -1034,7 +1126,8 @@
       ],
       "primary_package": "flux",
       "upstream_url": "https://fluxcd.io",
-      "summary": "Shell-less Flux CD GitOps CLI, built from source via melange."
+      "summary": "Shell-less Flux CD GitOps CLI, built from source via melange.",
+      "description": "Flux CD GitOps CLI for bootstrapping and reconciling Kubernetes from git. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt 6-hourly."
     },
     {
       "name": "kustomize",
@@ -1045,7 +1138,8 @@
       ],
       "primary_package": "kustomize",
       "upstream_url": "https://kustomize.io",
-      "summary": "Shell-less Kustomize Kubernetes configuration tool, built from source via melange."
+      "summary": "Shell-less Kustomize Kubernetes configuration tool, built from source via melange.",
+      "description": "Kustomize building Kubernetes manifests with overlays and patches, no templating. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "sops",
@@ -1056,7 +1150,8 @@
       ],
       "primary_package": "sops",
       "upstream_url": "https://getsops.io",
-      "summary": "Shell-less SOPS secrets encryption tool, built from source via melange."
+      "summary": "Shell-less SOPS secrets encryption tool, built from source via melange.",
+      "description": "SOPS encrypting secrets in YAML, JSON and env files with KMS, age and PGP. Shell-less Go binary, signed with SLSA provenance, rebuilt every 6 hours."
     },
     {
       "name": "crane",
@@ -1067,7 +1162,8 @@
       ],
       "primary_package": "crane",
       "upstream_url": "https://github.com/google/go-containerregistry",
-      "summary": "Shell-less crane OCI registry tool (go-containerregistry), built from source via melange."
+      "summary": "Shell-less crane OCI registry tool (go-containerregistry), built from source via melange.",
+      "description": "crane inspecting, copying and mutating images in OCI registries via go-containerregistry. Shell-less binary, signed and rebuilt every 6 hours."
     },
     {
       "name": "kubeseal",
@@ -1078,7 +1174,8 @@
       ],
       "primary_package": "kubeseal",
       "upstream_url": "https://sealed-secrets.netlify.app",
-      "summary": "Shell-less kubeseal Sealed Secrets CLI, built from source via melange."
+      "summary": "Shell-less kubeseal Sealed Secrets CLI, built from source via melange.",
+      "description": "kubeseal encrypting Kubernetes Secrets into SealedSecrets safe to commit to git. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "helmfile",
@@ -1089,7 +1186,8 @@
       ],
       "primary_package": "helmfile",
       "upstream_url": "https://helmfile.readthedocs.io",
-      "summary": "Shell-less Helmfile declarative Helm release manager, built from source via melange."
+      "summary": "Shell-less Helmfile declarative Helm release manager, built from source via melange.",
+      "description": "Helmfile declaratively managing many Helm releases across environments. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt every 6 hours."
     },
     {
       "name": "regctl",
@@ -1100,7 +1198,8 @@
       ],
       "primary_package": "regctl",
       "upstream_url": "https://github.com/regclient/regclient",
-      "summary": "Shell-less regctl OCI registry client (regclient), built from source via melange."
+      "summary": "Shell-less regctl OCI registry client (regclient), built from source via melange.",
+      "description": "regctl querying and managing OCI registries and image manifests via regclient. Shell-less Go binary, signed and rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "stern",
@@ -1111,7 +1210,8 @@
       ],
       "primary_package": "stern",
       "upstream_url": "https://github.com/stern/stern",
-      "summary": "Shell-less Stern multi-pod Kubernetes log tailing tool, built from source via melange."
+      "summary": "Shell-less Stern multi-pod Kubernetes log tailing tool, built from source via melange.",
+      "description": "Stern tailing logs from multiple Kubernetes pods and containers at once. Shell-less Go binary, cosign-signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "gitleaks",
@@ -1122,7 +1222,8 @@
       ],
       "primary_package": "gitleaks",
       "upstream_url": "https://github.com/gitleaks/gitleaks",
-      "summary": "Shell-less Gitleaks secret scanner, built from source via melange."
+      "summary": "Shell-less Gitleaks secret scanner, built from source via melange.",
+      "description": "Gitleaks detecting hardcoded secrets and credentials in git repositories. Shell-less Go binary, signed with SLSA build provenance, rebuilt every 6 hours."
     },
     {
       "name": "step-cli",
@@ -1133,7 +1234,8 @@
       ],
       "primary_package": "step-cli",
       "upstream_url": "https://smallstep.com/cli/",
-      "summary": "Shell-less smallstep step PKI/certificate CLI, built from source via melange."
+      "summary": "Shell-less smallstep step PKI/certificate CLI, built from source via melange.",
+      "description": "smallstep step CLI for PKI, certificate issuance, JWTs and OAuth flows. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "opa",
@@ -1144,7 +1246,8 @@
       ],
       "primary_package": "opa",
       "upstream_url": "https://www.openpolicyagent.org",
-      "summary": "Shell-less Open Policy Agent (OPA) policy engine, built from source via melange."
+      "summary": "Shell-less Open Policy Agent (OPA) policy engine, built from source via melange.",
+      "description": "Open Policy Agent evaluating Rego policies for admission control and authorization. Shell-less Go binary, signed and rebuilt every 6 hours against CVEs."
     },
     {
       "name": "jenkins",
@@ -1155,7 +1258,8 @@
       ],
       "primary_package": "jenkins",
       "upstream_url": "https://www.jenkins.io",
-      "summary": "Shell-less Jenkins with jlink custom JRE, built from source via melange."
+      "summary": "Shell-less Jenkins with jlink custom JRE, built from source via melange.",
+      "description": "Jenkins automation server for CI/CD pipelines. Runs on a custom jlink JRE with no shell, cosign-signed with SBOM attestations, rebuilt every 6 hours."
     },
     {
       "name": "gitea",
@@ -1166,7 +1270,8 @@
       ],
       "primary_package": "gitea",
       "upstream_url": "https://gitea.io",
-      "summary": "Gitea git hosting built from source via melange."
+      "summary": "Gitea git hosting built from source via melange.",
+      "description": "Gitea lightweight self-hosted git service with issues, CI and a package registry. Built from source, signed and rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "minio",
@@ -1177,7 +1282,8 @@
       ],
       "primary_package": "minio",
       "upstream_url": "https://min.io",
-      "summary": "Shell-less MinIO S3-compatible object storage built from source via melange."
+      "summary": "Shell-less MinIO S3-compatible object storage built from source via melange.",
+      "description": "MinIO high-performance S3-compatible object storage. Shell-less Go build from upstream source, cosign-signed with SLSA provenance, rebuilt 6-hourly."
     },
     {
       "name": "rails",
@@ -1188,7 +1294,8 @@
       ],
       "primary_package": "rails",
       "upstream_url": "https://rubyonrails.org",
-      "summary": "Ruby on Rails built from source via melange."
+      "summary": "Ruby on Rails built from source via melange.",
+      "description": "Ruby on Rails application runtime with the gems and native extensions preinstalled. Built from source, signed and rebuilt every 6 hours against CVE fixes."
     },
     {
       "name": "mailpit",
@@ -1199,7 +1306,8 @@
       ],
       "primary_package": "mailpit",
       "upstream_url": "https://mailpit.axllent.org",
-      "summary": "Shell-less Mailpit SMTP/email testing tool built from source via melange."
+      "summary": "Shell-less Mailpit SMTP/email testing tool built from source via melange.",
+      "description": "Mailpit SMTP testing server capturing outbound mail with a web UI and API. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     }
   ]
 }

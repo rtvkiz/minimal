@@ -357,6 +357,13 @@ jobs:
       - name: Check download retry backoff
         run: make check-curl-retries
 
+      # Every image page's <meta name="description"> comes from catalog.json.
+      # Without this an image can ship with no description (or a copy of another
+      # image's), which is invisible to search and has to be retrofitted later.
+      # Same check as local `make check-catalog-descriptions`.
+      - name: Check catalog descriptions
+        run: make check-catalog-descriptions
+
       - name: Assert docs match the catalog
         # The README's image count sat at 96 while the catalog grew to 100 —
         # badge, nav link and heading — because nothing compared them.
