@@ -156,6 +156,35 @@ pipeline:
       jar_swap org.apache.logging.log4j log4j-core 2.25.3 2.25.5 
       jar_swap org.apache.logging.log4j log4j-layout-template-json 2.25.3 2.25.5 
       
+      # Ask Maven Central whether one candidate release exists.
+      #
+      # A bare `curl -f` cannot tell "this version does not exist" (404) from
+      # "Maven Central would not answer me" (403 rate-limit, 5xx, timeout), and
+      # the caller treats any failure as a missing release and exits 1. On
+      # 2026-09-04 the x86_64 solr build took 66 consecutive 403s and died
+      # claiming "no release of log4j-web for family target 2.25.4" — a version
+      # that plainly exists. The aarch64 leg of the same commit passed, which is
+      # the tell: same source, same script, different runner luck.
+      #
+      # So classify by status code, and retry ONLY the codes that mean the
+      # question went unanswered. A genuine 404 returns immediately — the sweep
+      # probes up to six candidate URLs per artifact and most legitimately 404,
+      # so retrying those would cost minutes per jar for no reason.
+      _probe() {  # echoes: found | missing | unavailable:<code>
+        _i=0
+        while :; do
+          _code=$(curl -sI -o /dev/null -w '%{http_code}' \
+                    --connect-timeout 10 --max-time 30 "$1" 2>/dev/null || echo 000)
+          case "$_code" in
+            200) echo found; return 0 ;;
+            404|410) echo missing; return 0 ;;
+          esac
+          _i=$((_i + 1))
+          [ "$_i" -ge 5 ] && { echo "unavailable:$_code"; return 0; }
+          sleep $((_i * 3))
+        done
+      }
+
       # Sweep the rest of each upgraded family. Siblings with no CVE of their own
       # never appear in a scan report — log4j-api, log4j-web and log4j-slf4j2-impl
       # sat at 2.25.3 while log4j-core moved to 2.25.4, and log4j-core against a
@@ -181,6 +210,8 @@ pipeline:
           _a="${_b%-$_v}"
           _tok=$(echo "$_a" | cut -d- -f2)
           _found=0
+          _hit=""
+          _unavail=""
           # Target: exact, then patch-trimmed (2.21.5 -> 2.21) for artifacts that
           # release on major.minor only.
           for _tv in "$_new" "${_new%.*}"; do
@@ -188,16 +219,26 @@ pipeline:
             # the last segment, jetty appends).
             for _cand in "$_g" "${_g%.*}.$_tok" "$_g.$_tok"; do
               _u="https://repo1.maven.org/maven2/$(echo "$_cand" | tr . /)/$_a/$_tv/$_a-$_tv.jar"
-              if curl -sfI --connect-timeout 10 --max-time 30 "$_u" -o /dev/null; then
-                _found=1; break
-              fi
+              _r=$(_probe "$_u")
+              case "$_r" in
+                found) _found=1; _hit="$_u"; break ;;
+                unavailable:*) _unavail="${_r#unavailable:}" ;;
+              esac
             done
             [ "$_found" -eq 1 ] && break
           done
           if [ "$_found" -eq 0 ]; then
-            echo "patch-java-deps: no release of $_a for family target $_new" >&2
+            # Do not call a release missing when Maven Central never actually
+            # answered — that misdirects the next reader at a version problem
+            # that does not exist.
+            if [ -n "$_unavail" ]; then
+              echo "patch-java-deps: Maven Central unreachable for $_a (HTTP $_unavail after retries) — transient, not a missing release" >&2
+            else
+              echo "patch-java-deps: no release of $_a for family target $_new" >&2
+            fi
             exit 1
           fi
+          _u="$_hit"
           curl -sSfL --connect-timeout 10 --max-time 120 --retry 8 --retry-all-errors \
             "$_u" -o "$(dirname "$_f")/$_a-$_tv.jar"
           case "$(head -c2 "$(dirname "$_f")/$_a-$_tv.jar")" in
