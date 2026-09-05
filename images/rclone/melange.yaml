@@ -13,7 +13,7 @@ package:
   # (cpe:2.3:a:rclone:rclone-minimal:*, ...). NVD indexes this product bare,
   # as cpe:2.3:a:rclone:rclone:*, so none of them matched.
   name: rclone
-  version: 1.75.0
+  version: 1.75.1
   epoch: 0
   description: "Minimal rclone cloud storage sync tool built from source"
   copyright:
@@ -30,7 +30,7 @@ package:
 
 vars:
   # SHA256 of rclone source tarball - updated by update-versions.yml workflow
-  sha256: 1292c5fae9d10d6df3ea0c2ba96de42336e96e2e878729af1f02f86900434ee0
+  sha256: fcc9351ab3976c73b4824cf7919f98f911f2442a606e2910fc2bd562111da220
 
 environment:
   contents:
