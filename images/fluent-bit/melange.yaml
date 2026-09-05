@@ -10,7 +10,7 @@ package:
   # Wolfi secdb either, so both of grype's matchers missed every CVE for this
   # package.
   name: fluent-bit
-  version: 5.1.1
+  version: 5.1.2
   epoch: 0
   description: "Minimal Fluent Bit log processor built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: bbc05936d6981575520596f151978146beb8119c7ab720efd3e3275cc54c13b1
+  sha256: 1971d86c7dc0f3e6b906890297635d6a3a84e5e7ad64d36521b74da202fda62f
 
 environment:
   contents:
