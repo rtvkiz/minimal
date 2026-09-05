@@ -332,6 +332,11 @@ async function buildImage(entry) {
     name,
     category: entry.category,
     summary: entry.summary || '',
+    // Distinct 140-160 char meta description. `summary` is the short card line
+    // and is near-identical in shape across the catalogue, so it cannot carry
+    // the meta description on its own without reading as duplicate boilerplate.
+    // Enforced by scripts/check-catalog-descriptions.sh.
+    description: entry.description || '',
     upstreamUrl: entry.upstream_url || null,
     primaryPackage: entry.primary_package || null,
     repo: `${REGISTRY}/${ORG}/${PREFIX}${name}`,
@@ -445,6 +450,7 @@ async function main() {
       warn(`image "${entry.name}" failed hard: ${e.message}`);
       records.push({
         name: entry.name, category: entry.category, summary: entry.summary || '',
+        description: entry.description || '',
         repo: `${REGISTRY}/${ORG}/${PREFIX}${entry.name}`, variants: {}, tags: [],
         dataStatus: { apko: false, grype: false, meta: false, sbom: false, config: false, tags: 'none' },
         degraded: true, notes: [`assembly failed: ${e.message}`],

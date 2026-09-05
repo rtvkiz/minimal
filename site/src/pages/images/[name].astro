@@ -23,18 +23,23 @@ const sevOrder = ['critical', 'high', 'medium', 'low'] as const;
 // exist are "hardened <name> container image" and "distroless <name>". The brand
 // moves to og:site_name instead of occupying the front of every title.
 //
-// catalog.json `summary` is 23-77 chars and near-identical in shape across the
-// catalogue ("Shell-less X built on Wolfi."), which reads as boilerplate at
-// meta-description length. Compose it up to a useful length with the facts that
-// differ per image. Replace this with a real per-image `description` field in
-// catalog.json when one exists.
+// catalog.json now carries a distinct per-image `description` (140-160 chars),
+// required by scripts/check-catalog-descriptions.sh. Prefer it.
+//
+// The composed fallback below stays for resilience only: `summary` is 23-77
+// chars and near-identical in shape across the catalogue ("Shell-less X built
+// on Wolfi."), which reads as duplicate boilerplate at meta-description length,
+// so it is padded with the facts that differ per image. The gate means this
+// path should not be reached in a normal build.
 const pageTitle = `${image.name} — hardened, minimal container image`;
 const pullRef = prod?.pullRef ?? `ghcr.io/rtvkiz/minimal-${image.name}`;
-const pageDescription = [
-  image.summary,
-  `Signed, SBOM-attested${image.size ? `, ${image.size.human} compressed` : ''}, rebuilt every 6 hours.`,
-  `Free and public — pull ${pullRef.split(':')[0]} with no account.`,
-].join(' ');
+const pageDescription =
+  image.description?.trim() ||
+  [
+    image.summary,
+    `Signed, SBOM-attested${image.size ? `, ${image.size.human} compressed` : ''}, rebuilt every 6 hours.`,
+    `Free and public — pull ${pullRef.split(':')[0]} with no account.`,
+  ].join(' ');
 
 const siblings = images
   .filter((i) => i.category === image.category && i.name !== image.name)

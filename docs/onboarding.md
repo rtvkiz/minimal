@@ -67,7 +67,8 @@ Tick every box. The ones marked **⛔ CI-enforced** will fail your PR if missing
 
 - [ ] **`Makefile`** — version var + `.PHONY` + build/test targets (§6)
 - [ ] **`.github/workflows/build.yml`** — add to `MELANGE_IMAGES` or `APKO_IMAGES` (§7) **⛔**
-- [ ] **`catalog.json`** — one entry (§7) **⛔ validate-catalog fails the PR without it**
+- [ ] **`catalog.json`** — one entry (§7) **⛔ validate-catalog fails the PR without it**,
+      including a distinct 140-160 char `description` **⛔ check-catalog-descriptions**
 - [ ] **auto-update configured (§9)** **⛔ check-autoupdate fails the PR without it** —
       source-built → `cron-enabled` `.github/versions.yaml` row; apko-only →
       classify in `.github/autoupdate-coverage.yaml`
@@ -361,8 +362,27 @@ if there's no `-dev.yaml`.
 
 ```jsonc
 { "name":"<name>", "category":"<one of the categories below>", "variants":["prod","dev"],
-  "primary_package":"<name>", "upstream_url":"https://...", "summary":"Shell-less <Name> ..." }
+  "primary_package":"<name>", "upstream_url":"https://...", "summary":"Shell-less <Name> ...",
+  "description":"<140-160 chars, distinct from every other image>" }
 ```
+
+**`description` is required and CI-enforced** (`make check-catalog-descriptions`).
+It becomes `<meta name="description">` plus the `og:`/`twitter:` description on
+the image's page. `summary` is the short card line and is near-identical in shape
+across the catalogue, so it cannot do this job — ~108 pages of one sentence shape
+reads as duplicate boilerplate and none of them rank.
+
+Write it as: **what the software is → what this build gives you.** Name the thing
+in the first few words (that is the query), then the differentiator. Don't end on
+"built on Wolfi." / "built from source via melange." — the gate rejects those,
+because that is exactly the boilerplate the field exists to escape.
+
+```
+✅ "Redis-compatible in-memory data store. Shell-less, non-root, signed and
+    SBOM-attested, rebuilt every 6 hours against upstream CVE fixes."
+❌ "Shell-less Valkey built on Wolfi."          (that's the summary, and boilerplate)
+```
+
 Valid `category` values (must match exactly):
 `Languages & Runtimes` · `Databases` · `Caches, Queues & Messaging` ·
 `Web Servers & Proxies` · `Observability` · `Infrastructure` ·
@@ -517,6 +537,7 @@ make <name>-melange && make <name> && make test-<name>   # §0 — must all pass
 python3 -c "import json; json.load(open('catalog.json'))" # valid JSON
 ruby -ryaml -e "YAML.load_file('.github/versions.yaml')"  # valid YAML
 make check-autoupdate                                     # §9 — auto-update configured
+make check-catalog-descriptions                           # §7 — distinct 140-160 char description
 make lint-workflows                                       # if you touched .github/workflows/**
 ```
 
@@ -526,6 +547,7 @@ CI will independently enforce:
 |---|---|
 | `validate-catalog` | `catalog.json` ≠ build matrix |
 | `check-autoupdate` | a prod image has no live auto-update (missing/frozen row, or unclassified apko-only image) |
+| `check-catalog-descriptions` | an image has no `description`, one outside 140-160 chars, a duplicate, or stock boilerplate |
 | `melange-build` / `build-apko` (both arches) | the image doesn't build or its test fails |
 | `lint-workflows` (actionlint + shellcheck) | a workflow schema error or shell syntax error in a `run:` block |
 | gitleaks (pre-commit + CI) | a secret is committed |

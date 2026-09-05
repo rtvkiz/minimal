@@ -4372,6 +4372,15 @@ check-toolchain-pins:
 check-curl-retries:
 	@./scripts/check-curl-retries.sh
 
+# Every catalog.json image needs a distinct 140-160 char `description` — the
+# <meta name="description"> for its page. `summary` is the short card line and
+# is near-identical across the catalogue, so it cannot carry this on its own.
+check-catalog-descriptions:
+	@./scripts/check-catalog-descriptions.sh
+
+check-catalog-descriptions-report:
+	@./scripts/check-catalog-descriptions.sh --report
+
 # Verify the website's factual claims against this repo. --online additionally
 # checks that competitor repositories we name actually exist.
 check-site-claims:
