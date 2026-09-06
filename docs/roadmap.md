@@ -72,7 +72,7 @@ by effort. Fills the catalog's thinnest categories (databases, proxies, apps).
 | [x] | unbound | NLnetLabs/unbound | 🟢 BSD | C | 12M | 5k | DNS resolver — shipped; `--sbindir=/usr/bin`, builtin evloop, local-data smoke test |
 | [ ] | ~~varnish~~ | varnishcache/varnish-cache | 🟢 BSD | C | 21M | 4k | **Deferred → see below.** varnishd compiles VCL with `cc` at runtime → needs gcc+binutils+headers in prod (breaks the shell-less/minimal thesis). |
 | [ ] | apisix | apache/apisix | 🟢 Apache-2.0 | C/Lua/OpenResty | 37M | 17k | API gateway (harder: OpenResty) |
-| [ ] | vaultwarden | dani-garcia/vaultwarden | 🟡 AGPL-3.0 | Rust | 304M | 64k | self-hosted Bitwarden |
+| [x] | vaultwarden | dani-garcia/vaultwarden | 🟡 AGPL-3.0 | Rust | 304M | 64k | self-hosted Bitwarden — shipped |
 | [ ] | kvrocks | apache/kvrocks | 🟢 Apache-2.0 | C++ | 3.5M | 4k | Redis-on-RocksDB |
 | [x] | patroni | patroni/patroni | 🟢 MIT | Python | — | 9k | Postgres HA — shipped; first Python-daemon pattern |
 | [ ] | woodpecker | woodpecker-ci/woodpecker | 🟢 Apache-2.0 | Go+frontend | 2.7M | 7k | CI server (has web UI) |
@@ -138,12 +138,12 @@ Fills thin **Infrastructure**.
 
 ### Batch H — JVM-jlink (kafka/zookeeper template)
 cassandra (🟢 wide-column DB, Java-17 + jamm agent) · solr (🟢 search, Java-21) ·
-pulsar (🟢 messaging, Java-21) — **DONE**. flink (🟢 stream processing, Java-21) remaining.
+pulsar (🟢 messaging, Java-21) · flink (🟢 stream processing, Java-21) — **all DONE**.
 All Apache. Fills thin DB/search/messaging.
 
 ### Batch I — Rust (qdrant/vector precedent, own effort each)
-vector (🟢 MPL-2.0, observability pipeline) — **DONE**. vaultwarden (🟡 AGPL-3.0, Bitwarden
-server; ~304M pulls) remaining.
+vector (🟢 MPL-2.0, observability pipeline) · vaultwarden (🟡 AGPL-3.0, Bitwarden
+server; ~304M pulls) — **both DONE**.
 
 ### Batch J — Erlang / Python
 patroni (🟢 MIT, Postgres HA — new Python-daemon pattern) — **DONE**.
@@ -157,6 +157,80 @@ whichever land first.
 
 **Beyond the 100-path (deliberate exceptions, not scheduled):** varnish (runtime cc), grafana/argocd/uptime-kuma
 (frontend-in-bwrap), clickhouse/kubescape (disk-cap). See the deferred table above.
+
+## Wave 2 — beyond 108 (demand-ranked, re-surveyed 2026-08-30)
+
+Candidate survey after the 100 target was met. Same lens as above (license ·
+container demand · use case), with one new input: **many of these already have a
+Wolfi package**, which moves them from "own effort" into the cheapest bucket we
+have (apko-only, `dnsmasq`/`vector` precedent — no melange recipe, no
+`versions.yaml` row, just an `autoupdate-coverage.yaml` classification).
+
+Pull counts are Docker Hub `pull_count` read on 2026-08-30; treat as
+order-of-magnitude (cumulative, CI/bot-inflated).
+
+### Tier W1 — apko-only from an existing Wolfi package (cheapest crank)
+
+Verified present in the Wolfi `x86_64` APKINDEX on 2026-08-30. `(v)` = versioned
+package ⇒ `wolfi-versioned`; `(r)` = unversioned/rolling ⇒ `wolfi-rolling`.
+
+| ✓ | Image | Wolfi package | License | 🐳 pulls | Category | Notes |
+|---|---|---|---|---:|---|---|
+| [ ] | gitlab-runner | `gitlab-runner-18.11` (v) | 🟢 MIT | 3.6B | K8s, CI & IaC | Highest-demand gap in the catalog. Upstream is gitlab.com, so a *source* build would need a bespoke version-check — the Wolfi package sidesteps that entirely. |
+| [ ] | buildkit | `buildkitd` (r) | 🟢 Apache-2.0 | 1.8B | K8s, CI & IaC | `buildkitd` + `buildctl`. Decide rootless-vs-privileged posture and document it; daemon wants a writable state dir. |
+| [ ] | wordpress | `wordpress` (r) + `wordpress-oci-entrypoint` | 🟡 GPL-2.0-or-later | 1.5B | Apps | Largest single demand number in the survey. Pairs with our `php`/`httpd`; Wolfi ships the OCI entrypoint too. Fills the thinnest category (Apps, 6). |
+| [ ] | sonarqube | `sonarqube` (r) | 🟡 LGPL-3.0 | 1.2B | K8s, CI & IaC | Community Build. Heavier than it looks — bundles Elasticsearch and needs an external Postgres; smoke test = boot + `/api/system/status`. |
+| [ ] | nextcloud | `nextcloud-server-33` (v) | 🟡 AGPL-3.0 | 1.0B | Apps | AGPL precedent already set (loki/tempo/mimir/minio/vaultwarden). PHP-FPM. |
+| [ ] | maven | `maven-3.9` (v) | 🟢 Apache-2.0 | 767M | Languages & Runtimes | Build-tool image on top of our `java`. Near-zero effort, very high demand. |
+| [ ] | kong | `kong` (r) + `kong-entrypoint` | 🟢 Apache-2.0 | 359M | Web Servers & Proxies | The Wolfi package removes the OpenResty/Lua build problem that keeps `apisix` deferred. Fills a thin category (8). |
+| [ ] | neo4j | `neo4j-2025.12` (v) | 🟡 GPL-3.0 | 322M | Databases | Graph DB — a category we have zero coverage of. GPL precedent: dnsmasq, keepalived. |
+| [ ] | gradle | `gradle-9` (v) | 🟢 Apache-2.0 | 300M | Languages & Runtimes | Same shape as maven. |
+| [ ] | perl | `perl` (r) | 🟡 Artistic-1.0 / GPL-1.0+ | 255M | Languages & Runtimes | Trivial; the last mainstream scripting runtime we're missing. |
+| [ ] | couchdb | `couchdb-3.3` (v) | 🟢 Apache-2.0 | 205M | Databases | Already named in Batch J as an Erlang source build — the Wolfi package makes it a W1, not an own-effort. |
+| [ ] | argo-cd | `argo-cd-3.2` + `-repo-server` (v) | 🟢 Apache-2.0 | 148M | K8s, CI & IaC | **Re-opens a deferred item.** Wolfi packaging removes the yarn-frontend build; the repo-server's runtime git/helm/kustomize needs still apply, so this is multi-image, not one. |
+| [ ] | rust | `rust-1.92` (v) | 🟢 MIT OR Apache-2.0 | 143M | Languages & Runtimes | Toolchain image (builder-shaped, like our `go`). |
+| [ ] | erlang | `erlang-28` (v) | 🟢 Apache-2.0 | 65M | Languages & Runtimes | Natural companion to `rabbitmq`. |
+| [ ] | meilisearch | `meilisearch` (r) | 🟢 MIT | 51M | Databases | Rust search engine; complements `opensearch`/`solr` at a much smaller size. |
+| [ ] | temporal | `temporal` (r) | 🟢 MIT | 47M | Apps | Durable-execution server. Wolfi also has `temporal-ui-server-oci-entrypoint` if we want the UI later. |
+
+**Also packaged in Wolfi, parked deliberately:** `argo-workflows` (🟢 Apache — take
+with argo-cd or not at all), `harbor-2.14-*` (🟢 Apache, but 5+ images — own
+effort like cert-manager), `mattermost-11.4` (⚠️ mixed AGPL + Mattermost Source
+Available License in the same tree — needs a license read before onboarding),
+`apisix-ingress-controller` (🟢 Apache — note Wolfi packages the *controller*,
+not apisix itself, so the Tier-3 apisix entry above is unchanged).
+
+### Tier W2 — source-built Go (the proven crank; no Wolfi package)
+
+| ✓ | Image | Upstream | License | 🐳 pulls | Category | Notes |
+|---|---|---|---|---:|---|---|
+| [ ] | alloy | grafana/alloy | 🟢 Apache-2.0 | 388M | Observability | Successor to promtail (2.8B) and grafana-agent (470M), both now EOL — so the real demand it inherits is far above its own count. **Risk:** ships an embedded web UI built with yarn; check whether `go build` succeeds against a stubbed/pre-generated `ui/dist` before committing, or it becomes a frontend-in-bwrap item. |
+| [ ] | authelia | authelia/authelia | 🟢 Apache-2.0 | 81M | Web Servers & Proxies | Auth gateway; pairs with `oauth2-proxy`. Same embedded-frontend caveat as alloy (pnpm). |
+| [x] | syncthing | syncthing/syncthing | 🟢 MPL-2.0 | 346M (two repos) | Infrastructure | **Shipped** — confirmed the easiest build in this table. `CGO_ENABLED=0` picks the pure-Go `modernc.org/sqlite` driver v2.x needs; the web GUI is `.gitignore`'d upstream and regenerated by `script/genassets.go`, which is plain Go — no npm step. Built `-tags noupgrade` like upstream's own container. |
+| [x] | nsq | nsqio/nsq | 🟢 MIT | 63M | Caches, Queues & Messaging | **Shipped** — was indeed about an hour. Ships all nine upstream binaries for drop-in parity with `nsqio/nsq`; nsqadmin's web assets are committed pre-built and pulled in via `go:embed`. Note upstream is quiet (v1.3.0, Dec 2023), so its auto-update loop will be idle by design. |
+
+### Tier W3 — heavier / needs a decision
+
+| Image | Why it's not W1/W2 |
+|---|---|
+| influxdb | 1.1B pulls on `library/influxdb`, but that number is v1/v2 (Go, MIT); current upstream is **InfluxDB 3 Core in Rust** (🟢 Apache-2.0), no Wolfi package, and our time-series slot is already served by prometheus/mimir/victoria-metrics/thanos. Worth it only if we want line-protocol coverage. |
+| emqx | 47M pulls, but the repo is `NOASSERTION` (Apache core + BSL-ish enterprise pieces) and it's a large Erlang build. License read required first. |
+| timescaledb | 123M pulls, but the tree is split Apache-2.0 / TSL (source-available) — an Apache-only build is possible and is the only version we could ship. Own effort. |
+| pgadmin4 | 444M pulls (🟢 PostgreSQL license), Python + prebuilt frontend. Plausible via pip wheels; needs its own investigation. |
+
+### Confirmed avoid (🔴 non-OSS) — checked in this survey
+
+`terraform` (492M) · `vault` (554M) · `nomad` · `boundary` · `waypoint` — all
+BUSL-1.1; already covered by our `opentofu` and `openbao`. `elasticsearch` /
+`kibana` / `logstash` — Elastic License; covered by `opensearch`. `redpanda`
+(35M) — BSL. `n8n` — Sustainable Use License. No change to the policy.
+
+### Suggested first PR out of this survey
+
+Six images, all W1, no new build template, spanning four categories:
+**gitlab-runner · wordpress · maven · gradle · kong · perl** — the two largest
+demand numbers we're missing, the two cheapest Languages entries, and the first
+addition to Web Servers & Proxies since oauth2-proxy.
 
 ## Execution model
 

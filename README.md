@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>108 small, hardened container images. Free, MIT-licensed, signed, and rebuilt every six hours.</strong>
+  <strong>110 small, hardened container images. Free, MIT-licensed, signed, and rebuilt every six hours.</strong>
 </p>
 
 <p align="center">
@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build status"></a>
-  <img src="https://img.shields.io/badge/Images-108-0d9488" alt="Images: 108">
+  <img src="https://img.shields.io/badge/Images-110-0d9488" alt="Images: 110">
   <a href="https://slsa.dev/spec/v1.0/levels#build-l3"><img src="https://img.shields.io/badge/SLSA-Level_3-0d9488" alt="SLSA Level 3"></a>
   <img src="https://img.shields.io/badge/Arch-amd64_%7C_arm64-0d9488" alt="Architectures: amd64 and arm64">
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
@@ -34,7 +34,7 @@ docker run --rm -p 8080:80 ghcr.io/rtvkiz/minimal-nginx:latest
 docker run --rm -p 6379:6379 ghcr.io/rtvkiz/minimal-redis-slim:latest
 ```
 
-**[Find an image →](https://minimalcontainers.com/images)** — all 108, with live
+**[Find an image →](https://minimalcontainers.com/images)** — all 110, with live
 sizes and CVE counts.
 
 ## Verify what you pulled

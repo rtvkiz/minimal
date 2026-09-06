@@ -1308,6 +1308,30 @@
       "upstream_url": "https://mailpit.axllent.org",
       "summary": "Shell-less Mailpit SMTP/email testing tool built from source via melange.",
       "description": "Mailpit SMTP testing server capturing outbound mail with a web UI and API. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
+    },
+    {
+      "name": "syncthing",
+      "category": "Infrastructure",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "syncthing",
+      "upstream_url": "https://syncthing.net",
+      "summary": "Shell-less Syncthing continuous file synchronisation daemon, built from source via melange.",
+      "description": "Continuous peer-to-peer file synchronisation between your own devices, no cloud account. Shell-less non-root binary, signed, SBOM-attested, rebuilt 6-hourly."
+    },
+    {
+      "name": "nsq",
+      "category": "Caches, Queues & Messaging",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "nsq",
+      "upstream_url": "https://nsq.io",
+      "summary": "Shell-less NSQ realtime distributed messaging platform, built from source via melange.",
+      "description": "NSQ realtime distributed messaging: nsqd, nsqlookupd and nsqadmin in one shell-less non-root image, signed and SBOM-attested, rebuilt every six hours."
     }
   ]
 }

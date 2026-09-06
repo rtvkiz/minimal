@@ -101,6 +101,8 @@ jobs:
             {"name":"rclone","variants":["prod","dev"]},
             {"name":"restic","variants":["prod","dev"]},
             {"name":"seaweedfs","variants":["prod","dev"]},
+            {"name":"syncthing","variants":["prod","dev"]},
+            {"name":"nsq","variants":["prod","dev"]},
             {"name":"oauth2-proxy","variants":["prod","dev"]},
             {"name":"flux","variants":["prod","dev"]},
             {"name":"kustomize","variants":["prod","dev"]},

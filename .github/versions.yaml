@@ -335,6 +335,28 @@
     releases: "https://github.com/restic/restic/releases"
     notes: "https://github.com/restic/restic/releases/tag/v{version}"
 
+- name: syncthing
+  cron-enabled: true   # validated 2026-09-05 (see PR)
+  files: [images/syncthing/melange.yaml]
+  # Release candidates are published as GitHub pre-releases, and
+  # /releases/latest skips those, so this tracks stable only without a pattern.
+  source: { type: github-releases-latest, repo: syncthing/syncthing, strip-v: true }
+  tarball: { url: "https://github.com/syncthing/syncthing/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/syncthing/syncthing/releases"
+    notes: "https://github.com/syncthing/syncthing/releases/tag/v{version}"
+
+- name: nsq
+  cron-enabled: true   # validated 2026-09-05 (see PR)
+  files: [images/nsq/melange.yaml]
+  source: { type: github-releases-latest, repo: nsqio/nsq, strip-v: true }
+  tarball: { url: "https://github.com/nsqio/nsq/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/nsqio/nsq/releases"
+    notes: "https://github.com/nsqio/nsq/releases/tag/v{version}"
+
 - name: seaweedfs
   cron-enabled: true   # validated 2026-08-25 (see PR)
   files: [images/seaweedfs/melange.yaml]

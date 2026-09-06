@@ -1,0 +1,93 @@
+# Melange build configuration for minimal Syncthing
+# Pure Go from source. Single static `syncthing` binary (continuous P2P file
+# synchronisation). License: MPL-2.0 (The Syncthing Authors).
+#
+# Wolfi ships no `syncthing` package, so this is a source build by necessity
+# rather than by preference.
+
+package:
+  # Named `syncthing` (not `syncthing-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and a suffix
+  # produces cpe:2.3:a:syncthing-minimal:syncthing-minimal:*, which matches
+  # nothing in NVD. NVD indexes this product bare, as
+  # cpe:2.3:a:syncthing:syncthing:*.
+  name: syncthing
+  version: 2.1.3
+  epoch: 0
+  description: "Minimal Syncthing continuous file synchronisation daemon built from source"
+  copyright:
+    - license: MPL-2.0
+
+vars:
+  # SHA256 of syncthing source tarball - updated by update-versions.yml workflow
+  sha256: 177792c697f61fc25f02d8fc8923dfc57ebb35753bd92c8d32a73d553446d117
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  # Download and verify syncthing source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/syncthing/syncthing/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/syncthing.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/syncthing.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf syncthing.tar.gz
+      rm syncthing.tar.gz
+
+  # The web GUI is served from lib/api/auto/gui.files.go, which upstream
+  # .gitignore's and regenerates at build time. The generator (script/genassets.go)
+  # is plain Go reading the committed gui/ tree — there is no npm/yarn step — so
+  # this stays a hermetic Go-only build. Without it the binary compiles but
+  # serves an empty GUI (lib/api/auto/noassets.go is the fallback).
+  - runs: |
+      cd /home/build/syncthing-${{package.version}}
+      export GOFLAGS=-mod=mod
+      go run script/genassets.go -o lib/api/auto/gui.files.go gui
+
+  # CGO_ENABLED=0 selects the pure-Go SQLite driver: internal/db/sqlite has
+  # db_open_cgo.go (//go:build cgo -> mattn/go-sqlite3) and db_open_nocgo.go
+  # (//go:build !cgo -> modernc.org/sqlite). Syncthing 2.x needs SQLite for its
+  # index database, so getting this wrong is a runtime failure, not a link error.
+  #
+  # The `noupgrade` tag matches upstream's own container build
+  # (`go run build.go -no-upgrade build syncthing`): it compiles out the
+  # self-updater, which has no business writing to a read-only image anyway.
+  - runs: |
+      cd /home/build/syncthing-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -tags noupgrade \
+        -ldflags="-s -w -buildid= \
+          -X github.com/syncthing/syncthing/lib/build.Version=v${{package.version}} \
+          -X github.com/syncthing/syncthing/lib/build.User=melange \
+          -X github.com/syncthing/syncthing/lib/build.Host=wolfi \
+          -X github.com/syncthing/syncthing/lib/build.Tags=noupgrade" \
+        -o /home/build/syncthing-bin \
+        ./cmd/syncthing
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/syncthing-bin "${{targets.destdir}}/usr/bin/syncthing"
+      chmod 0755 "${{targets.destdir}}/usr/bin/syncthing"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying syncthing binary..."
+      "${{targets.destdir}}/usr/bin/syncthing" --version
