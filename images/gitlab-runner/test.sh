@@ -7,11 +7,20 @@ echo "Testing gitlab-runner version..."
 gv=$(docker run --rm --entrypoint /usr/bin/gitlab-runner "$IMAGE" --version 2>&1)
 echo "$gv" | grep -qE 'Version:[[:space:]]+19\.[0-9]+' || { echo "unexpected version: $gv"; exit 1; }
 
-echo "Verifying the runner reports its own name..."
-# common.NAME is one of the three -X ldflags upstream sets. Get it wrong and the
-# runner registers itself under the wrong name with the GitLab instance, which
-# is invisible until someone looks at the admin UI.
-echo "$gv" | grep -q 'gitlab-runner' || { echo "FAIL: NAME ldflag not applied: $gv"; exit 1; }
+echo "Verifying this is OUR build, not Wolfi's..."
+# Provenance guard, and the most load-bearing assertion in this file.
+# Wolfi's `gitlab-runner-19.3` package `p:`-provides the bare name
+# `gitlab-runner`, so apk can satisfy our apko request with THEIR binary; the
+# melange package carries provider-priority: 100 to stop that. Both builds are
+# 19.3.1, so a version check alone cannot tell them apart — the ldflags can:
+#
+#   ours     Git branch: v19.3.1   Git revision: HEAD    Built: (empty)
+#   Wolfi's  Git branch: HEAD      Git revision: a16f5092  Built: 2026-08-24...
+#
+# `Git branch` is set by our -X ...common.BRANCH flag and is HEAD by default, so
+# asserting it fails the moment resolution slips back to Wolfi's package.
+echo "$gv" | grep -qE 'Git branch:[[:space:]]+v19\.' \
+  || { echo "FAIL: not our build — provider-priority may have regressed:"; echo "$gv"; exit 1; }
 
 echo "Testing gitlab-runner subcommands are wired..."
 docker run --rm --entrypoint /usr/bin/gitlab-runner "$IMAGE" --help 2>&1 | grep -qE 'register|verify|unregister'
@@ -38,9 +47,13 @@ chmod 0666 "$work/config.toml"
 
 out=$(docker run --rm -v "$work:/cfg" --entrypoint /usr/bin/gitlab-runner "$IMAGE" \
   list --config /cfg/config.toml 2>&1)
-echo "$out" | grep -q 'minimal-smoke-test' \
+# The runner colourises its log fields, so the raw output reads
+# `Executor<ESC>[0;m=docker` — a naive grep for 'Executor=docker' fails against
+# a perfectly good image. Strip the escapes before matching.
+clean=$(printf '%s' "$out" | sed 's/\x1b\[[0-9;]*m//g')
+echo "$clean" | grep -q 'minimal-smoke-test' \
   || { echo "FAIL: runner did not list the configured runner: $out"; exit 1; }
-echo "$out" | grep -q 'Executor=docker' \
+echo "$clean" | grep -q 'Executor=docker' \
   || { echo "FAIL: executor not parsed from config: $out"; exit 1; }
 echo "config parse round-trip OK"
 
