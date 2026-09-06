@@ -1,0 +1,125 @@
+# Development variant of minimal-buildkit.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - buildkit
+    - ca-certificates-bundle
+    # buildkitd's default OCI worker execs runc to run each build step. Without
+    # it the daemon starts and then fails every solve with "exec: runc: not
+    # found", which looks like a build error rather than a missing dependency.
+    - runc
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+    - curl
+    - openssl
+    - bind-tools
+    - jq
+    - git
+
+# NOTE: run-as 0. This is the one image in the catalogue that is not nonroot,
+# and it is deliberate — see the posture note below.
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 0
+
+# POSTURE — read this before deploying.
+#
+# buildkitd is a privileged daemon by nature: it creates mount and user
+# namespaces to isolate each build step. This image runs as nonroot (65532),
+# which is the *rootless* posture — upstream ships that as a separate
+# `:rootless` tag rather than the default, and it is the only posture
+# consistent with the rest of this catalogue.
+#
+# That means it needs one of:
+#   - Kubernetes: securityContext with the userns/seccomp annotations from
+#     upstream's rootless docs, plus an emptyDir at /home/nonroot/.local.
+#   - Docker: --security-opt seccomp=unconfined --security-opt apparmor=unconfined
+#     and (usually) --device /dev/fuse for the fuse-overlayfs snapshotter.
+# Running it with no privileges at all will start the daemon and then fail
+# every solve — that is expected, not a defect in the image.
+#
+# buildkitd is built with `-tags seccomp` (see melange.yaml), so build
+# containers still get a seccomp profile; dropping that tag would have been the
+# easier build and a silent security regression.
+# POSTURE — read this before deploying, and before assuming this is a bug.
+#
+# buildkitd is a privileged daemon by nature: it creates mount and user
+# namespaces to isolate every build step. It refuses outright to start under an
+# unprivileged uid — "rootless mode requires to be executed as the mapped root
+# in a user namespace" — so `run-as: 65532` is not merely restrictive here, it
+# does not run at all.
+#
+# The rootless alternative is upstream's own `:rootless` variant, which runs
+# buildkitd under RootlessKit. That needs setuid-root newuidmap/newgidmap plus
+# /etc/subuid+/etc/subgid; Wolfi's just-newuidmap-newgidmap ships them 0755, not
+# setuid (upstream uses Alpine's shadow-uidmap). Putting setuid-root binaries in
+# a hardened shell-less image is a real concession, so this image takes the
+# other branch: root, matching upstream's DEFAULT buildkit image, and the
+# operator supplies the sandbox.
+#
+# Deploy with --privileged (Docker) or an equivalent securityContext (k8s).
+# Without it the daemon starts and every solve fails — expected, not a defect.
+#
+# The offsetting hardening is real: buildkitd is built with `-tags seccomp`
+# (see melange.yaml), so build containers still get a seccomp profile. Dropping
+# that tag would have been the easier build and a silent security regression.
+entrypoint:
+  command: /usr/bin/buildkitd
+
+cmd: --root /var/lib/buildkit
+
+work-dir: /var/lib/buildkit
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  HOME: /root
+  # buildctl talks to the daemon over this socket by default; setting it here
+  # means `buildctl` works with no flags when both run in the same pod.
+  BUILDKIT_HOST: unix:///run/buildkit/buildkitd.sock
+
+# Writable state. A nonroot process cannot create these at runtime, so apko
+# must author them owned by the run-as user.
+paths:
+  - path: /var/lib/buildkit
+    type: directory
+    uid: 0
+    gid: 0
+    permissions: 0o700
+  - path: /run/buildkit
+    type: directory
+    uid: 0
+    gid: 0
+    permissions: 0o700
+  - path: /tmp
+    type: directory
+    uid: 0
+    gid: 0
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-buildkit-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-buildkit: same buildkitd/buildctl + shell + curl/openssl/dig/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/buildkit"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

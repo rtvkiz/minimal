@@ -68,9 +68,28 @@ for img in $images; do
     note "$img: catalog primary_package '$cat_pkg' != melange package.name '$pkg'"
   fi
 
-  if grep -q "^P:${pkg}\$" "$IDX" && [ "$prio" != "100" ]; then
+  # A collision is not only a Wolfi package with the same NAME. A differently
+  # named Wolfi package can `p:`-provide our name — `gitlab-runner-19.3` carries
+  # `p: ... gitlab-runner=19.3.0-r0` — and apk resolves a top-level request
+  # against provides too. Matching P: alone missed that, and apko silently
+  # installed Wolfi's gitlab-runner over our source build; the image shipped a
+  # binary none of our ldflags had touched. Match both, and report which it was.
+  #
+  # The provides field looks like `p:cmd:foo=1.2-r0 foo=1.2-r0`, so require the
+  # name to start a space-separated token: that matches the bare `foo=` provide
+  # and deliberately not the `cmd:foo=` one, which apk does not use to satisfy a
+  # package-name request.
+  if grep -q "^P:${pkg}\$" "$IDX"; then
+    wolfi_hit="ships"
     wv=$(awk -v p="^P:${pkg}\$" '$0~p{f=1;next} f&&/^V:/{print substr($0,3);exit}' "$IDX")
-    note "$img: Wolfi ships '$pkg' ($wv) but provider-priority is $prio (want 100)"
+  elif grep -qE "^p:(.* )?${pkg}=" "$IDX"; then
+    wolfi_hit="provides"
+    wv=$(grep -oE "(^|[ :])${pkg}=[^ ]+" "$IDX" | head -1 | sed "s/.*${pkg}=//")
+  else
+    wolfi_hit=""
+  fi
+  if [ -n "$wolfi_hit" ] && [ "$prio" != "100" ]; then
+    note "$img: Wolfi $wolfi_hit '$pkg' ($wv) but provider-priority is $prio (want 100)"
   fi
 
   for af in "images/$img"/apko/*.yaml; do

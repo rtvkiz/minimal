@@ -1,0 +1,82 @@
+# Minimal GitLab Runner image - CI/CD job executor, built from source via melange
+# Shell-less, distroless. CVE patching via daily rebuilds from upstream source.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - gitlab-runner
+    - ca-certificates-bundle
+    # git is not optional here: the runner clones the project repository itself
+    # for the shell and custom executors, and uses it for submodule and LFS
+    # handling. A runner image that cannot clone is not a runner.
+    - git
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+# `run` is the long-running daemon mode. `register`, `verify`, `list` and the
+# rest are available by overriding the command.
+#
+# NOTE ON EXECUTORS: this image is shell-less, so the **shell executor is not
+# usable in prod** — it needs /bin/sh to run job scripts. Use the docker,
+# kubernetes or custom executors, which run job payloads in their own
+# containers and only need the runner binary here. The -dev variant carries a
+# shell if you specifically want the shell executor.
+entrypoint:
+  command: /usr/bin/gitlab-runner
+
+# The config path is passed explicitly rather than left to discovery: the
+# runner picks /etc/gitlab-runner/config.toml when it is root and
+# $HOME/.gitlab-runner/config.toml otherwise. Running as nonroot would
+# therefore silently move the config, and a mounted /etc/gitlab-runner would be
+# ignored — the single most common way to get an "unregistered" runner.
+cmd: run --config /etc/gitlab-runner/config.toml
+
+work-dir: /home/nonroot
+
+environment:
+  PATH: /usr/bin:/bin
+  HOME: /home/nonroot
+
+# Writable state. A nonroot process cannot create these at runtime, so apko
+# must author them owned by the run-as user.
+paths:
+  - path: /etc/gitlab-runner
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o700
+  - path: /home/nonroot
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-gitlab-runner"
+  org.opencontainers.image.description: "Hardened shell-less GitLab Runner CI/CD job executor built from source via melange with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/gitlab-runner"
+  org.opencontainers.image.licenses: "MIT"
+
+archs:
+  - x86_64
+  - aarch64
