@@ -112,6 +112,8 @@ TAILSCALE_VERSION ?= $(call melange_version,images/tailscale/melange.yaml)
 DESCHEDULER_VERSION ?= $(call melange_version,images/descheduler/melange.yaml)
 SYNCTHING_VERSION ?= $(call melange_version,images/syncthing/melange.yaml)
 NSQ_VERSION ?= $(call melange_version,images/nsq/melange.yaml)
+GITLAB_RUNNER_VERSION ?= $(call melange_version,images/gitlab-runner/melange.yaml)
+BUILDKIT_VERSION ?= $(call melange_version,images/buildkit/melange.yaml)
 OAUTH2_PROXY_VERSION ?= $(call melange_version,images/oauth2-proxy/melange.yaml)
 FLUX_VERSION ?= $(call melange_version,images/flux/melange.yaml)
 KUSTOMIZE_VERSION ?= $(call melange_version,images/kustomize/melange.yaml)
@@ -228,6 +230,8 @@ endef
 .PHONY: descheduler descheduler-melange test-descheduler
 .PHONY: syncthing syncthing-melange syncthing-dev test-syncthing test-syncthing-dev
 .PHONY: nsq nsq-melange nsq-dev test-nsq test-nsq-dev
+.PHONY: gitlab-runner gitlab-runner-melange gitlab-runner-dev test-gitlab-runner test-gitlab-runner-dev
+.PHONY: buildkit buildkit-melange buildkit-dev test-buildkit test-buildkit-dev
 .PHONY: oauth2-proxy oauth2-proxy-melange test-oauth2-proxy
 .PHONY: flux flux-melange test-flux
 .PHONY: kustomize kustomize-melange test-kustomize
@@ -369,6 +373,8 @@ $(eval $(call DEV_IMAGE_RULE,trivy,trivy-melange,--repository-append ./packages 
 $(eval $(call DEV_IMAGE_RULE,cosign,cosign-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,syncthing,syncthing-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,nsq,nsq-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,gitlab-runner,gitlab-runner-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,buildkit,buildkit-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,syft,syft-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,grype,grype-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,osv-scanner,osv-scanner-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -2184,6 +2190,52 @@ nsq: nsq-melange
 	@rm -f nsq.tar sbom-*.spdx.json
 	@echo "✓ minimal-nsq built (source build)"
 
+gitlab-runner-melange: keygen
+	@echo "Building GitLab Runner $(GITLAB_RUNNER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/gitlab-runner/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ GitLab Runner package built from source"
+
+gitlab-runner: gitlab-runner-melange
+	@echo "Assembling minimal-gitlab-runner image with apko..."
+	apko build images/gitlab-runner/apko/gitlab-runner.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-gitlab-runner:$(VERSION) \
+		gitlab-runner.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < gitlab-runner.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-gitlab-runner:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-gitlab-runner:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-gitlab-runner:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-gitlab-runner:latest
+	@rm -f gitlab-runner.tar sbom-*.spdx.json
+	@echo "✓ minimal-gitlab-runner built (source build)"
+
+buildkit-melange: keygen
+	@echo "Building BuildKit $(BUILDKIT_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/buildkit/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ BuildKit package built from source"
+
+buildkit: buildkit-melange
+	@echo "Assembling minimal-buildkit image with apko..."
+	apko build images/buildkit/apko/buildkit.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-buildkit:$(VERSION) \
+		buildkit.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < buildkit.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-buildkit:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-buildkit:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-buildkit:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-buildkit:latest
+	@rm -f buildkit.tar sbom-*.spdx.json
+	@echo "✓ minimal-buildkit built (source build)"
+
 dex-melange: keygen
 	@echo "Building Dex $(DEX_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build images/dex/melange.yaml \
@@ -3481,6 +3533,8 @@ $(eval $(call DEV_TEST_RULE,trivy))
 $(eval $(call DEV_TEST_RULE,cosign))
 $(eval $(call DEV_TEST_RULE,syncthing))
 $(eval $(call DEV_TEST_RULE,nsq))
+$(eval $(call DEV_TEST_RULE,gitlab-runner))
+$(eval $(call DEV_TEST_RULE,buildkit))
 $(eval $(call DEV_TEST_RULE,syft))
 $(eval $(call DEV_TEST_RULE,grype))
 $(eval $(call DEV_TEST_RULE,osv-scanner))
@@ -3928,6 +3982,18 @@ test-nsq:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-nsq:latest" && \
 		images/nsq/test.sh
 	@echo "✓ nsq tests passed"
+
+test-gitlab-runner:
+	@echo "Testing gitlab-runner image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-gitlab-runner:latest" && \
+		images/gitlab-runner/test.sh
+	@echo "✓ gitlab-runner tests passed"
+
+test-buildkit:
+	@echo "Testing buildkit image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-buildkit:latest" && \
+		images/buildkit/test.sh
+	@echo "✓ buildkit tests passed"
 
 test-seaweedfs:
 	@echo "Testing seaweedfs image..."

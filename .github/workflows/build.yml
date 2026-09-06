@@ -103,6 +103,8 @@ jobs:
             {"name":"seaweedfs","variants":["prod","dev"]},
             {"name":"syncthing","variants":["prod","dev"]},
             {"name":"nsq","variants":["prod","dev"]},
+            {"name":"gitlab-runner","variants":["prod","dev"]},
+            {"name":"buildkit","variants":["prod","dev"]},
             {"name":"oauth2-proxy","variants":["prod","dev"]},
             {"name":"flux","variants":["prod","dev"]},
             {"name":"kustomize","variants":["prod","dev"]},

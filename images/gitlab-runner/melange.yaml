@@ -1,0 +1,98 @@
+# Melange build configuration for minimal GitLab Runner
+# Pure Go from source. Single static `gitlab-runner` binary.
+# License: MIT (GitLab B.V.).
+#
+# Built from source rather than from a Wolfi package because Wolfi ships no
+# `gitlab-runner`. (It does ship `gitlab-agent-*`, which is a different product
+# — the GitLab Kubernetes agent/KAS, not the CI runner.)
+#
+# Upstream lives on gitlab.com, not GitHub, so the versions.yaml row uses the
+# GitLab tags API rather than github-releases-latest. See .github/versions.yaml.
+
+package:
+  # Named `gitlab-runner` (not `gitlab-runner-minimal`) so vulnerability
+  # scanners can identify it. Syft derives a package's CPE from its apk name,
+  # and a suffix produces cpe:2.3:a:gitlab-runner-minimal:*, matching nothing
+  # in NVD. NVD indexes this as cpe:2.3:a:gitlab:gitlab_runner:*.
+  name: gitlab-runner
+  version: 19.3.1
+  epoch: 0
+  description: "Minimal GitLab Runner CI/CD job executor built from source"
+  copyright:
+    - license: MIT
+  dependencies:
+    # REQUIRED, and easy to miss: Wolfi's package is named `gitlab-runner-19.3`,
+    # so grepping the APKINDEX for a bare `gitlab-runner` finds nothing — but it
+    # carries `p: gitlab-runner=19.3.0-r0`, i.e. it *provides* the bare name.
+    # apko resolves a top-level name across all repositories and picks the
+    # highest version, so without this it installed Wolfi's build over ours and
+    # the image silently shipped a different binary (caught only because the
+    # smoke test's version assertion failed: Wolfi's carries vcs stamps our
+    # ldflags never set). provider-priority is evaluated before version in
+    # apko's comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of gitlab-runner source tarball - updated by update-versions.yml workflow
+  sha256: 7a48c736326ec6f56e04cead677e6954adcea2c7837be4192064458753f87b75
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  # Download and verify gitlab-runner source.
+  # gitlab.com's archive endpoint, not GitHub's — the tarball's top-level
+  # directory is `gitlab-runner-v<version>` (with the `v`), unlike a GitHub
+  # archive, so the paths below keep that shape.
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://gitlab.com/gitlab-org/gitlab-runner/-/archive/v${{package.version}}/gitlab-runner-v${{package.version}}.tar.gz" \
+        -o /home/build/gitlab-runner.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/gitlab-runner.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf gitlab-runner.tar.gz
+      rm gitlab-runner.tar.gz
+
+  # The runner is a single main package at the repo root (`go build .`), not
+  # under cmd/. Version metadata goes into common.NAME/VERSION/BRANCH — the same
+  # three -X flags upstream's Makefile sets in GO_LDFLAGS. Getting NAME wrong
+  # makes the runner register itself under the wrong name with the GitLab
+  # instance, so it is not merely cosmetic.
+  #
+  # CGO_ENABLED=0 matches upstream's own default (`export CGO_ENABLED ?= 0`);
+  # the FIPS/boringcrypto variant is the only build that needs cgo.
+  - runs: |
+      cd /home/build/gitlab-runner-v${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X gitlab.com/gitlab-org/gitlab-runner/common.NAME=gitlab-runner \
+          -X gitlab.com/gitlab-org/gitlab-runner/common.VERSION=${{package.version}} \
+          -X gitlab.com/gitlab-org/gitlab-runner/common.BRANCH=v${{package.version}}" \
+        -o /home/build/gitlab-runner-bin \
+        .
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/gitlab-runner-bin "${{targets.destdir}}/usr/bin/gitlab-runner"
+      chmod 0755 "${{targets.destdir}}/usr/bin/gitlab-runner"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying gitlab-runner binary..."
+      "${{targets.destdir}}/usr/bin/gitlab-runner" --version

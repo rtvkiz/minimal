@@ -335,6 +335,37 @@
     releases: "https://github.com/restic/restic/releases"
     notes: "https://github.com/restic/restic/releases/tag/v{version}"
 
+- name: buildkit
+  cron-enabled: true   # validated 2026-09-06 (see PR)
+  files: [images/buildkit/melange.yaml]
+  # Release candidates are GitHub pre-releases and /releases/latest skips them.
+  source: { type: github-releases-latest, repo: moby/buildkit, strip-v: true }
+  tarball: { url: "https://github.com/moby/buildkit/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/moby/buildkit/releases"
+    notes: "https://github.com/moby/buildkit/releases/tag/v{version}"
+
+- name: gitlab-runner
+  cron-enabled: true   # validated 2026-09-06 (see PR)
+  files: [images/gitlab-runner/melange.yaml]
+  # Upstream is gitlab.com, not GitHub, so neither github-* type applies. The
+  # GitLab tags API is plain JSON, which the `json` source type already handles.
+  # The jq filter keeps only bare vN.N.N tags — that drops the -rc/-beta tags
+  # GitLab publishes alongside stable ones — then sorts numerically, because
+  # order_by=version is lexical enough to be worth not trusting for this.
+  source:
+    type: json
+    url: "https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab-runner/repository/tags?per_page=100&order_by=version&sort=desc"
+    jq: '[.[].name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) | ltrimstr("v")] | sort_by(split(".") | map(tonumber)) | last'
+  tarball:
+    url: "https://gitlab.com/gitlab-org/gitlab-runner/-/archive/v{version}/gitlab-runner-v{version}.tar.gz"
+    field: sha256
+  major-issue: true
+  links:
+    releases: "https://gitlab.com/gitlab-org/gitlab-runner/-/releases"
+    notes: "https://gitlab.com/gitlab-org/gitlab-runner/-/releases/v{version}"
+
 - name: syncthing
   cron-enabled: true   # validated 2026-09-05 (see PR)
   files: [images/syncthing/melange.yaml]

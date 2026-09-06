@@ -1,0 +1,9 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/rtvkiz/minimal/vex/gitlab-runner",
+  "author": "rtvkiz",
+  "timestamp": "2026-09-06T14:45:53Z",
+  "version": 1,
+  "tooling": "tools/vex/validate.sh",
+  "statements": []
+}

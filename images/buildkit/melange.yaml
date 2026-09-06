@@ -1,0 +1,114 @@
+# Melange build configuration for minimal BuildKit
+# Go from source. Two binaries: `buildkitd` (the build daemon) and `buildctl`
+# (its client). License: Apache-2.0 (the Moby authors).
+#
+# Wolfi ships a `buildkitd` package, but this is a source build so the image
+# tracks upstream releases directly rather than Wolfi's packaging cadence.
+
+package:
+  # Named `buildkit` (not `buildkit-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name; a suffix
+  # produces cpe:2.3:a:buildkit-minimal:buildkit-minimal:*, matching nothing.
+  name: buildkit
+  version: 0.33.0
+  epoch: 0
+  description: "Minimal BuildKit concurrent container image builder built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi has no package called `buildkit`, but its `buildkitd` package
+    # *provides* `buildkit`, and apk resolves a top-level request against
+    # provides as well as names. Our 0.33.0 currently outranks their 0.27.1 on
+    # version alone, so the right package installs today — by luck, not by rule.
+    # The day Wolfi ships a newer buildkitd, apko would silently install theirs
+    # instead of this source build. provider-priority is evaluated before
+    # version, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of buildkit source tarball - updated by update-versions.yml workflow
+  sha256: c365476e1b10e27a2ab809e3a7a6dcd0647a60fa6e8917799b894d4127af7306
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+      # buildkitd is built with the `seccomp` tag, which is cgo and links
+      # libseccomp. The -static archive keeps the result a static binary so the
+      # runtime image needs no libseccomp of its own. See the build step.
+      - libseccomp-dev
+      - libseccomp-static
+
+pipeline:
+  # Download and verify buildkit source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/moby/buildkit/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/buildkit.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/buildkit.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf buildkit.tar.gz
+      rm buildkit.tar.gz
+
+  # buildctl is the client: pure Go, no cgo, nothing platform-specific.
+  - runs: |
+      cd /home/build/buildkit-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/moby/buildkit/version.Version=v${{package.version}} \
+          -X github.com/moby/buildkit/version.Revision=v${{package.version}} \
+          -X github.com/moby/buildkit/version.Package=github.com/moby/buildkit" \
+        -o /home/build/buildctl-bin \
+        ./cmd/buildctl
+
+  # buildkitd keeps upstream's build tags, and the `seccomp` one is the reason
+  # this step is CGO_ENABLED=1 while everything else in this catalogue is 0:
+  # seccomp support links libseccomp through cgo. Dropping the tag would build a
+  # simpler pure-Go daemon that silently runs every build container WITHOUT a
+  # seccomp profile — a security regression upstream does not ship, and not one
+  # a hardened image should introduce. `-extldflags -static` plus
+  # libseccomp-static keeps the binary static anyway, so the runtime image gains
+  # no shared-library dependency from this.
+  #
+  # osusergo/netgo force Go's own user and DNS resolvers instead of glibc's,
+  # which is what makes a cgo-enabled binary safe to run in a distroless image.
+  # no_btrfs drops the btrfs snapshotter (needs btrfs headers, unused here).
+  - runs: |
+      cd /home/build/buildkit-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=1 go build \
+        -trimpath \
+        -tags "osusergo netgo static_build seccomp no_btrfs" \
+        -ldflags="-s -w -buildid= \
+          -X github.com/moby/buildkit/version.Version=v${{package.version}} \
+          -X github.com/moby/buildkit/version.Revision=v${{package.version}} \
+          -X github.com/moby/buildkit/version.Package=github.com/moby/buildkit \
+          -extldflags '-static'" \
+        -o /home/build/buildkitd-bin \
+        ./cmd/buildkitd
+
+  # Install binaries
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/buildctl-bin "${{targets.destdir}}/usr/bin/buildctl"
+      cp /home/build/buildkitd-bin "${{targets.destdir}}/usr/bin/buildkitd"
+      chmod 0755 "${{targets.destdir}}/usr/bin/buildctl" "${{targets.destdir}}/usr/bin/buildkitd"
+
+  # Verify the build. `file`-free static check: a dynamically linked buildkitd
+  # would carry an INTERP segment and fail to run in the distroless image.
+  - runs: |
+      echo "Verifying buildkit binaries..."
+      "${{targets.destdir}}/usr/bin/buildctl" --version
+      "${{targets.destdir}}/usr/bin/buildkitd" --version

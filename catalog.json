@@ -1332,6 +1332,30 @@
       "upstream_url": "https://nsq.io",
       "summary": "Shell-less NSQ realtime distributed messaging platform, built from source via melange.",
       "description": "NSQ realtime distributed messaging: nsqd, nsqlookupd and nsqadmin in one shell-less non-root image, signed and SBOM-attested, rebuilt every six hours."
+    },
+    {
+      "name": "gitlab-runner",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "gitlab-runner",
+      "upstream_url": "https://docs.gitlab.com/runner/",
+      "summary": "Shell-less GitLab Runner CI/CD job executor, built from source via melange.",
+      "description": "GitLab Runner executes CI/CD jobs from your GitLab pipelines on your own infrastructure. Shell-less non-root binary, signed, SBOM-attested, rebuilt 6-hourly."
+    },
+    {
+      "name": "buildkit",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "buildkit",
+      "upstream_url": "https://github.com/moby/buildkit",
+      "summary": "Shell-less BuildKit concurrent container image builder, built from source via melange.",
+      "description": "BuildKit concurrent container image builder, buildkitd plus buildctl. Shell-less non-root with seccomp, signed and SBOM-attested, rebuilt every six hours."
     }
   ]
 }
