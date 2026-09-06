@@ -11,7 +11,7 @@ package:
   # bare, as cpe:2.3:a:mailpit:mailpit:*, so none of them matched, and the
   # Wolfi secdb missed it too.
   name: mailpit
-  version: 1.31.0
+  version: 1.31.1
   epoch: 0
   description: "Minimal Mailpit — email & SMTP testing tool built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of mailpit source tarball - updated by update-versions.yml workflow
-  sha256: 010629f1c47c5a7e05818d1a2e2661ced9a16840355f328a68b7f780a4e50d8c
+  sha256: 23b822e23c4f89679bfa67e9952e557e9c2bd6175d670f914d16cb8babd35317
 
 environment:
   contents:
