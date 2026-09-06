@@ -121,6 +121,8 @@ jobs:
             [trivy]="/home/build/trivy-${D}{{package.version}}"
             [thanos]="/home/build/thanos-${D}{{package.version}}"
             [cosign]="/home/build/cosign-${D}{{package.version}}"
+            [syncthing]="/home/build/syncthing-${D}{{package.version}}"
+            [nsq]="/home/build/nsq-${D}{{package.version}}"
             [syft]="/home/build/syft-${D}{{package.version}}"
             [grype]="/home/build/grype-${D}{{package.version}}"
             [node-exporter]="/home/build/node_exporter-${D}{{package.version}}"
@@ -195,6 +197,8 @@ jobs:
             [trivy]="github.com/aquasecurity/trivy"
             [thanos]="github.com/thanos-io/thanos"
             [cosign]="github.com/sigstore/cosign/v3"
+            [syncthing]="github.com/syncthing/syncthing"
+            [nsq]="github.com/nsqio/nsq"
             [syft]="github.com/anchore/syft"
             [grype]="github.com/anchore/grype"
             [node-exporter]="github.com/prometheus/node_exporter"
@@ -268,6 +272,8 @@ jobs:
             [trivy]='GOEXPERIMENT=jsonv2 go build'
             [thanos]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [cosign]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [syncthing]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [nsq]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [syft]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [grype]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [node-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

@@ -1,0 +1,82 @@
+# Melange build configuration for minimal NSQ
+# Pure Go from source. NSQ is a set of small daemons and utilities built from
+# one module: nsqd (the message daemon), nsqlookupd (topology discovery),
+# nsqadmin (web UI) plus the nsq_to_* / to_nsq / nsq_tail / nsq_stat helpers.
+# The upstream `nsqio/nsq` image ships all nine, so this one does too — dropping
+# the helpers would break it as a drop-in replacement.
+# License: MIT (Bitly / the NSQ authors).
+#
+# Wolfi ships no `nsq` package, so this is a source build by necessity rather
+# than by preference.
+
+package:
+  # Named `nsq` (not `nsq-minimal`) so vulnerability scanners can identify it.
+  # Syft derives a package's CPE from its apk name, and a suffix produces
+  # cpe:2.3:a:nsq-minimal:nsq-minimal:*, which matches nothing in NVD.
+  name: nsq
+  version: 1.3.0
+  epoch: 0
+  description: "Minimal NSQ realtime distributed messaging platform built from source"
+  copyright:
+    - license: MIT
+
+vars:
+  # SHA256 of nsq source tarball - updated by update-versions.yml workflow
+  sha256: c6289e295aaa40c8d9651de76e66bc9f23e7f5c40b1cc051ea5901965093e1f0
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  # Download and verify nsq source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/nsqio/nsq/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/nsq.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/nsq.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf nsq.tar.gz
+      rm nsq.tar.gz
+
+  # No -X version ldflag: nsq carries its version as a Go constant
+  # (internal/version.Binary), set by upstream at release time, so there is
+  # nothing to inject — the binaries self-report ${{package.version}} already.
+  # nsqadmin's web assets are committed pre-built under nsqadmin/static/build
+  # and pulled in with //go:embed, so no npm step is needed.
+  - runs: |
+      cd /home/build/nsq-${{package.version}}
+      for app in nsqd nsqlookupd nsqadmin nsq_to_nsq nsq_to_file nsq_to_http nsq_tail nsq_stat to_nsq; do
+        echo "Building $app..."
+        GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+          -trimpath \
+          -ldflags="-s -w -buildid=" \
+          -o "/home/build/nsq-bin/$app" \
+          "./apps/$app"
+      done
+
+  # Install binaries
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/nsq-bin/* "${{targets.destdir}}/usr/bin/"
+      chmod 0755 "${{targets.destdir}}"/usr/bin/*
+
+  # Verify the build
+  - runs: |
+      echo "Verifying nsq binaries..."
+      "${{targets.destdir}}/usr/bin/nsqd" --version
+      "${{targets.destdir}}/usr/bin/nsqlookupd" --version
+      "${{targets.destdir}}/usr/bin/nsqadmin" --version

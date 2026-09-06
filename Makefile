@@ -110,6 +110,8 @@ RCLONE_VERSION ?= $(call melange_version,images/rclone/melange.yaml)
 RESTIC_VERSION ?= $(call melange_version,images/restic/melange.yaml)
 TAILSCALE_VERSION ?= $(call melange_version,images/tailscale/melange.yaml)
 DESCHEDULER_VERSION ?= $(call melange_version,images/descheduler/melange.yaml)
+SYNCTHING_VERSION ?= $(call melange_version,images/syncthing/melange.yaml)
+NSQ_VERSION ?= $(call melange_version,images/nsq/melange.yaml)
 OAUTH2_PROXY_VERSION ?= $(call melange_version,images/oauth2-proxy/melange.yaml)
 FLUX_VERSION ?= $(call melange_version,images/flux/melange.yaml)
 KUSTOMIZE_VERSION ?= $(call melange_version,images/kustomize/melange.yaml)
@@ -224,6 +226,8 @@ endef
 .PHONY: restic restic-melange test-restic
 .PHONY: tailscale tailscale-melange test-tailscale
 .PHONY: descheduler descheduler-melange test-descheduler
+.PHONY: syncthing syncthing-melange syncthing-dev test-syncthing test-syncthing-dev
+.PHONY: nsq nsq-melange nsq-dev test-nsq test-nsq-dev
 .PHONY: oauth2-proxy oauth2-proxy-melange test-oauth2-proxy
 .PHONY: flux flux-melange test-flux
 .PHONY: kustomize kustomize-melange test-kustomize
@@ -363,6 +367,8 @@ $(eval $(call DEV_IMAGE_RULE,kubectl,kubectl-melange,--repository-append ./packa
 $(eval $(call DEV_IMAGE_RULE,opentofu,opentofu-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,trivy,trivy-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,cosign,cosign-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,syncthing,syncthing-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,nsq,nsq-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,syft,syft-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,grype,grype-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,osv-scanner,osv-scanner-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -2132,6 +2138,52 @@ seaweedfs: seaweedfs-melange
 	@rm -f seaweedfs.tar sbom-*.spdx.json
 	@echo "✓ minimal-seaweedfs built (source build)"
 
+syncthing-melange: keygen
+	@echo "Building Syncthing $(SYNCTHING_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/syncthing/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Syncthing package built from source"
+
+syncthing: syncthing-melange
+	@echo "Assembling minimal-syncthing image with apko..."
+	apko build images/syncthing/apko/syncthing.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-syncthing:$(VERSION) \
+		syncthing.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < syncthing.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-syncthing:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-syncthing:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-syncthing:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-syncthing:latest
+	@rm -f syncthing.tar sbom-*.spdx.json
+	@echo "✓ minimal-syncthing built (source build)"
+
+nsq-melange: keygen
+	@echo "Building NSQ $(NSQ_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/nsq/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ NSQ package built from source"
+
+nsq: nsq-melange
+	@echo "Assembling minimal-nsq image with apko..."
+	apko build images/nsq/apko/nsq.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-nsq:$(VERSION) \
+		nsq.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < nsq.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-nsq:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-nsq:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-nsq:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-nsq:latest
+	@rm -f nsq.tar sbom-*.spdx.json
+	@echo "✓ minimal-nsq built (source build)"
+
 dex-melange: keygen
 	@echo "Building Dex $(DEX_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build images/dex/melange.yaml \
@@ -3427,6 +3479,8 @@ $(eval $(call DEV_TEST_RULE,kubectl))
 $(eval $(call DEV_TEST_RULE,opentofu))
 $(eval $(call DEV_TEST_RULE,trivy))
 $(eval $(call DEV_TEST_RULE,cosign))
+$(eval $(call DEV_TEST_RULE,syncthing))
+$(eval $(call DEV_TEST_RULE,nsq))
 $(eval $(call DEV_TEST_RULE,syft))
 $(eval $(call DEV_TEST_RULE,grype))
 $(eval $(call DEV_TEST_RULE,osv-scanner))
@@ -3862,6 +3916,18 @@ test-restic:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-restic:latest" && \
 		images/restic/test.sh
 	@echo "✓ restic tests passed"
+
+test-syncthing:
+	@echo "Testing syncthing image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-syncthing:latest" && \
+		images/syncthing/test.sh
+	@echo "✓ syncthing tests passed"
+
+test-nsq:
+	@echo "Testing nsq image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-nsq:latest" && \
+		images/nsq/test.sh
+	@echo "✓ nsq tests passed"
 
 test-seaweedfs:
 	@echo "Testing seaweedfs image..."
