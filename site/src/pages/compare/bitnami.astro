@@ -21,7 +21,7 @@ const schema = [{
   })),
 }];
 ---
-<Layout title={title} description={description} schema={schema} breadcrumbs={[{ name: 'Compare', href: '/compare' }]}>
+<Layout title={title} description={description} schema={schema} breadcrumbs={[{ name: 'Compare', href: '/compare/' }]}>
   <section>
     <div class="container-narrow">
       <h1 class="section-title">Replacing deprecated Bitnami images</h1>
@@ -52,7 +52,7 @@ const schema = [{
             {map.pairs.map((p) => (
               <tr>
                 <td class="kv-mono">bitnami/{p.bitnami}</td>
-                <td><a href={`/images/${p.minimal}`}>minimal-{p.minimal}</a></td>
+                <td><a href={`/images/${p.minimal}/`}>minimal-{p.minimal}</a></td>
                 <td style="text-align:right" class="kv-mono">{p.pulls ? p.pulls.toLocaleString('en-GB') : '—'}</td>
               </tr>
             ))}
@@ -81,7 +81,7 @@ const schema = [{
       <p class="small muted" style="margin-top:14px">
         Two of these are deliberate rather than pending: <b>mongodb</b> (SSPL) and
         <b>elasticsearch</b> (Elastic License) are not open source, so they will not be added.
-        <a href="/images/opensearch">opensearch</a> is the closest available substitute for
+        <a href="/images/opensearch/">opensearch</a> is the closest available substitute for
         Elasticsearch. The rest are simply not built yet.
       </p>
 
@@ -126,8 +126,8 @@ const schema = [{
 grype ghcr.io/rtvkiz/minimal-postgres-slim:latest`} />
       <p style="margin-top:20px">
         The general migration steps — tags, verification, rollout order — are in
-        <a href="/blog/migrating-from-minimus-to-minimal">the migration guide</a>, and apply
-        whichever base you are coming from. Full catalog: <a href="/images">{images.length} images</a>.
+        <a href="/blog/migrating-from-minimus-to-minimal/">the migration guide</a>, and apply
+        whichever base you are coming from. Full catalog: <a href="/images/">{images.length} images</a>.
       </p>
 
       <p class="small muted" style="margin-top:32px">
@@ -139,7 +139,7 @@ grype ghcr.io/rtvkiz/minimal-postgres-slim:latest`} />
         {map.generated}. Bitnami's catalog changes are documented by Broadcom in
         <a href="https://github.com/bitnami/containers/issues/83267" rel="noopener nofollow">bitnami/containers #83267</a>.
         Details there change; that issue, not this page, is the authority on what Bitnami currently
-        publishes. Statements about Minimal are checkable from the <a href="/about">verify page</a>.
+        publishes. Statements about Minimal are checkable from the <a href="/about/">verify page</a>.
       </p>
     </div>
   </section>

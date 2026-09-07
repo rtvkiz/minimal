@@ -30,10 +30,10 @@ const schema = [{
   description={post.data.description}
   published={post.data.published}
   schema={schema}
-  breadcrumbs={[{ name: 'Blog', href: '/blog' }]}>
+  breadcrumbs={[{ name: 'Blog', href: '/blog/' }]}>
   <section>
     <div class="container-narrow">
-      <p style="margin:0 0 6px"><a href="/blog" class="small muted">← Blog</a></p>
+      <p style="margin:0 0 6px"><a href="/blog/" class="small muted">← Blog</a></p>
       <h1 class="section-title">{post.data.title}</h1>
       <p class="small muted">
         <time datetime={post.data.published}>{fmt(post.data.published)}</time>

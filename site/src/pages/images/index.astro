@@ -43,7 +43,7 @@ const schema = [{
         {categories.map((c) => (
           <div class="cat-group" data-category={c}>
             <h2 class="section-title" style="font-size:1.15rem;margin-top:28px">
-              <a href={`/images/category/${categorySlug(c)}`}>{c}</a>
+              <a href={`/images/category/${categorySlug(c)}/`}>{c}</a>
             </h2>
             <div class="grid">
               {grouped[c].map((img) => <ImageCard image={img} />)}

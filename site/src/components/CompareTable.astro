@@ -26,7 +26,7 @@ const rows = limit ? set.pairs.slice(0, limit) : set.pairs;
     <tbody>
       {rows.map((p: any) => (
         <tr>
-          <td><a href={`/images/${p.image}`}>{p.image}</a></td>
+          <td><a href={`/images/${p.image}/`}>{p.image}</a></td>
           <td style="text-align:right">{p.ours}</td>
           <td style="text-align:right">{p.theirs}</td>
           <td style={`text-align:right;font-weight:600;color:${p.delta < 0 ? 'var(--clean)' : p.delta > 0 ? 'var(--high)' : 'var(--subtle)'}`}>

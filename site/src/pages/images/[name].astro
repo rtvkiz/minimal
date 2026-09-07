@@ -70,13 +70,13 @@ const schema = [{
   title={pageTitle}
   description={pageDescription}
   schema={schema}
-  breadcrumbs={[{ name: 'Images', href: '/images' }, { name: image.category, href: '/images' }]}>
+  breadcrumbs={[{ name: 'Images', href: '/images/' }, { name: image.category, href: '/images/' }]}>
   <div class="detail-head">
     <div class="container">
-      <p style="margin:0 0 6px"><a href="/images" class="small muted">← All images</a></p>
+      <p style="margin:0 0 6px"><a href="/images/" class="small muted">← All images</a></p>
       <h1>
         {image.name}
-        <a class="cat" href={`/images/category/${categorySlug(image.category)}`}>{image.category}</a>
+        <a class="cat" href={`/images/category/${categorySlug(image.category)}/`}>{image.category}</a>
       </h1>
       <p class="summary">{image.summary}</p>
       <div class="quickfacts">
@@ -303,18 +303,18 @@ const schema = [{
       {siblings.length > 0 && (
         <>
           <h2 class="section-title" style="font-size:1.05rem">
-            More <a href={`/images/category/${categorySlug(image.category)}`}>{image.category}</a> images
+            More <a href={`/images/category/${categorySlug(image.category)}/`}>{image.category}</a> images
           </h2>
           <div class="facets" style="margin-top:12px">
-            {siblings.map((s) => <a class="facet" href={`/images/${s.name}`}>{s.name}</a>)}
+            {siblings.map((s) => <a class="facet" href={`/images/${s.name}/`}>{s.name}</a>)}
           </div>
         </>
       )}
       <p class="small muted" style="margin-top:22px">
         Weighing this against another provider? The
-        <a href="/compare">comparison pages</a> publish head-to-head scan data with the raw
+        <a href="/compare/">comparison pages</a> publish head-to-head scan data with the raw
         dataset, including the images where Minimal comes off worse — or read the
-        <a href="/blog/migrating-from-minimus-to-minimal">migration guide</a> for what actually
+        <a href="/blog/migrating-from-minimus-to-minimal/">migration guide</a> for what actually
         breaks when you switch.
       </p>
     </div>

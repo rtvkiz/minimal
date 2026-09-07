@@ -30,7 +30,7 @@ const datasetSchema = {
   }],
 };
 ---
-<Layout title={title} description={description} schema={[datasetSchema]} breadcrumbs={[{ name: 'Compare', href: '/compare' }]}>
+<Layout title={title} description={description} schema={[datasetSchema]} breadcrumbs={[{ name: 'Compare', href: '/compare/' }]}>
   <section>
     <div class="container-narrow">
       <h1 class="section-title">Minimal vs Minimus</h1>
@@ -91,7 +91,7 @@ const datasetSchema = {
       </table>
       <p class="small muted" style="margin-top:14px">
         Statements above describe Minimal, and each is checkable with the commands on the
-        <a href="/about">verify page</a>. We deliberately do not characterise Minimus's pricing,
+        <a href="/about/">verify page</a>. We deliberately do not characterise Minimus's pricing,
         licensing or roadmap here — those change, and their site is the authority on them.
       </p>
 
@@ -101,7 +101,7 @@ const datasetSchema = {
 grype ghcr.io/rtvkiz/minimal-python:latest`} />
       <p style="margin-top:20px">
         Migrating an existing deployment? See
-        <a href="/blog/migrating-from-minimus-to-minimal">migrating from Minimus to Minimal</a>.
+        <a href="/blog/migrating-from-minimus-to-minimal/">migrating from Minimus to Minimal</a>.
       </p>
 
       <CompareMethod data={data} />

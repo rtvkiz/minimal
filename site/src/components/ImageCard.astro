@@ -6,7 +6,7 @@ const { image } = Astro.props;
 ---
 <article class="card" data-name={image.name} data-category={image.category} data-search={`${image.name} ${image.summary} ${image.category}`.toLowerCase()}>
   <span class="cat">{image.category}</span>
-  <a class="card-title" href={`/images/${image.name}`}>{image.name}</a>
+  <a class="card-title" href={`/images/${image.name}/`}>{image.name}</a>
   <p class="desc">{image.summary}</p>
   <div class="meta-row">
     <SeverityBar image={image} />
