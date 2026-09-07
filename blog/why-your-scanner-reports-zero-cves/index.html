@@ -1,0 +1,115 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Why your scanner reports zero CVEs — Minimal Containers</title><meta name="description" content="A clean Grype report can mean your image is clean, or it can mean the scanner never identified the software inside it. Here is the difference, and how to tell which one you have."><link rel="canonical" href="https://minimalcontainers.com/blog/why-your-scanner-reports-zero-cves/"><meta property="og:title" content="Why your scanner reports zero CVEs — Minimal Containers"><meta property="og:description" content="A clean Grype report can mean your image is clean, or it can mean the scanner never identified the software inside it. Here is the difference, and how to tell which one you have."><meta property="og:type" content="article"><meta property="og:url" content="https://minimalcontainers.com/blog/why-your-scanner-reports-zero-cves/"><meta property="og:site_name" content="Minimal Containers"><meta property="og:image" content="https://minimalcontainers.com/og.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Why your scanner reports zero CVEs — Minimal Containers"><meta name="twitter:description" content="A clean Grype report can mean your image is clean, or it can mean the scanner never identified the software inside it. Here is the difference, and how to tell which one you have."><meta name="twitter:image" content="https://minimalcontainers.com/og.png"><meta property="article:published_time" content="2026-09-06"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Why your scanner reports zero CVEs","description":"A clean Grype report can mean your image is clean, or it can mean the scanner never identified the software inside it. Here is the difference, and how to tell which one you have.","datePublished":"2026-09-06","dateModified":"2026-09-06","url":"https://minimalcontainers.com/blog/why-your-scanner-reports-zero-cves","author":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"},"publisher":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://minimalcontainers.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://minimalcontainers.com/blog/"},{"@type":"ListItem","position":3,"name":"Why your scanner reports zero CVEs — Minimal Containers","item":"https://minimalcontainers.com/blog/why-your-scanner-reports-zero-cves/"}]}</script><link rel="icon" type="image/svg+xml" href="/icon.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;640;680;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- GoatCounter: cookieless, no personal data, no consent banner needed.
+       Dashboard is private by default (goatcounter settings.go defaults
+       `Public` to "private"), so the numbers are not publicly visible.
+       Loaded async so it never blocks render, and the site works fine when
+       ad blockers drop it — expect undercounting on a technical audience. --><script data-goatcounter="https://minimal.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script><link rel="stylesheet" href="/_astro/about.CfO43Qde.css"></head> <body> <header class="site-header"> <div class="container"> <a href="/" class="brand"> <img src="/icon.svg" alt="" class="logo" width="26" height="26"> <span class="brand-name">minimal</span> </a> <nav class="nav"> <a href="/images/">Images</a> <a href="/docs/">Docs</a> <a href="/compare/">Compare</a> <a href="/blog/">Blog</a> <a href="/about/">Verify</a> <a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a> </nav> </div> </header> <main>  <section> <div class="container-narrow"> <p style="margin:0 0 6px"><a href="/blog/" class="small muted">← Blog</a></p> <h1 class="section-title">Why your scanner reports zero CVEs</h1> <p class="small muted"> <time datetime="2026-09-06">6 September 2026</time>  </p> <article class="prose" style="margin-top:28px"> <p>A vulnerability report with nothing in it has two possible meanings, and they
+look identical:</p>
+<ol>
+<li>The scanner identified the software in your image and found no known
+vulnerabilities.</li>
+<li>The scanner did not identify the software at all, so it had nothing to match
+against.</li>
+</ol>
+<p>The second one is worse than a report full of findings, because it is
+indistinguishable from success. Nobody escalates a green scan.</p>
+<p>We hit this in a way that was easy to measure. Two builds of HAProxy, the same
+upstream version, the same source, the same everything — except the name of the
+apk package inside. One reported <strong>0 findings</strong>. The other reported <strong>14</strong>. The
+binaries were byte-identical in every way that matters to an attacker.</p>
+<h2 id="what-the-scanner-is-actually-doing">What the scanner is actually doing</h2>
+<p>Grype does not look at your image and recognise HAProxy. It reads a package
+inventory produced by Syft, and then matches each entry in that inventory
+against vulnerability data. Two of those matching paths matter here:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Path</th><th>Keyed on</th></tr></thead><tbody><tr><td>Distro security database (e.g. <code>wolfi:distro:wolfi:rolling</code>)</td><td>the apk package <strong>name</strong></td></tr><tr><td><code>nvd:cpe</code></td><td>a CPE that Syft <strong>derives from</strong> the apk package name</td></tr></tbody></table>
+<p>Both are keyed on a string. Not a hash, not a symbol table, not the contents of
+the binary — the name recorded in the package database.</p>
+<p>So if the package inside your image is called <code>haproxy</code>, the distro database has
+an entry under <code>haproxy</code>, NVD has <code>cpe:2.3:a:haproxy:haproxy:*</code>, and both paths
+hit. If you named it something reasonable-sounding but nonstandard —
+<code>haproxy-minimal</code>, <code>haproxy-slim</code>, <code>our-haproxy</code> — then:</p>
+<ul>
+<li>the distro database has no entry under that name, so that path finds nothing;</li>
+<li>Syft derives <code>cpe:2.3:a:haproxy-minimal:haproxy-minimal:*</code>, which matches
+nothing in NVD, because NVD does not index a product by that name.</li>
+</ul>
+<p>Two paths, both broken by the same string, and no error anywhere. The scan
+succeeds. It just has nothing to say.</p>
+<h2 id="why-a-cpe-declaration-does-not-save-you">Why a CPE declaration does not save you</h2>
+<p>The obvious fix is to declare the correct CPE in your build config. For scanning
+the <em>image</em>, it does not help.</p>
+<p>Syft’s <code>apk-db-cataloger</code> reads <code>/usr/lib/apk/db/installed</code>. That file records
+the package name, version and dependencies. It has no CPE field. A CPE you
+declared at build time lives in your build metadata, and an SBOM embedded at,
+say, <code>/var/lib/db/sbom/</code> is not what <code>grype &#x3C;image></code> reads either.</p>
+<p>So the package name is not a label on the identity. For a C or C++ image it <em>is</em>
+the identity, and renaming the package is the only fix.</p>
+<h2 id="go-images-are-accidentally-protected">Go images are accidentally protected</h2>
+<p>If your image is a Go binary, you may have never seen this, and that is luck
+rather than design. Syft’s <code>go-module</code> cataloguer reads the build information
+that the Go toolchain embeds in every binary — module path and dependency
+versions. That gives the image a second, independent identity that has nothing
+to do with the apk name.</p>
+<p>The practical consequence is uneven: a Go image with a mangled package name
+still gets its dependencies scanned. A C image with the same mistake is
+completely invisible. If you are auditing a mixed fleet, the C and C++ images are
+where to look first.</p>
+<h2 id="how-to-check-your-own-images">How to check your own images</h2>
+<p>The useful question is not “does my scan pass” but “did the scanner find the
+thing I care about”. Ask it directly.</p>
+<p>List what the scanner thinks is installed:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>syft ghcr.io/rtvkiz/minimal-haproxy:latest -o json \</span></span>
+<span class="line"><span>  | jq -r '.artifacts[] | "\(.type)\t\(.name)\t\(.version)"' | sort</span></span></code></pre>
+<p>Look at the CPEs it derived, which is where a bad name shows up:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>syft &#x3C;your-image> -o json | jq -r '.artifacts[].cpes[]?' | sort -u</span></span></code></pre>
+<p>If you see a product field that no vendor would ever publish — your internal
+suffix, your company name, a <code>-slim</code> or <code>-minimal</code> — that entry is matching
+nothing.</p>
+<p>Then confirm the negative is real. Scan a version you <em>know</em> has published
+advisories:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>grype &#x3C;your-image>:&#x3C;an-old-tag></span></span></code></pre>
+<p>An old build of anything widely deployed should produce findings. If an image
+from a year ago is also clean, the problem is identification, not hygiene. This
+takes a minute and is the single most useful check you can run against a
+scanning pipeline you have not verified before.</p>
+<h2 id="what-we-do-about-it">What we do about it</h2>
+<p>Every package we build carries the name upstream uses — <code>haproxy</code>, <code>nginx</code>,
+<code>redis</code>, <code>postgresql</code> — never a decorated variant. The image is called
+<code>minimal-haproxy</code>; the <em>package</em> inside it is <code>haproxy</code>. Those are different
+namespaces and only one of them is load-bearing for scanners.</p>
+<p>That rule is enforced by a check that runs on every pull request, not by
+convention, because it is exactly the kind of thing that is invisible until
+someone re-reads it. A suffix, or a mismatch between the package we build and
+the package the image config asks for, fails the build.</p>
+<p>The honest caveat: matching by name means you inherit whatever the advisory
+feeds say about that name, including their mistakes and their timing. Naming
+things correctly gets you into the conversation. It does not end it.</p>
+<h2 id="the-general-point">The general point</h2>
+<p>Scanner output is a claim about what was <em>identified</em>, not about what is
+<em>present</em>. Before you trust a clean report — ours or anyone’s — confirm the
+scanner listed the software you expected, with a version you recognise, under a
+name the advisory databases actually use.</p>
+<p>A clean scan of an unidentified image is not a security result. It is an empty
+question.</p> </article> </div> </section>  </main> <footer class="site-footer"> <div class="container"> <div>
+Minimal Containers · MIT-licensed · built from
+<a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
+<a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+</div> <div>
+Updated 2026-09-07 02:22 UTC  · <a href="https://github.com/rtvkiz/minimal/actions/runs/34076004984" rel="noopener">1622b99</a>
+· &copy; 2026 </div> </div> </footer> <script type="module">document.addEventListener("click",e=>{const t=e.target.closest("[data-copy]");if(!t)return;const n=t.getAttribute("data-copy")||"";navigator.clipboard.writeText(n).then(()=>{const o=t.textContent;t.textContent="Copied",setTimeout(()=>{t.textContent=o},1400)}).catch(()=>{t.textContent="Failed"})});</script> </body> </html>

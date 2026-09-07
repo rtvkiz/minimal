@@ -1,0 +1,147 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Migrating from Minimus to Minimal — Minimal Containers</title><meta name="description" content="What actually breaks when you move a container image to Minimal: the missing shell, the non-root UID, and the tag you should not have pinned. With the commands to verify what you pulled."><link rel="canonical" href="https://minimalcontainers.com/blog/migrating-from-minimus-to-minimal/"><meta property="og:title" content="Migrating from Minimus to Minimal — Minimal Containers"><meta property="og:description" content="What actually breaks when you move a container image to Minimal: the missing shell, the non-root UID, and the tag you should not have pinned. With the commands to verify what you pulled."><meta property="og:type" content="article"><meta property="og:url" content="https://minimalcontainers.com/blog/migrating-from-minimus-to-minimal/"><meta property="og:site_name" content="Minimal Containers"><meta property="og:image" content="https://minimalcontainers.com/og.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Migrating from Minimus to Minimal — Minimal Containers"><meta name="twitter:description" content="What actually breaks when you move a container image to Minimal: the missing shell, the non-root UID, and the tag you should not have pinned. With the commands to verify what you pulled."><meta name="twitter:image" content="https://minimalcontainers.com/og.png"><meta property="article:published_time" content="2026-08-31"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Migrating from Minimus to Minimal","description":"What actually breaks when you move a container image to Minimal: the missing shell, the non-root UID, and the tag you should not have pinned. With the commands to verify what you pulled.","datePublished":"2026-08-31","dateModified":"2026-08-31","url":"https://minimalcontainers.com/blog/migrating-from-minimus-to-minimal","author":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"},"publisher":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://minimalcontainers.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://minimalcontainers.com/blog/"},{"@type":"ListItem","position":3,"name":"Migrating from Minimus to Minimal — Minimal Containers","item":"https://minimalcontainers.com/blog/migrating-from-minimus-to-minimal/"}]}</script><link rel="icon" type="image/svg+xml" href="/icon.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;640;680;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- GoatCounter: cookieless, no personal data, no consent banner needed.
+       Dashboard is private by default (goatcounter settings.go defaults
+       `Public` to "private"), so the numbers are not publicly visible.
+       Loaded async so it never blocks render, and the site works fine when
+       ad blockers drop it — expect undercounting on a technical audience. --><script data-goatcounter="https://minimal.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script><link rel="stylesheet" href="/_astro/about.CfO43Qde.css"></head> <body> <header class="site-header"> <div class="container"> <a href="/" class="brand"> <img src="/icon.svg" alt="" class="logo" width="26" height="26"> <span class="brand-name">minimal</span> </a> <nav class="nav"> <a href="/images/">Images</a> <a href="/docs/">Docs</a> <a href="/compare/">Compare</a> <a href="/blog/">Blog</a> <a href="/about/">Verify</a> <a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a> </nav> </div> </header> <main>  <section> <div class="container-narrow"> <p style="margin:0 0 6px"><a href="/blog/" class="small muted">← Blog</a></p> <h1 class="section-title">Migrating from Minimus to Minimal</h1> <p class="small muted"> <time datetime="2026-08-31">31 August 2026</time>  </p> <article class="prose" style="margin-top:28px"> <p>Swapping one hardened base for another is mostly a find-and-replace. The
+interesting part is the small number of things that break afterward, and they
+are the same ones every time: something calls <code>/bin/sh</code>, something writes to a
+directory it does not own, or someone pinned <code>:latest</code> and got moved across a
+major version.</p>
+<p>This covers what Minimal does. It does not describe Minimus’s internals — their
+docs are the authority there, and guessing at someone else’s images is how
+comparison content ends up wrong.</p>
+<h2 id="change-the-reference">Change the reference</h2>
+<p>One repository per image on GHCR, <code>minimal-</code> prefixed:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="diff"><code><span class="line"><span style="color:#FDAEB7"><span style="user-select: none;">-</span>FROM &#x3C;your-current-registry>/python:latest</span></span>
+<span class="line"><span style="color:#85E89D"><span style="user-select: none;">+</span>FROM ghcr.io/rtvkiz/minimal-python:latest</span></span></code></pre>
+<p>No login, no account:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>docker pull ghcr.io/rtvkiz/minimal-python:latest</span></span></code></pre>
+<p>Names follow the upstream project — <code>nginx</code>, <code>redis-slim</code>, <code>postgres-slim</code>,
+<code>kafka</code>. Before you go further, check the <a href="/images/">image directory</a> and confirm
+everything you depend on is actually there. The catalog is deliberately smaller
+than a commercial vendor’s. Finding the gap now is much cheaper than finding it
+with half your services moved.</p>
+<h2 id="pick-a-tag-that-will-not-surprise-you">Pick a tag that will not surprise you</h2>
+<p><code>:latest</code> on Minimal crosses major versions. That is rarely what a deployment
+wants, so decide deliberately:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>You want</th><th>Pin</th><th>Behavior</th></tr></thead><tbody><tr><td>A byte-identical artifact</td><td><code>minimal-caddy@sha256:…</code></td><td>Immutable, never moves</td></tr><tr><td>Patches without breaking upgrades</td><td><code>minimal-caddy:2</code></td><td>Newest release in that major line</td></tr><tr><td>Tighter still</td><td><code>minimal-caddy:2.11</code></td><td>Newest patch in that minor line</td></tr></tbody></table>
+<p>Most people want the major line. You keep getting security rebuilds and you
+never get moved across an upstream breaking release. Note that an exact version
+tag like <code>:2.11.4-r0</code> is not the safe conservative choice it looks like — it
+never moves, which also means it never picks up a fix. <a href="/docs/tags/">Tags and
+pinning</a> has the rest.</p>
+<h2 id="then-fix-the-things-that-break">Then fix the things that break</h2>
+<h3 id="no-shell">No shell</h3>
+<p>Most production images have no shell and no package manager. Anything using the
+shell form fails immediately, and the error is usually some variation of:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>exec: "/bin/sh": stat /bin/sh: no such file or directory</span></span></code></pre>
+<p>So this stops working:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#85E89D">command</span><span style="color:#E1E4E8">: [</span><span style="color:#9ECBFF">"/bin/sh"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"-c"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"exec myapp --flag"</span><span style="color:#E1E4E8">]</span></span></code></pre>
+<p>Two ways out. The better one is to keep the shell in the builder stage only —
+every image has a <code>-dev</code> companion carrying a shell, package manager and
+toolchain, which exists for exactly this:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="dockerfile"><code><span class="line"><span style="color:#F97583">FROM</span><span style="color:#E1E4E8"> ghcr.io/rtvkiz/minimal-node-slim:latest-dev </span><span style="color:#F97583">AS</span><span style="color:#E1E4E8"> build</span></span>
+<span class="line"><span style="color:#F97583">WORKDIR</span><span style="color:#E1E4E8"> /src</span></span>
+<span class="line"><span style="color:#F97583">COPY</span><span style="color:#E1E4E8"> package*.json ./</span></span>
+<span class="line"><span style="color:#F97583">RUN</span><span style="color:#E1E4E8"> npm ci</span></span>
+<span class="line"><span style="color:#F97583">COPY</span><span style="color:#E1E4E8"> . .</span></span>
+<span class="line"><span style="color:#F97583">RUN</span><span style="color:#E1E4E8"> npm run build</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">FROM</span><span style="color:#E1E4E8"> ghcr.io/rtvkiz/minimal-node-slim:latest</span></span>
+<span class="line"><span style="color:#F97583">COPY</span><span style="color:#E1E4E8"> --from=build --chown=65532:65532 /src/dist /app</span></span>
+<span class="line"><span style="color:#F97583">ENTRYPOINT</span><span style="color:#E1E4E8"> [</span><span style="color:#9ECBFF">"node"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"/app/server.js"</span><span style="color:#E1E4E8">]</span></span></code></pre>
+<p>The other is to drop the wrapper entirely and use exec form, so nothing needs a
+shell to start. If you were relying on the shell for variable expansion or
+pipes, that logic has to move into your entrypoint binary or an init container.</p>
+<blockquote>
+<p>Shipping the <code>-dev</code> variant to production is not a fix. It carries the shell
+and toolchain you were trying to get rid of.</p>
+</blockquote>
+<h3 id="non-root-by-default">Non-root by default</h3>
+<p>Production images run as UID <code>65532</code>. A handful that need kernel capabilities
+(kube-vip, for one) differ, and every image’s page lists the UID it actually
+uses.</p>
+<p>What this breaks is writes to root-owned paths, which surface as a plain
+<code>permission denied</code> somewhere unhelpful. Usually one of these fixes it:</p>
+<ul>
+<li>Write to a volume or <code>emptyDir</code> the workload owns rather than into <code>/</code>.</li>
+<li>Set <code>fsGroup</code> in the pod security context so mounted volumes are group-writable.</li>
+<li><code>COPY --chown=65532:65532</code> for files your process needs to write to later.</li>
+</ul>
+<h3 id="paths-that-moved">Paths that moved</h3>
+<p>Config locations and entrypoints follow upstream conventions, which may not
+match whatever repackaged image you were on before. Rather than guess, go and
+look:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>docker run --rm -it --entrypoint /bin/sh ghcr.io/rtvkiz/minimal-nginx:latest-dev</span></span></code></pre>
+<p>The <strong>Specifications</strong> and <strong>Packages</strong> tabs on each image’s page list the
+entrypoint, exposed ports and full package inventory if you would rather read
+than poke.</p>
+<h2 id="verify-what-you-pulled">Verify what you pulled</h2>
+<p>Worth doing once during the migration and then leaving in CI, since the whole
+argument for hardened images is that you do not have to take anyone’s word for
+it.</p>
+<p>Provenance, which ties the image to the workflow and commit that built it:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz</span></span></code></pre>
+<p>The SBOM:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>cosign verify-attestation --type spdxjson \</span></span>
+<span class="line"><span>  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \</span></span>
+<span class="line"><span>  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \</span></span>
+<span class="line"><span>  ghcr.io/rtvkiz/minimal-python:latest \</span></span>
+<span class="line"><span>  | jq -r '.payload | @base64d | fromjson | .predicate' > python-sbom.spdx.json</span></span></code></pre>
+<p>That is SLSA v1.0 <strong>Build L2</strong>, not L3. L3 needs a reusable workflow isolating
+the build from its caller and this project does not have one yet. If your
+compliance program requires L3, that is a genuine reason not to migrate.</p>
+<h2 id="scan-it-before-you-commit-to-it">Scan it before you commit to it</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>grype ghcr.io/rtvkiz/minimal-python:latest</span></span></code></pre>
+<p>The <a href="/compare/minimus/">full head-to-head data</a> is published, raw CSV included,
+and it contains the images where Minimal comes off worse. Solr is the current
+example: materially more findings than the Minimus equivalent, most of it in
+bundled Java libraries. If Solr is on your critical path, that is a reason to
+wait, and you should know it from us rather than discover it yourself.</p>
+<h2 id="rolling-it-out">Rolling it out</h2>
+<p>Start with something you can afford to break — an internal tool, a batch job —
+and run it through your normal tests. You are watching for the three failure
+modes above, not for subtle runtime differences; if it starts and serves
+traffic, it is almost certainly fine.</p>
+<p>After that, move in batches grouped by base image rather than by service. Each
+batch then exercises one runtime at a time, so when something does break you
+know which base to blame.</p>
+<h2 id="when-to-stay-where-you-are">When to stay where you are</h2>
+<p>If you need thousands of images, an SLA, FedRAMP or STIG artifacts, SLSA Build
+L3, or CVE remediation somebody is contractually obliged to deliver, buy the
+commercial product. Minimal is a small MIT-licensed catalog that costs nothing
+and asks for no account. It is not a substitute for a vendor relationship and
+does not pretend to be.</p>
+<p>If that trade suits you, the <a href="/images/">image directory</a> and the <a href="/compare/">comparison
+data</a> are the places to start.</p> </article> </div> </section>  </main> <footer class="site-footer"> <div class="container"> <div>
+Minimal Containers · MIT-licensed · built from
+<a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
+<a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+</div> <div>
+Updated 2026-09-07 02:22 UTC  · <a href="https://github.com/rtvkiz/minimal/actions/runs/34076004984" rel="noopener">1622b99</a>
+· &copy; 2026 </div> </div> </footer> <script type="module">document.addEventListener("click",e=>{const t=e.target.closest("[data-copy]");if(!t)return;const n=t.getAttribute("data-copy")||"";navigator.clipboard.writeText(n).then(()=>{const o=t.textContent;t.textContent="Copied",setTimeout(()=>{t.textContent=o},1400)}).catch(()=>{t.textContent="Failed"})});</script> </body> </html>

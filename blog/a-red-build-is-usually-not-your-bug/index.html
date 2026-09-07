@@ -1,0 +1,85 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>A red build is usually not your bug — Minimal Containers</title><meta name="description" content="Most CI failures in a dependency-heavy pipeline are someone else's outage wearing a convincing error message. How to classify one in about two minutes before you start debugging."><link rel="canonical" href="https://minimalcontainers.com/blog/a-red-build-is-usually-not-your-bug/"><meta property="og:title" content="A red build is usually not your bug — Minimal Containers"><meta property="og:description" content="Most CI failures in a dependency-heavy pipeline are someone else's outage wearing a convincing error message. How to classify one in about two minutes before you start debugging."><meta property="og:type" content="article"><meta property="og:url" content="https://minimalcontainers.com/blog/a-red-build-is-usually-not-your-bug/"><meta property="og:site_name" content="Minimal Containers"><meta property="og:image" content="https://minimalcontainers.com/og.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="A red build is usually not your bug — Minimal Containers"><meta name="twitter:description" content="Most CI failures in a dependency-heavy pipeline are someone else's outage wearing a convincing error message. How to classify one in about two minutes before you start debugging."><meta name="twitter:image" content="https://minimalcontainers.com/og.png"><meta property="article:published_time" content="2026-09-06"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"A red build is usually not your bug","description":"Most CI failures in a dependency-heavy pipeline are someone else's outage wearing a convincing error message. How to classify one in about two minutes before you start debugging.","datePublished":"2026-09-06","dateModified":"2026-09-06","url":"https://minimalcontainers.com/blog/a-red-build-is-usually-not-your-bug","author":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"},"publisher":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://minimalcontainers.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://minimalcontainers.com/blog/"},{"@type":"ListItem","position":3,"name":"A red build is usually not your bug — Minimal Containers","item":"https://minimalcontainers.com/blog/a-red-build-is-usually-not-your-bug/"}]}</script><link rel="icon" type="image/svg+xml" href="/icon.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;640;680;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- GoatCounter: cookieless, no personal data, no consent banner needed.
+       Dashboard is private by default (goatcounter settings.go defaults
+       `Public` to "private"), so the numbers are not publicly visible.
+       Loaded async so it never blocks render, and the site works fine when
+       ad blockers drop it — expect undercounting on a technical audience. --><script data-goatcounter="https://minimal.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script><link rel="stylesheet" href="/_astro/about.CfO43Qde.css"></head> <body> <header class="site-header"> <div class="container"> <a href="/" class="brand"> <img src="/icon.svg" alt="" class="logo" width="26" height="26"> <span class="brand-name">minimal</span> </a> <nav class="nav"> <a href="/images/">Images</a> <a href="/docs/">Docs</a> <a href="/compare/">Compare</a> <a href="/blog/">Blog</a> <a href="/about/">Verify</a> <a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a> </nav> </div> </header> <main>  <section> <div class="container-narrow"> <p style="margin:0 0 6px"><a href="/blog/" class="small muted">← Blog</a></p> <h1 class="section-title">A red build is usually not your bug</h1> <p class="small muted"> <time datetime="2026-09-06">6 September 2026</time>  </p> <article class="prose" style="margin-top:28px"> <p>A build that pulls from GitHub, a module proxy, Maven Central and a package
+index has four ways to fail that have nothing to do with your code. In a
+pipeline that rebuilds continuously, those transient failures outnumber the real
+ones — and the expensive mistake is spending an hour debugging a change that was
+never broken.</p>
+<p>The problem is that upstream outages rarely announce themselves. They arrive
+wearing an error message about your code.</p>
+<h2 id="three-real-examples">Three real examples</h2>
+<p><strong>“No release of log4j-web 2.25.4”</strong> — a build step checked whether an artifact
+existed and reported it missing. It was not missing. Maven Central was returning
+<code>403</code> because we had been rate-limited, and the check used <code>curl -sfI</code>, where
+<code>-f</code> collapses every HTTP error into the same non-zero exit. “Server refused to
+answer me” and “the file is not there” became the same signal. The fix was to
+read the status code instead of the exit code, and say <code>unavailable</code> when the
+answer is neither 200 nor 404.</p>
+<p><strong>“Missing go.sum entry”</strong> — a classic real error, and this time it was a stream
+error from <code>proxy.golang.org</code> mid-download. The next run passed with no change.</p>
+<p><strong>A dependency conflict that named the wrong module</strong> — the resolver reported a
+version requirement conflict, and the actual cause was a workspace file pinned
+below what a bumped dependency required. The message pointed at the module; the
+fix was three directories up.</p>
+<p>Pattern: the error is generated at the point of <em>failure</em>, which is often far
+from the <em>cause</em>.</p>
+<h2 id="the-tell-that-saves-the-most-time">The tell that saves the most time</h2>
+<p><strong>If one architecture passes and the other fails on the same commit, it is
+almost never your code.</strong></p>
+<p>The source is identical. The build config is identical. A genuine bug in either
+would fail both. What differs is which runner, which mirror, which moment in
+time — so a split result points at the network or the environment, not the
+diff.</p>
+<p>This one observation resolves more red builds than any other, and it takes five
+seconds to check. Look at the matrix before you look at the diff.</p>
+<h2 id="a-two-minute-triage">A two-minute triage</h2>
+<p>Before debugging, answer these in order:</p>
+<p><strong>1. Did this exact commit pass before?</strong>
+If the scheduled rebuild was green an hour ago and nothing merged since, the
+code is not the variable.</p>
+<p><strong>2. Do the failures cluster by architecture, or by upstream?</strong>
+One arch failing is environmental. Several unrelated images failing the same
+step at the same time is an upstream outage — unrelated images do not develop
+the same bug simultaneously.</p>
+<p><strong>3. What is the actual status code?</strong>
+Not the exit code. <code>403</code>, <code>429</code>, <code>502</code> and a timeout are all “they would not
+answer”; <code>404</code> is “it is not there”. Any check that treats those as one thing
+will eventually report an outage as a missing file.</p>
+<p><strong>4. Does it reproduce on a re-run?</strong>
+Cheap, and decisive. A flake fails once. A real bug fails every time. Re-run
+<em>before</em> you start reading code — but re-run <strong>once</strong>. Re-running until green is
+how a real intermittent bug gets shipped.</p>
+<h2 id="building-this-into-the-pipeline">Building this into the pipeline</h2>
+<p>Triage that lives only in someone’s head does not survive. Two things worth
+encoding:</p>
+<p><strong>Retry with meaning.</strong> Add retries to network fetches, but be careful what you
+retry with. <code>curl -sfI --retry 5</code> does not retry HTTP errors the way people
+expect — without <code>--retry-all-errors</code>, and with <code>-f</code> in play, a <code>403</code> is not
+necessarily a retryable condition to curl. Test that your retry actually
+retries; a flag that looks right and does nothing is worse than no flag, because
+it stops anyone from looking again.</p>
+<p><strong>Make the failure message name the class.</strong> Compare:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>ERROR: no release of log4j-web 2.25.4 found</span></span></code></pre>
+<p>with:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Maven Central unreachable for log4j-web (HTTP 403 after retries)</span></span>
+<span class="line"><span>  — transient, not a missing release</span></span></code></pre>
+<p>Same failure, and the second one ends the investigation in the first line. Every
+check that reaches the network should be able to distinguish “the answer is no”
+from “there was no answer”, and should say which it got.</p>
+<h2 id="what-this-is-not">What this is not</h2>
+<p>This is not an argument for ignoring red builds. It is an argument for spending
+the first two minutes deciding <em>which kind</em> of red you have, because the two
+kinds need completely different responses — and the wrong response to a
+transient failure is a code change that papers over it.</p>
+<p>The failure mode to avoid is the opposite one: treating everything as flaky and
+re-running until green. That is how a genuine intermittent bug reaches
+production with a green checkmark on it. The discipline is to classify honestly,
+not to classify optimistically.</p> </article> </div> </section>  </main> <footer class="site-footer"> <div class="container"> <div>
+Minimal Containers · MIT-licensed · built from
+<a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
+<a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+</div> <div>
+Updated 2026-09-07 02:22 UTC  · <a href="https://github.com/rtvkiz/minimal/actions/runs/34076004984" rel="noopener">1622b99</a>
+· &copy; 2026 </div> </div> </footer> <script type="module">document.addEventListener("click",e=>{const t=e.target.closest("[data-copy]");if(!t)return;const n=t.getAttribute("data-copy")||"";navigator.clipboard.writeText(n).then(()=>{const o=t.textContent;t.textContent="Copied",setTimeout(()=>{t.textContent=o},1400)}).catch(()=>{t.textContent="Failed"})});</script> </body> </html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Reading scan results — Minimal Containers</title><meta name="description" content="Why a green build does not mean zero CVEs, and how raw and VEX-effective counts differ."><link rel="canonical" href="https://minimalcontainers.com/docs/vulnerabilities/"><meta property="og:title" content="Reading scan results — Minimal Containers"><meta property="og:description" content="Why a green build does not mean zero CVEs, and how raw and VEX-effective counts differ."><meta property="og:type" content="website"><meta property="og:url" content="https://minimalcontainers.com/docs/vulnerabilities/"><meta property="og:site_name" content="Minimal Containers"><meta property="og:image" content="https://minimalcontainers.com/og.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Reading scan results — Minimal Containers"><meta name="twitter:description" content="Why a green build does not mean zero CVEs, and how raw and VEX-effective counts differ."><meta name="twitter:image" content="https://minimalcontainers.com/og.png"><link rel="icon" type="image/svg+xml" href="/icon.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;640;680;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- GoatCounter: cookieless, no personal data, no consent banner needed.
+       Dashboard is private by default (goatcounter settings.go defaults
+       `Public` to "private"), so the numbers are not publicly visible.
+       Loaded async so it never blocks render, and the site works fine when
+       ad blockers drop it — expect undercounting on a technical audience. --><script data-goatcounter="https://minimal.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script><link rel="stylesheet" href="/_astro/about.CfO43Qde.css"></head> <body> <header class="site-header"> <div class="container"> <a href="/" class="brand"> <img src="/icon.svg" alt="" class="logo" width="26" height="26"> <span class="brand-name">minimal</span> </a> <nav class="nav"> <a href="/images/">Images</a> <a href="/docs/">Docs</a> <a href="/compare/">Compare</a> <a href="/blog/">Blog</a> <a href="/about/">Verify</a> <a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a> </nav> </div> </header> <main>  <section> <div class="container-narrow"> <p class="eyebrow"><a href="/docs/">Docs</a></p> <h1 class="section-title">Reading scan results</h1> <p class="section-sub">A successful build does not mean an image has zero reported vulnerabilities. Here is exactly what the numbers mean.</p> <h2 class="section-title" style="margin-top:40px">What gets published</h2> <ul> <li><b>Grype scans every production image</b> and publishes raw JSON and SARIF results. SARIF is uploaded to the repository's Security tab.</li> <li><b>Findings are informational.</b> There is no global severity threshold that blocks publication — a CVE with no available fix should not stop a security update to everything else in the image.</li> <li><b>Dev images are excluded</b> from the dashboard. Their larger toolchain surface is not representative of the production image.</li> </ul> <h2 class="section-title" style="margin-top:44px">Raw vs effective counts</h2> <p>
+The catalog shows two numbers. <b>Raw</b> is what the scanner reported. <b>Effective</b> is what
+        remains after applying <a href="https://openvex.dev/" rel="noopener">OpenVEX</a> statements, which
+        can mark a finding <code class="kv-mono">not_affected</code> or <code class="kv-mono">fixed</code>
+with a stated justification.
+</p> <p class="small muted">
+Both are shown deliberately. A single "0 CVEs" headline hides whether it was achieved by patching
+        or by suppression.
+</p> <h2 class="section-title" style="margin-top:44px" id="provenance">Why some advisories are withheld</h2> <p>
+These images are built from Wolfi packages, so their apk database identifies them as a Wolfi
+        system and the scanner looks up every installed package name in the distro advisory feed —
+        including the packages <em>we</em> build. That feed records fixes against <em>its own</em>
+rebuild counter:
+</p> <pre class="kv-mono" style="padding:12px;overflow-x:auto"><code>installed   gitleaks 8.30.1-r0     our first build of 8.30.1
+"fixed in"  gitleaks 8.30.1-r13    their fourteenth build of 8.30.1</code></pre> <p> <code class="kv-mono">r0</code> is lower than <code class="kv-mono">r13</code>, so we are reported
+        as unpatched. But <code class="kv-mono">-rN</code> is a per-distro build counter, not a patch
+        level — both start at zero and they count different distributions&rsquo; build events. Comparing
+        them across distributions is not a meaningful operation.
+</p> <p>Each such finding is resolved on evidence, never by blanket suppression:</p> <ul> <li><b>Counted</b> — the vulnerable component is genuinely in the image: the scanner matched the
+          module, jar, gem or crate itself, or the same advisory also matched real binary contents.</li> <li><b>Withheld</b> — our own package, nothing corroborating in the contents, and the fix is a
+          same-version rebuild. A rebuild at the same upstream version cannot patch the application&rsquo;s
+          own source, so the fix lives in a dependency or the compiler — which our from-source rebuild
+          already picks up.</li> <li><b>Needs review</b> — our own package, uncorroborated, but the fix requires a genuinely
+<em>newer upstream version</em>. That usually means we are behind. <b>Never withheld</b>, and
+          flagged on the image page.</li> </ul> <p class="small muted">
+Nothing is deleted. Withheld counts are shown next to the totals so the exclusion can be audited,
+        and a finding that later gains corroboration moves back into the count on its own.
+</p> <h2 class="section-title" style="margin-top:44px">Unscored advisories</h2> <p>
+Some findings show a severity of <b>Unknown</b>. That is not a gap in our reporting — it is how
+        the source feed publishes them. The <a href="https://go.dev/doc/security/vuln/database" rel="noopener">Go
+        vulnerability database</a> assigns no CVSS score, so every Go advisory
+        (<code class="kv-mono">GO-YYYY-NNNN</code>) arrives unscored.
+</p> <p class="small muted">
+They are counted in the totals like any other finding. Summing only critical/high/medium/low would
+        report an image carrying them as clean, which is the one thing these numbers must never do.
+</p> <h2 class="section-title" style="margin-top:44px">Suppressions cannot quietly rot</h2> <p>
+Anything can be suppressed once. The check that matters is whether a suppression is
+<em>still true</em>, so every scan reconciles VEX statements against fresh results and flags two
+        kinds of drift:
+</p> <ul> <li><b>Stale</b> — the suppressed CVE is no longer present at all, so the statement is dead weight.</li> <li><b>Now fixable</b> — a real upstream fix exists, so the finding should be <em>patched, not hidden</em>.</li> </ul> <p class="small muted">
+VEX documents are also schema-validated in CI. The workflow is documented in
+<a href="https://github.com/rtvkiz/minimal/blob/main/tools/vex/README.md" rel="noopener">tools/vex/README.md</a>.
+</p> <h2 class="section-title" style="margin-top:44px">Check it yourself</h2> <p class="small muted">
+Every claim here is verifiable from your terminal without an account — see <a href="/about/">Verify</a>.
+</p> </div> </section>  </main> <footer class="site-footer"> <div class="container"> <div>
+Minimal Containers · MIT-licensed · built from
+<a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
+<a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+</div> <div>
+Updated 2026-09-07 02:22 UTC  · <a href="https://github.com/rtvkiz/minimal/actions/runs/34076004984" rel="noopener">1622b99</a>
+· &copy; 2026 </div> </div> </footer> <script type="module">document.addEventListener("click",e=>{const t=e.target.closest("[data-copy]");if(!t)return;const n=t.getAttribute("data-copy")||"";navigator.clipboard.writeText(n).then(()=>{const o=t.textContent;t.textContent="Copied",setTimeout(()=>{t.textContent=o},1400)}).catch(()=>{t.textContent="Failed"})});</script> </body> </html>

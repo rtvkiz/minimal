@@ -1,0 +1,101 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Permission denied: running containers as a non-root user — Minimal Containers</title><meta name="description" content="Almost every non-root container failure is one of four things. What each looks like, why the fix is not chmod 777, and how to make a directory writable in the image itself."><link rel="canonical" href="https://minimalcontainers.com/blog/permission-denied-non-root-containers/"><meta property="og:title" content="Permission denied: running containers as a non-root user — Minimal Containers"><meta property="og:description" content="Almost every non-root container failure is one of four things. What each looks like, why the fix is not chmod 777, and how to make a directory writable in the image itself."><meta property="og:type" content="article"><meta property="og:url" content="https://minimalcontainers.com/blog/permission-denied-non-root-containers/"><meta property="og:site_name" content="Minimal Containers"><meta property="og:image" content="https://minimalcontainers.com/og.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Permission denied: running containers as a non-root user — Minimal Containers"><meta name="twitter:description" content="Almost every non-root container failure is one of four things. What each looks like, why the fix is not chmod 777, and how to make a directory writable in the image itself."><meta name="twitter:image" content="https://minimalcontainers.com/og.png"><meta property="article:published_time" content="2026-09-06"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Permission denied: running containers as a non-root user","description":"Almost every non-root container failure is one of four things. What each looks like, why the fix is not chmod 777, and how to make a directory writable in the image itself.","datePublished":"2026-09-06","dateModified":"2026-09-06","url":"https://minimalcontainers.com/blog/permission-denied-non-root-containers","author":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"},"publisher":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://minimalcontainers.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://minimalcontainers.com/blog/"},{"@type":"ListItem","position":3,"name":"Permission denied: running containers as a non-root user — Minimal Containers","item":"https://minimalcontainers.com/blog/permission-denied-non-root-containers/"}]}</script><link rel="icon" type="image/svg+xml" href="/icon.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;640;680;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- GoatCounter: cookieless, no personal data, no consent banner needed.
+       Dashboard is private by default (goatcounter settings.go defaults
+       `Public` to "private"), so the numbers are not publicly visible.
+       Loaded async so it never blocks render, and the site works fine when
+       ad blockers drop it — expect undercounting on a technical audience. --><script data-goatcounter="https://minimal.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script><link rel="stylesheet" href="/_astro/about.CfO43Qde.css"></head> <body> <header class="site-header"> <div class="container"> <a href="/" class="brand"> <img src="/icon.svg" alt="" class="logo" width="26" height="26"> <span class="brand-name">minimal</span> </a> <nav class="nav"> <a href="/images/">Images</a> <a href="/docs/">Docs</a> <a href="/compare/">Compare</a> <a href="/blog/">Blog</a> <a href="/about/">Verify</a> <a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a> </nav> </div> </header> <main>  <section> <div class="container-narrow"> <p style="margin:0 0 6px"><a href="/blog/" class="small muted">← Blog</a></p> <h1 class="section-title">Permission denied: running containers as a non-root user</h1> <p class="small muted"> <time datetime="2026-09-06">6 September 2026</time>  </p> <article class="prose" style="margin-top:28px"> <p><code>runAsNonRoot: true</code> is one of the highest-value settings in a Pod spec, and the
+first thing most people hit after enabling it is this:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Error: EACCES: permission denied, mkdir '/data'</span></span></code></pre>
+<p>Almost every instance is one of four causes. They have different fixes, and
+<code>chmod 777</code> is not any of them.</p>
+<h2 id="1-the-directory-does-not-exist-and-a-non-root-process-cannot-create-it">1. The directory does not exist, and a non-root process cannot create it</h2>
+<p>The most common one, and the most misread. The error says permission denied on
+<code>/data</code>, so people chmod <code>/data</code> — but <code>/data</code> does not exist. The process is
+being denied permission to create it <em>in <code>/</code></em>, which is root-owned.</p>
+<p>You cannot fix this at runtime, because there is no point at which a non-root
+process can create a directory in <code>/</code>. It has to exist in the image, owned by
+the right uid.</p>
+<p>With apko, that is a <code>paths:</code> entry:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#85E89D">paths</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">  - </span><span style="color:#85E89D">path</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">/data</span></span>
+<span class="line"><span style="color:#85E89D">    type</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">directory</span></span>
+<span class="line"><span style="color:#85E89D">    uid</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">65532</span></span>
+<span class="line"><span style="color:#85E89D">    gid</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">65532</span></span>
+<span class="line"><span style="color:#85E89D">    permissions</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">0o755</span></span></code></pre>
+<p>The Dockerfile equivalent:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="dockerfile"><code><span class="line"><span style="color:#F97583">RUN</span><span style="color:#E1E4E8"> mkdir -p /data &#x26;&#x26; chown 65532:65532 /data</span></span>
+<span class="line"><span style="color:#F97583">USER</span><span style="color:#E1E4E8"> 65532</span></span></code></pre>
+<p>Build the directory into the image. Every image we publish that needs writable
+state ships it this way.</p>
+<p>A related trap if you build with a tool that generates an SBOM after the build:
+creating <code>/var/...</code> directories inside the build pipeline can fail, because the
+SBOM step may run as your host user after the sandbox exits and cannot write
+into a root-owned destination. Declaring the directory in the image config
+avoids that entirely.</p>
+<h2 id="2-the-application-writes-to-home-and-there-is-no-home-directory">2. The application writes to <code>$HOME</code>, and there is no home directory</h2>
+<p>This one is sneaky, because the error rarely mentions <code>$HOME</code>. A CLI tool wants
+to cache something, resolves <code>~</code>, gets <code>/</code> or an empty string, and fails
+somewhere that looks unrelated.</p>
+<p>Set <code>HOME</code> to somewhere writable:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#85E89D">environment</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#85E89D">  HOME</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">/tmp</span></span></code></pre>
+<p>Cosign caches its trust root under <code>$HOME/.sigstore</code>; plenty of tools do the
+same thing. If a binary works as root and fails as non-root with a confusing
+path error, check <code>HOME</code> before anything else.</p>
+<h2 id="3-the-mounted-volume-is-owned-by-someone-else">3. The mounted volume is owned by someone else</h2>
+<p>The image is correct and the mount is not. On Kubernetes, <code>fsGroup</code> is the
+supported lever:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#85E89D">securityContext</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#85E89D">  runAsNonRoot</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">true</span></span>
+<span class="line"><span style="color:#85E89D">  runAsUser</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">65532</span></span>
+<span class="line"><span style="color:#85E89D">  fsGroup</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">65532</span></span></code></pre>
+<p><code>fsGroup</code> makes the kubelet set group ownership on the volume so your uid can
+write. It does not apply to every volume type — <code>hostPath</code> in particular is
+whatever it already was on the node.</p>
+<p>Locally, the equivalent trap bites in test scripts:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#E1E4E8">work</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">$(</span><span style="color:#B392F0">mktemp</span><span style="color:#79B8FF"> -d</span><span style="color:#E1E4E8">)              </span><span style="color:#6A737D"># 0700, owned by you</span></span>
+<span class="line"><span style="color:#B392F0">docker</span><span style="color:#9ECBFF"> run</span><span style="color:#79B8FF"> -v</span><span style="color:#9ECBFF"> "</span><span style="color:#E1E4E8">$work</span><span style="color:#9ECBFF">:/workspace"</span><span style="color:#9ECBFF"> ...</span><span style="color:#6A737D">   # container is uid 65532 → denied</span></span></code></pre>
+<p><code>mktemp -d</code> creates <code>0700</code> owned by the invoking user, so a container running as
+a different uid cannot write into it. In a throwaway test directory,
+<code>chmod 0777 "$work"</code> is the correct fix and nothing is weakened by it — the
+directory exists for thirty seconds and holds nothing.</p>
+<p>That is <em>not</em> a licence to <code>chmod 777</code> a real volume. The reason it is fine here
+is the lifetime and the contents, not the permission bits.</p>
+<h2 id="4-you-can-read-the-file-but-not-the-one-the-container-wrote">4. You can read the file, but not the one the container wrote</h2>
+<p>The mirror image of the last problem, and it shows up in test scripts:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">grep</span><span style="color:#9ECBFF"> 'something'</span><span style="color:#9ECBFF"> "</span><span style="color:#E1E4E8">$work</span><span style="color:#9ECBFF">/output"</span><span style="color:#6A737D">    # Permission denied</span></span></code></pre>
+<p>Files the container creates are owned by <em>its</em> uid, often <code>0600</code>. Your user
+cannot read them even though you own the directory. Assert on existence rather
+than content when you only need to know something was produced:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#E1E4E8">[ </span><span style="color:#F97583">-s</span><span style="color:#9ECBFF"> "</span><span style="color:#E1E4E8">$work</span><span style="color:#9ECBFF">/output"</span><span style="color:#E1E4E8"> ] </span><span style="color:#F97583">||</span><span style="color:#E1E4E8"> { </span><span style="color:#79B8FF">echo</span><span style="color:#9ECBFF"> "no output produced"</span><span style="color:#E1E4E8">; </span><span style="color:#79B8FF">exit</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; }</span></span></code></pre>
+<p><code>stat</code> only needs the directory permission, which you have. Reading needs the
+file permission, which you may not.</p>
+<h2 id="why-65532">Why 65532</h2>
+<p>It is the conventional “nonroot” uid in the distroless ecosystem, and the value
+Kubernetes examples use. Nothing magic — the important properties are that it is
+not 0 and that it is fixed, so a volume chowned for one image works for the next.</p>
+<p><code>runAsNonRoot: true</code> on its own only asserts that the image does not run as
+root. It does not pick a uid. Pin <code>runAsUser</code> too, or an image that changes its
+default uid silently changes who owns your data.</p>
+<h2 id="the-one-honest-exception">The one honest exception</h2>
+<p>Some workloads genuinely require root, and pretending otherwise produces an
+image that does not run. A build daemon that creates mount and user namespaces
+is the clearest case: it will refuse to start under an unprivileged uid, so
+“non-root” there is not a stricter setting, it is a broken one.</p>
+<p>The right response is to say so explicitly in the image’s documentation rather
+than ship something that fails at deploy time — and to keep the rest of the
+hardening. Non-root is one control among several, not the whole of it.</p>
+<h2 id="checklist">Checklist</h2>
+<p>When a container fails as non-root, in order:</p>
+<ol>
+<li>Does the directory exist in the image, owned by the run-as uid?</li>
+<li>Is <code>HOME</code> set to somewhere writable?</li>
+<li>Is the volume owned correctly — <code>fsGroup</code> on Kubernetes, real permissions locally?</li>
+<li>Are you trying to read a file the container wrote as a different uid?</li>
+</ol>
+<p>Four questions. One of them is nearly always it.</p> </article> </div> </section>  </main> <footer class="site-footer"> <div class="container"> <div>
+Minimal Containers · MIT-licensed · built from
+<a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
+<a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+</div> <div>
+Updated 2026-09-07 02:22 UTC  · <a href="https://github.com/rtvkiz/minimal/actions/runs/34076004984" rel="noopener">1622b99</a>
+· &copy; 2026 </div> </div> </footer> <script type="module">document.addEventListener("click",e=>{const t=e.target.closest("[data-copy]");if(!t)return;const n=t.getAttribute("data-copy")||"";navigator.clipboard.writeText(n).then(()=>{const o=t.textContent;t.textContent="Copied",setTimeout(()=>{t.textContent=o},1400)}).catch(()=>{t.textContent="Failed"})});</script> </body> </html>

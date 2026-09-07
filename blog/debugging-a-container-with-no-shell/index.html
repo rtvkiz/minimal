@@ -1,0 +1,86 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Debugging a container that has no shell — Minimal Containers</title><meta name="description" content="Distroless images remove the shell an attacker would use, and the one you would use. Here are the techniques that still work, in the order you should reach for them."><link rel="canonical" href="https://minimalcontainers.com/blog/debugging-a-container-with-no-shell/"><meta property="og:title" content="Debugging a container that has no shell — Minimal Containers"><meta property="og:description" content="Distroless images remove the shell an attacker would use, and the one you would use. Here are the techniques that still work, in the order you should reach for them."><meta property="og:type" content="article"><meta property="og:url" content="https://minimalcontainers.com/blog/debugging-a-container-with-no-shell/"><meta property="og:site_name" content="Minimal Containers"><meta property="og:image" content="https://minimalcontainers.com/og.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Debugging a container that has no shell — Minimal Containers"><meta name="twitter:description" content="Distroless images remove the shell an attacker would use, and the one you would use. Here are the techniques that still work, in the order you should reach for them."><meta name="twitter:image" content="https://minimalcontainers.com/og.png"><meta property="article:published_time" content="2026-09-06"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Debugging a container that has no shell","description":"Distroless images remove the shell an attacker would use, and the one you would use. Here are the techniques that still work, in the order you should reach for them.","datePublished":"2026-09-06","dateModified":"2026-09-06","url":"https://minimalcontainers.com/blog/debugging-a-container-with-no-shell","author":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"},"publisher":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://minimalcontainers.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://minimalcontainers.com/blog/"},{"@type":"ListItem","position":3,"name":"Debugging a container that has no shell — Minimal Containers","item":"https://minimalcontainers.com/blog/debugging-a-container-with-no-shell/"}]}</script><link rel="icon" type="image/svg+xml" href="/icon.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;640;680;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- GoatCounter: cookieless, no personal data, no consent banner needed.
+       Dashboard is private by default (goatcounter settings.go defaults
+       `Public` to "private"), so the numbers are not publicly visible.
+       Loaded async so it never blocks render, and the site works fine when
+       ad blockers drop it — expect undercounting on a technical audience. --><script data-goatcounter="https://minimal.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script><link rel="stylesheet" href="/_astro/about.CfO43Qde.css"></head> <body> <header class="site-header"> <div class="container"> <a href="/" class="brand"> <img src="/icon.svg" alt="" class="logo" width="26" height="26"> <span class="brand-name">minimal</span> </a> <nav class="nav"> <a href="/images/">Images</a> <a href="/docs/">Docs</a> <a href="/compare/">Compare</a> <a href="/blog/">Blog</a> <a href="/about/">Verify</a> <a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a> </nav> </div> </header> <main>  <section> <div class="container-narrow"> <p style="margin:0 0 6px"><a href="/blog/" class="small muted">← Blog</a></p> <h1 class="section-title">Debugging a container that has no shell</h1> <p class="small muted"> <time datetime="2026-09-06">6 September 2026</time>  </p> <article class="prose" style="margin-top:28px"> <p>The first time <code>kubectl exec</code> fails on a distroless image, it looks like the
+image is broken:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>$ docker exec -it mycontainer sh</span></span>
+<span class="line"><span>OCI runtime exec failed: exec: "sh": executable file not found in $PATH</span></span></code></pre>
+<p>Nothing is broken. There is no shell, on purpose. The same absence that stops an
+attacker from chaining a command injection into a foothold stops you from poking
+around, and the techniques below are how you work anyway.</p>
+<p>They are listed roughly in the order to try them: cheapest and least invasive
+first.</p>
+<h2 id="1-run-a-different-binary-in-the-same-image">1. Run a different binary in the same image</h2>
+<p><code>--entrypoint</code> replaces the command without changing the image. Most of what you
+want to know early — is the binary there, what version is it, does it parse the
+config — needs no shell at all:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>docker run --rm --entrypoint /usr/bin/haproxy ghcr.io/rtvkiz/minimal-haproxy:latest -vv</span></span>
+<span class="line"><span>docker run --rm -v "$PWD/haproxy.cfg:/etc/haproxy/haproxy.cfg:ro" \</span></span>
+<span class="line"><span>  --entrypoint /usr/bin/haproxy ghcr.io/rtvkiz/minimal-haproxy:latest \</span></span>
+<span class="line"><span>  -c -f /etc/haproxy/haproxy.cfg</span></span></code></pre>
+<p>Note the second one: a config check, offline, with no shell involved. A
+surprising number of “the container won’t start” incidents end here.</p>
+<h2 id="2-inspect-the-filesystem-from-outside">2. Inspect the filesystem from outside</h2>
+<p>You do not need to be inside a container to read its filesystem.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># what is actually in the image, without running it</span></span>
+<span class="line"><span>docker create --name tmp ghcr.io/rtvkiz/minimal-nginx:latest</span></span>
+<span class="line"><span>docker export tmp | tar -tv | head -50</span></span>
+<span class="line"><span>docker cp tmp:/etc/nginx/nginx.conf ./nginx.conf</span></span>
+<span class="line"><span>docker rm tmp</span></span></code></pre>
+<p><code>docker cp</code> works against a running container too, and works whether or not that
+container has a shell. If your question is “what file is at this path”, this is
+the whole answer.</p>
+<h2 id="3-attach-a-debug-container-that-has-the-tools">3. Attach a debug container that has the tools</h2>
+<p>This is the technique that replaces <code>exec</code> properly, and it is the one worth
+learning if you only learn one.</p>
+<p>Kubernetes:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>kubectl debug -it mypod --image=busybox:latest --target=mycontainer</span></span></code></pre>
+<p>The <code>--target</code> flag is what makes it useful: the debug container shares the
+target’s process namespace, so <code>ps</code> sees the real process, and <code>/proc/1/root</code>
+gives you the target’s filesystem:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>ls /proc/1/root/etc</span></span>
+<span class="line"><span>cat /proc/1/root/etc/nginx/nginx.conf</span></span></code></pre>
+<p>Docker has an equivalent:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>docker run --rm -it --pid=container:mycontainer \</span></span>
+<span class="line"><span>  --network=container:mycontainer --cap-add SYS_PTRACE \</span></span>
+<span class="line"><span>  busybox:latest sh</span></span></code></pre>
+<p>Sharing <code>--network</code> matters more than people expect. Half of “the service is
+down” turns out to be DNS or a listener bound to <code>127.0.0.1</code>, and both are only
+visible from inside that network namespace:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>wget -qO- http://127.0.0.1:8080/healthz</span></span>
+<span class="line"><span>nslookup my-service.default.svc.cluster.local</span></span></code></pre>
+<h2 id="4-use-the-dev-variant">4. Use the dev variant</h2>
+<p>Every image we publish has a <code>-dev</code> tag carrying the same primary binary plus a
+shell and the usual tools — <code>bash</code>, <code>curl</code>, <code>openssl</code>, <code>dig</code>, <code>jq</code>, <code>git</code>, <code>apk</code>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>docker run --rm -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-nginx:latest-dev</span></span></code></pre>
+<p>Swap the tag, reproduce the problem, keep everything else identical. Because
+both variants are built from the same package, a bug that reproduces in <code>-dev</code>
+is a bug in your setup or in the software; a bug that <em>stops</em> reproducing is
+usually about the missing shell or the tools themselves.</p>
+<p>The rule that makes this safe: <strong><code>-dev</code> is for debugging, not for production.</strong>
+It exists so that the production image never needs to grow a shell “just for
+now”. A shell added during an incident is a shell that is still there a year
+later.</p>
+<h2 id="5-read-the-logs-properly">5. Read the logs properly</h2>
+<p>Obvious, and still skipped:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>docker logs --timestamps --tail 200 mycontainer</span></span>
+<span class="line"><span>kubectl logs mypod -c mycontainer --previous   # the container that just crashed</span></span></code></pre>
+<p><code>--previous</code> is the one people forget. A container in <code>CrashLoopBackOff</code> has
+already told you why it died; the current instance may not have got far enough
+to repeat it.</p>
+<h2 id="what-actually-changes">What actually changes</h2>
+<p>The shift is from <em>interactive exploration</em> to <em>asking specific questions</em>. You
+lose “let me look around”, which is genuinely convenient. You keep everything
+that is diagnostic, and you gain that the same absence works against an
+attacker, continuously, in every container you run.</p>
+<p>If you find yourself needing a shell in production repeatedly for the same
+reason, that is a signal about the image or the workload — a missing health
+endpoint, a config that cannot be validated ahead of time, logs that do not say
+enough. Fixing the underlying gap is better than keeping a shell around for it.</p> </article> </div> </section>  </main> <footer class="site-footer"> <div class="container"> <div>
+Minimal Containers · MIT-licensed · built from
+<a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
+<a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+</div> <div>
+Updated 2026-09-07 02:22 UTC  · <a href="https://github.com/rtvkiz/minimal/actions/runs/34076004984" rel="noopener">1622b99</a>
+· &copy; 2026 </div> </div> </footer> <script type="module">document.addEventListener("click",e=>{const t=e.target.closest("[data-copy]");if(!t)return;const n=t.getAttribute("data-copy")||"";navigator.clipboard.writeText(n).then(()=>{const o=t.textContent;t.textContent="Copied",setTimeout(()=>{t.textContent=o},1400)}).catch(()=>{t.textContent="Failed"})});</script> </body> </html>
