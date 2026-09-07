@@ -198,12 +198,75 @@ Available License in the same tree — needs a license read before onboarding),
 `apisix-ingress-controller` (🟢 Apache — note Wolfi packages the *controller*,
 not apisix itself, so the Tier-3 apisix entry above is unchanged).
 
+### Wave 3 survey — verified 2026-09-07
+
+Re-checked every W1/W2 candidate against the **live** Wolfi APKINDEX (120,016
+packages) and a Chainguard free-tier probe, after the W1 table was found wrong
+twice: it listed a `gitlab-runner-18.11` package that was actually
+`gitlab-agent-*` (a different product), and a bare-name APKINDEX grep misses
+versioned packages entirely. Method that actually works — check three things,
+not one:
+
+```
+grep -x  "P:<name>"        APKINDEX   # exact package name
+grep -E  "^P:<name>-[0-9]"  APKINDEX   # versioned package (gitlab-runner-19.3)
+grep -E  "^p:(.* )?<name>=" APKINDEX   # a DIFFERENT package that provides the name
+```
+
+The Chainguard probe (validated against known-free nginx/python/static, which
+all return 200) is an anonymous pull-token request against
+`cgr.dev/v2/chainguard/<name>/manifests/latest`.
+
+**Already free from Chainguard — dropped from the plan.** These were the
+roadmap's "near-zero effort, very high demand" picks, and there is no reason to
+publish a second free hardened build of something already free elsewhere:
+
+| Image | 🐳 pulls | Why dropped |
+|---|---:|---|
+| wordpress | 1.5B | `cgr.dev/chainguard/wordpress` returns 200 anonymously |
+| maven | 767M | free |
+| gradle | 300M | free |
+| rust | 143M | free |
+
+**Gated on Chainguard and packaged in Wolfi** — the cheap, high-demand bucket.
+Pull counts read from Docker Hub on 2026-09-07:
+
+| Image | 🐳 pulls | License | Category | Note |
+|---|---:|---|---|---|
+| sonarqube | 1.3B | 🟡 LGPL-3.0 | K8s, CI & IaC | Heavier than the packaging suggests: bundles Elasticsearch, needs an external Postgres |
+| nextcloud | 1.1B | 🟡 AGPL-3.0 | Apps | `nextcloud-server-33` (+ `-apache2-config`). PHP-FPM |
+| kong | 360M | 🟢 Apache-2.0 | Web Servers & Proxies | The Wolfi package removes the OpenResty/Lua build that keeps apisix deferred |
+| neo4j | 323M | 🟡 GPL-3.0 | Databases | Graph DB — a category with zero coverage today |
+| perl | 255M | 🟡 Artistic/GPL | Languages & Runtimes | Trivial; the last mainstream scripting runtime missing |
+| couchdb | 205M | 🟢 Apache-2.0 | Databases | |
+| erlang | 66M | 🟢 Apache-2.0 | Languages & Runtimes | Companion to rabbitmq |
+| meilisearch | 52M | 🟢 MIT | Databases | Rust search engine, much smaller than opensearch/solr |
+| temporal | 48M | 🟢 MIT | Apps | Durable execution; fills the thinnest category |
+| argo-cd · cert-manager · keda · karpenter · harbor · zot | — | 🟢 Apache-2.0 | K8s, CI & IaC | All in Wolfi, all gated on Chainguard. **No pull counts exist** — they publish to quay/ghcr/registry.k8s.io, so demand cannot be ranked the way the rest of this table is |
+
+**The finding that shapes the next wave:** the source-built well has run dry at
+the top of the demand curve. Every remaining high-demand candidate is either
+Wolfi-packaged (so apko-only), blocked by a frontend build (alloy, authelia,
+woodpecker), or already free from Chainguard. What is left to build from source
+is genuinely hard and much lower demand: influxdb (1.2B, but that number is
+v1/v2 — current upstream is a Rust rewrite), kvrocks (3.5M, C++), apisix (37M,
+OpenResty), emqx (Erlang, licence read needed), timescaledb (split licence),
+pgadmin4 (Python + prebuilt frontend), fluentd (Ruby).
+
+So Wave 3 is a **decision**, not a queue: continue insisting on source builds
+and accept far lower demand per unit of effort, or take the apko-only route for
+things Chainguard gates. Note that apko-only is not a weaker product here — the
+Wolfi package is free, Chainguard's *image* is not, so a hardened signed
+SBOM-attested rebuild of a gated image is exactly the gap this catalogue
+exists to fill. It also keeps full auto-update coverage via
+`autoupdate-coverage.yaml`, which `check-autoupdate` enforces.
+
 ### Tier W2 — source-built Go (the proven crank; no Wolfi package)
 
 | ✓ | Image | Upstream | License | 🐳 pulls | Category | Notes |
 |---|---|---|---|---:|---|---|
-| [ ] | gitlab-runner | gitlab-org/gitlab-runner | 🟢 MIT | 3.6B | K8s, CI & IaC | Highest-demand gap in the catalog. Source-built by choice: Wolfi *does* ship it, as the versioned `gitlab-runner-19.3`. Two traps, both hit during onboarding: (1) grepping the APKINDEX for a bare `P:gitlab-runner` finds nothing, so it looks absent — it is there under a versioned name that `p:`-provides the bare one, which means **`provider-priority: 100` is mandatory** or apko installs Wolfi's binary over ours; (2) upstream is gitlab.com, so neither `github-*` source type applies — the versions.yaml row uses `type: json` against the GitLab tags API. |
-| [ ] | buildkit | moby/buildkit | 🟢 Apache-2.0 | 1.8B | K8s, CI & IaC | `buildkitd` + `buildctl`. Wolfi's `buildkitd` package `p:`-provides `buildkit`, so this needs `provider-priority: 100` too. **Build:** buildkitd must be CGO_ENABLED=1 with `-tags "osusergo netgo static_build seccomp"` — dropping `seccomp` builds a daemon that silently runs build containers with no seccomp profile; `libseccomp-static` keeps the result static (verified: no INTERP segment). **Blocked on a posture decision** — see the note below. |
+| [x] | gitlab-runner | gitlab-org/gitlab-runner | 🟢 MIT | 3.6B | K8s, CI & IaC | **Shipped** — source-built. Wolfi *does* ship it as the versioned `gitlab-runner-19.3`, which `p:`-provides the bare name, so `provider-priority: 100` was mandatory; without it apko silently installed Wolfi's binary over ours. versions.yaml uses `type: json` against the GitLab tags API. |
+| [x] | buildkit | moby/buildkit | 🟢 Apache-2.0 | 1.8B | K8s, CI & IaC | **Shipped** — source-built. `provider-priority: 100` needed too (Wolfi's `buildkitd` provides `buildkit`). buildkitd is the only CGO_ENABLED=1 build in the catalogue, to keep upstream's `seccomp` tag; `libseccomp-static` keeps it static. Runs as **root** — it refuses unprivileged uids, and the rootless path needs setuid newuidmap Wolfi does not ship setuid. |
 | [ ] | ~~alloy~~ | grafana/alloy | 🟢 Apache-2.0 | 388M | Observability | **Blocked — frontend-in-bwrap, verified 2026-09-06.** `internal/web/ui/dist` is NOT committed; `assets_builtin.go` is behind `//go:build embedalloyui` whose `go:generate` runs `npm ci && npm run build`, and the `!embedalloyui` fallback serves from a runtime filesystem path that will not exist in the image. So there is no UI-bearing build without npm in the sandbox. Demand is real (inherits EOL promtail 2.8B + grafana-agent 470M) — reconsider if we ever take on a frontend build pattern. |
 | [ ] | ~~authelia~~ | authelia/authelia | 🟢 Apache-2.0 | 81M | Web Servers & Proxies | **Blocked — frontend-in-bwrap, verified 2026-09-06.** `internal/server/public_html` contains only 3 files (index.html + the openapi pair); the React bundle is built from `web/` by pnpm and is not in the tarball. Same blocker as alloy. |
 | [x] | syncthing | syncthing/syncthing | 🟢 MPL-2.0 | 346M (two repos) | Infrastructure | **Shipped** — confirmed the easiest build in this table. `CGO_ENABLED=0` picks the pure-Go `modernc.org/sqlite` driver v2.x needs; the web GUI is `.gitignore`'d upstream and regenerated by `script/genassets.go`, which is plain Go — no npm step. Built `-tags noupgrade` like upstream's own container. |
