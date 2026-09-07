@@ -30,7 +30,7 @@ docker pull ghcr.io/rtvkiz/minimal-python:latest
 ```
 
 Names follow the upstream project — `nginx`, `redis-slim`, `postgres-slim`,
-`kafka`. Before you go further, check the [image directory](/images) and confirm
+`kafka`. Before you go further, check the [image directory](/images/) and confirm
 everything you depend on is actually there. The catalog is deliberately smaller
 than a commercial vendor's. Finding the gap now is much cheaper than finding it
 with half your services moved.
@@ -50,7 +50,7 @@ Most people want the major line. You keep getting security rebuilds and you
 never get moved across an upstream breaking release. Note that an exact version
 tag like `:2.11.4-r0` is not the safe conservative choice it looks like — it
 never moves, which also means it never picks up a fix. [Tags and
-pinning](/docs/tags) has the rest.
+pinning](/docs/tags/) has the rest.
 
 ## Then fix the things that break
 
@@ -152,7 +152,7 @@ compliance program requires L3, that is a genuine reason not to migrate.
 grype ghcr.io/rtvkiz/minimal-python:latest
 ```
 
-The [full head-to-head data](/compare/minimus) is published, raw CSV included,
+The [full head-to-head data](/compare/minimus/) is published, raw CSV included,
 and it contains the images where Minimal comes off worse. Solr is the current
 example: materially more findings than the Minimus equivalent, most of it in
 bundled Java libraries. If Solr is on your critical path, that is a reason to
@@ -177,5 +177,5 @@ commercial product. Minimal is a small MIT-licensed catalog that costs nothing
 and asks for no account. It is not a substitute for a vendor relationship and
 does not pretend to be.
 
-If that trade suits you, the [image directory](/images) and the [comparison
-data](/compare) are the places to start.
+If that trade suits you, the [image directory](/images/) and the [comparison
+data](/compare/) are the places to start.

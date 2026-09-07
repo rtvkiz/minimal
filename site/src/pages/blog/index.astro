@@ -28,7 +28,7 @@ const fmt = (d: string) =>
               <time datetime={p.data.published}>{fmt(p.data.published)}</time>
             </p>
             <h2 style="font-size:1.15rem;margin:0 0 8px">
-              <a href={`/blog/${p.id}`}>{p.data.title}</a>
+              <a href={`/blog/${p.id}/`}>{p.data.title}</a>
             </h2>
             <p class="small muted" style="margin:0">{p.data.description}</p>
           </article>

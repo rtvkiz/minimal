@@ -45,8 +45,8 @@ const schema = [
         account, no Docker Hub pull limits.
       </p>
       <div class="cta">
-        <a class="btn btn-primary" href="/images">Browse {stats.images} images →</a>
-        <a class="btn btn-ghost" href="/about">How to verify</a>
+        <a class="btn btn-primary" href="/images/">Browse {stats.images} images →</a>
+        <a class="btn btn-ghost" href="/about/">How to verify</a>
       </div>
       <div class="stats" style="margin-top:36px">
         <div class="stat"><div class="num">{stats.images}</div><div class="lbl">Images</div></div>
@@ -85,7 +85,7 @@ const schema = [
   <section>
     <div class="container">
       <h2 class="section-title">Popular images</h2>
-      <p class="section-sub">A few of the {stats.images} available. <a href="/images">See all →</a></p>
+      <p class="section-sub">A few of the {stats.images} available. <a href="/images/">See all →</a></p>
       <div class="grid">
         {featured.map((img) => <ImageCard image={img} />)}
       </div>

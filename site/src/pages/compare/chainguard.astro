@@ -30,7 +30,7 @@ const datasetSchema = {
   }],
 };
 ---
-<Layout title={title} description={description} schema={[datasetSchema]} breadcrumbs={[{ name: 'Compare', href: '/compare' }]}>
+<Layout title={title} description={description} schema={[datasetSchema]} breadcrumbs={[{ name: 'Compare', href: '/compare/' }]}>
   <section>
     <div class="container-narrow">
       <h1 class="section-title">Minimal vs Chainguard</h1>
@@ -83,7 +83,7 @@ const datasetSchema = {
         Chainguard details verified {data.scanDate} from their public documentation and by pulling
         from their free tier; they change often, so check for yourself rather than taking this
         table's word for it. Minimal's own column is checkable with the commands on the
-        <a href="/about">verify page</a>.
+        <a href="/about/">verify page</a>.
       </p>
 
       <h2 class="section-title" style="margin-top:44px">When Chainguard is the right answer</h2>
