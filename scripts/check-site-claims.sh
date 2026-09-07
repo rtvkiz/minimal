@@ -155,16 +155,46 @@ fi
 # --- 6. Competitor repositories we name must exist (network) ----------------
 if [ "$ONLINE" = 1 ]; then
   echo "Checking named competitor repositories…"
+  # This check answers one question: does a repository we NAME on the site
+  # actually exist? Only 404/410 answers it "no". Everything else — 429, 5xx, a
+  # timeout — means Docker Hub declined to answer, which is not the same claim
+  # and must not fail the build.
+  #
+  # It did, on 2026-09-07: the map holds ~50 pairs and we query them back to
+  # back, so Docker Hub rate-limited us and every remaining repo was reported as
+  # "the Bitnami page claims it exists", failing the scheduled refresh. Nothing
+  # was wrong with the site. This is the same confusion that made a Maven
+  # Central 403 read as "no release of log4j-web 2.25.4" (PR #654): an outage
+  # wearing the costume of a factual negative.
   miss=0
+  unver=0
+  _hub() {  # echo: 200 | 404 | unavailable:<code>
+    _n=0
+    while :; do
+      _c=$(curl -s -m 15 -o /dev/null -w '%{http_code}' \
+             "https://hub.docker.com/v2/repositories/bitnami/$1/" || echo 000)
+      case "$_c" in
+        200)     echo 200; return 0 ;;
+        404|410) echo 404; return 0 ;;
+      esac
+      _n=$((_n + 1))
+      [ "$_n" -ge 3 ] && { echo "unavailable:$_c"; return 0; }
+      sleep $((_n * 3))
+    done
+  }
   while read -r b; do
-    code=$(curl -s -m 15 -o /dev/null -w '%{http_code}' "https://hub.docker.com/v2/repositories/bitnami/$b/" || echo 000)
-    case "$code" in
+    case "$(_hub "$b")" in
       200) ;;
-      000) echo "    (skipped $b — network unreachable)" ;;
-      *)   note "bitnami/$b returns HTTP $code — the Bitnami page claims it exists"; miss=$((miss+1)) ;;
+      404) note "bitnami/$b returns HTTP 404 — the Bitnami page claims it exists"; miss=$((miss+1)) ;;
+      unavailable:000) echo "    (skipped $b — network unreachable)"; unver=$((unver+1)) ;;
+      unavailable:*) unver=$((unver+1)) ;;
     esac
+    sleep 0.3   # be a good citizen: ~50 lookups in a burst is what triggered the 429
   done < <(jq -r '.pairs[].bitnami' "$SITE"/data/bitnami-map.json)
-  [ "$miss" -eq 0 ] && ok "every bitnami/<name> named on the site resolves"
+  if [ "$unver" -gt 0 ]; then
+    soft "$unver bitnami repo(s) could not be verified (Docker Hub rate-limited or unreachable) — not a claim that they are missing"
+  fi
+  [ "$miss" -eq 0 ] && ok "every bitnami/<name> named on the site resolves (${unver} unverified)"
 else
   echo "  (competitor repository checks skipped — pass --online to run them)"
 fi
