@@ -49,7 +49,7 @@ environment:
       # reason. update-wolfi-packages retries the bump on each toolchain
       # release and the repair loop holds this image back until upstream
       # adapts, so the pin clears itself.
-      - go-1.26
+      - go-1.27
       - git
 
 pipeline:
