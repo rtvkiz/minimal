@@ -1,0 +1,122 @@
+---
+import Layout from '../../components/Layout.astro';
+const title = 'Why two scanners report different CVE counts — Minimal Containers';
+const description = 'Grype and Trivy can disagree about the same image and both be right. What a scanner finding actually proves, when it is not an exposure, and when it is.';
+---
+<Layout title={title} description={description} breadcrumbs={[{ name: 'Docs', href: '/docs/' }]}>
+  <section>
+    <div class="container-narrow">
+      <p class="eyebrow"><a href="/docs/">Docs</a></p>
+      <h1 class="section-title">Why two scanners disagree</h1>
+      <p class="section-sub">
+        Scan the same image with Grype and Trivy and you can get two different numbers. Neither tool is
+        broken. A CVE count is the result of matching an inventory against a database, and both halves
+        of that differ between tools.
+      </p>
+
+      <p>
+        This page is about how to read a finding. It is <em>not</em> an argument that findings can be
+        ignored — some of ours are real, and the ones that are get fixed rather than explained. What
+        follows is how to tell which is which, for our images or anyone else's.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">What a finding actually claims</h2>
+      <p>
+        A scanner does not examine your image and conclude that it is exploitable. It performs two steps:
+      </p>
+      <ol>
+        <li><b>Inventory.</b> Catalogue what is installed — apk database, Go build metadata, jars, gems,
+          crates, npm trees.</li>
+        <li><b>Match.</b> Look each entry up in a vulnerability database, by name and version.</li>
+      </ol>
+      <p>
+        So a finding claims: <em>a component with this name and version is present, and an advisory
+        exists against that name and version</em>. That is a useful claim. It is not the same as
+        &ldquo;this image is exploitable&rdquo;, and the gap between the two is where the disagreements live.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Why the numbers differ</h2>
+      <ul>
+        <li><b>Different databases.</b> Tools aggregate different sources and normalise them differently.
+          An advisory present in one feed and absent from another produces a finding in one tool and not
+          the other.</li>
+        <li><b>Different cataloguers.</b> If one tool reads a language manifest that another skips, it
+          sees dependencies the other never inventories — so it can only report more.</li>
+        <li><b>Different matching rules.</b> Version-range and CPE matching are heuristics. How strictly
+          a tool matches decides whether a near-miss becomes a finding.</li>
+        <li><b>Different defaults.</b> Severity floors, whether unfixed findings are shown, and whether
+          dev dependencies are included all change the headline number without changing the image.</li>
+      </ul>
+      <p class="small muted">
+        Comparing two vendors' published CVE counts is only meaningful if the same tool, the same
+        database version and the same flags were used on the same day. Otherwise the comparison measures
+        the tooling, not the images.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">When a finding is not an exposure</h2>
+      <p>These are the recurring causes, roughly in order of how often they come up:</p>
+      <ul>
+        <li><b>A backported fix.</b> Distributions patch a vulnerability without changing the upstream
+          version number. The version string still looks old to a matcher keyed on version alone. Our own
+          version of this problem — a distro rebuild counter compared across distributions — is described
+          in <a href="/docs/vulnerabilities/#provenance">Reading scan results</a>.</li>
+        <li><b>Unreachable code.</b> The vulnerable function exists in a linked dependency but nothing in
+          the image can call it. Present, not reachable.</li>
+        <li><b>Over-broad matching.</b> An advisory recorded against a product name that collides with a
+          different project, or a version range wider than the code it describes.</li>
+        <li><b>Not in the image's role.</b> A client library flagged for a server-side flaw the container
+          never performs.</li>
+      </ul>
+      <p>
+        The honest counterweight: <b>most findings in a container image are not in these categories.</b>
+        Old software with published advisories is the common case, and the fix is to update it. Treating
+        &ldquo;probably a false positive&rdquo; as a default is how images stay vulnerable while looking
+        managed.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">The opposite failure, which is worse</h2>
+      <p>
+        A scanner that cannot identify the software in an image reports nothing, and an empty report
+        looks exactly like a clean one. We measured this: two builds of HAProxy at an identical version,
+        differing only in the apk package name, reported <b>0</b> and <b>14</b> findings. Nobody
+        escalates a green scan.
+      </p>
+      <p>
+        Before trusting any clean report, confirm the scanner listed the software you expected. The
+        commands for that are in
+        <a href="/blog/why-your-scanner-reports-zero-cves/">Why your scanner reports zero CVEs</a>.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Triaging a finding yourself</h2>
+      <ol>
+        <li><b>Is the component really there?</b>
+          <pre class="kv-mono" style="padding:12px;overflow-x:auto"><code>syft &lt;image&gt; -o json | jq -r '.artifacts[] | "\(.name) \(.version)"' | grep -i &lt;pkg&gt;</code></pre>
+        </li>
+        <li><b>What does the advisory actually say?</b> Read the upstream advisory, not the summary line.
+          It states the affected versions, the conditions, and often that a configuration is required.</li>
+        <li><b>Is a fix available?</b> A finding with no fixed version cannot be resolved by updating, and
+          rebuilding will not clear it.</li>
+        <li><b>Can the code be reached?</b> The hardest question and the one worth the time. For Go,
+          <a href="https://go.dev/blog/govulncheck" rel="noopener">govulncheck</a> answers it directly by
+          analysing call paths rather than version strings.</li>
+      </ol>
+
+      <h2 class="section-title" style="margin-top:44px">What we publish</h2>
+      <p>
+        Every production image is scanned and both numbers are published: <b>raw</b>, what the scanner
+        reported, and <b>effective</b>, what remains after
+        <a href="https://openvex.dev/" rel="noopener">OpenVEX</a> statements. Both are shown on purpose —
+        a single &ldquo;0 CVEs&rdquo; headline hides whether it was reached by patching or by suppression.
+      </p>
+      <p>
+        Suppression is evidence-based and auditable: the VEX files are in the repository, withheld counts
+        are displayed next to the totals, and a finding that later gains corroboration returns to the
+        count on its own. The rules, including the cases we deliberately never withhold, are in
+        <a href="/docs/vulnerabilities/">Reading scan results</a>.
+      </p>
+      <p class="small muted">
+        We would rather publish a number that needs explaining than a zero that needs trusting.
+      </p>
+    </div>
+  </section>
+</Layout>
