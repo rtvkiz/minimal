@@ -12,7 +12,7 @@ package:
   # nothing in NVD. NVD indexes this product bare, as
   # cpe:2.3:a:syncthing:syncthing:*.
   name: syncthing
-  version: 2.1.3
+  version: 2.1.5
   epoch: 0
   description: "Minimal Syncthing continuous file synchronisation daemon built from source"
   copyright:
@@ -20,7 +20,7 @@ package:
 
 vars:
   # SHA256 of syncthing source tarball - updated by update-versions.yml workflow
-  sha256: 177792c697f61fc25f02d8fc8923dfc57ebb35753bd92c8d32a73d553446d117
+  sha256: 1b3e217022848b65a1b7ececa4d5e752fc044b4e8643befa1f9a8a9dc9b2bbbf
 
 environment:
   contents:
