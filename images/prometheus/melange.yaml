@@ -166,7 +166,7 @@ pipeline:
         ( set -e
           cd "$root"
           cp go.mod .pgd-orig.mod
-          _PGDA=$(_pgd_filter github.com/klauspost/compress@v1.18.7 google.golang.org/grpc@v1.83.1 golang.org/x/crypto@v0.57.0 golang.org/x/net@v0.59.0 golang.org/x/sys@v0.48.0 golang.org/x/text@v0.42.0 golang.org/x/term@v0.46.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.23.0 golang.org/x/tools@v0.50.0)
+          _PGDA=$(_pgd_filter github.com/klauspost/compress@v1.18.7 google.golang.org/grpc@v1.83.2 golang.org/x/crypto@v0.57.0 golang.org/x/net@v0.59.0 golang.org/x/sys@v0.48.0 golang.org/x/text@v0.42.0 golang.org/x/term@v0.46.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.23.0 golang.org/x/tools@v0.50.0)
           if [ -n "$_PGDA" ]; then _pgd_get $_PGDA; fi
           go mod tidy -e
           # go mod tidy can downgrade a source-pinned require below what the
