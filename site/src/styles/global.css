@@ -299,3 +299,43 @@ table.data td.mono { font-family: var(--mono); font-size: 0.82rem; color: var(--
   color: var(--accent-ink);
 }
 .prose blockquote > * + * { margin-top: 10px; }
+
+/* FAQ accordion (homepage). Native <details> so it works with JS disabled and
+   the answer text stays in the DOM for crawlers even while collapsed. */
+.faq {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0 18px;
+  margin-bottom: 10px;
+}
+.faq summary {
+  cursor: pointer;
+  padding: 15px 0;
+  font-weight: 550;
+  font-size: 0.98rem;
+  color: var(--fg-strong);
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+  content: '+';
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 1.15rem;
+  line-height: 1;
+  flex: none;
+}
+.faq[open] summary::after { content: '\2013'; }
+.faq summary:hover { color: var(--fg); }
+.faq > p {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  max-width: 66ch;
+}

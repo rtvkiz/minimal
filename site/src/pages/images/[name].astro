@@ -31,7 +31,7 @@ const sevOrder = ['critical', 'high', 'medium', 'low'] as const;
 // on Wolfi."), which reads as duplicate boilerplate at meta-description length,
 // so it is padded with the facts that differ per image. The gate means this
 // path should not be reached in a normal build.
-const pageTitle = `${image.name} — hardened, minimal container image`;
+const pageTitle = `${image.name} — free hardened container image`;
 const pullRef = prod?.pullRef ?? `ghcr.io/rtvkiz/minimal-${image.name}`;
 const pageDescription =
   image.description?.trim() ||

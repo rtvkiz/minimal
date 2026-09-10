@@ -16,6 +16,38 @@ docker pull ghcr.io/rtvkiz/minimal-python:latest
 # Verify build provenance (SLSA v1.0, Build L2)
 gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz`;
 
+// Real questions people type before adopting a hardened base image. The answers
+// live in the page body (not only in schema) because that is the text an answer
+// engine can actually quote — Google retired FAQPage rich results for
+// non-authoritative sites in 2023, so the markup below is for machine readers,
+// and the section further down is for humans and AI Overviews alike.
+const faqs = [
+  {
+    q: 'Are these hardened container images really free?',
+    a: `Yes — all ${stats.images} images are free for any use, including commercial, under the MIT license. There is no paid tier, no free-trial window, and no image held back behind a subscription. The catalogue you see is the whole catalogue.`,
+  },
+  {
+    q: 'Do I need an account to pull them?',
+    a: 'No. Images are published to the GitHub Container Registry as public packages, so an anonymous `docker pull` works with no login, no token and none of the Docker Hub anonymous pull-rate limits.',
+  },
+  {
+    q: 'What makes a container image "hardened"?',
+    a: 'Here it means four concrete things: the image ships only the packages the application needs, most images have no shell or package manager, the default user is non-root (UID 65532), and every published tag carries a cosign signature, an SPDX SBOM and SLSA v1.0 build provenance you can verify yourself.',
+  },
+  {
+    q: 'How often are the images rebuilt?',
+    a: 'Every six hours. A rebuild picks up new Wolfi packages, so a fix that lands upstream reaches a published tag the same day rather than at the next release. Each rebuild is re-scanned with Grype and the counts are published on this site.',
+  },
+  {
+    q: 'How do these compare to Chainguard, Minimus or Docker Hardened Images?',
+    a: 'The comparison pages publish head-to-head Grype scans run against a single pinned vulnerability database, including the images where Minimal has more CVEs than the alternative. The short version: comparable hardening and provenance, MIT-licensed and free, with a much smaller catalogue than the commercial vendors.',
+  },
+  {
+    q: 'Can I debug an image with no shell?',
+    a: 'Most images ship a `-dev` companion tag that adds a shell and a toolchain. Use the `-dev` variant as the build stage or for interactive debugging, and ship the shell-less production tag.',
+  },
+];
+
 const schema = [
   {
     '@context': 'https://schema.org',
@@ -32,13 +64,22 @@ const schema = [
     name: 'Minimal Containers',
     url: 'https://minimalcontainers.com',
   },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
 ];
 ---
 <Layout schema={schema}>
   <section class="hero">
     <div class="container">
       <span class="eyebrow">Open source · MIT licensed</span>
-      <h1>Hardened container images</h1>
+      <h1>Free hardened container images</h1>
       <p class="lead">
         Free. Signed. Verifiable. Small images — most built from source — rebuilt every six
         hours, each one cosign-signed with an SPDX SBOM and SLSA v1.0 build provenance. No
@@ -78,6 +119,21 @@ const schema = [
         <div class="feature"><h3>CVE scan every rebuild</h3><p>Grype runs on every production image each cycle; results published here and in the GitHub Security tab.</p></div>
         <div class="feature"><h3>Non-root by default</h3><p>Runs as UID 65532 unless the upstream insists otherwise.</p></div>
         <div class="feature"><h3>No shell where possible</h3><p>Most images don't ship /bin/sh, shrinking the attack surface.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:var(--bg-alt)">
+    <div class="container">
+      <div class="container-narrow" style="padding:0">
+        <h2 class="section-title">Common questions</h2>
+        <p class="section-sub">Short answers to what people ask before swapping a base image.</p>
+        {faqs.map((f) => (
+          <details class="faq">
+            <summary>{f.q}</summary>
+            <p set:html={f.a.replace(/`([^`]+)`/g, '<code>$1</code>')} />
+          </details>
+        ))}
       </div>
     </div>
   </section>
