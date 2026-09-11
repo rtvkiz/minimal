@@ -1,0 +1,10 @@
+{
+  "version": "0.109.1",
+  "sbom_tool": "syft",
+  "sbom_version": "1.18.1",
+  "started_at": "2026-09-11T01:25:07Z",
+  "vex_applied": false,
+  "db_schema": "v6.1.9",
+  "db_built": "2026-09-10T06:30:24Z",
+  "db_checksum": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.9_2026-09-10T00:31:01Z_1789021824.tar.zst?checksum=sha256%3Ace7ae6d4f7fb81029fc3bd1891b6b441f96bac4e278519743e4768eebd805e69"
+}
