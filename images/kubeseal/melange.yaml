@@ -10,7 +10,7 @@ package:
   # product bare, as cpe:2.3:a:kubeseal:kubeseal:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: kubeseal
-  version: 0.39.1
+  version: 0.40.0
   epoch: 0
   description: "Minimal kubeseal Sealed Secrets CLI built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of kubeseal source tarball - updated by update-versions.yml workflow
-  sha256: f96f7edbf887852e5e2c0e05a4b2dcefa4cc2a93470b9c078e22974e7e8e2706
+  sha256: d80d44401f3516d2b31c3e51dcd0826ad8ae90d976c2e86010be2c665ff23d99
 
 environment:
   contents:
