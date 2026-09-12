@@ -1286,6 +1286,42 @@
       "description": "Grafana Tempo distributed tracing backend storing traces in object storage. Shell-less, cosign-signed with SLSA provenance, rebuilt every 6 hours."
     },
     {
+      "name": "temporal-admin-tools",
+      "category": "Apps",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "temporal-admin-tools",
+      "upstream_url": "https://temporal.io",
+      "summary": "Temporal admin, schema and CLI tooling built from source.",
+      "description": "Temporal admin toolbox: tdbg, schema tools for Cassandra, SQL and Elasticsearch, plus the temporal and tctl CLIs. Built from source and signed."
+    },
+    {
+      "name": "temporal-server",
+      "category": "Apps",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "temporal-server",
+      "upstream_url": "https://temporal.io",
+      "summary": "Temporal workflow engine server built from source.",
+      "description": "Temporal workflow engine server with the temporal and tctl CLIs bundled, as upstream ships them. Built from source, signed, rebuilt every six hours."
+    },
+    {
+      "name": "temporal-ui-server",
+      "category": "Apps",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "temporal-ui-server",
+      "upstream_url": "https://temporal.io",
+      "summary": "Temporal Web UI server built from source.",
+      "description": "Temporal Web UI server with the SvelteKit bundle embedded in the binary. Built from source, signed with SLSA provenance, rebuilt every six hours."
+    },
+    {
       "name": "thanos",
       "category": "Observability",
       "variants": [

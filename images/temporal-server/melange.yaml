@@ -1,0 +1,135 @@
+# Melange build configuration for minimal-temporal-server
+# Temporal workflow engine server built from source
+
+package:
+  # Named exactly what upstream calls it. syft derives the apk CPE from this
+  # string, so a `-minimal` suffix would produce a CPE matching nothing in NVD
+  # and nothing in the Wolfi secdb, and grype would report zero CVEs for the
+  # image. See docs/onboarding.md "Package naming and scanner visibility".
+  name: temporal-server
+  version: 1.32.0
+  epoch: 0
+  description: "Temporal workflow engine server built from source"
+  copyright:
+    - license: MIT
+  dependencies:
+    # Wolfi ships a package of this name. apko resolves a top-level name across
+    # ALL repositories and picks the highest version — it does not prefer our
+    # local repo — so without this apk silently installs Wolfi's build over
+    # ours (the gitlab-runner / buildkit lesson).
+    provider-priority: 100
+
+vars:
+  sha256: a089b27f11b6910ee2ff7e7bb429831f87f1fe3dd6d82419cef3aca24039c47c
+  # Secondary upstreams. Each is tracked by its own versions.yaml row
+  # (temporal-cli / temporal-tctl) writing these fields, so none of them can
+  # freeze silently — that is what check-autoupdate exists to prevent.
+  cli_version: 1.8.3
+  cli_sha256: 14280dbc5f157373a2b34d7d333dd0c8f1b8506fa9ff5b332edc9048527af6f8
+  tctl_version: 1.18.4
+  tctl_sha256: 6d4f749754f816b9569459fe6a82c521349dc6dfb75e6419514bae80b4eb6c92
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/temporalio/temporal/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/temporal.tar.gz
+      echo "${{vars.sha256}}  /home/build/temporal.tar.gz" | sha256sum -c -
+      tar xzf /home/build/temporal.tar.gz -C /home/build && rm /home/build/temporal.tar.gz
+
+      # temporalio/cli — provides the modern `temporal` CLI.
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/temporalio/cli/archive/refs/tags/v${{vars.cli_version}}.tar.gz" \
+        -o /home/build/cli.tar.gz
+      echo "${{vars.cli_sha256}}  /home/build/cli.tar.gz" | sha256sum -c -
+      tar xzf /home/build/cli.tar.gz -C /home/build && rm /home/build/cli.tar.gz
+
+      # temporalio/tctl — the legacy CLI plus its authorization plugin. Upstream
+      # still ships both in the server and admin-tools images, so dropping them
+      # would break anyone scripting against the official images.
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/temporalio/tctl/archive/refs/tags/v${{vars.tctl_version}}.tar.gz" \
+        -o /home/build/tctl.tar.gz
+      echo "${{vars.tctl_sha256}}  /home/build/tctl.tar.gz" | sha256sum -c -
+      tar xzf /home/build/tctl.tar.gz -C /home/build && rm /home/build/tctl.tar.gz
+
+  - runs: |
+      # temporal-server. Its version is a source constant
+      # (common/headers.ServerVersion), bumped upstream per release, so there is
+      # no -X flag to set — a stale tarball under a bumped version number would
+      # show up as a version mismatch in the smoke test.
+      cd /home/build/temporal-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid=" \
+        -o /home/build/temporal-server \
+        ./cmd/server
+
+  - runs: |
+      # `temporal` CLI. Version is a package var (internal/temporalcli.Version,
+      # default "0.0.0-DEV"), so it must be injected or the CLI reports DEV.
+      cd /home/build/cli-${{vars.cli_version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/temporalio/cli/internal/temporalcli.Version=${{vars.cli_version}}" \
+        -o /home/build/temporal \
+        ./cmd/temporal
+
+  - runs: |
+      # tctl + its authorization plugin.
+      #
+      # tctl's version is NOT a linkable symbol: cli/app.go assigns
+      # `app.Version = "next"` inside NewCliApp(), so -X cannot reach it and
+      # upstream ships it reporting "next". Stamp the literal instead, guarded
+      # so a restructure upstream fails the build rather than silently
+      # reverting to "next".
+      cd /home/build/tctl-${{vars.tctl_version}}
+      grep -q 'app.Version = "next"' cli/app.go \
+        || { echo "FAIL: tctl version literal moved — re-check cli/app.go"; exit 1; }
+      sed -i 's/app.Version = "next"/app.Version = "${{vars.tctl_version}}"/' cli/app.go
+
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build -trimpath \
+        -ldflags="-s -w -buildid=" -o /home/build/tctl ./cmd/tctl
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build -trimpath \
+        -ldflags="-s -w -buildid=" -o /home/build/tctl-authorization-plugin \
+        ./cmd/plugins/tctl-authorization-plugin
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/temporal-server /home/build/temporal \
+         /home/build/tctl /home/build/tctl-authorization-plugin \
+         "${{targets.destdir}}/usr/bin/"
+
+      # Schema files, as upstream's server image ships them.
+      mkdir -p "${{targets.destdir}}/etc/temporal"
+      cp -r /home/build/temporal-${{package.version}}/schema \
+            "${{targets.destdir}}/etc/temporal/schema"
+
+  - runs: |
+      echo "Verifying temporal-server build..."
+      for b in temporal-server temporal tctl tctl-authorization-plugin; do
+        ls -lh "${{targets.destdir}}/usr/bin/$b"
+      done
+      test -d "${{targets.destdir}}/etc/temporal/schema"
+
+update:
+  enabled: true
+  github:
+    identifier: temporalio/temporal
+    use-tag: true
+    tag-filter: "v"

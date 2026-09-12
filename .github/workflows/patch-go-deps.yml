@@ -88,6 +88,9 @@ jobs:
           # have their own go.mod; patching only the root has no effect on
           # the built binaries). For single-module images, one path suffices.
           declare -A MODROOTS=(
+            [temporal-ui-server]="/home/build/ui-server-${D}{{package.version}}"
+            [temporal-admin-tools]="/home/build/temporal-${D}{{package.version}}"
+            [temporal-server]="/home/build/temporal-${D}{{package.version}}"
             [metallb]="/home/build/metallb-${D}{{package.version}}"
             [victoria-logs]="/home/build/VictoriaLogs-${D}{{package.version}}"
             [headscale]="/home/build/headscale-${D}{{package.version}}"
@@ -179,6 +182,9 @@ jobs:
           # "package X is in the main module, so can't request version Y".
           # Listing the main module here lets the FIXES filter drop self-bumps.
           declare -A MAIN_MODULES=(
+            [temporal-ui-server]="github.com/temporalio/ui-server/v2"
+            [temporal-admin-tools]="go.temporal.io/server"
+            [temporal-server]="go.temporal.io/server"
             [metallb]="go.universe.tf/metallb"
             [victoria-logs]="github.com/VictoriaMetrics/VictoriaLogs"
             [headscale]="github.com/juanfont/headscale"
@@ -260,6 +266,9 @@ jobs:
 
           # Build step markers to insert before
           declare -A BUILD_MARKERS=(
+            [temporal-ui-server]='CGO_ENABLED=0 go build'
+            [temporal-admin-tools]='CGO_ENABLED=0 go build'
+            [temporal-server]='CGO_ENABLED=0 go build'
             [metallb]='CGO_ENABLED=0 go build'
             [victoria-logs]='CGO_ENABLED=0 go build'
             [headscale]='CGO_ENABLED=0 go build'

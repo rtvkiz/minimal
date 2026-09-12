@@ -33,6 +33,19 @@ render() {
     [ -z "$k" ] && continue
     tmpl="${tmpl//\{$k\}/$v}"
   done < <(jq -r '(.tarball.vars // .tarballs[0].vars // {}) | to_entries[] | "\(.key)\t\(.value)"' <<<"$row")
+  # Computed digests, by their melange field name (e.g. {sha256}, {cli_sha256}).
+  # Without these a custom {path,pattern,template} entry can rewrite a version
+  # but NOT its checksum, so an image that bundles a SECOND upstream had no way
+  # to track that upstream at all: the string-form files[] entry rewrites the
+  # package's own `version:`, which for a secondary row is the wrong field
+  # entirely (the temporal-cli row read current=1.32.0 — the server version —
+  # and would have rewritten the package version down to the CLI's 1.8.3).
+  # `digests` is populated before this is ever called; bash resolves it at call
+  # time, so the empty-on-definition case is fine.
+  local dk
+  for dk in "${!digests[@]}"; do
+    tmpl="${tmpl//\{$dk\}/${digests[$dk]}}"
+  done
   printf '%s' "$tmpl"
 }
 
