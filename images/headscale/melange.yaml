@@ -1,0 +1,82 @@
+# Melange build configuration for minimal-headscale
+# Headscale self-hosted Tailscale control server, from source.
+
+package:
+  # Named exactly what upstream calls it, not `headscale-minimal`: syft derives the
+  # apk CPE from this string, so a suffix produces a CPE that matches nothing
+  # in NVD and nothing in the Wolfi secdb, and grype then reports zero CVEs
+  # for the image. See docs/onboarding.md "Package naming and scanner
+  # visibility" (haproxy-minimal: 0 findings vs haproxy: 14, same version).
+  name: headscale
+  version: 0.29.3
+  epoch: 0
+  description: "Headscale self-hosted Tailscale control server, from source."
+  copyright:
+    - license: BSD-3-Clause
+
+vars:
+  sha256: 9c2b6020b51a1d53641fe8e282fd849b4d00eca8945fef93d63454655a90ba0d
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/juanfont/headscale/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/headscale.tar.gz
+      echo "${{vars.sha256}}  /home/build/headscale.tar.gz" | sha256sum -c -
+      cd /home/build
+      tar xzf headscale.tar.gz
+      rm headscale.tar.gz
+
+  - runs: |
+      cd /home/build/headscale-${{package.version}}
+      # headscale 0.29.x takes its version from debug.ReadBuildInfo()
+      # (hscontrol/types/version.go), NOT from an -X ldflag. Upstream's Makefile
+      # still passes `-X main.version=...` but no such symbol exists any more, so
+      # Go silently discards it — a stale flag they never removed. A tarball has
+      # no VCS metadata, so buildInfo.Main.Version is "(devel)" and the code
+      # falls back to the literal "dev", which is what `headscale version`
+      # printed before this step existed.
+      #
+      # So stamp the fallback in the source instead. The grep guard makes a
+      # silent regression impossible: if upstream renames or restructures this,
+      # the build fails here rather than quietly shipping "dev" again.
+      grep -q 'Version:   "dev",' hscontrol/types/version.go \
+        || { echo "FAIL: headscale version fallback moved — re-check hscontrol/types/version.go"; exit 1; }
+      sed -i 's/Version:   "dev",/Version:   "${{package.version}}",/' hscontrol/types/version.go
+      grep -q 'Version:   "${{package.version}}",' hscontrol/types/version.go \
+        || { echo "FAIL: version stamp did not apply"; exit 1; }
+
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid=" \
+        -o /home/build/headscale \
+        ./cmd/headscale
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/headscale "${{targets.destdir}}/usr/bin/"
+
+  - runs: |
+      echo "Verifying headscale build..."
+      ls -lh "${{targets.destdir}}/usr/bin/headscale"
+
+update:
+  enabled: true
+  github:
+    identifier: juanfont/headscale
+    use-tag: true
+    tag-filter: "v"

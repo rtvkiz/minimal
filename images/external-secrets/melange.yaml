@@ -1,0 +1,65 @@
+# Melange build configuration for minimal-external-secrets
+# External Secrets Operator built from source via melange.
+
+package:
+  # Named exactly what upstream calls it, not `external-secrets-minimal`: syft derives the
+  # apk CPE from this string, so a suffix produces a CPE that matches nothing
+  # in NVD and nothing in the Wolfi secdb, and grype then reports zero CVEs
+  # for the image. See docs/onboarding.md "Package naming and scanner
+  # visibility" (haproxy-minimal: 0 findings vs haproxy: 14, same version).
+  name: external-secrets
+  version: 2.10.0
+  epoch: 0
+  description: "External Secrets Operator built from source via melange."
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: a0c8834a9ecc7b98b5107f748a48a40189ff7a16e5b7033418e9b89992a159df
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/external-secrets/external-secrets/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/external-secrets.tar.gz
+      echo "${{vars.sha256}}  /home/build/external-secrets.tar.gz" | sha256sum -c -
+      cd /home/build
+      tar xzf external-secrets.tar.gz
+      rm external-secrets.tar.gz
+
+  - runs: |
+      cd /home/build/external-secrets-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid=" \
+        -o /home/build/external-secrets \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/external-secrets "${{targets.destdir}}/usr/bin/"
+
+  - runs: |
+      echo "Verifying external-secrets build..."
+      ls -lh "${{targets.destdir}}/usr/bin/external-secrets"
+
+update:
+  enabled: true
+  github:
+    identifier: external-secrets/external-secrets
+    use-tag: true
+    tag-filter: "v"

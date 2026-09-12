@@ -215,6 +215,7 @@ endef
 .PHONY: cosign cosign-melange test-cosign
 .PHONY: syft syft-melange test-syft
 .PHONY: grype grype-melange test-grype
+.PHONY: external-secrets external-secrets-melange kyverno kyverno-melange flagger flagger-melange reloader reloader-melange postgres-exporter postgres-exporter-melange headscale headscale-melange victoria-logs victoria-logs-melange metallb metallb-melange
 .PHONY: oras oras-melange test-oras
 .PHONY: gitleaks gitleaks-melange test-gitleaks
 .PHONY: step-cli step-cli-melange test-step-cli
@@ -255,13 +256,15 @@ endef
 .PHONY: kube-state-metrics kube-state-metrics-melange test-kube-state-metrics
 .PHONY: pushgateway pushgateway-melange test-pushgateway
 .PHONY: mosquitto mosquitto-melange mosquitto-dev test-mosquitto test-mosquitto-dev
+.PHONY: scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb
 .PHONY: scan-python scan-jenkins scan-go scan-node-slim scan-nginx scan-httpd scan-redis-slim scan-mysql scan-memcached scan-caddy scan-haproxy scan-postgres-slim scan-bun scan-sqlite scan-dotnet scan-java scan-ruby scan-php scan-rails scan-kafka scan-cassandra scan-solr scan-pulsar scan-valkey scan-nats scan-traefik scan-rabbitmq scan-minio scan-opensearch scan-prometheus scan-mariadb scan-etcd scan-victoria-metrics scan-jaeger scan-otelcol scan-qdrant scan-deno scan-coredns scan-openbao scan-loki scan-fluent-bit scan-keycloak
+.PHONY: test-external-secrets test-external-secrets-dev test-kyverno test-kyverno-dev test-flagger test-flagger-dev test-reloader test-reloader-dev test-postgres-exporter test-postgres-exporter-dev test-headscale test-headscale-dev test-victoria-logs test-victoria-logs-dev test-metallb test-metallb-dev
 .PHONY: test-python test-python-dev test-jenkins test-go test-go-dev test-node-slim test-node-slim-dev test-nginx test-httpd test-redis-slim test-redis-slim-dev test-mysql test-memcached test-caddy test-haproxy test-postgres-slim test-postgres-slim-dev test-bun test-bun-dev test-sqlite test-dotnet test-dotnet-dev test-java test-java-dev test-ruby test-ruby-dev test-php test-php-dev test-rails test-rails-dev test-deno test-deno-dev test-mariadb test-mariadb-dev test-valkey test-valkey-dev test-memcached-dev test-sqlite-dev test-opensearch-dev test-kafka test-cassandra test-solr test-pulsar test-valkey test-nats test-traefik test-envoy test-rabbitmq test-minio test-opensearch test-prometheus test-mariadb test-etcd test-victoria-metrics test-jaeger test-otelcol test-qdrant test-deno test-coredns test-openbao test-loki test-fluent-bit test-keycloak
 
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -1063,6 +1066,14 @@ qdrant: qdrant-melange
 # DENO IMAGE (melange: official upstream binary, shell-less)
 #------------------------------------------------------------------------------
 DENO_VERSION ?= $(call melange_version,images/deno/melange.yaml)
+EXTERNAL_SECRETS_VERSION ?= $(call melange_version,images/external-secrets/melange.yaml)
+KYVERNO_VERSION ?= $(call melange_version,images/kyverno/melange.yaml)
+FLAGGER_VERSION ?= $(call melange_version,images/flagger/melange.yaml)
+RELOADER_VERSION ?= $(call melange_version,images/reloader/melange.yaml)
+POSTGRES_EXPORTER_VERSION ?= $(call melange_version,images/postgres-exporter/melange.yaml)
+HEADSCALE_VERSION ?= $(call melange_version,images/headscale/melange.yaml)
+VICTORIA_LOGS_VERSION ?= $(call melange_version,images/victoria-logs/melange.yaml)
+METALLB_VERSION ?= $(call melange_version,images/metallb/melange.yaml)
 
 deno-melange: keygen
 	@echo "Building Deno $(DENO_VERSION) (official upstream binary) via melange (x86_64 only locally; CI builds aarch64 natively)..."
@@ -3101,7 +3112,7 @@ scan-%:
 		$(REGISTRY)/$(OWNER)/minimal-$*:latest
 	@echo "✓ minimal-$*: scan passed"
 
-scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit
+scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -3453,7 +3464,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit
+test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb
 
 $(eval $(call DEV_TEST_RULE,python))
 $(eval $(call DEV_TEST_RULE,node-slim))
@@ -4372,7 +4383,7 @@ push-%:
 	docker push $(REGISTRY)/$(OWNER)/minimal-$*:$(or $(PUSH_VER_$*),$(VERSION))
 	docker push $(REGISTRY)/$(OWNER)/minimal-$*:latest
 
-push: push-python push-node-slim push-bun push-go push-java push-ruby push-php push-dotnet push-deno push-mysql push-mariadb push-postgres-slim push-pgbouncer push-unbound push-dnsmasq push-keepalived push-vector push-patroni push-metrics-server push-external-dns push-velero push-kaniko push-step-ca push-skopeo push-sqlite push-opensearch push-redis-slim push-valkey push-memcached push-kafka push-zookeeper push-cassandra push-solr push-pulsar push-tomcat push-rabbitmq push-nats push-mosquitto push-nginx push-httpd push-caddy push-haproxy push-traefik push-envoy push-oauth2-proxy push-prometheus push-alertmanager push-victoria-metrics push-thanos push-mimir push-jaeger push-loki push-tempo push-otelcol push-fluent-bit push-telegraf push-node-exporter push-blackbox-exporter push-pushgateway push-coredns push-etcd push-openbao push-keycloak push-qdrant push-registry push-consul push-helm push-kubectl push-opentofu push-trivy push-cosign push-syft push-grype push-osv-scanner push-oras push-notation push-conftest push-kubeconform push-kube-bench push-trufflehog push-flux push-kustomize push-sops push-crane push-kubeseal push-helmfile push-regctl push-stern push-gitleaks push-step-cli push-opa push-jenkins push-gitea push-minio push-rails push-mailpit
+push: push-python push-node-slim push-bun push-go push-java push-ruby push-php push-dotnet push-deno push-mysql push-mariadb push-postgres-slim push-pgbouncer push-unbound push-dnsmasq push-keepalived push-vector push-patroni push-metrics-server push-external-dns push-velero push-kaniko push-step-ca push-skopeo push-sqlite push-opensearch push-redis-slim push-valkey push-memcached push-kafka push-zookeeper push-cassandra push-solr push-pulsar push-tomcat push-rabbitmq push-nats push-mosquitto push-nginx push-httpd push-caddy push-haproxy push-traefik push-envoy push-oauth2-proxy push-prometheus push-alertmanager push-victoria-metrics push-thanos push-mimir push-jaeger push-loki push-tempo push-otelcol push-fluent-bit push-telegraf push-node-exporter push-blackbox-exporter push-pushgateway push-coredns push-etcd push-openbao push-keycloak push-qdrant push-registry push-consul push-helm push-kubectl push-opentofu push-trivy push-cosign push-syft push-grype push-osv-scanner push-oras push-notation push-conftest push-kubeconform push-kube-bench push-trufflehog push-flux push-kustomize push-sops push-crane push-kubeseal push-helmfile push-regctl push-stern push-gitleaks push-step-cli push-opa push-jenkins push-gitea push-minio push-rails push-mailpit push-external-secrets push-kyverno push-flagger push-reloader push-postgres-exporter push-headscale push-victoria-logs push-metallb
 
 #------------------------------------------------------------------------------
 # CLEANUP
@@ -4600,3 +4611,331 @@ help:
 	@echo "  CUDA_VERSION=$(CUDA_VERSION)"
 	@echo "  REGISTRY=$(REGISTRY)"
 	@echo "  OWNER=$(OWNER)"
+
+external-secrets-melange: keygen
+	@echo "Building External Secrets Operator $(EXTERNAL_SECRETS_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
+	melange build images/external-secrets/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ External Secrets Operator package built from source"
+
+external-secrets: external-secrets-melange
+	@echo "Assembling minimal-external-secrets image with apko..."
+	apko build images/external-secrets/apko/external-secrets.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-external-secrets:$(VERSION) \
+		external-secrets.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < external-secrets.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-external-secrets:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-external-secrets:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-external-secrets:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-external-secrets:latest
+	@rm -f external-secrets.tar sbom-*.spdx.json
+	@echo "✓ minimal-external-secrets built (source build)"
+
+scan-external-secrets:
+	@echo "Scanning minimal-external-secrets..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-external-secrets:latest
+	@echo "✓ minimal-external-secrets: scan passed"
+
+test-external-secrets:
+	@echo "Testing External Secrets Operator image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-external-secrets:latest" && \
+		images/external-secrets/test.sh
+	@echo "✓ External Secrets Operator tests passed"
+
+$(eval $(call DEV_IMAGE_RULE,external-secrets,external-secrets-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_TEST_RULE,external-secrets))
+
+kyverno-melange: keygen
+	@echo "Building Kyverno $(KYVERNO_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
+	melange build images/kyverno/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Kyverno package built from source"
+
+kyverno: kyverno-melange
+	@echo "Assembling minimal-kyverno image with apko..."
+	apko build images/kyverno/apko/kyverno.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-kyverno:$(VERSION) \
+		kyverno.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < kyverno.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kyverno:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kyverno:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kyverno:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kyverno:latest
+	@rm -f kyverno.tar sbom-*.spdx.json
+	@echo "✓ minimal-kyverno built (source build)"
+
+scan-kyverno:
+	@echo "Scanning minimal-kyverno..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-kyverno:latest
+	@echo "✓ minimal-kyverno: scan passed"
+
+test-kyverno:
+	@echo "Testing Kyverno image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kyverno:latest" && \
+		images/kyverno/test.sh
+	@echo "✓ Kyverno tests passed"
+
+$(eval $(call DEV_IMAGE_RULE,kyverno,kyverno-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_TEST_RULE,kyverno))
+
+flagger-melange: keygen
+	@echo "Building Flagger $(FLAGGER_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
+	melange build images/flagger/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Flagger package built from source"
+
+flagger: flagger-melange
+	@echo "Assembling minimal-flagger image with apko..."
+	apko build images/flagger/apko/flagger.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-flagger:$(VERSION) \
+		flagger.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < flagger.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-flagger:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-flagger:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-flagger:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-flagger:latest
+	@rm -f flagger.tar sbom-*.spdx.json
+	@echo "✓ minimal-flagger built (source build)"
+
+scan-flagger:
+	@echo "Scanning minimal-flagger..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-flagger:latest
+	@echo "✓ minimal-flagger: scan passed"
+
+test-flagger:
+	@echo "Testing Flagger image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-flagger:latest" && \
+		images/flagger/test.sh
+	@echo "✓ Flagger tests passed"
+
+$(eval $(call DEV_IMAGE_RULE,flagger,flagger-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_TEST_RULE,flagger))
+
+reloader-melange: keygen
+	@echo "Building Reloader $(RELOADER_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
+	melange build images/reloader/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Reloader package built from source"
+
+reloader: reloader-melange
+	@echo "Assembling minimal-reloader image with apko..."
+	apko build images/reloader/apko/reloader.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-reloader:$(VERSION) \
+		reloader.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < reloader.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-reloader:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-reloader:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-reloader:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-reloader:latest
+	@rm -f reloader.tar sbom-*.spdx.json
+	@echo "✓ minimal-reloader built (source build)"
+
+scan-reloader:
+	@echo "Scanning minimal-reloader..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-reloader:latest
+	@echo "✓ minimal-reloader: scan passed"
+
+test-reloader:
+	@echo "Testing Reloader image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-reloader:latest" && \
+		images/reloader/test.sh
+	@echo "✓ Reloader tests passed"
+
+$(eval $(call DEV_IMAGE_RULE,reloader,reloader-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_TEST_RULE,reloader))
+
+postgres-exporter-melange: keygen
+	@echo "Building postgres_exporter $(POSTGRES_EXPORTER_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
+	melange build images/postgres-exporter/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ postgres_exporter package built from source"
+
+postgres-exporter: postgres-exporter-melange
+	@echo "Assembling minimal-postgres-exporter image with apko..."
+	apko build images/postgres-exporter/apko/postgres-exporter.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-postgres-exporter:$(VERSION) \
+		postgres-exporter.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < postgres-exporter.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-postgres-exporter:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-postgres-exporter:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-postgres-exporter:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-postgres-exporter:latest
+	@rm -f postgres-exporter.tar sbom-*.spdx.json
+	@echo "✓ minimal-postgres-exporter built (source build)"
+
+scan-postgres-exporter:
+	@echo "Scanning minimal-postgres-exporter..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-postgres-exporter:latest
+	@echo "✓ minimal-postgres-exporter: scan passed"
+
+test-postgres-exporter:
+	@echo "Testing postgres_exporter image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-postgres-exporter:latest" && \
+		images/postgres-exporter/test.sh
+	@echo "✓ postgres_exporter tests passed"
+
+$(eval $(call DEV_IMAGE_RULE,postgres-exporter,postgres-exporter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_TEST_RULE,postgres-exporter))
+
+headscale-melange: keygen
+	@echo "Building Headscale $(HEADSCALE_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
+	melange build images/headscale/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Headscale package built from source"
+
+headscale: headscale-melange
+	@echo "Assembling minimal-headscale image with apko..."
+	apko build images/headscale/apko/headscale.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-headscale:$(VERSION) \
+		headscale.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < headscale.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-headscale:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-headscale:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-headscale:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-headscale:latest
+	@rm -f headscale.tar sbom-*.spdx.json
+	@echo "✓ minimal-headscale built (source build)"
+
+scan-headscale:
+	@echo "Scanning minimal-headscale..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-headscale:latest
+	@echo "✓ minimal-headscale: scan passed"
+
+test-headscale:
+	@echo "Testing Headscale image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-headscale:latest" && \
+		images/headscale/test.sh
+	@echo "✓ Headscale tests passed"
+
+$(eval $(call DEV_IMAGE_RULE,headscale,headscale-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_TEST_RULE,headscale))
+
+victoria-logs-melange: keygen
+	@echo "Building VictoriaLogs $(VICTORIA_LOGS_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
+	melange build images/victoria-logs/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ VictoriaLogs package built from source"
+
+victoria-logs: victoria-logs-melange
+	@echo "Assembling minimal-victoria-logs image with apko..."
+	apko build images/victoria-logs/apko/victoria-logs.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-victoria-logs:$(VERSION) \
+		victoria-logs.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < victoria-logs.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-victoria-logs:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-victoria-logs:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-victoria-logs:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-victoria-logs:latest
+	@rm -f victoria-logs.tar sbom-*.spdx.json
+	@echo "✓ minimal-victoria-logs built (source build)"
+
+scan-victoria-logs:
+	@echo "Scanning minimal-victoria-logs..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-victoria-logs:latest
+	@echo "✓ minimal-victoria-logs: scan passed"
+
+test-victoria-logs:
+	@echo "Testing VictoriaLogs image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-victoria-logs:latest" && \
+		images/victoria-logs/test.sh
+	@echo "✓ VictoriaLogs tests passed"
+
+$(eval $(call DEV_IMAGE_RULE,victoria-logs,victoria-logs-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_TEST_RULE,victoria-logs))
+
+metallb-melange: keygen
+	@echo "Building MetalLB $(METALLB_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
+	melange build images/metallb/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ MetalLB package built from source"
+
+metallb: metallb-melange
+	@echo "Assembling minimal-metallb image with apko..."
+	apko build images/metallb/apko/metallb.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-metallb:$(VERSION) \
+		metallb.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < metallb.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-metallb:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-metallb:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-metallb:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-metallb:latest
+	@rm -f metallb.tar sbom-*.spdx.json
+	@echo "✓ minimal-metallb built (source build)"
+
+scan-metallb:
+	@echo "Scanning minimal-metallb..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-metallb:latest
+	@echo "✓ minimal-metallb: scan passed"
+
+test-metallb:
+	@echo "Testing MetalLB image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-metallb:latest" && \
+		images/metallb/test.sh
+	@echo "✓ MetalLB tests passed"
+
+$(eval $(call DEV_IMAGE_RULE,metallb,metallb-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_TEST_RULE,metallb))

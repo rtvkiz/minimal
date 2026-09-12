@@ -1173,3 +1173,84 @@
 #     field `minio_release:` keeps the full tag for the download URL. That
 #     tag-vs-version split is not worth lifting into the framework for one
 #     image. Both workflows stay authoritative.
+
+- name: external-secrets
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  # releases/latest on this repo is a HELM CHART tag, not the app version,
+  # so this tracks tags with an app-semver pattern instead. github-tags
+  # reads strip-prefix; strip-v is ignored by this source type.
+  files: [images/external-secrets/melange.yaml]
+  source: { type: github-tags, repo: external-secrets/external-secrets, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
+  tarball: { url: "https://github.com/external-secrets/external-secrets/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/external-secrets/external-secrets/releases"
+    notes: "https://github.com/external-secrets/external-secrets/releases/tag/v{version}"
+
+- name: kyverno
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  files: [images/kyverno/melange.yaml]
+  source: { type: github-releases-latest, repo: kyverno/kyverno, strip-v: true }
+  tarball: { url: "https://github.com/kyverno/kyverno/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/kyverno/kyverno/releases"
+    notes: "https://github.com/kyverno/kyverno/releases/tag/v{version}"
+
+- name: flagger
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  files: [images/flagger/melange.yaml]
+  source: { type: github-releases-latest, repo: fluxcd/flagger, strip-v: true }
+  tarball: { url: "https://github.com/fluxcd/flagger/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/fluxcd/flagger/releases"
+    notes: "https://github.com/fluxcd/flagger/releases/tag/v{version}"
+
+- name: reloader
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  # releases/latest on this repo is a HELM CHART tag, not the app version,
+  # so this tracks tags with an app-semver pattern instead. github-tags
+  # reads strip-prefix; strip-v is ignored by this source type.
+  files: [images/reloader/melange.yaml]
+  source: { type: github-tags, repo: stakater/Reloader, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
+  tarball: { url: "https://github.com/stakater/Reloader/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/stakater/Reloader/releases"
+    notes: "https://github.com/stakater/Reloader/releases/tag/v{version}"
+
+- name: postgres-exporter
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  files: [images/postgres-exporter/melange.yaml]
+  source: { type: github-releases-latest, repo: prometheus-community/postgres_exporter, strip-v: true }
+  tarball: { url: "https://github.com/prometheus-community/postgres_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/prometheus-community/postgres_exporter/releases"
+    notes: "https://github.com/prometheus-community/postgres_exporter/releases/tag/v{version}"
+
+- name: headscale
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  files: [images/headscale/melange.yaml]
+  source: { type: github-releases-latest, repo: juanfont/headscale, strip-v: true }
+  tarball: { url: "https://github.com/juanfont/headscale/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/juanfont/headscale/releases"
+    notes: "https://github.com/juanfont/headscale/releases/tag/v{version}"
+
+- name: victoria-logs
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  files: [images/victoria-logs/melange.yaml]
+  source: { type: github-releases-latest, repo: VictoriaMetrics/VictoriaLogs, strip-v: true }
+  tarball: { url: "https://github.com/VictoriaMetrics/VictoriaLogs/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/VictoriaMetrics/VictoriaLogs/releases"
+    notes: "https://github.com/VictoriaMetrics/VictoriaLogs/releases/tag/v{version}"
+
+- name: metallb
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  # releases/latest on this repo is a HELM CHART tag, not the app version,
+  # so this tracks tags with an app-semver pattern instead. github-tags
+  # reads strip-prefix; strip-v is ignored by this source type.
+  files: [images/metallb/melange.yaml]
+  source: { type: github-tags, repo: metallb/metallb, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
+  tarball: { url: "https://github.com/metallb/metallb/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/metallb/metallb/releases"
+    notes: "https://github.com/metallb/metallb/releases/tag/v{version}"

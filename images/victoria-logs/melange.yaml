@@ -1,0 +1,66 @@
+# Melange build configuration for minimal-victoria-logs
+# VictoriaLogs log database built from source via melange.
+
+package:
+  # Named exactly what upstream calls it, not `victoria-logs-minimal`: syft derives the
+  # apk CPE from this string, so a suffix produces a CPE that matches nothing
+  # in NVD and nothing in the Wolfi secdb, and grype then reports zero CVEs
+  # for the image. See docs/onboarding.md "Package naming and scanner
+  # visibility" (haproxy-minimal: 0 findings vs haproxy: 14, same version).
+  name: victoria-logs
+  version: 1.52.0
+  epoch: 0
+  description: "VictoriaLogs log database built from source via melange."
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: 90d20500b5d9ecc41b0e1c2487696cde8aa16b025a1f2d176d53d759490d8f90
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/VictoriaMetrics/VictoriaLogs/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/victoria-logs.tar.gz
+      echo "${{vars.sha256}}  /home/build/victoria-logs.tar.gz" | sha256sum -c -
+      cd /home/build
+      tar xzf victoria-logs.tar.gz
+      rm victoria-logs.tar.gz
+
+  - runs: |
+      cd /home/build/VictoriaLogs-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/VictoriaMetrics/VictoriaMetrics/lib/buildinfo.Version=${{package.version}}" \
+        -o /home/build/victoria-logs \
+        ./app/victoria-logs
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/victoria-logs "${{targets.destdir}}/usr/bin/"
+
+  - runs: |
+      echo "Verifying victoria-logs build..."
+      ls -lh "${{targets.destdir}}/usr/bin/victoria-logs"
+
+update:
+  enabled: true
+  github:
+    identifier: VictoriaMetrics/VictoriaLogs
+    use-tag: true
+    tag-filter: "v"

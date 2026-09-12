@@ -60,6 +60,7 @@ jobs:
         run: |
           # Image configuration
           MELANGE_IMAGES='[
+            {"name":"external-secrets","variants":["prod","dev"]},{"name":"kyverno","variants":["prod","dev"]},{"name":"flagger","variants":["prod","dev"]},{"name":"reloader","variants":["prod","dev"]},{"name":"postgres-exporter","variants":["prod","dev"]},{"name":"headscale","variants":["prod","dev"]},{"name":"victoria-logs","variants":["prod","dev"]},{"name":"metallb","variants":["prod","dev"]},
             {"name":"jenkins","variants":["prod","dev"]},
             {"name":"redis-slim","apko":"redis-slim/apko/redis.yaml","variants":["prod","dev"]},
             {"name":"mysql","variants":["prod","dev"]},{"name":"memcached","variants":["prod","dev"]},{"name":"caddy","variants":["prod","dev"]},
