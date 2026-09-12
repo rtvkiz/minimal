@@ -1256,7 +1256,7 @@
     notes: "https://github.com/metallb/metallb/releases/tag/v{version}"
 
 - name: temporal
-  cron-enabled: true   # wave 4 (temporal family)
+  cron-enabled: true   # wave 4 (dispatch-validated 2026-09-12, run 34713113831)
   # Primary upstream for BOTH the server and admin-tools images: it sets
   # `version:` (the package version) and `sha256:` in each.
   files: [images/temporal-server/melange.yaml, images/temporal-admin-tools/melange.yaml]
@@ -1267,7 +1267,7 @@
     notes: "https://github.com/temporalio/temporal/releases/tag/v{version}"
 
 - name: temporal-cli
-  cron-enabled: true   # wave 4 (temporal family)
+  cron-enabled: true   # wave 4 (dispatch-validated 2026-09-12, run 34713113831)
   # SECONDARY upstream: both images bundle the `temporal` CLI,
   # which releases on its own cadence. Without this row it would freeze at
   # whatever version shipped first — the silent staleness check-autoupdate
@@ -1294,7 +1294,7 @@
     releases: "https://github.com/temporalio/cli/releases"
     notes: "https://github.com/temporalio/cli/releases/tag/v{version}"
 - name: temporal-tctl
-  cron-enabled: true   # wave 4 (temporal family)
+  cron-enabled: true   # wave 4 (dispatch-validated 2026-09-12, run 34713113831)
   # SECONDARY upstream: both images bundle the legacy tctl CLI and its authorization plugin,
   # which releases on its own cadence. Without this row it would freeze at
   # whatever version shipped first — the silent staleness check-autoupdate
@@ -1321,7 +1321,7 @@
     releases: "https://github.com/temporalio/tctl/releases"
     notes: "https://github.com/temporalio/tctl/releases/tag/v{version}"
 - name: temporal-ui-server
-  cron-enabled: true   # wave 4 (temporal family)
+  cron-enabled: true   # wave 4 (dispatch-validated 2026-09-12, run 34713113831)
   files: [images/temporal-ui-server/melange.yaml]
   source: { type: github-releases-latest, repo: temporalio/ui-server, strip-v: true }
   tarball: { url: "https://github.com/temporalio/ui-server/archive/refs/tags/v{version}.tar.gz", field: sha256 }
