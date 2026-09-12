@@ -44,6 +44,133 @@ pipeline:
       echo "${{vars.sha256}}  /home/build/ui-server.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf ui-server.tar.gz && rm ui-server.tar.gz
 
+  # patch-go-deps: auto-generated — do not edit manually
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      _pgd_reqs() { awk '$1=="require" && $2=="(" {b=1;next} b && $1==")" {b=0;next} b && index($1,"/")>0 && substr($2,1,1)=="v" {print $1,$2;next} $1=="require" && NF>=3 && index($2,"/")>0 && substr($3,1,1)=="v" {print $2,$3}' "$1"; }
+      _pgd_filter() {  # drop pins the module graph already satisfies at >= the pin
+        # grype reports the FIRST fixed version, which for a backported fix sits on
+        # an older minor line than the graph already carries (etcd: grype said
+        # v3.5.33 while external-dns already resolved v3.6.10). Pinning that is a
+        # DOWNGRADE: go either refuses the whole batch ("requires X@v3.6.4, not
+        # X@v3.5.33") or accepts it and drags siblings back until the vendored
+        # source stops compiling (loki: dskit CompressionAlgorithm undefined).
+        # Neither is a fix — the module is already past the CVE — so skip it.
+        _keep=""
+        for _mv in "$@"; do
+          _m="${_mv%@*}"; _v="${_mv##*@}"
+          _cur=$(go list -m "$_m" 2>/dev/null | awk '{print $2}')
+          if [ -n "$_cur" ] && [ "$_cur" != "$_v" ]; then
+            _hi=$( { echo "$_cur"; echo "$_v"; } | sort -V | tail -1 )
+            if [ "$_hi" = "$_cur" ]; then
+              echo "pgd-graph: skipping ${_mv} — graph already at ${_cur}" >&2
+              continue
+            fi
+          fi
+          _keep="${_keep} ${_mv}"
+        done
+        printf '%s' "$_keep"
+      }
+      _pgd_get() {  # go get, resolving conflicts BETWEEN pins in the same batch
+        # _pgd_filter compares each pin against the graph as it is BEFORE this
+        # batch, so it structurally cannot see a conflict introduced by a SIBLING
+        # pin. Bumping sigstore/fulcio to v1.8.6 raises fulcio own docker/cli
+        # requirement to v29.4.0, which contradicts our docker/cli@v29.2.1 pin,
+        # and go then rejects the whole batch: "requires X@vHI, not X@vLO".
+        # Six images failed that way at once (PR #677) and, because the bot opens
+        # one shared PR, they blocked every other image patches too.
+        #
+        # Raise the losing pin to vHI and retry: vHI is above the CVE fix, so the
+        # fix is kept rather than dropped. This only ever raises. A vHI BELOW our
+        # pin would mean satisfying the sibling un-fixes the CVE, so that case
+        # fails loudly instead of silently shipping a downgrade.
+        #
+        # Parsed with parameter expansion, not sed: backslashes are stripped
+        # twice on the way into the melange file (bash double quotes, then
+        # printf %b), so a sed backreference silently arrives empty.
+        _args="$*"
+        _i=0
+        while :; do
+          _err=$(go get $_args 2>&1) && return 0
+          echo "$_err" >&2
+          _line=$(echo "$_err" | grep -m1 ", not " || true)
+          [ -n "$_line" ] || return 1
+          _rp=${_line##*requires }
+          _hp=${_rp%%,*}
+          _lp=${_rp##*not }
+          _m=${_hp%@*}
+          _hi=${_hp##*@}
+          _lo=${_lp##*@}
+          [ -n "$_m" ] && [ -n "$_hi" ] || return 1
+          _top=$( { echo "$_lo"; echo "$_hi"; } | sort -V | tail -1 )
+          if [ "$_top" != "$_hi" ]; then
+            echo "pgd-conflict: $_m needs $_hi but our CVE pin is $_lo - refusing to downgrade" >&2
+            return 1
+          fi
+          echo "pgd-raise: $_m $_lo -> $_hi (required by a sibling pin, still >= the CVE fix)" >&2
+          _new=""
+          _hit=0
+          for _a in $_args; do
+            case "$_a" in
+              "$_m@"*) _new="$_new $_m@$_hi"; _hit=1 ;;
+              *) _new="$_new $_a" ;;
+            esac
+          done
+          [ "$_hit" = 1 ] || { echo "pgd-conflict: $_m is not one of our pins" >&2; return 1; }
+          _args="$_new"
+          _i=$((_i + 1))
+          [ "$_i" -ge 6 ] && return 1
+        done
+      }
+      _pgd_workfix() {  # raise an enclosing go.work above every member's go directive
+        # A go.work whose `go` directive sits below a bumped member's requirement
+        # hard-fails every go command in the tree — even under GOWORK=off — before
+        # the build is reached. x/crypto v0.56.0 declares go 1.26.0, which stranded
+        # prometheus (go.work at 1.25.8) and etcd (1.26). Raise the workspace to the
+        # build toolchain first so a bump can never sit above it; the explicit
+        # go.work argument keeps `go work edit` working under GOWORK=off. No-op for
+        # the majority of images, which ship no workspace at all.
+        _d="$1"
+        while [ -n "$_d" ] && [ "$_d" != "/" ]; do
+          if [ -f "$_d/go.work" ]; then
+            _gv=$(go env GOVERSION | sed 's/^go//')
+            echo "pgd-work: raising $_d/go.work go directive to $_gv"
+            ( cd "$_d" && go work edit -go="$_gv" go.work ) || true
+            return 0
+          fi
+          _d=$(dirname "$_d")
+        done
+      }
+      for root in /home/build/ui-server-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        _pgd_workfix "$root"
+        ( set -e
+          cd "$root"
+          cp go.mod .pgd-orig.mod
+          _PGDA=$(_pgd_filter google.golang.org/grpc@v1.83.1 golang.org/x/crypto@v0.57.0 golang.org/x/net@v0.59.0 golang.org/x/sys@v0.48.0 golang.org/x/text@v0.42.0 golang.org/x/term@v0.46.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.23.0 golang.org/x/tools@v0.50.0)
+          if [ -n "$_PGDA" ]; then _pgd_get $_PGDA; fi
+          go mod tidy -e
+          # go mod tidy can downgrade a source-pinned require below what the
+          # source shipped (e.g. a lockstep family like openbao's
+          # go-kms-wrapping transit v2.8.0 -> v2.1.0, which then fails to build
+          # against its core sibling still at v2.8.0). Re-raise any require tidy
+          # dropped below its pre-tidy version. Corrects only upward, so CVE
+          # bumps (>= source) are never undone.
+          _pgd_reqs .pgd-orig.mod > .pgd-o.txt
+          _pgd_reqs go.mod > .pgd-n.txt
+          awk 'NR==FNR{o[$1]=$2;next} ($1 in o) && o[$1]!=$2 {print $1,o[$1],$2}' .pgd-o.txt .pgd-n.txt | while read -r p ov cv; do
+            hi=$( { echo "$ov"; echo "$cv"; } | sort -V | tail -1 )
+            if [ "$hi" = "$ov" ]; then
+              echo "pgd-guard: restoring $p: $cv -> $ov (tidy downgraded below source pin)"
+              _retry go get "$p@$ov"
+            fi
+          done
+          rm -f .pgd-orig.mod .pgd-o.txt .pgd-n.txt
+          [ ! -d vendor ] || go mod vendor
+        )
+      done
+  # end-patch-go-deps
   - runs: |
       # The SvelteKit bundle is COMMITTED to the tarball (ui/assets, ~411 files)
       # and pulled in by //go:embed all:assets — so this is a pure Go build with
