@@ -1,0 +1,68 @@
+# Melange build configuration for minimal-postgres-exporter
+# Prometheus PostgreSQL exporter built from source via melange.
+
+package:
+  # Named exactly what upstream calls it, not `postgres-exporter-minimal`: syft derives the
+  # apk CPE from this string, so a suffix produces a CPE that matches nothing
+  # in NVD and nothing in the Wolfi secdb, and grype then reports zero CVEs
+  # for the image. See docs/onboarding.md "Package naming and scanner
+  # visibility" (haproxy-minimal: 0 findings vs haproxy: 14, same version).
+  name: postgres-exporter
+  version: 0.20.1
+  epoch: 0
+  description: "Prometheus PostgreSQL exporter built from source via melange."
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: be5d9b71cdedcc5bd484869a2a1c66e51f76d5620ebf681781f22acc0cba283b
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/prometheus-community/postgres_exporter/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/postgres-exporter.tar.gz
+      echo "${{vars.sha256}}  /home/build/postgres-exporter.tar.gz" | sha256sum -c -
+      cd /home/build
+      tar xzf postgres-exporter.tar.gz
+      rm postgres-exporter.tar.gz
+
+  - runs: |
+      cd /home/build/postgres_exporter-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/prometheus/common/version.Version={{package.version}} \
+          -X github.com/prometheus/common/version.Revision=source-build \
+          -X github.com/prometheus/common/version.Branch=HEAD" \
+        -o /home/build/postgres_exporter \
+        ./cmd/postgres_exporter
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/postgres_exporter "${{targets.destdir}}/usr/bin/"
+
+  - runs: |
+      echo "Verifying postgres-exporter build..."
+      ls -lh "${{targets.destdir}}/usr/bin/postgres_exporter"
+
+update:
+  enabled: true
+  github:
+    identifier: prometheus-community/postgres_exporter
+    use-tag: true
+    tag-filter: "v"

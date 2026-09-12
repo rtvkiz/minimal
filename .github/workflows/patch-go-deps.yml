@@ -88,6 +88,14 @@ jobs:
           # have their own go.mod; patching only the root has no effect on
           # the built binaries). For single-module images, one path suffices.
           declare -A MODROOTS=(
+            [metallb]="/home/build/metallb-${D}{{package.version}}"
+            [victoria-logs]="/home/build/VictoriaLogs-${D}{{package.version}}"
+            [headscale]="/home/build/headscale-${D}{{package.version}}"
+            [postgres-exporter]="/home/build/postgres_exporter-${D}{{package.version}}"
+            [reloader]="/home/build/Reloader-${D}{{package.version}}"
+            [flagger]="/home/build/flagger-${D}{{package.version}}"
+            [kyverno]="/home/build/kyverno-${D}{{package.version}}"
+            [external-secrets]="/home/build/external-secrets-${D}{{package.version}}"
             [kube-state-metrics]="/home/build/kube-state-metrics-${D}{{package.version}}"
             [redis-exporter]="/home/build/redis-exporter-${D}{{package.version}}"
             [caddy]="/home/build/caddy-${D}{{package.version}}"
@@ -171,6 +179,14 @@ jobs:
           # "package X is in the main module, so can't request version Y".
           # Listing the main module here lets the FIXES filter drop self-bumps.
           declare -A MAIN_MODULES=(
+            [metallb]="go.universe.tf/metallb"
+            [victoria-logs]="github.com/VictoriaMetrics/VictoriaLogs"
+            [headscale]="github.com/juanfont/headscale"
+            [postgres-exporter]="github.com/prometheus-community/postgres_exporter"
+            [reloader]="github.com/stakater/Reloader"
+            [flagger]="github.com/fluxcd/flagger"
+            [kyverno]="github.com/kyverno/kyverno"
+            [external-secrets]="github.com/external-secrets/external-secrets"
             [kube-state-metrics]="k8s.io/kube-state-metrics/v2"
             [redis-exporter]="github.com/oliver006/redis_exporter"
             [caddy]="github.com/caddyserver/caddy/v2"
@@ -244,6 +260,14 @@ jobs:
 
           # Build step markers to insert before
           declare -A BUILD_MARKERS=(
+            [metallb]='CGO_ENABLED=0 go build'
+            [victoria-logs]='CGO_ENABLED=0 go build'
+            [headscale]='CGO_ENABLED=0 go build'
+            [postgres-exporter]='CGO_ENABLED=0 go build'
+            [reloader]='CGO_ENABLED=0 go build'
+            [flagger]='CGO_ENABLED=0 go build'
+            [kyverno]='CGO_ENABLED=0 go build'
+            [external-secrets]='CGO_ENABLED=0 go build'
             [kube-state-metrics]='CGO_ENABLED=0 go build'
             [redis-exporter]='CGO_ENABLED=0 go build'
             [caddy]='# Build Caddy from source'

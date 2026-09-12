@@ -1,0 +1,83 @@
+# Melange build configuration for minimal-metallb
+# MetalLB bare-metal load balancer, controller and speaker.
+
+package:
+  # Named exactly what upstream calls it, not `metallb-minimal`: syft derives the
+  # apk CPE from this string, so a suffix produces a CPE that matches nothing
+  # in NVD and nothing in the Wolfi secdb, and grype then reports zero CVEs
+  # for the image. See docs/onboarding.md "Package naming and scanner
+  # visibility" (haproxy-minimal: 0 findings vs haproxy: 14, same version).
+  name: metallb
+  version: 0.16.1
+  epoch: 0
+  description: "MetalLB bare-metal load balancer, controller and speaker."
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi ships a package of this name, and apko resolves a top-level name
+    # across ALL repositories picking the highest version — it does not prefer
+    # our local repo. provider-priority is evaluated before version in apko's
+    # comparator, so this pins resolution to our source build permanently.
+    # Without it apk silently installs Wolfi's binary over ours (gitlab-runner
+    # and buildkit both hit this).
+    provider-priority: 100
+
+vars:
+  sha256: ed66950e5306ab8e383ed4d1ca943defb40b43d6f3a4461ee34f7cae3e285757
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/metallb/metallb/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/metallb.tar.gz
+      echo "${{vars.sha256}}  /home/build/metallb.tar.gz" | sha256sum -c -
+      cd /home/build
+      tar xzf metallb.tar.gz
+      rm metallb.tar.gz
+
+  - runs: |
+      cd /home/build/metallb-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid=" \
+        -o /home/build/controller \
+        ./controller
+
+  - runs: |
+      cd /home/build/metallb-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid=" \
+        -o /home/build/speaker \
+        ./speaker
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/controller "${{targets.destdir}}/usr/bin/"
+      cp /home/build/speaker "${{targets.destdir}}/usr/bin/"
+
+  - runs: |
+      echo "Verifying metallb build..."
+      ls -lh "${{targets.destdir}}/usr/bin/controller"
+      ls -lh "${{targets.destdir}}/usr/bin/speaker"
+
+update:
+  enabled: true
+  github:
+    identifier: metallb/metallb
+    use-tag: true
+    tag-filter: "v"

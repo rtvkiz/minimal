@@ -1,0 +1,66 @@
+# Melange build configuration for minimal-reloader
+# Stakater Reloader configmap and secret reloader, from source.
+
+package:
+  # Named exactly what upstream calls it, not `reloader-minimal`: syft derives the
+  # apk CPE from this string, so a suffix produces a CPE that matches nothing
+  # in NVD and nothing in the Wolfi secdb, and grype then reports zero CVEs
+  # for the image. See docs/onboarding.md "Package naming and scanner
+  # visibility" (haproxy-minimal: 0 findings vs haproxy: 14, same version).
+  name: reloader
+  version: 1.4.22
+  epoch: 0
+  description: "Stakater Reloader configmap and secret reloader, from source."
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: 9d989d0812bc95b6bb71015d629313d0511cbf3f25876142c73eb9ce3cbc245a
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/stakater/Reloader/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/reloader.tar.gz
+      echo "${{vars.sha256}}  /home/build/reloader.tar.gz" | sha256sum -c -
+      cd /home/build
+      tar xzf reloader.tar.gz
+      rm reloader.tar.gz
+
+  - runs: |
+      cd /home/build/Reloader-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/stakater/Reloader/pkg/common.Version={{package.version}}" \
+        -o /home/build/reloader \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/reloader "${{targets.destdir}}/usr/bin/"
+
+  - runs: |
+      echo "Verifying reloader build..."
+      ls -lh "${{targets.destdir}}/usr/bin/reloader"
+
+update:
+  enabled: true
+  github:
+    identifier: stakater/Reloader
+    use-tag: true
+    tag-filter: "v"

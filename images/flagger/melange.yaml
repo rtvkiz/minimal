@@ -1,0 +1,66 @@
+# Melange build configuration for minimal-flagger
+# Flagger progressive delivery operator built from source.
+
+package:
+  # Named exactly what upstream calls it, not `flagger-minimal`: syft derives the
+  # apk CPE from this string, so a suffix produces a CPE that matches nothing
+  # in NVD and nothing in the Wolfi secdb, and grype then reports zero CVEs
+  # for the image. See docs/onboarding.md "Package naming and scanner
+  # visibility" (haproxy-minimal: 0 findings vs haproxy: 14, same version).
+  name: flagger
+  version: 1.45.0
+  epoch: 0
+  description: "Flagger progressive delivery operator built from source."
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: b0fc84a95815ae5d701bde4c39c01290ba9422d8bbfab3d50ef2a79f7ee23a74
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/fluxcd/flagger/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/flagger.tar.gz
+      echo "${{vars.sha256}}  /home/build/flagger.tar.gz" | sha256sum -c -
+      cd /home/build
+      tar xzf flagger.tar.gz
+      rm flagger.tar.gz
+
+  - runs: |
+      cd /home/build/flagger-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/fluxcd/flagger/pkg/version.REVISION=source-build" \
+        -o /home/build/flagger \
+        ./cmd/flagger
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/flagger "${{targets.destdir}}/usr/bin/"
+
+  - runs: |
+      echo "Verifying flagger build..."
+      ls -lh "${{targets.destdir}}/usr/bin/flagger"
+
+update:
+  enabled: true
+  github:
+    identifier: fluxcd/flagger
+    use-tag: true
+    tag-filter: "v"
