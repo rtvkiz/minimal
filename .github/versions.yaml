@@ -1268,30 +1268,58 @@
 
 - name: temporal-cli
   cron-enabled: true   # wave 4 (temporal family)
-  # SECONDARY upstream. Both images bundle the `temporal` CLI, which releases on
-  # its own cadence — without this row it would freeze at whatever version
-  # shipped first, which is exactly the silent-staleness failure
-  # check-autoupdate exists to prevent. Writes cli_version + cli_sha256.
-  files: [images/temporal-server/melange.yaml, images/temporal-admin-tools/melange.yaml]
-  extra-fields: [cli_version]
-  source: { type: github-releases-latest, repo: temporalio/cli, strip-v: true }
+  # SECONDARY upstream: both images bundle the `temporal` CLI,
+  # which releases on its own cadence. Without this row it would freeze at
+  # whatever version shipped first — the silent staleness check-autoupdate
+  # exists to prevent.
+  #
+  # NB: custom {path,pattern,template} entries, NOT the string form. The
+  # string form rewrites the package's own `version:` (and epoch), which for a
+  # secondary upstream is the wrong field: this row would have driven
+  # temporal-server's version from 1.32.0 down to the CLI's version. Likewise
+  # `current-field` below, or `current` is read from `version:` and compared
+  # against the wrong upstream.
+  files:
+    - { path: images/temporal-server/melange.yaml, pattern: '^  cli_version: .*', template: '  cli_version: {version}' }
+    - { path: images/temporal-server/melange.yaml, pattern: '^  cli_sha256: .*', template: '  cli_sha256: {cli_sha256}' }
+    - { path: images/temporal-admin-tools/melange.yaml, pattern: '^  cli_version: .*', template: '  cli_version: {version}' }
+    - { path: images/temporal-admin-tools/melange.yaml, pattern: '^  cli_sha256: .*', template: '  cli_sha256: {cli_sha256}' }
+  source:
+    type: github-releases-latest
+    repo: temporalio/cli
+    strip-v: true
+    current-field: cli_version
   tarball: { url: "https://github.com/temporalio/cli/archive/refs/tags/v{version}.tar.gz", field: cli_sha256 }
   links:
     releases: "https://github.com/temporalio/cli/releases"
     notes: "https://github.com/temporalio/cli/releases/tag/v{version}"
-
 - name: temporal-tctl
   cron-enabled: true   # wave 4 (temporal family)
-  # SECONDARY upstream: the legacy tctl CLI and its authorization plugin, which
-  # upstream still ships in both images. Writes tctl_version + tctl_sha256.
-  files: [images/temporal-server/melange.yaml, images/temporal-admin-tools/melange.yaml]
-  extra-fields: [tctl_version]
-  source: { type: github-releases-latest, repo: temporalio/tctl, strip-v: true }
+  # SECONDARY upstream: both images bundle the legacy tctl CLI and its authorization plugin,
+  # which releases on its own cadence. Without this row it would freeze at
+  # whatever version shipped first — the silent staleness check-autoupdate
+  # exists to prevent.
+  #
+  # NB: custom {path,pattern,template} entries, NOT the string form. The
+  # string form rewrites the package's own `version:` (and epoch), which for a
+  # secondary upstream is the wrong field: this row would have driven
+  # temporal-server's version from 1.32.0 down to the CLI's version. Likewise
+  # `current-field` below, or `current` is read from `version:` and compared
+  # against the wrong upstream.
+  files:
+    - { path: images/temporal-server/melange.yaml, pattern: '^  tctl_version: .*', template: '  tctl_version: {version}' }
+    - { path: images/temporal-server/melange.yaml, pattern: '^  tctl_sha256: .*', template: '  tctl_sha256: {tctl_sha256}' }
+    - { path: images/temporal-admin-tools/melange.yaml, pattern: '^  tctl_version: .*', template: '  tctl_version: {version}' }
+    - { path: images/temporal-admin-tools/melange.yaml, pattern: '^  tctl_sha256: .*', template: '  tctl_sha256: {tctl_sha256}' }
+  source:
+    type: github-releases-latest
+    repo: temporalio/tctl
+    strip-v: true
+    current-field: tctl_version
   tarball: { url: "https://github.com/temporalio/tctl/archive/refs/tags/v{version}.tar.gz", field: tctl_sha256 }
   links:
     releases: "https://github.com/temporalio/tctl/releases"
     notes: "https://github.com/temporalio/tctl/releases/tag/v{version}"
-
 - name: temporal-ui-server
   cron-enabled: true   # wave 4 (temporal family)
   files: [images/temporal-ui-server/melange.yaml]
