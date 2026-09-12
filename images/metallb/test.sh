@@ -4,24 +4,29 @@ set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 : "${IMAGE:?IMAGE env var required}"
 
 # Upstream ships controller and speaker as separate images; this one carries
-# both binaries, with controller as the default entrypoint and speaker selected
-# by overriding it. Both must therefore be present and runnable.
-echo "Testing metallb controller version..."
-docker run --rm --entrypoint /usr/bin/controller "$IMAGE" --version 2>&1 | grep -qE '0\.[0-9]+\.[0-9]+' \
-  || { echo "FAIL: controller version not reported"; \
-       docker run --rm --entrypoint /usr/bin/controller "$IMAGE" --version 2>&1 | head -5; exit 1; }
+# both binaries, controller as the default entrypoint and speaker selected by
+# overriding it. Both must therefore be present and runnable.
+#
+# Neither binary has a --version flag (both use the plain `flag` package and
+# define none — `-version` errors with "flag provided but not defined"). They
+# do log the version at startup before touching the cluster, so that startup
+# line is the assertion. metallb's version is a source constant in
+# internal/version, not an -X ldflag, so this also catches a stale tarball
+# being built under a bumped version number.
+for bin in controller speaker; do
+  echo "Testing metallb ${bin} reports its version at startup..."
+  out=$(docker run --rm --entrypoint "/usr/bin/${bin}" "$IMAGE" 2>&1 | head -10 || true)
 
-echo "Testing metallb speaker is present and runnable..."
-docker run --rm --entrypoint /usr/bin/speaker "$IMAGE" --version 2>&1 | grep -qE '0\.[0-9]+\.[0-9]+' \
-  || { echo "FAIL: speaker version not reported"; \
-       docker run --rm --entrypoint /usr/bin/speaker "$IMAGE" --version 2>&1 | head -5; exit 1; }
+  echo "$out" | grep -qE "MetalLB ${bin} starting version [0-9]+\.[0-9]+\.[0-9]+" \
+    || { echo "FAIL: ${bin} did not log its startup version line:"; echo "$out"; exit 1; }
 
-echo "Testing controller fails cleanly with no cluster..."
-out=$(docker run --rm --entrypoint /usr/bin/controller "$IMAGE" 2>&1 | head -30 || true)
-case "$out" in
-  *"in-cluster"*|*KUBERNETES_SERVICE_HOST*|*"unable to"*|*"failed to"*|*"cannot"*|*"connection refused"*|*NAMESPACE*|*namespace*) ;;
-  *) echo "FAIL: unexpected output with no cluster:"; echo "$out"; exit 1 ;;
-esac
+  echo "Testing metallb ${bin} then fails cleanly with no cluster..."
+  case "$out" in
+    *"Unable to get namespace from pod service account"*|*METALLB_NAMESPACE*|\
+    *"in-cluster"*|*KUBERNETES_SERVICE_HOST*|*"connection refused"*) ;;
+    *) echo "FAIL: ${bin} gave unexpected output with no cluster:"; echo "$out"; exit 1 ;;
+  esac
+done
 
 echo "Verifying no shell in the production image..."
 if docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo x" >/dev/null 2>&1; then

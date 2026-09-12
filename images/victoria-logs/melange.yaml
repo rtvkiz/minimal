@@ -46,7 +46,7 @@ pipeline:
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w -buildid= \
-          -X github.com/VictoriaMetrics/VictoriaMetrics/lib/buildinfo.Version={{package.version}}" \
+          -X github.com/VictoriaMetrics/VictoriaMetrics/lib/buildinfo.Version=${{package.version}}" \
         -o /home/build/victoria-logs \
         ./app/victoria-logs
 

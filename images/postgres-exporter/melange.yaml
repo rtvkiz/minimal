@@ -46,7 +46,7 @@ pipeline:
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w -buildid= \
-          -X github.com/prometheus/common/version.Version={{package.version}} \
+          -X github.com/prometheus/common/version.Version=${{package.version}} \
           -X github.com/prometheus/common/version.Revision=source-build \
           -X github.com/prometheus/common/version.Branch=HEAD" \
         -o /home/build/postgres_exporter \

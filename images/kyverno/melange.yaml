@@ -54,7 +54,7 @@ pipeline:
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w -buildid= \
-          -X github.com/kyverno/kyverno/pkg/version.BuildVersion={{package.version}}" \
+          -X github.com/kyverno/kyverno/pkg/version.BuildVersion=${{package.version}}" \
         -o /home/build/kyverno \
         ./cmd/kyverno
 

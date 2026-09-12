@@ -43,10 +43,26 @@ pipeline:
 
   - runs: |
       cd /home/build/headscale-${{package.version}}
+      # headscale 0.29.x takes its version from debug.ReadBuildInfo()
+      # (hscontrol/types/version.go), NOT from an -X ldflag. Upstream's Makefile
+      # still passes `-X main.version=...` but no such symbol exists any more, so
+      # Go silently discards it — a stale flag they never removed. A tarball has
+      # no VCS metadata, so buildInfo.Main.Version is "(devel)" and the code
+      # falls back to the literal "dev", which is what `headscale version`
+      # printed before this step existed.
+      #
+      # So stamp the fallback in the source instead. The grep guard makes a
+      # silent regression impossible: if upstream renames or restructures this,
+      # the build fails here rather than quietly shipping "dev" again.
+      grep -q 'Version:   "dev",' hscontrol/types/version.go \
+        || { echo "FAIL: headscale version fallback moved — re-check hscontrol/types/version.go"; exit 1; }
+      sed -i 's/Version:   "dev",/Version:   "${{package.version}}",/' hscontrol/types/version.go
+      grep -q 'Version:   "${{package.version}}",' hscontrol/types/version.go \
+        || { echo "FAIL: version stamp did not apply"; exit 1; }
+
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
-        -ldflags="-s -w -buildid= \
-          -X main.version={{package.version}}" \
+        -ldflags="-s -w -buildid=" \
         -o /home/build/headscale \
         ./cmd/headscale
 

@@ -46,7 +46,7 @@ pipeline:
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w -buildid= \
-          -X github.com/stakater/Reloader/pkg/common.Version={{package.version}}" \
+          -X github.com/stakater/Reloader/pkg/common.Version=${{package.version}}" \
         -o /home/build/reloader \
         .
 
@@ -57,6 +57,12 @@ pipeline:
   - runs: |
       echo "Verifying reloader build..."
       ls -lh "${{targets.destdir}}/usr/bin/reloader"
+      # Reloader fatals on --version/--help without a cluster, so the injected
+      # version cannot be asserted at runtime. Check it here instead: the -X
+      # value is a plain string in the binary's data even under -s -w.
+      grep -q "${{package.version}}" "${{targets.destdir}}/usr/bin/reloader" \
+        || { echo "FAIL: version ${{package.version}} not found in binary — ldflag wrong?"; exit 1; }
+      echo "version string ${{package.version}} present in binary"
 
 update:
   enabled: true

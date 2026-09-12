@@ -4614,8 +4614,11 @@ help:
 
 external-secrets-melange: keygen
 	@echo "Building External Secrets Operator $(EXTERNAL_SECRETS_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
 	melange build images/external-secrets/melange.yaml \
-		--arch x86_64,aarch64 \
+		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ External Secrets Operator package built from source"
 
@@ -4652,8 +4655,11 @@ $(eval $(call DEV_TEST_RULE,external-secrets))
 
 kyverno-melange: keygen
 	@echo "Building Kyverno $(KYVERNO_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
 	melange build images/kyverno/melange.yaml \
-		--arch x86_64,aarch64 \
+		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Kyverno package built from source"
 
@@ -4690,8 +4696,11 @@ $(eval $(call DEV_TEST_RULE,kyverno))
 
 flagger-melange: keygen
 	@echo "Building Flagger $(FLAGGER_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
 	melange build images/flagger/melange.yaml \
-		--arch x86_64,aarch64 \
+		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Flagger package built from source"
 
@@ -4728,8 +4737,11 @@ $(eval $(call DEV_TEST_RULE,flagger))
 
 reloader-melange: keygen
 	@echo "Building Reloader $(RELOADER_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
 	melange build images/reloader/melange.yaml \
-		--arch x86_64,aarch64 \
+		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Reloader package built from source"
 
@@ -4766,8 +4778,11 @@ $(eval $(call DEV_TEST_RULE,reloader))
 
 postgres-exporter-melange: keygen
 	@echo "Building postgres_exporter $(POSTGRES_EXPORTER_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
 	melange build images/postgres-exporter/melange.yaml \
-		--arch x86_64,aarch64 \
+		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ postgres_exporter package built from source"
 
@@ -4804,8 +4819,11 @@ $(eval $(call DEV_TEST_RULE,postgres-exporter))
 
 headscale-melange: keygen
 	@echo "Building Headscale $(HEADSCALE_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
 	melange build images/headscale/melange.yaml \
-		--arch x86_64,aarch64 \
+		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ Headscale package built from source"
 
@@ -4842,8 +4860,11 @@ $(eval $(call DEV_TEST_RULE,headscale))
 
 victoria-logs-melange: keygen
 	@echo "Building VictoriaLogs $(VICTORIA_LOGS_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
 	melange build images/victoria-logs/melange.yaml \
-		--arch x86_64,aarch64 \
+		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ VictoriaLogs package built from source"
 
@@ -4880,8 +4901,11 @@ $(eval $(call DEV_TEST_RULE,victoria-logs))
 
 metallb-melange: keygen
 	@echo "Building MetalLB $(METALLB_VERSION) from source via melange..."
+	# x86_64 only locally: aarch64 cross-builds need QEMU binfmt, which a plain
+	# x86_64 host does not have ("unable to start pod"). CI builds arm64 on
+	# native ARM runners. Same reason as kafka/keycloak.
 	melange build images/metallb/melange.yaml \
-		--arch x86_64,aarch64 \
+		--arch x86_64 \
 		--signing-key melange.rsa
 	@echo "✓ MetalLB package built from source"
 
