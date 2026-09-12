@@ -1175,7 +1175,7 @@
 #     image. Both workflows stay authoritative.
 
 - name: external-secrets
-  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-12, run 34676570408)
   # releases/latest on this repo is a HELM CHART tag, not the app version,
   # so this tracks tags with an app-semver pattern instead. github-tags
   # reads strip-prefix; strip-v is ignored by this source type.
@@ -1187,7 +1187,7 @@
     notes: "https://github.com/external-secrets/external-secrets/releases/tag/v{version}"
 
 - name: kyverno
-  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-12, run 34676570408)
   files: [images/kyverno/melange.yaml]
   source: { type: github-releases-latest, repo: kyverno/kyverno, strip-v: true }
   tarball: { url: "https://github.com/kyverno/kyverno/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -1196,7 +1196,7 @@
     notes: "https://github.com/kyverno/kyverno/releases/tag/v{version}"
 
 - name: flagger
-  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-12, run 34676570408)
   files: [images/flagger/melange.yaml]
   source: { type: github-releases-latest, repo: fluxcd/flagger, strip-v: true }
   tarball: { url: "https://github.com/fluxcd/flagger/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -1205,7 +1205,7 @@
     notes: "https://github.com/fluxcd/flagger/releases/tag/v{version}"
 
 - name: reloader
-  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-12, run 34676570408)
   # releases/latest on this repo is a HELM CHART tag, not the app version,
   # so this tracks tags with an app-semver pattern instead. github-tags
   # reads strip-prefix; strip-v is ignored by this source type.
@@ -1217,7 +1217,7 @@
     notes: "https://github.com/stakater/Reloader/releases/tag/v{version}"
 
 - name: postgres-exporter
-  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-12, run 34676570408)
   files: [images/postgres-exporter/melange.yaml]
   source: { type: github-releases-latest, repo: prometheus-community/postgres_exporter, strip-v: true }
   tarball: { url: "https://github.com/prometheus-community/postgres_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -1226,7 +1226,7 @@
     notes: "https://github.com/prometheus-community/postgres_exporter/releases/tag/v{version}"
 
 - name: headscale
-  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-12, run 34676570408)
   files: [images/headscale/melange.yaml]
   source: { type: github-releases-latest, repo: juanfont/headscale, strip-v: true }
   tarball: { url: "https://github.com/juanfont/headscale/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -1235,7 +1235,7 @@
     notes: "https://github.com/juanfont/headscale/releases/tag/v{version}"
 
 - name: victoria-logs
-  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-12, run 34676570408)
   files: [images/victoria-logs/melange.yaml]
   source: { type: github-releases-latest, repo: VictoriaMetrics/VictoriaLogs, strip-v: true }
   tarball: { url: "https://github.com/VictoriaMetrics/VictoriaLogs/archive/refs/tags/v{version}.tar.gz", field: sha256 }
@@ -1244,7 +1244,7 @@
     notes: "https://github.com/VictoriaMetrics/VictoriaLogs/releases/tag/v{version}"
 
 - name: metallb
-  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-11)
+  cron-enabled: true   # wave 3 (dispatch-validated 2026-09-12, run 34676570408)
   # releases/latest on this repo is a HELM CHART tag, not the app version,
   # so this tracks tags with an app-semver pattern instead. github-tags
   # reads strip-prefix; strip-v is ignored by this source type.
