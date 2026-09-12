@@ -1254,3 +1254,49 @@
   links:
     releases: "https://github.com/metallb/metallb/releases"
     notes: "https://github.com/metallb/metallb/releases/tag/v{version}"
+
+- name: temporal
+  cron-enabled: true   # wave 4 (temporal family)
+  # Primary upstream for BOTH the server and admin-tools images: it sets
+  # `version:` (the package version) and `sha256:` in each.
+  files: [images/temporal-server/melange.yaml, images/temporal-admin-tools/melange.yaml]
+  source: { type: github-releases-latest, repo: temporalio/temporal, strip-v: true }
+  tarball: { url: "https://github.com/temporalio/temporal/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/temporalio/temporal/releases"
+    notes: "https://github.com/temporalio/temporal/releases/tag/v{version}"
+
+- name: temporal-cli
+  cron-enabled: true   # wave 4 (temporal family)
+  # SECONDARY upstream. Both images bundle the `temporal` CLI, which releases on
+  # its own cadence — without this row it would freeze at whatever version
+  # shipped first, which is exactly the silent-staleness failure
+  # check-autoupdate exists to prevent. Writes cli_version + cli_sha256.
+  files: [images/temporal-server/melange.yaml, images/temporal-admin-tools/melange.yaml]
+  extra-fields: [cli_version]
+  source: { type: github-releases-latest, repo: temporalio/cli, strip-v: true }
+  tarball: { url: "https://github.com/temporalio/cli/archive/refs/tags/v{version}.tar.gz", field: cli_sha256 }
+  links:
+    releases: "https://github.com/temporalio/cli/releases"
+    notes: "https://github.com/temporalio/cli/releases/tag/v{version}"
+
+- name: temporal-tctl
+  cron-enabled: true   # wave 4 (temporal family)
+  # SECONDARY upstream: the legacy tctl CLI and its authorization plugin, which
+  # upstream still ships in both images. Writes tctl_version + tctl_sha256.
+  files: [images/temporal-server/melange.yaml, images/temporal-admin-tools/melange.yaml]
+  extra-fields: [tctl_version]
+  source: { type: github-releases-latest, repo: temporalio/tctl, strip-v: true }
+  tarball: { url: "https://github.com/temporalio/tctl/archive/refs/tags/v{version}.tar.gz", field: tctl_sha256 }
+  links:
+    releases: "https://github.com/temporalio/tctl/releases"
+    notes: "https://github.com/temporalio/tctl/releases/tag/v{version}"
+
+- name: temporal-ui-server
+  cron-enabled: true   # wave 4 (temporal family)
+  files: [images/temporal-ui-server/melange.yaml]
+  source: { type: github-releases-latest, repo: temporalio/ui-server, strip-v: true }
+  tarball: { url: "https://github.com/temporalio/ui-server/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/temporalio/ui-server/releases"
+    notes: "https://github.com/temporalio/ui-server/releases/tag/v{version}"

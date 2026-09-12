@@ -1,0 +1,78 @@
+# Melange build configuration for minimal-temporal-ui-server
+# Temporal Web UI server built from source
+
+package:
+  # Named exactly what upstream calls it. syft derives the apk CPE from this
+  # string, so a `-minimal` suffix would produce a CPE matching nothing in NVD
+  # and nothing in the Wolfi secdb, and grype would report zero CVEs for the
+  # image. See docs/onboarding.md "Package naming and scanner visibility".
+  name: temporal-ui-server
+  version: 2.54.1
+  epoch: 0
+  description: "Temporal Web UI server built from source"
+  copyright:
+    - license: MIT
+  dependencies:
+    # Wolfi ships a package of this name. apko resolves a top-level name across
+    # ALL repositories and picks the highest version — it does not prefer our
+    # local repo — so without this apk silently installs Wolfi's build over
+    # ours (the gitlab-runner / buildkit lesson).
+    provider-priority: 100
+
+vars:
+  sha256: 58b6d84545af4030de9ef6e911003597e850b8514161274484b763d83ad5bd53
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/temporalio/ui-server/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/ui-server.tar.gz
+      echo "${{vars.sha256}}  /home/build/ui-server.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf ui-server.tar.gz && rm ui-server.tar.gz
+
+  - runs: |
+      # The SvelteKit bundle is COMMITTED to the tarball (ui/assets, ~411 files)
+      # and pulled in by //go:embed all:assets — so this is a pure Go build with
+      # no npm step, unlike alloy/authelia which docs/roadmap.md blocks for
+      # exactly that reason. Guard it: if upstream ever stops committing the
+      # assets, fail here rather than shipping a UI server with no UI.
+      cd /home/build/ui-server-${{package.version}}
+      test -d ui/assets || { echo "FAIL: ui/assets missing — upstream may now require an npm build"; exit 1; }
+      n=$(find ui/assets -type f | wc -l)
+      [ "$n" -ge 50 ] || { echo "FAIL: ui/assets has only $n files — expected a full bundle"; exit 1; }
+      echo "embedded UI assets: $n files"
+
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid=" \
+        -o /home/build/temporal-ui-server \
+        ./cmd/server
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/temporal-ui-server "${{targets.destdir}}/usr/bin/"
+
+  - runs: |
+      echo "Verifying temporal-ui-server build..."
+      ls -lh "${{targets.destdir}}/usr/bin/temporal-ui-server"
+
+update:
+  enabled: true
+  github:
+    identifier: temporalio/ui-server
+    use-tag: true
+    tag-filter: "v"
