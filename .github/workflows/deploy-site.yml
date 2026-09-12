@@ -49,36 +49,100 @@ jobs:
       # Source scan data from the latest successful FULL build — one that scanned
       # (nearly) all images. Partial push builds only scan changed images, so we
       # judge completeness by the vulnerability-report artifact count rather than
-      # the trigger event: any run with >= MIN reports qualifies (full push,
+      # the trigger event: any run with enough reports qualifies (full push,
       # schedule, or dispatch), and thin partial builds are skipped. This keeps a
       # data-thin build from ever deploying over a complete one.
+      #
+      # COMPLETENESS IS RELATIVE TO THE RUN, NOT TO HEAD. This used to compare
+      # every candidate against `catalog.json` at HEAD. Onboarding 8 images
+      # (#691) therefore raised the bar from 109 to 117 while every existing
+      # build had scanned the 112 images that existed when it ran, so nothing
+      # qualified and the site could not deploy at all for ~6 hours — until the
+      # next 6-hourly full rebuild produced 120 reports. A 112-report build from
+      # when the catalog held 112 is COMPLETE, and is now judged as such by
+      # reading catalog.json at that run's own commit.
+      #
+      # AND WE NO LONGER HARD-FAIL. If nothing is complete, deploy from the most
+      # complete run available and warn loudly, rather than publishing nothing:
+      # during that incident the site sat un-deployed while holding a perfectly
+      # good 112-image dataset. Stale scan data is a visible, bounded problem;
+      # a dead deploy pipeline is not.
       - name: Resolve source build run
         id: buildrun
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Require a nearly-complete scan: catalog size minus a small
-          # tolerance for flaky per-image scans (was hardcoded 50 while the
-          # catalog grew to 88, letting a ~57%% scan qualify).
-          MIN=$(( $(jq '.images|length' catalog.json) - 3 ))
-          RID=""
-          for id in $(gh api "repos/${{ github.repository }}/actions/workflows/build.yml/runs?status=success&branch=main&per_page=20" \
-                        --jq '.workflow_runs[].id'); do
+          set -uo pipefail
+          HEAD_IMAGES=$(jq '.images|length' catalog.json)
+
+          # Absolute floor. Even a "complete for its era" run is not worth
+          # deploying if the catalog has since grown hugely; this keeps a very
+          # old run from publishing over a mostly-current one.
+          FLOOR=$(( HEAD_IMAGES / 2 ))
+
+          RID=""; RID_N=0
+          BEST=""; BEST_N=0; BEST_MIN=0
+
+          # per_page=40, and partial `push` builds are skipped outright: they
+          # scan only changed images (6-8 reports is typical), so they can never
+          # qualify and used to consume the search window. With a busy afternoon
+          # of pushes the single qualifying run could scroll out of a 20-run
+          # window entirely and break deploys with no catalog change at all.
+          while read -r id sha ev; do
+            [ -n "$id" ] || continue
+            if [ "$ev" = "push" ]; then
+              echo "run $id (push) → skipped, partial by construction"
+              continue
+            fi
+
             # Stream the matching names and count with wc -l. Do NOT use
             # `--jq '... | length'`: with --paginate, jq runs per page and emits
             # one length per page (e.g. "44\n10" for a >100-artifact run), which
             # then fails the numeric test below and skips a complete build.
             N=$(gh api "repos/${{ github.repository }}/actions/runs/$id/artifacts" --paginate \
                   --jq '.artifacts[].name | select(startswith("vulnerability-report-"))' | wc -l)
-            echo "run $id → $N vulnerability-report artifacts"
-            if [ "${N:-0}" -ge "$MIN" ]; then RID=$id; break; fi
-          done
-          if [ -z "$RID" ]; then
-            echo "::error::No successful build with >= $MIN image reports found to source scan data from."
+
+            # The catalog as it stood at THAT commit, not at HEAD.
+            RUN_IMAGES=$(gh api "repos/${{ github.repository }}/contents/catalog.json?ref=$sha" \
+                           --jq '.content' 2>/dev/null | base64 -d 2>/dev/null | jq '.images|length' 2>/dev/null || echo "")
+            [ -n "$RUN_IMAGES" ] || RUN_IMAGES=$HEAD_IMAGES   # deleted/unreachable commit
+            MIN=$(( RUN_IMAGES - 3 ))   # tolerance for a few flaky per-image scans
+
+            echo "run $id ($ev) → $N reports; catalog was $RUN_IMAGES at $sha, needs >= $MIN"
+
+            if [ "${N:-0}" -ge "$MIN" ] && [ "${N:-0}" -ge "$FLOOR" ]; then
+              RID=$id; RID_N=$N; RUN_IMAGES_SEL=$RUN_IMAGES; break
+            fi
+            if [ "${N:-0}" -gt "$BEST_N" ]; then BEST=$id; BEST_N=$N; BEST_MIN=$MIN; fi
+          done < <(gh api "repos/${{ github.repository }}/actions/workflows/build.yml/runs?status=success&branch=main&per_page=40" \
+                     --jq '.workflow_runs[] | "\(.id) \(.head_sha) \(.event)"')
+
+          if [ -n "$RID" ]; then
+            echo "Sourcing scan artifacts from complete build run $RID ($RID_N reports)"
+            echo "scan_complete=true" >> "$GITHUB_OUTPUT"
+            echo "scan_reports=$RID_N" >> "$GITHUB_OUTPUT"
+          elif [ -n "$BEST" ] && [ "$BEST_N" -ge "$FLOOR" ]; then
+            RID=$BEST; RID_N=$BEST_N
+            echo "::warning title=Partial scan data::No complete build found; deploying from run $BEST with $BEST_N reports (catalog is now $HEAD_IMAGES). Images missing a report render as unscanned until the next full build."
+            echo "scan_complete=false" >> "$GITHUB_OUTPUT"
+            echo "scan_reports=$BEST_N" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::No successful build with at least $FLOOR image reports found to source scan data from."
             exit 1
           fi
           echo "run_id=$RID" >> "$GITHUB_OUTPUT"
-          echo "Sourcing scan artifacts from full build run $RID"
+
+          {
+            echo "### Scan data source"
+            echo
+            echo "- build run: \`$RID\`"
+            echo "- reports: **$RID_N** (catalog at HEAD: $HEAD_IMAGES)"
+            if [ -n "${RUN_IMAGES_SEL:-}" ]; then
+              echo "- that run's catalog: $RUN_IMAGES — complete for its commit"
+            else
+              echo "- :warning: **partial** — no complete build available"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Download the per-image scan reports (+ SBOM sidecars) from that build.
       # NOTE: we page through the artifact list via the API rather than using
