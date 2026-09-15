@@ -11,7 +11,7 @@ package:
   # bare, as cpe:2.3:a:jaeger:jaeger:*, so none of them matched, and the Wolfi
   # secdb missed it too.
   name: jaeger
-  version: 2.20.0
+  version: 2.21.0
   epoch: 0
   description: "Minimal Jaeger distributed tracing backend built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: 667a744192a31d3159acbeafb08e3c241ffd86118696443643b6d03cec9b2af8
+  sha256: e42952d2d2824a95a4eff27889ff324569136acb900e9e3d2544e53b1152f088
 
 environment:
   contents:
