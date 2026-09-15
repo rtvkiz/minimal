@@ -14,7 +14,7 @@ package:
   # (cpe:2.3:a:seaweedfs:seaweedfs-minimal:*, ...). NVD indexes this product
   # bare, as cpe:2.3:a:seaweedfs:seaweedfs:*, so none of them matched.
   name: seaweedfs
-  version: 4.46
+  version: 4.47
   epoch: 0
   description: "Minimal SeaweedFS distributed object store and filesystem built from source"
   copyright:
@@ -31,7 +31,7 @@ package:
 
 vars:
   # SHA256 of seaweedfs source tarball - updated by update-versions.yml workflow
-  sha256: f25baf95473c2a8b53c8111375ba5a4fc0ee5f417cbf07bbd6821e8f62de52e0
+  sha256: f2ac1ac2cbd4e72a135605b90f5369eb548303e2e60e376bf43cd49a59ddb0ec
 
 environment:
   contents:
