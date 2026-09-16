@@ -9,7 +9,8 @@ import { images } from '../../lib/catalog';
 const s = data.chainguard;
 const title = 'Chainguard alternative — free hardened images, compared with scan data';
 const description =
-  `A free Chainguard alternative: ${images.length} MIT-licensed hardened images, no account, no paid tier. ${s.compared} images scanned head-to-head with one Grype build on ${data.scanDate}.`;
+  `A free Chainguard alternative: ${images.length} MIT-licensed hardened images, no account, no paid tier. ${s.compared} version-matched images scanned head-to-head with one Grype build on ${data.scanDate}.`;
+const versionExcluded = s.excludedMismatch + s.excludedUnknown;
 
 const datasetSchema = {
   '@context': 'https://schema.org',
@@ -44,17 +45,18 @@ const datasetSchema = {
       <h2 class="section-title" style="margin-top:36px">The honest framing</h2>
       <p>
         Chainguard's free tier publishes a limited set of images; the full catalog is
-        commercial. When this scan ran on {data.scanDate}, only <b>{s.compared}</b> of Minimal's
-        images had a free, publicly pullable Chainguard equivalent to compare against — so this
-        table is narrow by construction, and that is the most important caveat on the page.
-        The remaining images are marked not available, never scored as wins.
+        commercial. When this scan ran on {data.scanDate}, <b>{s.available}</b> of Minimal's images
+        had a free, publicly pullable Chainguard equivalent. Of those, <b>{s.compared}</b> were exact
+        or same-major/minor version pairs and were scored; {versionExcluded} mismatched or unknown
+        pairs were excluded. This table is narrow by construction, and that is the most important
+        caveat on the page. Missing images are never scored as wins.
       </p>
 
       <div class="stats" style="margin-top:28px">
         <div class="stat"><div class="num">{s.lower}</div><div class="lbl">Minimal lower</div></div>
         <div class="stat"><div class="num">{s.tie}</div><div class="lbl">Tied</div></div>
         <div class="stat"><div class="num">{s.higher}</div><div class="lbl">Minimal higher</div></div>
-        <div class="stat"><div class="num">{s.compared}</div><div class="lbl">Images compared</div></div>
+        <div class="stat"><div class="num">{s.compared}</div><div class="lbl">Version-matched</div></div>
       </div>
       <p style="margin-top:24px">
         Across those {s.compared} images Minimal totalled <b>{s.oursTotal}</b> unique CVEs against
@@ -63,7 +65,10 @@ const datasetSchema = {
       </p>
 
       <h2 class="section-title" style="margin-top:44px">Full head-to-head</h2>
-      <p class="small muted">Δ is Minimal minus Chainguard, so negative is better for Minimal.</p>
+      <p class="small muted">
+        Exact and same-major/minor version pairs only. Δ is Minimal minus Chainguard, so negative
+        is better for Minimal.
+      </p>
       <CompareTable set={s} rivalLabel="Chainguard" />
 
       <h2 class="section-title" style="margin-top:44px">What you give up, and what you gain</h2>

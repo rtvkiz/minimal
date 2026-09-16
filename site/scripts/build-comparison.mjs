@@ -28,6 +28,20 @@ const [head, ...lines] = csv.split('\n');
 const cols = head.split(',');
 const rows = lines.map((l) => Object.fromEntries(l.split(',').map((v, i) => [cols[i], v])));
 
+// The long-form CSV establishes coverage, but it cannot tell us whether two
+// images contain the same upstream release. The scanner publishes a companion
+// pairs file with that classification. Only exact and same-major/minor pairs
+// support a product comparison; mismatched or unknown versions stay visible in
+// the raw artifacts but must not be scored on the public pages.
+const pairsFile = `cve-comparison-pairs-${SCAN_DATE}.csv`;
+const pairsCsv = readFileSync(join(dataDir, pairsFile), 'utf8').trim();
+const [pairsHead, ...pairLines] = pairsCsv.split('\n');
+const pairCols = pairsHead.split(',');
+const pairRows = pairLines.map((l) =>
+  Object.fromEntries(l.split(',').map((v, i) => [pairCols[i], v]))
+);
+const scoredVersionMatches = new Set(['exact', 'minor']);
+
 const byImage = new Map();
 for (const r of rows) {
   if (!byImage.has(r.image)) byImage.set(r.image, {});
@@ -40,7 +54,12 @@ for (const r of rows) {
 // dishonest.
 function compare(rival) {
   const pairs = [];
-  for (const [image, p] of byImage) {
+  const rivalPairs = pairRows.filter((p) => p.competitor === rival);
+  for (const pair of rivalPairs) {
+    if (!scoredVersionMatches.has(pair.version_match)) continue;
+    const image = pair.image;
+    const p = byImage.get(image);
+    if (!p) continue;
     const a = p.minimal, b = p[rival];
     if (!a || !b || a.status !== 'scanned' || b.status !== 'scanned') continue;
     const ours = Number(a.unique_cves), theirs = Number(b.unique_cves);
@@ -52,6 +71,9 @@ function compare(rival) {
       oursCritical: Number(a.critical), oursHigh: Number(a.high),
       theirsCritical: Number(b.critical), theirsHigh: Number(b.high),
       oursRef: a.reference, theirsRef: b.reference,
+      oursVersion: pair.minimal_version,
+      theirsVersion: pair.competitor_version,
+      versionMatch: pair.version_match,
     });
   }
   pairs.sort((x, y) => x.delta - y.delta || x.image.localeCompare(y.image));
@@ -61,10 +83,13 @@ function compare(rival) {
   return {
     rival,
     pairs,
+    available: rivalPairs.length,
     compared: pairs.length,
     lower, tie, higher,
     oursTotal: pairs.reduce((s, p) => s + p.ours, 0),
     theirsTotal: pairs.reduce((s, p) => s + p.theirs, 0),
+    excludedMismatch: rivalPairs.filter((p) => p.version_match === 'mismatch').length,
+    excludedUnknown: rivalPairs.filter((p) => p.version_match === 'unknown').length,
     // Images we ship that the rival had no equivalent public image for.
     rivalUnavailable: [...byImage.values()]
       .filter((p) => p.minimal?.status === 'scanned' && (!p[rival] || p[rival].status !== 'scanned')).length,
@@ -99,6 +124,7 @@ const out = {
   ...method,
   platform: 'linux/amd64',
   csvPath: `/data/${csvFile}`,
+  pairsPath: `/data/${pairsFile}`,
   archivedRuns: scans.map((s) => s[1]),
   csvRows: rows.length,
   minimus: compare('minimus'),

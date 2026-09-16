@@ -153,10 +153,10 @@ grype ghcr.io/rtvkiz/minimal-python:latest
 ```
 
 The [full head-to-head data](/compare/minimus/) is published, raw CSV included,
-and it contains the images where Minimal comes off worse. Solr is the current
-example: materially more findings than the Minimus equivalent, most of it in
-bundled Java libraries. If Solr is on your critical path, that is a reason to
-wait, and you should know it from us rather than discover it yourself.
+and it contains every version-matched image where Minimal comes off worse. The
+specific outliers change as both projects rebuild, so check the current table
+for anything on your critical path rather than relying on a point-in-time
+example.
 
 ## Rolling it out
 

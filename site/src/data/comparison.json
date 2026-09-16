@@ -1,43 +1,21 @@
 {
-  "scanDate": "2026-09-11",
+  "scanDate": "2026-09-15",
   "scanner": "Grype 0.109.1",
   "dbSchema": "v6.1.9",
-  "dbBuilt": "2026-09-10T06:30:24Z",
-  "dbChecksum": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.9_2026-09-10T00:31:01Z_1789021824.tar.zst?checksum=sha256%3Ace7ae6d4f7fb81029fc3bd1891b6b441f96bac4e278519743e4768eebd805e69",
+  "dbBuilt": "2026-09-15T06:31:36Z",
+  "dbChecksum": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.9_2026-09-15T00:33:48Z_1789453896.tar.zst?checksum=sha256%3Ada59e6799affd13b75ab62e1de533fff3a45f4efa6fe255ffd99e35109f82c60",
   "platform": "linux/amd64",
-  "csvPath": "/data/cve-comparison-2026-09-11.csv",
+  "csvPath": "/data/cve-comparison-2026-09-15.csv",
+  "pairsPath": "/data/cve-comparison-pairs-2026-09-15.csv",
   "archivedRuns": [
     "2026-07-24",
-    "2026-09-11"
+    "2026-09-11",
+    "2026-09-15"
   ],
-  "csvRows": 336,
+  "csvRows": 369,
   "minimus": {
     "rival": "minimus",
     "pairs": [
-      {
-        "image": "minio",
-        "ours": 1,
-        "theirs": 86,
-        "delta": -85,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 7,
-        "theirsHigh": 53,
-        "oursRef": "ghcr.io/rtvkiz/minimal-minio:latest",
-        "theirsRef": "reg.mini.dev/minio:latest"
-      },
-      {
-        "image": "solr",
-        "ours": 2,
-        "theirs": 30,
-        "delta": -28,
-        "oursCritical": 0,
-        "oursHigh": 1,
-        "theirsCritical": 1,
-        "theirsHigh": 12,
-        "oursRef": "ghcr.io/rtvkiz/minimal-solr:latest",
-        "theirsRef": "reg.mini.dev/solr:latest"
-      },
       {
         "image": "opensearch",
         "ours": 2,
@@ -48,55 +26,55 @@
         "theirsCritical": 6,
         "theirsHigh": 32,
         "oursRef": "ghcr.io/rtvkiz/minimal-opensearch:latest",
-        "theirsRef": "reg.mini.dev/opensearch:latest"
+        "theirsRef": "reg.mini.dev/opensearch:latest",
+        "oursVersion": "3.8.0",
+        "theirsVersion": "3.8.0",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "solr",
+        "ours": 3,
+        "theirs": 30,
+        "delta": -27,
+        "oursCritical": 0,
+        "oursHigh": 2,
+        "theirsCritical": 1,
+        "theirsHigh": 12,
+        "oursRef": "ghcr.io/rtvkiz/minimal-solr:latest",
+        "theirsRef": "reg.mini.dev/solr:latest",
+        "oursVersion": "10.0.0",
+        "theirsVersion": "10.0.0",
+        "versionMatch": "exact"
       },
       {
         "image": "gitea",
-        "ours": 1,
-        "theirs": 17,
-        "delta": -16,
+        "ours": 2,
+        "theirs": 16,
+        "delta": -14,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
-        "theirsHigh": 12,
+        "theirsHigh": 11,
         "oursRef": "ghcr.io/rtvkiz/minimal-gitea:latest",
-        "theirsRef": "reg.mini.dev/gitea:latest"
+        "theirsRef": "reg.mini.dev/gitea:latest",
+        "oursVersion": "1.27.3",
+        "theirsVersion": "1.27.3",
+        "versionMatch": "exact"
       },
       {
         "image": "gitlab-runner",
-        "ours": 2,
+        "ours": 3,
         "theirs": 17,
-        "delta": -15,
+        "delta": -14,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
         "theirsHigh": 14,
         "oursRef": "ghcr.io/rtvkiz/minimal-gitlab-runner:latest",
-        "theirsRef": "reg.mini.dev/gitlab-runner:latest"
-      },
-      {
-        "image": "pulsar",
-        "ours": 1,
-        "theirs": 13,
-        "delta": -12,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 1,
-        "theirsHigh": 1,
-        "oursRef": "ghcr.io/rtvkiz/minimal-pulsar:latest",
-        "theirsRef": "reg.mini.dev/apache-pulsar:latest"
-      },
-      {
-        "image": "cassandra",
-        "ours": 25,
-        "theirs": 36,
-        "delta": -11,
-        "oursCritical": 1,
-        "oursHigh": 11,
-        "theirsCritical": 1,
-        "theirsHigh": 12,
-        "oursRef": "ghcr.io/rtvkiz/minimal-cassandra:latest",
-        "theirsRef": "reg.mini.dev/cassandra:latest"
+        "theirsRef": "reg.mini.dev/gitlab-runner:latest",
+        "oursVersion": "19.3.2",
+        "theirsVersion": "19.3.2",
+        "versionMatch": "exact"
       },
       {
         "image": "etcd",
@@ -108,7 +86,10 @@
         "theirsCritical": 0,
         "theirsHigh": 18,
         "oursRef": "ghcr.io/rtvkiz/minimal-etcd:latest",
-        "theirsRef": "reg.mini.dev/etcd:latest"
+        "theirsRef": "reg.mini.dev/etcd:latest",
+        "oursVersion": "3.7.1",
+        "theirsVersion": "3.7.1",
+        "versionMatch": "exact"
       },
       {
         "image": "metrics-server",
@@ -120,7 +101,40 @@
         "theirsCritical": 0,
         "theirsHigh": 8,
         "oursRef": "ghcr.io/rtvkiz/minimal-metrics-server:latest",
-        "theirsRef": "reg.mini.dev/metrics-server:latest"
+        "theirsRef": "reg.mini.dev/metrics-server:latest",
+        "oursVersion": "0.9.0",
+        "theirsVersion": "0.9.0",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "pulsar",
+        "ours": 2,
+        "theirs": 12,
+        "delta": -10,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 1,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-pulsar:latest",
+        "theirsRef": "reg.mini.dev/apache-pulsar:latest",
+        "oursVersion": "4.2.4",
+        "theirsVersion": "4.2.4",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "cassandra",
+        "ours": 26,
+        "theirs": 35,
+        "delta": -9,
+        "oursCritical": 1,
+        "oursHigh": 12,
+        "theirsCritical": 1,
+        "theirsHigh": 11,
+        "oursRef": "ghcr.io/rtvkiz/minimal-cassandra:latest",
+        "theirsRef": "reg.mini.dev/cassandra:latest",
+        "oursVersion": "5.0.9",
+        "theirsVersion": "5.0.9",
+        "versionMatch": "exact"
       },
       {
         "image": "dex",
@@ -132,7 +146,10 @@
         "theirsCritical": 0,
         "theirsHigh": 9,
         "oursRef": "ghcr.io/rtvkiz/minimal-dex:latest",
-        "theirsRef": "reg.mini.dev/dex:latest"
+        "theirsRef": "reg.mini.dev/dex:latest",
+        "oursVersion": "2.45.1",
+        "theirsVersion": "2.45.1",
+        "versionMatch": "exact"
       },
       {
         "image": "descheduler",
@@ -144,7 +161,10 @@
         "theirsCritical": 0,
         "theirsHigh": 7,
         "oursRef": "ghcr.io/rtvkiz/minimal-descheduler:latest",
-        "theirsRef": "reg.mini.dev/descheduler:latest"
+        "theirsRef": "reg.mini.dev/descheduler:latest",
+        "oursVersion": "0.36.0",
+        "theirsVersion": "0.36.0",
+        "versionMatch": "exact"
       },
       {
         "image": "grype",
@@ -156,7 +176,10 @@
         "theirsCritical": 0,
         "theirsHigh": 7,
         "oursRef": "ghcr.io/rtvkiz/minimal-grype:latest",
-        "theirsRef": "reg.mini.dev/grype:latest"
+        "theirsRef": "reg.mini.dev/grype:latest",
+        "oursVersion": "0.118.0",
+        "theirsVersion": "0.118.0",
+        "versionMatch": "exact"
       },
       {
         "image": "kube-state-metrics",
@@ -168,7 +191,10 @@
         "theirsCritical": 0,
         "theirsHigh": 5,
         "oursRef": "ghcr.io/rtvkiz/minimal-kube-state-metrics:latest",
-        "theirsRef": "reg.mini.dev/kube-state-metrics:latest"
+        "theirsRef": "reg.mini.dev/kube-state-metrics:latest",
+        "oursVersion": "2.20.0",
+        "theirsVersion": "2.20.0",
+        "versionMatch": "exact"
       },
       {
         "image": "trivy",
@@ -180,67 +206,40 @@
         "theirsCritical": 0,
         "theirsHigh": 4,
         "oursRef": "ghcr.io/rtvkiz/minimal-trivy:latest",
-        "theirsRef": "reg.mini.dev/trivy:latest"
+        "theirsRef": "reg.mini.dev/trivy:latest",
+        "oursVersion": "0.74.0",
+        "theirsVersion": "0.74.0",
+        "versionMatch": "exact"
       },
       {
         "image": "patroni",
-        "ours": 1,
+        "ours": 2,
         "theirs": 6,
-        "delta": -5,
+        "delta": -4,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-patroni:latest",
-        "theirsRef": "reg.mini.dev/patroni:latest"
-      },
-      {
-        "image": "seaweedfs",
-        "ours": 0,
-        "theirs": 4,
-        "delta": -4,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 2,
-        "oursRef": "ghcr.io/rtvkiz/minimal-seaweedfs:latest",
-        "theirsRef": "reg.mini.dev/seaweedfs:latest"
+        "theirsRef": "reg.mini.dev/patroni:latest",
+        "oursVersion": "4.1.5",
+        "theirsVersion": "4.1.5",
+        "versionMatch": "exact"
       },
       {
         "image": "telegraf",
-        "ours": 1,
-        "theirs": 5,
+        "ours": 10,
+        "theirs": 14,
         "delta": -4,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 3,
+        "oursCritical": 2,
+        "oursHigh": 2,
+        "theirsCritical": 2,
+        "theirsHigh": 5,
         "oursRef": "ghcr.io/rtvkiz/minimal-telegraf:latest",
-        "theirsRef": "reg.mini.dev/telegraf:latest"
-      },
-      {
-        "image": "consul",
-        "ours": 1,
-        "theirs": 4,
-        "delta": -3,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 2,
-        "oursRef": "ghcr.io/rtvkiz/minimal-consul:latest",
-        "theirsRef": "reg.mini.dev/consul:latest"
-      },
-      {
-        "image": "keycloak",
-        "ours": 1,
-        "theirs": 4,
-        "delta": -3,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 1,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-keycloak:latest",
-        "theirsRef": "reg.mini.dev/keycloak:latest"
+        "theirsRef": "reg.mini.dev/telegraf:latest",
+        "oursVersion": "1.40.0",
+        "theirsVersion": "1.40.0",
+        "versionMatch": "exact"
       },
       {
         "image": "otelcol",
@@ -252,10 +251,13 @@
         "theirsCritical": 0,
         "theirsHigh": 2,
         "oursRef": "ghcr.io/rtvkiz/minimal-otelcol:latest",
-        "theirsRef": "reg.mini.dev/opentelemetry-collector:latest"
+        "theirsRef": "reg.mini.dev/opentelemetry-collector:latest",
+        "oursVersion": "0.160.0",
+        "theirsVersion": "0.160.0",
+        "versionMatch": "exact"
       },
       {
-        "image": "syft",
+        "image": "seaweedfs",
         "ours": 0,
         "theirs": 3,
         "delta": -3,
@@ -263,8 +265,11 @@
         "oursHigh": 0,
         "theirsCritical": 0,
         "theirsHigh": 1,
-        "oursRef": "ghcr.io/rtvkiz/minimal-syft:latest",
-        "theirsRef": "reg.mini.dev/syft:latest"
+        "oursRef": "ghcr.io/rtvkiz/minimal-seaweedfs:latest",
+        "theirsRef": "reg.mini.dev/seaweedfs:latest",
+        "oursVersion": "4.47",
+        "theirsVersion": "4.47",
+        "versionMatch": "exact"
       },
       {
         "image": "trufflehog",
@@ -276,7 +281,10 @@
         "theirsCritical": 0,
         "theirsHigh": 4,
         "oursRef": "ghcr.io/rtvkiz/minimal-trufflehog:latest",
-        "theirsRef": "reg.mini.dev/trufflehog:latest"
+        "theirsRef": "reg.mini.dev/trufflehog:latest",
+        "oursVersion": "3.97.4",
+        "theirsVersion": "3.97.4",
+        "versionMatch": "exact"
       },
       {
         "image": "velero",
@@ -288,19 +296,10 @@
         "theirsCritical": 0,
         "theirsHigh": 5,
         "oursRef": "ghcr.io/rtvkiz/minimal-velero:latest",
-        "theirsRef": "reg.mini.dev/velero:latest"
-      },
-      {
-        "image": "buildkit",
-        "ours": 2,
-        "theirs": 4,
-        "delta": -2,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-buildkit:latest",
-        "theirsRef": "reg.mini.dev/buildkit:latest"
+        "theirsRef": "reg.mini.dev/velero:latest",
+        "oursVersion": "1.18.2",
+        "theirsVersion": "1.18.2",
+        "versionMatch": "exact"
       },
       {
         "image": "coredns",
@@ -312,43 +311,25 @@
         "theirsCritical": 0,
         "theirsHigh": 3,
         "oursRef": "ghcr.io/rtvkiz/minimal-coredns:latest",
-        "theirsRef": "reg.mini.dev/coredns:latest"
+        "theirsRef": "reg.mini.dev/coredns:latest",
+        "oursVersion": "1.14.7",
+        "theirsVersion": "1.14.7",
+        "versionMatch": "exact"
       },
       {
-        "image": "deno",
-        "ours": 1,
-        "theirs": 3,
+        "image": "keycloak",
+        "ours": 2,
+        "theirs": 4,
         "delta": -2,
         "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 1,
-        "oursRef": "ghcr.io/rtvkiz/minimal-deno:latest",
-        "theirsRef": "reg.mini.dev/deno:latest"
-      },
-      {
-        "image": "jaeger",
-        "ours": 1,
-        "theirs": 3,
-        "delta": -2,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 1,
-        "oursRef": "ghcr.io/rtvkiz/minimal-jaeger:latest",
-        "theirsRef": "reg.mini.dev/jaeger:latest"
-      },
-      {
-        "image": "kube-bench",
-        "ours": 0,
-        "theirs": 2,
-        "delta": -2,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 1,
         "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-kube-bench:latest",
-        "theirsRef": "reg.mini.dev/kube-bench:latest"
+        "oursRef": "ghcr.io/rtvkiz/minimal-keycloak:latest",
+        "theirsRef": "reg.mini.dev/keycloak:latest",
+        "oursVersion": "26.7.3",
+        "theirsVersion": "26.7.3",
+        "versionMatch": "exact"
       },
       {
         "image": "kustomize",
@@ -360,7 +341,10 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-kustomize:latest",
-        "theirsRef": "reg.mini.dev/kustomize:latest"
+        "theirsRef": "reg.mini.dev/kustomize:latest",
+        "oursVersion": "5.8.1",
+        "theirsVersion": "5.8.1",
+        "versionMatch": "exact"
       },
       {
         "image": "nats",
@@ -372,7 +356,10 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-nats:latest",
-        "theirsRef": "reg.mini.dev/nats:latest"
+        "theirsRef": "reg.mini.dev/nats:latest",
+        "oursVersion": "2.14.6",
+        "theirsVersion": "2.14.6",
+        "versionMatch": "exact"
       },
       {
         "image": "openbao",
@@ -384,7 +371,10 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-openbao:latest",
-        "theirsRef": "reg.mini.dev/openbao:latest"
+        "theirsRef": "reg.mini.dev/openbao:latest",
+        "oursVersion": "2.6.2",
+        "theirsVersion": "2.6.2",
+        "versionMatch": "exact"
       },
       {
         "image": "opentofu",
@@ -396,7 +386,10 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-opentofu:latest",
-        "theirsRef": "reg.mini.dev/opentofu:latest"
+        "theirsRef": "reg.mini.dev/opentofu:latest",
+        "oursVersion": "1.12.6",
+        "theirsVersion": "1.12.6",
+        "versionMatch": "exact"
       },
       {
         "image": "prometheus",
@@ -408,19 +401,25 @@
         "theirsCritical": 0,
         "theirsHigh": 2,
         "oursRef": "ghcr.io/rtvkiz/minimal-prometheus:latest",
-        "theirsRef": "reg.mini.dev/prometheus:latest"
+        "theirsRef": "reg.mini.dev/prometheus:latest",
+        "oursVersion": "3.14.0",
+        "theirsVersion": "3.14.0",
+        "versionMatch": "exact"
       },
       {
-        "image": "python",
-        "ours": 4,
-        "theirs": 6,
+        "image": "qdrant",
+        "ours": 0,
+        "theirs": 2,
         "delta": -2,
         "oursCritical": 0,
         "oursHigh": 0,
         "theirsCritical": 0,
         "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-python:latest",
-        "theirsRef": "reg.mini.dev/python:latest"
+        "oursRef": "ghcr.io/rtvkiz/minimal-qdrant:latest",
+        "theirsRef": "reg.mini.dev/qdrant:latest",
+        "oursVersion": "1.19.1",
+        "theirsVersion": "1.19.1",
+        "versionMatch": "exact"
       },
       {
         "image": "rclone",
@@ -432,7 +431,10 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-rclone:latest",
-        "theirsRef": "reg.mini.dev/rclone:latest"
+        "theirsRef": "reg.mini.dev/rclone:latest",
+        "oursVersion": "1.75.1",
+        "theirsVersion": "1.75.1",
+        "versionMatch": "exact"
       },
       {
         "image": "skopeo",
@@ -444,7 +446,25 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-skopeo:latest",
-        "theirsRef": "reg.mini.dev/skopeo:latest"
+        "theirsRef": "reg.mini.dev/skopeo:latest",
+        "oursVersion": "1.24.0",
+        "theirsVersion": "1.24.0",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "syft",
+        "ours": 0,
+        "theirs": 2,
+        "delta": -2,
+        "oursCritical": 0,
+        "oursHigh": 0,
+        "theirsCritical": 0,
+        "theirsHigh": 1,
+        "oursRef": "ghcr.io/rtvkiz/minimal-syft:latest",
+        "theirsRef": "reg.mini.dev/syft:latest",
+        "oursVersion": "1.51.1",
+        "theirsVersion": "1.51.1",
+        "versionMatch": "exact"
       },
       {
         "image": "tailscale",
@@ -456,7 +476,10 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-tailscale:latest",
-        "theirsRef": "reg.mini.dev/tailscale:latest"
+        "theirsRef": "reg.mini.dev/tailscale:latest",
+        "oursVersion": "1.102.4",
+        "theirsVersion": "1.102.4",
+        "versionMatch": "exact"
       },
       {
         "image": "thanos",
@@ -468,7 +491,10 @@
         "theirsCritical": 0,
         "theirsHigh": 3,
         "oursRef": "ghcr.io/rtvkiz/minimal-thanos:latest",
-        "theirsRef": "reg.mini.dev/thanos:latest"
+        "theirsRef": "reg.mini.dev/thanos:latest",
+        "oursVersion": "0.42.4",
+        "theirsVersion": "0.42.4",
+        "versionMatch": "exact"
       },
       {
         "image": "blackbox-exporter",
@@ -480,7 +506,10 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-blackbox-exporter:latest",
-        "theirsRef": "reg.mini.dev/prometheus-blackbox-exporter:latest"
+        "theirsRef": "reg.mini.dev/prometheus-blackbox-exporter:latest",
+        "oursVersion": "0.28.0",
+        "theirsVersion": "0.28.0",
+        "versionMatch": "exact"
       },
       {
         "image": "caddy",
@@ -492,7 +521,55 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-caddy:latest",
-        "theirsRef": "reg.mini.dev/caddy:latest"
+        "theirsRef": "reg.mini.dev/caddy:latest",
+        "oursVersion": "2.11.4",
+        "theirsVersion": "2.11.4",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "consul",
+        "ours": 1,
+        "theirs": 2,
+        "delta": -1,
+        "oursCritical": 0,
+        "oursHigh": 0,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-consul:latest",
+        "theirsRef": "reg.mini.dev/consul:latest",
+        "oursVersion": "2.0.4",
+        "theirsVersion": "2.0.4",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "deno",
+        "ours": 2,
+        "theirs": 3,
+        "delta": -1,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 1,
+        "oursRef": "ghcr.io/rtvkiz/minimal-deno:latest",
+        "theirsRef": "reg.mini.dev/deno:latest",
+        "oursVersion": "2.9.6",
+        "theirsVersion": "2.9.6",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "envoy",
+        "ours": 0,
+        "theirs": 1,
+        "delta": -1,
+        "oursCritical": 0,
+        "oursHigh": 0,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-envoy:latest",
+        "theirsRef": "reg.mini.dev/envoy:latest",
+        "oursVersion": "1.39.1",
+        "theirsVersion": "1.39.1",
+        "versionMatch": "exact"
       },
       {
         "image": "external-dns",
@@ -504,31 +581,10 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-external-dns:latest",
-        "theirsRef": "reg.mini.dev/external-dns:latest"
-      },
-      {
-        "image": "flink",
-        "ours": 1,
-        "theirs": 2,
-        "delta": -1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-flink:latest",
-        "theirsRef": "reg.mini.dev/flink:latest"
-      },
-      {
-        "image": "flux",
-        "ours": 1,
-        "theirs": 2,
-        "delta": -1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 1,
-        "oursRef": "ghcr.io/rtvkiz/minimal-flux:latest",
-        "theirsRef": "reg.mini.dev/flux:latest"
+        "theirsRef": "reg.mini.dev/external-dns:latest",
+        "oursVersion": "0.22.0",
+        "theirsVersion": "0.22.0",
+        "versionMatch": "exact"
       },
       {
         "image": "gitleaks",
@@ -540,19 +596,10 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-gitleaks:latest",
-        "theirsRef": "reg.mini.dev/gitleaks:latest"
-      },
-      {
-        "image": "haproxy",
-        "ours": 1,
-        "theirs": 2,
-        "delta": -1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 1,
-        "oursRef": "ghcr.io/rtvkiz/minimal-haproxy:latest",
-        "theirsRef": "reg.mini.dev/haproxy:latest"
+        "theirsRef": "reg.mini.dev/gitleaks:latest",
+        "oursVersion": "8.30.1",
+        "theirsVersion": "8.30.1",
+        "versionMatch": "exact"
       },
       {
         "image": "kube-vip",
@@ -564,7 +611,10 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-kube-vip:latest",
-        "theirsRef": "reg.mini.dev/kube-vip:latest"
+        "theirsRef": "reg.mini.dev/kube-vip:latest",
+        "oursVersion": "1.2.3",
+        "theirsVersion": "1.2.3",
+        "versionMatch": "exact"
       },
       {
         "image": "loki",
@@ -576,19 +626,40 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-loki:latest",
-        "theirsRef": "reg.mini.dev/loki:latest"
+        "theirsRef": "reg.mini.dev/loki:latest",
+        "oursVersion": "3.7.7",
+        "theirsVersion": "3.7.7",
+        "versionMatch": "exact"
       },
       {
-        "image": "mimir",
-        "ours": 1,
-        "theirs": 2,
+        "image": "memcached",
+        "ours": 0,
+        "theirs": 1,
         "delta": -1,
         "oursCritical": 0,
         "oursHigh": 0,
         "theirsCritical": 0,
-        "theirsHigh": 1,
-        "oursRef": "ghcr.io/rtvkiz/minimal-mimir:latest",
-        "theirsRef": "reg.mini.dev/mimir:latest"
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-memcached:latest",
+        "theirsRef": "reg.mini.dev/memcached:latest",
+        "oursVersion": "1.6.45",
+        "theirsVersion": "1.6.45",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "mosquitto",
+        "ours": 0,
+        "theirs": 1,
+        "delta": -1,
+        "oursCritical": 0,
+        "oursHigh": 0,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-mosquitto:latest",
+        "theirsRef": "reg.mini.dev/eclipse-mosquitto:latest",
+        "oursVersion": "2.1.2",
+        "theirsVersion": "2.1.2",
+        "versionMatch": "exact"
       },
       {
         "image": "notation",
@@ -600,46 +671,13 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-notation:latest",
-        "theirsRef": "reg.mini.dev/notation:latest"
+        "theirsRef": "reg.mini.dev/notation:latest",
+        "oursVersion": "1.3.2",
+        "theirsVersion": "1.3.2",
+        "versionMatch": "exact"
       },
       {
-        "image": "php",
-        "ours": 1,
-        "theirs": 2,
-        "delta": -1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 1,
-        "oursRef": "ghcr.io/rtvkiz/minimal-php:latest",
-        "theirsRef": "reg.mini.dev/php:latest"
-      },
-      {
-        "image": "qdrant",
-        "ours": 1,
-        "theirs": 2,
-        "delta": -1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-qdrant:latest",
-        "theirsRef": "reg.mini.dev/qdrant:latest"
-      },
-      {
-        "image": "ruby",
-        "ours": 2,
-        "theirs": 3,
-        "delta": -1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 1,
-        "oursRef": "ghcr.io/rtvkiz/minimal-ruby:latest",
-        "theirsRef": "reg.mini.dev/ruby:latest"
-      },
-      {
-        "image": "victoria-metrics",
+        "image": "pgbouncer",
         "ours": 0,
         "theirs": 1,
         "delta": -1,
@@ -647,8 +685,71 @@
         "oursHigh": 0,
         "theirsCritical": 0,
         "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-victoria-metrics:latest",
-        "theirsRef": "reg.mini.dev/victoria-metrics:latest"
+        "oursRef": "ghcr.io/rtvkiz/minimal-pgbouncer:latest",
+        "theirsRef": "reg.mini.dev/pgbouncer:latest",
+        "oursVersion": "1.25.2",
+        "theirsVersion": "1.25.2",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "python",
+        "ours": 5,
+        "theirs": 6,
+        "delta": -1,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-python:latest",
+        "theirsRef": "reg.mini.dev/python:latest",
+        "oursVersion": "3.14.7_git20260914",
+        "theirsVersion": "3.14.7",
+        "versionMatch": "minor"
+      },
+      {
+        "image": "redis-slim",
+        "ours": 0,
+        "theirs": 1,
+        "delta": -1,
+        "oursCritical": 0,
+        "oursHigh": 0,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-redis-slim:latest",
+        "theirsRef": "reg.mini.dev/redis:latest",
+        "oursVersion": "8.10.1",
+        "theirsVersion": "8.10.1",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "unbound",
+        "ours": 0,
+        "theirs": 1,
+        "delta": -1,
+        "oursCritical": 0,
+        "oursHigh": 0,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-unbound:latest",
+        "theirsRef": "reg.mini.dev/unbound:latest",
+        "oursVersion": "1.26.0",
+        "theirsVersion": "1.26.0",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "valkey",
+        "ours": 0,
+        "theirs": 1,
+        "delta": -1,
+        "oursCritical": 0,
+        "oursHigh": 0,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-valkey:latest",
+        "theirsRef": "reg.mini.dev/valkey:latest",
+        "oursVersion": "9.1.2",
+        "theirsVersion": "9.1.2",
+        "versionMatch": "exact"
       },
       {
         "image": "alertmanager",
@@ -660,19 +761,10 @@
         "theirsCritical": 0,
         "theirsHigh": 2,
         "oursRef": "ghcr.io/rtvkiz/minimal-alertmanager:latest",
-        "theirsRef": "reg.mini.dev/prometheus-alertmanager:latest"
-      },
-      {
-        "image": "bun",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-bun:latest",
-        "theirsRef": "reg.mini.dev/bun:latest"
+        "theirsRef": "reg.mini.dev/prometheus-alertmanager:latest",
+        "oursVersion": "0.34.0",
+        "theirsVersion": "0.34.0",
+        "versionMatch": "exact"
       },
       {
         "image": "cosign",
@@ -684,7 +776,10 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-cosign:latest",
-        "theirsRef": "reg.mini.dev/cosign:latest"
+        "theirsRef": "reg.mini.dev/cosign:latest",
+        "oursVersion": "3.1.3",
+        "theirsVersion": "3.1.3",
+        "versionMatch": "exact"
       },
       {
         "image": "crane",
@@ -696,55 +791,40 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-crane:latest",
-        "theirsRef": "reg.mini.dev/crane:latest"
+        "theirsRef": "reg.mini.dev/crane:latest",
+        "oursVersion": "0.22.1",
+        "theirsVersion": "0.22.1",
+        "versionMatch": "exact"
       },
       {
-        "image": "dotnet",
-        "ours": 1,
-        "theirs": 1,
+        "image": "flink",
+        "ours": 2,
+        "theirs": 2,
         "delta": 0,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
         "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-dotnet:latest",
-        "theirsRef": "reg.mini.dev/dotnet-runtime:latest"
+        "oursRef": "ghcr.io/rtvkiz/minimal-flink:latest",
+        "theirsRef": "reg.mini.dev/flink:latest",
+        "oursVersion": "2.3.0",
+        "theirsVersion": "2.3.0",
+        "versionMatch": "exact"
       },
       {
-        "image": "envoy",
-        "ours": 1,
-        "theirs": 1,
+        "image": "haproxy",
+        "ours": 2,
+        "theirs": 2,
         "delta": 0,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-envoy:latest",
-        "theirsRef": "reg.mini.dev/envoy:latest"
-      },
-      {
-        "image": "fluent-bit",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-fluent-bit:latest",
-        "theirsRef": "reg.mini.dev/fluent-bit:latest"
-      },
-      {
-        "image": "go",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-go:latest",
-        "theirsRef": "reg.mini.dev/go:latest"
+        "theirsHigh": 1,
+        "oursRef": "ghcr.io/rtvkiz/minimal-haproxy:latest",
+        "theirsRef": "reg.mini.dev/haproxy:latest",
+        "oursVersion": "3.4.0",
+        "theirsVersion": "3.4.4",
+        "versionMatch": "minor"
       },
       {
         "image": "helm",
@@ -756,31 +836,10 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-helm:latest",
-        "theirsRef": "reg.mini.dev/helm:latest"
-      },
-      {
-        "image": "java",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-java:latest",
-        "theirsRef": "reg.mini.dev/openjdk:latest"
-      },
-      {
-        "image": "kafka",
-        "ours": 20,
-        "theirs": 20,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 7,
-        "theirsCritical": 0,
-        "theirsHigh": 6,
-        "oursRef": "ghcr.io/rtvkiz/minimal-kafka:latest",
-        "theirsRef": "reg.mini.dev/kafka:latest"
+        "theirsRef": "reg.mini.dev/helm:latest",
+        "oursVersion": "4.3.0",
+        "theirsVersion": "4.3.0",
+        "versionMatch": "exact"
       },
       {
         "image": "kubectl",
@@ -792,7 +851,10 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-kubectl:latest",
-        "theirsRef": "reg.mini.dev/kubectl:latest"
+        "theirsRef": "reg.mini.dev/kubectl:latest",
+        "oursVersion": "1.37.0",
+        "theirsVersion": "1.37.0",
+        "versionMatch": "exact"
       },
       {
         "image": "kubeseal",
@@ -804,79 +866,25 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-kubeseal:latest",
-        "theirsRef": "reg.mini.dev/sealed-secrets-kubeseal:latest"
+        "theirsRef": "reg.mini.dev/sealed-secrets-kubeseal:latest",
+        "oursVersion": "0.40.0",
+        "theirsVersion": "0.40.0",
+        "versionMatch": "exact"
       },
       {
-        "image": "mariadb",
-        "ours": 1,
-        "theirs": 1,
+        "image": "kyverno",
+        "ours": 2,
+        "theirs": 2,
         "delta": 0,
         "oursCritical": 0,
         "oursHigh": 0,
         "theirsCritical": 0,
         "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-mariadb:latest",
-        "theirsRef": "reg.mini.dev/mariadb:latest"
-      },
-      {
-        "image": "memcached",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-memcached:latest",
-        "theirsRef": "reg.mini.dev/memcached:latest"
-      },
-      {
-        "image": "mosquitto",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-mosquitto:latest",
-        "theirsRef": "reg.mini.dev/eclipse-mosquitto:latest"
-      },
-      {
-        "image": "mysql",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-mysql:latest",
-        "theirsRef": "reg.mini.dev/mysql:latest"
-      },
-      {
-        "image": "nginx",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-nginx:latest",
-        "theirsRef": "reg.mini.dev/nginx:latest"
-      },
-      {
-        "image": "node-slim",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-node-slim:latest",
-        "theirsRef": "reg.mini.dev/node:latest"
+        "oursRef": "ghcr.io/rtvkiz/minimal-kyverno:latest",
+        "theirsRef": "reg.mini.dev/kyverno:latest",
+        "oursVersion": "1.19.1",
+        "theirsVersion": "1.19.1",
+        "versionMatch": "exact"
       },
       {
         "image": "oauth2-proxy",
@@ -888,7 +896,10 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-oauth2-proxy:latest",
-        "theirsRef": "reg.mini.dev/oauth2-proxy:latest"
+        "theirsRef": "reg.mini.dev/oauth2-proxy:latest",
+        "oursVersion": "7.15.4",
+        "theirsVersion": "7.15.4",
+        "versionMatch": "exact"
       },
       {
         "image": "opa",
@@ -900,7 +911,10 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-opa:latest",
-        "theirsRef": "reg.mini.dev/opa:latest"
+        "theirsRef": "reg.mini.dev/opa:latest",
+        "oursVersion": "1.20.2",
+        "theirsVersion": "1.20.2",
+        "versionMatch": "exact"
       },
       {
         "image": "oras",
@@ -912,31 +926,10 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-oras:latest",
-        "theirsRef": "reg.mini.dev/oras:latest"
-      },
-      {
-        "image": "pgbouncer",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-pgbouncer:latest",
-        "theirsRef": "reg.mini.dev/pgbouncer:latest"
-      },
-      {
-        "image": "postgres-slim",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-postgres-slim:latest",
-        "theirsRef": "reg.mini.dev/postgres:latest"
+        "theirsRef": "reg.mini.dev/oras:latest",
+        "oursVersion": "1.3.4",
+        "theirsVersion": "1.3.4",
+        "versionMatch": "exact"
       },
       {
         "image": "pushgateway",
@@ -948,31 +941,10 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-pushgateway:latest",
-        "theirsRef": "reg.mini.dev/prometheus-pushgateway:latest"
-      },
-      {
-        "image": "rabbitmq",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-rabbitmq:latest",
-        "theirsRef": "reg.mini.dev/rabbitmq:latest"
-      },
-      {
-        "image": "redis-slim",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-redis-slim:latest",
-        "theirsRef": "reg.mini.dev/redis:latest"
+        "theirsRef": "reg.mini.dev/prometheus-pushgateway:latest",
+        "oursVersion": "1.11.3",
+        "theirsVersion": "1.11.3",
+        "versionMatch": "exact"
       },
       {
         "image": "regctl",
@@ -984,67 +956,100 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-regctl:latest",
-        "theirsRef": "reg.mini.dev/regctl:latest"
+        "theirsRef": "reg.mini.dev/regctl:latest",
+        "oursVersion": "0.11.6",
+        "theirsVersion": "0.11.6",
+        "versionMatch": "exact"
       },
       {
-        "image": "sqlite",
-        "ours": 1,
-        "theirs": 1,
+        "image": "ruby",
+        "ours": 3,
+        "theirs": 3,
         "delta": 0,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-sqlite:latest",
-        "theirsRef": "reg.mini.dev/sqlite3:latest"
+        "theirsHigh": 1,
+        "oursRef": "ghcr.io/rtvkiz/minimal-ruby:latest",
+        "theirsRef": "reg.mini.dev/ruby:latest",
+        "oursVersion": "4.0.6",
+        "theirsVersion": "4.0.7",
+        "versionMatch": "minor"
       },
       {
-        "image": "tomcat",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-tomcat:latest",
-        "theirsRef": "reg.mini.dev/tomcat:latest"
-      },
-      {
-        "image": "unbound",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-unbound:latest",
-        "theirsRef": "reg.mini.dev/unbound:latest"
-      },
-      {
-        "image": "valkey",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-valkey:latest",
-        "theirsRef": "reg.mini.dev/valkey:latest"
-      },
-      {
-        "image": "httpd",
+        "image": "dotnet",
         "ours": 2,
         "theirs": 1,
         "delta": 1,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
         "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-httpd:latest",
-        "theirsRef": "reg.mini.dev/httpd:latest"
+        "oursRef": "ghcr.io/rtvkiz/minimal-dotnet:latest",
+        "theirsRef": "reg.mini.dev/dotnet-runtime:latest",
+        "oursVersion": "10.0.112",
+        "theirsVersion": "10.0.112",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "fluent-bit",
+        "ours": 2,
+        "theirs": 1,
+        "delta": 1,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-fluent-bit:latest",
+        "theirsRef": "reg.mini.dev/fluent-bit:latest",
+        "oursVersion": "5.1.2",
+        "theirsVersion": "5.1.2",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "go",
+        "ours": 2,
+        "theirs": 1,
+        "delta": 1,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-go:latest",
+        "theirsRef": "reg.mini.dev/go:latest",
+        "oursVersion": "1.27.1",
+        "theirsVersion": "1.27.1",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "kafka",
+        "ours": 21,
+        "theirs": 20,
+        "delta": 1,
+        "oursCritical": 0,
+        "oursHigh": 8,
+        "theirsCritical": 0,
+        "theirsHigh": 6,
+        "oursRef": "ghcr.io/rtvkiz/minimal-kafka:latest",
+        "theirsRef": "reg.mini.dev/kafka:latest",
+        "oursVersion": "4.3.1",
+        "theirsVersion": "4.3.1",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "nginx",
+        "ours": 2,
+        "theirs": 1,
+        "delta": 1,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-nginx:latest",
+        "theirsRef": "reg.mini.dev/nginx:latest",
+        "oursVersion": "1.31.5",
+        "theirsVersion": "1.31.5",
+        "versionMatch": "exact"
       },
       {
         "image": "node-exporter",
@@ -1056,7 +1061,70 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-node-exporter:latest",
-        "theirsRef": "reg.mini.dev/prometheus-node-exporter:latest"
+        "theirsRef": "reg.mini.dev/prometheus-node-exporter:latest",
+        "oursVersion": "1.12.1",
+        "theirsVersion": "1.12.1",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "node-slim",
+        "ours": 2,
+        "theirs": 1,
+        "delta": 1,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-node-slim:latest",
+        "theirsRef": "reg.mini.dev/node:latest",
+        "oursVersion": "26.8.2",
+        "theirsVersion": "26.8.2",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "php",
+        "ours": 2,
+        "theirs": 1,
+        "delta": 1,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-php:latest",
+        "theirsRef": "reg.mini.dev/php:latest",
+        "oursVersion": "8.5.10",
+        "theirsVersion": "8.5.10",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "postgres-slim",
+        "ours": 2,
+        "theirs": 1,
+        "delta": 1,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-postgres-slim:latest",
+        "theirsRef": "reg.mini.dev/postgres:latest",
+        "oursVersion": "18.6",
+        "theirsVersion": "18.6",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "sqlite",
+        "ours": 2,
+        "theirs": 1,
+        "delta": 1,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-sqlite:latest",
+        "theirsRef": "reg.mini.dev/sqlite3:latest",
+        "oursVersion": "3.53.4",
+        "theirsVersion": "3.53.4",
+        "versionMatch": "exact"
       },
       {
         "image": "tempo",
@@ -1068,7 +1136,10 @@
         "theirsCritical": 0,
         "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-tempo:latest",
-        "theirsRef": "reg.mini.dev/tempo:latest"
+        "theirsRef": "reg.mini.dev/tempo:latest",
+        "oursVersion": "3.0.3",
+        "theirsVersion": "3.0.3",
+        "versionMatch": "exact"
       },
       {
         "image": "traefik",
@@ -1080,127 +1151,70 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-traefik:latest",
-        "theirsRef": "reg.mini.dev/traefik:latest"
+        "theirsRef": "reg.mini.dev/traefik:latest",
+        "oursVersion": "3.7.13",
+        "theirsVersion": "3.7.13",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "httpd",
+        "ours": 3,
+        "theirs": 1,
+        "delta": 2,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-httpd:latest",
+        "theirsRef": "reg.mini.dev/httpd:latest",
+        "oursVersion": "2.4.68",
+        "theirsVersion": "2.4.68",
+        "versionMatch": "exact"
       },
       {
         "image": "zookeeper",
-        "ours": 26,
+        "ours": 27,
         "theirs": 22,
-        "delta": 4,
+        "delta": 5,
         "oursCritical": 1,
-        "oursHigh": 12,
+        "oursHigh": 13,
         "theirsCritical": 1,
         "theirsHigh": 9,
         "oursRef": "ghcr.io/rtvkiz/minimal-zookeeper:latest",
-        "theirsRef": "reg.mini.dev/zookeeper:latest"
-      },
-      {
-        "image": "jenkins",
-        "ours": 17,
-        "theirs": 8,
-        "delta": 9,
-        "oursCritical": 1,
-        "oursHigh": 7,
-        "theirsCritical": 0,
-        "theirsHigh": 3,
-        "oursRef": "ghcr.io/rtvkiz/minimal-jenkins:latest",
-        "theirsRef": "reg.mini.dev/jenkins:latest"
-      },
-      {
-        "image": "vector",
-        "ours": 12,
-        "theirs": 1,
-        "delta": 11,
-        "oursCritical": 0,
-        "oursHigh": 5,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-vector:latest",
-        "theirsRef": "reg.mini.dev/vector:latest"
+        "theirsRef": "reg.mini.dev/zookeeper:latest",
+        "oursVersion": "3.9.5",
+        "theirsVersion": "3.9.5",
+        "versionMatch": "exact"
       }
     ],
-    "compared": 92,
-    "lower": 53,
-    "tie": 32,
-    "higher": 7,
-    "oursTotal": 202,
-    "theirsTotal": 500,
-    "rivalUnavailable": 20
+    "available": 96,
+    "compared": 78,
+    "lower": 49,
+    "tie": 15,
+    "higher": 14,
+    "oursTotal": 187,
+    "theirsTotal": 388,
+    "excludedMismatch": 8,
+    "excludedUnknown": 10,
+    "rivalUnavailable": 27
   },
   "chainguard": {
     "rival": "chainguard",
     "pairs": [
       {
-        "image": "grype",
-        "ours": 5,
-        "theirs": 8,
-        "delta": -3,
-        "oursCritical": 0,
-        "oursHigh": 3,
-        "theirsCritical": 0,
-        "theirsHigh": 4,
-        "oursRef": "ghcr.io/rtvkiz/minimal-grype:latest",
-        "theirsRef": "cgr.dev/chainguard/grype:latest"
-      },
-      {
-        "image": "haproxy",
-        "ours": 1,
-        "theirs": 2,
-        "delta": -1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-haproxy:latest",
-        "theirsRef": "cgr.dev/chainguard/haproxy:latest"
-      },
-      {
-        "image": "mariadb",
-        "ours": 1,
-        "theirs": 2,
-        "delta": -1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-mariadb:latest",
-        "theirsRef": "cgr.dev/chainguard/mariadb:latest"
-      },
-      {
-        "image": "minio",
-        "ours": 1,
-        "theirs": 2,
-        "delta": -1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-minio:latest",
-        "theirsRef": "cgr.dev/chainguard/minio:latest"
-      },
-      {
-        "image": "php",
-        "ours": 1,
-        "theirs": 2,
-        "delta": -1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 1,
-        "oursRef": "ghcr.io/rtvkiz/minimal-php:latest",
-        "theirsRef": "cgr.dev/chainguard/php:latest"
-      },
-      {
         "image": "redis-slim",
-        "ours": 1,
-        "theirs": 2,
+        "ours": 0,
+        "theirs": 1,
         "delta": -1,
         "oursCritical": 0,
         "oursHigh": 0,
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-redis-slim:latest",
-        "theirsRef": "cgr.dev/chainguard/redis:latest"
+        "theirsRef": "cgr.dev/chainguard/redis:latest",
+        "oursVersion": "8.10.1",
+        "theirsVersion": "8.10.1",
+        "versionMatch": "exact"
       },
       {
         "image": "crane",
@@ -1212,31 +1226,55 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-crane:latest",
-        "theirsRef": "cgr.dev/chainguard/crane:latest"
+        "theirsRef": "cgr.dev/chainguard/crane:latest",
+        "oursVersion": "0.22.1",
+        "theirsVersion": "0.22.1",
+        "versionMatch": "exact"
       },
       {
         "image": "dotnet",
-        "ours": 1,
-        "theirs": 1,
+        "ours": 2,
+        "theirs": 2,
         "delta": 0,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
-        "theirsHigh": 0,
+        "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-dotnet:latest",
-        "theirsRef": "cgr.dev/chainguard/dotnet-runtime:latest"
+        "theirsRef": "cgr.dev/chainguard/dotnet-runtime:latest",
+        "oursVersion": "10.0.112",
+        "theirsVersion": "10.0.112",
+        "versionMatch": "exact"
       },
       {
         "image": "go",
-        "ours": 1,
-        "theirs": 1,
+        "ours": 2,
+        "theirs": 2,
         "delta": 0,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
-        "theirsHigh": 0,
+        "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-go:latest",
-        "theirsRef": "cgr.dev/chainguard/go:latest"
+        "theirsRef": "cgr.dev/chainguard/go:latest",
+        "oursVersion": "1.27.1",
+        "theirsVersion": "1.27.1",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "grype",
+        "ours": 5,
+        "theirs": 5,
+        "delta": 0,
+        "oursCritical": 0,
+        "oursHigh": 3,
+        "theirsCritical": 0,
+        "theirsHigh": 3,
+        "oursRef": "ghcr.io/rtvkiz/minimal-grype:latest",
+        "theirsRef": "cgr.dev/chainguard/grype:latest",
+        "oursVersion": "0.118.0",
+        "theirsVersion": "0.118.0",
+        "versionMatch": "exact"
       },
       {
         "image": "helm",
@@ -1248,135 +1286,156 @@
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-helm:latest",
-        "theirsRef": "cgr.dev/chainguard/helm:latest"
-      },
-      {
-        "image": "java",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-java:latest",
-        "theirsRef": "cgr.dev/chainguard/jre:latest"
+        "theirsRef": "cgr.dev/chainguard/helm:latest",
+        "oursVersion": "4.3.0",
+        "theirsVersion": "4.3.0",
+        "versionMatch": "exact"
       },
       {
         "image": "nginx",
-        "ours": 1,
-        "theirs": 1,
+        "ours": 2,
+        "theirs": 2,
         "delta": 0,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
-        "theirsHigh": 0,
+        "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-nginx:latest",
-        "theirsRef": "cgr.dev/chainguard/nginx:latest"
+        "theirsRef": "cgr.dev/chainguard/nginx:latest",
+        "oursVersion": "1.31.5",
+        "theirsVersion": "1.31.5",
+        "versionMatch": "exact"
       },
       {
         "image": "node-slim",
-        "ours": 1,
-        "theirs": 1,
+        "ours": 2,
+        "theirs": 2,
         "delta": 0,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
-        "theirsHigh": 0,
+        "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-node-slim:latest",
-        "theirsRef": "cgr.dev/chainguard/node:latest"
+        "theirsRef": "cgr.dev/chainguard/node:latest",
+        "oursVersion": "26.8.2",
+        "theirsVersion": "26.8.2",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "php",
+        "ours": 2,
+        "theirs": 2,
+        "delta": 0,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 1,
+        "oursRef": "ghcr.io/rtvkiz/minimal-php:latest",
+        "theirsRef": "cgr.dev/chainguard/php:latest",
+        "oursVersion": "8.5.10",
+        "theirsVersion": "8.5.10",
+        "versionMatch": "exact"
       },
       {
         "image": "postgres-slim",
-        "ours": 1,
-        "theirs": 1,
+        "ours": 2,
+        "theirs": 2,
         "delta": 0,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
-        "theirsHigh": 0,
+        "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-postgres-slim:latest",
-        "theirsRef": "cgr.dev/chainguard/postgres:latest"
+        "theirsRef": "cgr.dev/chainguard/postgres:latest",
+        "oursVersion": "18.6",
+        "theirsVersion": "18.6",
+        "versionMatch": "exact"
       },
       {
         "image": "python",
-        "ours": 4,
-        "theirs": 4,
+        "ours": 5,
+        "theirs": 5,
         "delta": 0,
         "oursCritical": 0,
-        "oursHigh": 0,
+        "oursHigh": 1,
         "theirsCritical": 0,
-        "theirsHigh": 0,
+        "theirsHigh": 1,
         "oursRef": "ghcr.io/rtvkiz/minimal-python:latest",
-        "theirsRef": "cgr.dev/chainguard/python:latest"
-      },
-      {
-        "image": "tomcat",
-        "ours": 1,
-        "theirs": 1,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-tomcat:latest",
-        "theirsRef": "cgr.dev/chainguard/tomcat:latest"
+        "theirsRef": "cgr.dev/chainguard/python:latest",
+        "oursVersion": "3.14.7_git20260914",
+        "theirsVersion": "3.14.7_git20260914",
+        "versionMatch": "exact"
       },
       {
         "image": "valkey",
-        "ours": 1,
-        "theirs": 1,
+        "ours": 0,
+        "theirs": 0,
         "delta": 0,
         "oursCritical": 0,
         "oursHigh": 0,
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-valkey:latest",
-        "theirsRef": "cgr.dev/chainguard/valkey:latest"
+        "theirsRef": "cgr.dev/chainguard/valkey:latest",
+        "oursVersion": "9.1.2",
+        "theirsVersion": "9.1.2",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "haproxy",
+        "ours": 2,
+        "theirs": 1,
+        "delta": 1,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-haproxy:latest",
+        "theirsRef": "cgr.dev/chainguard/haproxy:latest",
+        "oursVersion": "3.4.0",
+        "theirsVersion": "3.4.4",
+        "versionMatch": "minor"
+      },
+      {
+        "image": "ruby",
+        "ours": 3,
+        "theirs": 2,
+        "delta": 1,
+        "oursCritical": 0,
+        "oursHigh": 1,
+        "theirsCritical": 0,
+        "theirsHigh": 1,
+        "oursRef": "ghcr.io/rtvkiz/minimal-ruby:latest",
+        "theirsRef": "cgr.dev/chainguard/ruby:latest",
+        "oursVersion": "4.0.6",
+        "theirsVersion": "4.0.6",
+        "versionMatch": "exact"
       },
       {
         "image": "cosign",
         "ours": 4,
-        "theirs": 3,
-        "delta": 1,
+        "theirs": 2,
+        "delta": 2,
         "oursCritical": 0,
         "oursHigh": 0,
         "theirsCritical": 0,
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-cosign:latest",
-        "theirsRef": "cgr.dev/chainguard/cosign:latest"
-      },
-      {
-        "image": "kubectl",
-        "ours": 1,
-        "theirs": 0,
-        "delta": 1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-kubectl:latest",
-        "theirsRef": "cgr.dev/chainguard/kubectl:latest"
-      },
-      {
-        "image": "ruby",
-        "ours": 2,
-        "theirs": 1,
-        "delta": 1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-ruby:latest",
-        "theirsRef": "cgr.dev/chainguard/ruby:latest"
+        "theirsRef": "cgr.dev/chainguard/cosign:latest",
+        "oursVersion": "3.1.3",
+        "theirsVersion": "3.1.3",
+        "versionMatch": "exact"
       }
     ],
-    "compared": 20,
-    "lower": 6,
+    "available": 20,
+    "compared": 15,
+    "lower": 1,
     "tie": 11,
     "higher": 3,
-    "oursTotal": 30,
-    "theirsTotal": 35,
-    "rivalUnavailable": 92
+    "oursTotal": 32,
+    "theirsTotal": 29,
+    "excludedMismatch": 3,
+    "excludedUnknown": 2,
+    "rivalUnavailable": 103
   }
 }
