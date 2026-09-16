@@ -13,17 +13,20 @@ const { data } = Astro.props;
   <li>Every image was scanned with the same Grype binary and the same frozen database.</li>
   <li>Raw Grype findings. No vendor VEX suppression was applied to anyone, including us.</li>
   <li>Only publicly pullable images were scanned. No paid or private registry credentials were used.</li>
+  <li>Only exact or same-major/minor upstream version pairs are scored. Mismatched and unknown versions are excluded.</li>
 </ul>
 <p>
   The full {data.csvRows}-row dataset, including the resolved reference and digest for every
   provider/image pair, is here: <a href={data.csvPath}>cve-comparison-{data.scanDate}.csv</a>.
-  Every figure on this page is derived from that file.
+  The scored-pair inputs and version classifications are here:
+  <a href={data.pairsPath}>cve-comparison-pairs-{data.scanDate}.csv</a>.
+  Every figure on this page is derived from those files.
 </p>
 <h3 style="font-size:1.05rem;margin-top:28px">What this does not prove</h3>
 <p>
-  <code class="kv-mono">latest</code> does not guarantee the same application version or feature
-  set across vendors, so an individual outlier should be version- and feature-matched before it
-  is treated as a product-level claim. A scanner reports known findings visible to one database
-  snapshot; a low count is not proof that an image is free of vulnerabilities. An image a vendor
-  does not publish is counted as <b>not available</b> — never as zero.
+  Exact versions can still bundle different feature sets, and same-major/minor pairs can use
+  different patch releases, so an individual outlier still needs inspection before it is treated
+  as a product-level claim. A scanner reports known findings visible to one database snapshot; a
+  low count is not proof that an image is free of vulnerabilities. An image a vendor does not
+  publish is counted as <b>not available</b> — never as zero.
 </p>

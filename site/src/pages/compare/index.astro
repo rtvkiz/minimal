@@ -6,7 +6,7 @@ import { images } from '../../lib/catalog';
 
 const title = 'Hardened container image alternatives — Chainguard, Minimus, Docker Hardened compared';
 const description =
-  `An evidence-based comparison of free hardened container images. ${data.minimus.compared} images scanned head-to-head with the same Grype build, including the images where Minimal loses.`;
+  `An evidence-based comparison of free hardened container images. ${data.minimus.compared} version-matched images scanned head-to-head with the same Grype build, including the images where Minimal loses.`;
 
 const datasetSchema = {
   '@context': 'https://schema.org',
@@ -42,7 +42,7 @@ const datasetSchema = {
         <a class="card" href="/compare/chainguard/">
           <h2 style="font-size:1.1rem;margin:0 0 6px">Minimal vs Chainguard</h2>
           <p class="small muted" style="margin:0">
-            {data.chainguard.compared} images with a free, publicly pullable Chainguard equivalent.
+            {data.chainguard.compared} version-matched images with a free, publicly pullable Chainguard equivalent.
             Minimal lower on {data.chainguard.lower}, tied on {data.chainguard.tie},
             higher on {data.chainguard.higher}.
           </p>
@@ -65,7 +65,7 @@ const datasetSchema = {
         <a class="card" href="/compare/minimus/">
           <h2 style="font-size:1.1rem;margin:0 0 6px">Minimal vs Minimus</h2>
           <p class="small muted" style="margin:0">
-            {data.minimus.compared} images compared. Minimal lower on {data.minimus.lower},
+            {data.minimus.compared} version-matched images compared. Minimal lower on {data.minimus.lower},
             tied on {data.minimus.tie}, higher on {data.minimus.higher}.
           </p>
         </a>
@@ -86,15 +86,16 @@ const datasetSchema = {
 
       <h2 class="section-title" style="margin-top:44px">Why publish the losses</h2>
       <p>
-        Because a comparison you cannot check is worth nothing. Solr is the clearest example:
-        Minimal's Solr image carries substantially <i>more</i> findings than Minimus's, and that
-        row is in the table with the same prominence as the wins. The raw CSV is published so you
-        can recompute all of it, and the method is stated so you can disagree with it precisely.
+        Because a comparison you cannot check is worth nothing. Every version-matched row where
+        Minimal carries more findings is shown with the same prominence as the wins. The raw CSV
+        and version classifications are published so you can recompute all of it, and the method
+        is stated so you can disagree with it precisely.
       </p>
 
       <p class="small muted" style="margin-top:28px">
         Scan date {data.scanDate} · {data.scanner} · full dataset:
-        <a href={data.csvPath}>cve-comparison-{data.scanDate}.csv</a>
+        <a href={data.csvPath}>cve-comparison-{data.scanDate}.csv</a> · version-matched pairs:
+        <a href={data.pairsPath}>cve-comparison-pairs-{data.scanDate}.csv</a>
       </p>
     </div>
   </section>

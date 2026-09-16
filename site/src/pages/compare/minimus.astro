@@ -8,8 +8,9 @@ import data from '../../data/comparison.json';
 const s = data.minimus;
 const title = 'Minimus alternative — Minimal vs Minimus, scanned head-to-head';
 const description =
-  `A free Minimus alternative with published scan data: ${s.compared} images scanned with one Grype build on ${data.scanDate}. Minimal lower on ${s.lower}, tied on ${s.tie}, higher on ${s.higher}.`;
+  `A free Minimus alternative with published scan data: ${s.compared} version-matched images scanned with one Grype build on ${data.scanDate}. Minimal lower on ${s.lower}, tied on ${s.tie}, higher on ${s.higher}.`;
 const worst = [...s.pairs].filter((p: any) => p.delta > 0).reverse();
+const versionExcluded = s.excludedMismatch + s.excludedUnknown;
 
 const datasetSchema = {
   '@context': 'https://schema.org',
@@ -36,15 +37,16 @@ const datasetSchema = {
       <h1 class="section-title">Minimal vs Minimus</h1>
       <p class="section-sub">
         Both projects ship small, hardened, low-CVE container images. This page is the measured
-        comparison: {s.compared} images for which both publish an equivalent, scanned with the
-        same Grype binary against the same frozen database on {data.scanDate}.
+        comparison: {s.compared} exact or same-major/minor version pairs, scanned with the same
+        Grype binary against the same frozen database on {data.scanDate}. Another {versionExcluded}
+        available pairs have mismatched or unknown versions and are excluded from the score.
       </p>
 
       <div class="stats" style="margin-top:28px">
         <div class="stat"><div class="num">{s.lower}</div><div class="lbl">Minimal lower</div></div>
         <div class="stat"><div class="num">{s.tie}</div><div class="lbl">Tied</div></div>
         <div class="stat"><div class="num">{s.higher}</div><div class="lbl">Minimal higher</div></div>
-        <div class="stat"><div class="num">{s.compared}</div><div class="lbl">Images compared</div></div>
+        <div class="stat"><div class="num">{s.compared}</div><div class="lbl">Version-matched</div></div>
       </div>
 
       <p style="margin-top:24px">
@@ -60,22 +62,21 @@ const datasetSchema = {
       </p>
       <CompareTable set={{ pairs: worst }} rivalLabel="Minimus" />
       <p class="small muted" style="margin-top:14px">
-        Solr is the real outlier and a genuine finding against us — most of its gap traces to
-        bundled Java libraries, with a large share of findings associated with a single
-        <code class="kv-mono">netty-codec-http</code> version. Minimus's Solr image does not expose
-        that artifact to the scanner, so part of the difference may be different bundled modules
-        rather than only patch levels. Either way it is ours to fix, and it is tracked.
+        These are current scan observations, not permanent product properties. The complete raw
+        dataset and version classifications are published below so each difference can be checked.
       </p>
 
       <h2 class="section-title" style="margin-top:44px">Full head-to-head</h2>
       <p class="small muted">
-        Every image where both projects publish an equivalent, best result first. Δ is Minimal
-        minus Minimus, so negative is better for Minimal.
+        Every exact or same-major/minor version pair, best result first. Δ is Minimal minus
+        Minimus, so negative is better for Minimal.
       </p>
       <CompareTable set={s} rivalLabel="Minimus" />
       <p class="small muted" style="margin-top:14px">
-        Minimal also publishes {s.rivalUnavailable} scanned images with no equivalent in this
-        comparison set. Those are excluded entirely rather than scored as wins.
+        Minimus had {s.available} public equivalents in this run: {s.compared} were version-matched
+        and scored, while {versionExcluded} were excluded for mismatched or unknown versions.
+        Minimal also publishes {s.rivalUnavailable} scanned images with no Minimus equivalent;
+        those are excluded entirely rather than scored as wins.
       </p>
 
       <h2 class="section-title" style="margin-top:44px">The differences that are not CVE counts</h2>
