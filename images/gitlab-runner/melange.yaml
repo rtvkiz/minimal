@@ -15,7 +15,7 @@ package:
   # and a suffix produces cpe:2.3:a:gitlab-runner-minimal:*, matching nothing
   # in NVD. NVD indexes this as cpe:2.3:a:gitlab:gitlab_runner:*.
   name: gitlab-runner
-  version: 19.3.3
+  version: 19.4.0
   epoch: 0
   description: "Minimal GitLab Runner CI/CD job executor built from source"
   copyright:
@@ -34,7 +34,7 @@ package:
 
 vars:
   # SHA256 of gitlab-runner source tarball - updated by update-versions.yml workflow
-  sha256: cae48780d138a43a588a91bf9bf0d6093a0dd2c3aed73ab8d017b395dfa02ade
+  sha256: 428f36859bc0655cd274bd390e8da62f9c9b00fd6de6c9d4815d7a8b086c5eff
 
 environment:
   contents:
