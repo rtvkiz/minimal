@@ -12,6 +12,7 @@ on:
     paths:
       - '.github/workflows/**'
       - '.github/scripts/**'
+      - '.github/versions.yaml'
       - 'scripts/**.sh'
       - 'tests/**'
   push:
@@ -19,6 +20,7 @@ on:
     paths:
       - '.github/workflows/**'
       - '.github/scripts/**'
+      - '.github/versions.yaml'
       - 'scripts/**.sh'
       - 'tests/**'
 
@@ -39,6 +41,9 @@ jobs:
       # actionlint. Reusing `make lint-workflows` keeps CI and local identical.
       - name: Lint workflows (actionlint + shellcheck)
         run: make lint-workflows
+
+      - name: Validate upstream-version configuration
+        run: make lint-versions test-versions-config
 
       # The classifier decides whether a failed build authorises reverting an
       # image's toolchain pin. A wrong "build" verdict silently pins an image
