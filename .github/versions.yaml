@@ -34,7 +34,8 @@
 #     url:     template with {version} and any keys from `vars`
 #     urls:    list of templates; first that succeeds wins (mirror fallback)
 #     field:   melange.yaml key to write the digest into (sha256, sha512, …)
-#     algo:    digest algorithm (sha256 | sha512); defaults to field name
+#     algo:    digest algorithm (sha256 | sha512); defaults to field name, so
+#              it is required when field is custom (e.g. cli_sha256)
 #     vars:    extra template substitutions (e.g. {scala: "2.13"})
 #   tarballs: list form of `tarball:` for multi-asset images (e.g. envoy x86+arm)
 #   field:   for source-only rows (rails), the melange key to write the bare
@@ -1289,7 +1290,7 @@
     repo: temporalio/cli
     strip-v: true
     current-field: cli_version
-  tarball: { url: "https://github.com/temporalio/cli/archive/refs/tags/v{version}.tar.gz", field: cli_sha256 }
+  tarball: { url: "https://github.com/temporalio/cli/archive/refs/tags/v{version}.tar.gz", field: cli_sha256, algo: sha256 }
   links:
     releases: "https://github.com/temporalio/cli/releases"
     notes: "https://github.com/temporalio/cli/releases/tag/v{version}"
@@ -1316,7 +1317,7 @@
     repo: temporalio/tctl
     strip-v: true
     current-field: tctl_version
-  tarball: { url: "https://github.com/temporalio/tctl/archive/refs/tags/v{version}.tar.gz", field: tctl_sha256 }
+  tarball: { url: "https://github.com/temporalio/tctl/archive/refs/tags/v{version}.tar.gz", field: tctl_sha256, algo: sha256 }
   links:
     releases: "https://github.com/temporalio/tctl/releases"
     notes: "https://github.com/temporalio/tctl/releases/tag/v{version}"

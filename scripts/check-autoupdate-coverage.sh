@@ -28,6 +28,11 @@ COVERAGE=".github/autoupdate-coverage.yaml"
 
 command -v jq >/dev/null 2>&1 || { echo "jq is required" >&2; exit 2; }
 
+# Validate the updater schema before interpreting it for coverage. This catches
+# configurations that look like valid YAML but would fail only in the next
+# scheduled update (for example a custom checksum field without `algo`).
+./scripts/check-versions-config.sh "$VERSIONS"
+
 if command -v yq >/dev/null 2>&1; then
   yq_bin="yq"
 else

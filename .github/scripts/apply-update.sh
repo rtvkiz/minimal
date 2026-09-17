@@ -61,11 +61,11 @@ fetch_digest() {
     fi
     rendered=""
   done
-  [ -n "$rendered" ] || { echo "::error::all tarball URLs failed for $name"; return 1; }
+  [ -n "$rendered" ] || { echo "::error::all tarball URLs failed for $name" >&2; return 1; }
   case "$algo" in
     sha256) sha256sum "$out" | awk '{print $1}' ;;
     sha512) sha512sum "$out" | awk '{print $1}' ;;
-    *) echo "::error::unsupported algo: $algo"; return 1 ;;
+    *) echo "::error::unsupported algo: $algo" >&2; return 1 ;;
   esac
   rm -f "$out"
 }
@@ -79,6 +79,10 @@ for i in $(seq 0 $((tarball_count - 1))); do
   t=$(jq -c ".[$i]" <<<"$tarballs_json")
   field=$(jq -r '.field' <<<"$t")
   algo=$(jq -r '.algo // .field' <<<"$t")
+  case "$algo" in
+    sha256|sha512) ;;
+    *) echo "::error::$name: unsupported digest algorithm '$algo' for field '$field'" >&2; exit 1 ;;
+  esac
   # Per-tarball URL list: support both `urls:` (plural) and `url:` (single).
   mapfile -t urls < <(jq -r 'if .urls then .urls[] else .url end' <<<"$t")
   digest=$(fetch_digest "$algo" "${urls[@]}")
