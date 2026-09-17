@@ -14,7 +14,7 @@ package:
   # bare, as cpe:2.3:a:skopeo:skopeo:*, so none of them matched, and the Wolfi
   # secdb missed it too.
   name: skopeo
-  version: 1.24.0
+  version: 1.24.1
   epoch: 0
   description: "Minimal Skopeo container image inspection/copy tool built from source"
   copyright:
@@ -31,7 +31,7 @@ package:
 
 vars:
   # SHA256 of skopeo source tarball - updated by update-versions.yml
-  sha256: 1eea9364e344c4d6cb398fac53bc387663d19690552003b43c75819e8bb55527
+  sha256: 6a3f342a327ec7684198eb0e15114940b6101506db48d9a96590f5942cb3b335
 
 environment:
   contents:
