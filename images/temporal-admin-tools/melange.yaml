@@ -18,8 +18,8 @@ vars:
   # Secondary upstreams. Each is tracked by its own versions.yaml row
   # (temporal-cli / temporal-tctl) writing these fields, so none of them can
   # freeze silently — that is what check-autoupdate exists to prevent.
-  cli_version: 1.8.3
-  cli_sha256: 14280dbc5f157373a2b34d7d333dd0c8f1b8506fa9ff5b332edc9048527af6f8
+  cli_version: 1.9.1
+  cli_sha256: d0310b8f4ef26b8a2240aa2e783c67c099406be01f34cf4edb3ae8aa2d86b7bb
   tctl_version: 1.18.4
   tctl_sha256: 6d4f749754f816b9569459fe6a82c521349dc6dfb75e6419514bae80b4eb6c92
 
