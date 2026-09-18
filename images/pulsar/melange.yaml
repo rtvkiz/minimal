@@ -182,8 +182,8 @@ pipeline:
         done
         rm -f /tmp/_bj.jar
       }
-      _swap async-http-client-netty-utils org/asynchttpclient 2.16.0 2.16.1 5dc30eb034ec1daea2578e3ecf861ee3212f8693170f7da53cc3503a9ff44971 rename -
-      _swap async-http-client org/asynchttpclient 2.16.0 2.16.1 9e76dd36d4ef6e13e81e2478f4e18723cabda0fe2e3b7ad6a4f41990969a7c90 rename -
+      _swap async-http-client-netty-utils org/asynchttpclient 2.15.0 2.16.1 5dc30eb034ec1daea2578e3ecf861ee3212f8693170f7da53cc3503a9ff44971 rename -
+      _swap async-http-client org/asynchttpclient 2.15.0 2.16.1 9e76dd36d4ef6e13e81e2478f4e18723cabda0fe2e3b7ad6a4f41990969a7c90 rename -
       _swap log4j-api org/apache/logging/log4j 2.25.4 2.25.5 64777f73ea0b3104c04eb82befbdccc30a425a19e83ad06cb2f93aa303511863 rename -
       _swap log4j-core org/apache/logging/log4j 2.25.4 2.25.5 050c4f85deb48b055e9c041ac39043fbb79ce477841a11a1eb2969c86c6a0072 rename -
       _swap log4j-layout-template-json org/apache/logging/log4j 2.25.4 2.25.5 27c37313e20c16bf0178e38d9d1a5c7320e34c03aa35bc2c66a589ea14abf545 rename -
@@ -213,7 +213,7 @@ pipeline:
       _swap netty-transport-native-unix-common io/netty 4.1.136.Final 4.1.137.Final 8056e7637f9948f953314894cf995ab664711b66c73c4cd5b593ae84f0b1048c rename -
       _swap netty-transport io/netty 4.1.136.Final 4.1.137.Final 6251adc2a2921572382732a2db188d4f4f2251fd6ebb49c5d44bbf33d6bfb1a7 rename -
       _strag=/tmp/_bj_stragglers; : > "$_strag"
-      find "${{targets.destdir}}/opt/pulsar" \( -name "async*-2.16.*.jar" -o -name "async*-2.16.jar" \) ! -name "*-2.16.1.jar" ! -name "*-2.16.1-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "async*-2.15.*.jar" -o -name "async*-2.15.jar" \) ! -name "*-2.16.1.jar" ! -name "*-2.16.1-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "log4j*-2.25.*.jar" -o -name "log4j*-2.25.jar" \) ! -name "*-2.25.5.jar" ! -name "*-2.25.5-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "lz4*-1.10.*.jar" -o -name "lz4*-1.10.jar" \) ! -name "*-1.11.1.jar" ! -name "*-1.11.1-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "netty*-4.1.*.jar" -o -name "netty*-4.1.jar" \) ! -name "*-4.1.137.Final.jar" ! -name "*-4.1.137.Final-*.jar" >> "$_strag" 2>/dev/null || true
