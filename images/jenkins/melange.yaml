@@ -212,6 +212,7 @@ pipeline:
         done
         rm -f /tmp/_bj.jar
       }
+      _swap bcprov-jdk18on org/bouncycastle 1.84 1.85 20af26bf6060bb8005cc2389916812c1e0e998dc48d2ced7131b89461b54cff7 rename -
       _swap jackson-core tools/jackson/core 3.1.3 3.1.4 3bda1cd6eff0a8d47bdfcaeae7c2bd5311d6c8ed494ef5f3e51029bb44aa9bdf rename -
       _swap jackson-databind tools/jackson/core 3.1.3 3.1.4 14034bfdf392b6ebec1b4bb6c1de29d604f0aa97251259a19d5f19af8719bb20 rename -
       _swap jackson-dataformat-toml tools/jackson/dataformat 3.1.3 3.1.4 b15c504d7587ec2880f07b9e48b23dd8bae91fff4011eca2129e29cbbbeda519 rename -
@@ -244,6 +245,7 @@ pipeline:
       _swap jetty-xml org/eclipse/jetty 12.1.8 12.1.10 d4660c9fa82eabfa9e5996eff5b36ae22e5e14430c3dcc485920aef889149a89 rename -
       _swap mina-core org/apache/mina 2.2.7 2.2.8 07a62c5b2fae3a61da693f7a5c6d6711a7ea09f318972d3e76ae8a5f032329f3 rename -
       _strag=/tmp/_bj_stragglers; : > "$_strag"
+      find "${{targets.destdir}}/usr/share/jenkins" \( -name "bcprov*-1.84.*.jar" -o -name "bcprov*-1.84.jar" \) ! -name "*-1.85.jar" ! -name "*-1.85-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/usr/share/jenkins" \( -name "jackson*-3.1.*.jar" -o -name "jackson*-3.1.jar" \) ! -name "*-3.1.4.jar" ! -name "*-3.1.4-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/usr/share/jenkins" \( -name "jetty*-12.1.*.jar" -o -name "jetty*-12.1.jar" \) ! -name "*-12.1.10.jar" ! -name "*-12.1.10-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/usr/share/jenkins" \( -name "mina*-2.2.*.jar" -o -name "mina*-2.2.jar" \) ! -name "*-2.2.8.jar" ! -name "*-2.2.8-*.jar" >> "$_strag" 2>/dev/null || true
