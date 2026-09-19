@@ -1,0 +1,87 @@
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - meilisearch
+    - glibc
+    - ld-linux
+    - libgcc
+    - libstdc++
+    - libssl3
+    - libcrypto3
+    - ca-certificates-bundle
+    - tini
+    # Standard daemon/server debugging surface.
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+    - curl
+    - openssl
+    - bind-tools
+    - iputils
+    - jq
+    - git
+
+accounts:
+  groups:
+    - groupname: meilisearch
+      gid: 65532
+  users:
+    - username: meilisearch
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /sbin/tini -- /usr/bin/meilisearch
+
+work-dir: /meili_data
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  HOME: /tmp
+  MEILI_HTTP_ADDR: 0.0.0.0:7700
+  MEILI_SERVER_PROVIDER: docker
+  MEILI_DB_PATH: /meili_data/data.ms
+  MEILI_DUMP_DIR: /meili_data/dumps
+  MEILI_SNAPSHOT_DIR: /meili_data/snapshots
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  LANG: C.UTF-8
+
+paths:
+  - path: /meili_data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /meili_data/dumps
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /meili_data/snapshots
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-meilisearch-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-meilisearch with a shell, package manager, and network debugging tools"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/meilisearch"
+  org.opencontainers.image.licenses: "MIT"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

@@ -650,6 +650,18 @@
       "description": "Memcached distributed memory object caching system. Compiled from upstream source, shell-less, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
+      "name": "meilisearch",
+      "category": "Databases",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "meilisearch",
+      "upstream_url": "https://www.meilisearch.com",
+      "summary": "Shell-less Meilisearch full-text and vector search engine built from source.",
+      "description": "Meilisearch fast, developer-friendly search engine with typo tolerance and REST APIs. Built from current upstream source, signed and rebuilt every six hours."
+    },
+    {
       "name": "metallb",
       "category": "Infrastructure",
       "variants": [

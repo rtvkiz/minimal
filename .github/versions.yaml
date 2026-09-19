@@ -58,6 +58,15 @@
     releases: "https://github.com/qdrant/qdrant/releases"
     notes: "https://github.com/qdrant/qdrant/releases/tag/v{version}"
 
+- name: meilisearch
+  cron-enabled: true
+  files: [images/meilisearch/melange.yaml]
+  source: { type: github-releases-latest, repo: meilisearch/meilisearch, strip-v: true }
+  tarball: { url: "https://github.com/meilisearch/meilisearch/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/meilisearch/meilisearch/releases"
+    notes: "https://github.com/meilisearch/meilisearch/releases/tag/v{version}"
+
 - name: etcd
   cron-enabled: true   # wave 2
   files: [images/etcd/melange.yaml]
