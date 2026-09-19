@@ -12,7 +12,7 @@ package:
   # this product bare, as cpe:2.3:a:external-dns:external-dns:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: external-dns
-  version: 0.22.0
+  version: 0.23.0
   epoch: 0
   description: "Minimal ExternalDNS Kubernetes DNS controller built from source"
   copyright:
@@ -30,7 +30,7 @@ package:
 
 vars:
   # SHA256 of external-dns source tarball - updated by update-versions.yml
-  sha256: e60abf206d8e150dbc9a4e86ce2d2cf8b1899c6c1b53cdae382078c57ece47b7
+  sha256: f9e61848ab12b9bfbd19e64a8a4c01085534f1ba82b90c46276ff173909dd3d5
 
 environment:
   contents:
