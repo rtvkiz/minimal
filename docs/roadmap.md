@@ -1,6 +1,6 @@
 # Image Roadmap — the road to 100 (demand-ranked)
 
-**Status: 108 images — the 100 target is met.** This is the source-of-truth plan for
+**Status: 124 images — the 100 target is met.** This is the source-of-truth plan for
 growing the catalog. The tier tables below stay useful as the demand-ranked backlog;
 the "road to 100" batch section near the end is kept as a build log of how the first
 100 were reached, not as remaining work.
@@ -188,7 +188,7 @@ package ⇒ `wolfi-versioned`; `(r)` = unversioned/rolling ⇒ `wolfi-rolling`.
 | [ ] | argo-cd | `argo-cd-3.2` + `-repo-server` (v) | 🟢 Apache-2.0 | 148M | K8s, CI & IaC | **Re-opens a deferred item.** Wolfi packaging removes the yarn-frontend build; the repo-server's runtime git/helm/kustomize needs still apply, so this is multi-image, not one. |
 | [ ] | rust | `rust-1.92` (v) | 🟢 MIT OR Apache-2.0 | 143M | Languages & Runtimes | Toolchain image (builder-shaped, like our `go`). |
 | [ ] | erlang | `erlang-28` (v) | 🟢 Apache-2.0 | 65M | Languages & Runtimes | Natural companion to `rabbitmq`. |
-| [ ] | meilisearch | `meilisearch` (r) | 🟢 MIT | 51M | Databases | Rust search engine; complements `opensearch`/`solr` at a much smaller size. |
+| [x] | meilisearch | source-built | 🟢 MIT | 51M | Databases | Wolfi lagged seven releases, so v1.53.2 was built from source using the established Rust pattern. |
 | [ ] | temporal | `temporal` (r) | 🟢 MIT | 47M | Apps | Durable-execution server. Wolfi also has `temporal-ui-server-oci-entrypoint` if we want the UI later. |
 
 **Also packaged in Wolfi, parked deliberately:** `argo-workflows` (🟢 Apache — take
@@ -240,7 +240,7 @@ Pull counts read from Docker Hub on 2026-09-07:
 | perl | 255M | 🟡 Artistic/GPL | Languages & Runtimes | Trivial; the last mainstream scripting runtime missing |
 | couchdb | 205M | 🟢 Apache-2.0 | Databases | |
 | erlang | 66M | 🟢 Apache-2.0 | Languages & Runtimes | Companion to rabbitmq |
-| meilisearch | 52M | 🟢 MIT | Databases | Rust search engine, much smaller than opensearch/solr |
+| meilisearch | 52M | 🟢 MIT | Databases | **Shipped source-built** because Wolfi lagged seven upstream releases. |
 | temporal | 48M | 🟢 MIT | Apps | Durable execution; fills the thinnest category |
 | argo-cd · cert-manager · keda · karpenter · harbor · zot | — | 🟢 Apache-2.0 | K8s, CI & IaC | All in Wolfi, all gated on Chainguard. **No pull counts exist** — they publish to quay/ghcr/registry.k8s.io, so demand cannot be ranked the way the rest of this table is |
 

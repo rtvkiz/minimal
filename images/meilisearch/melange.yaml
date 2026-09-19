@@ -1,0 +1,74 @@
+# Meilisearch community edition, built from the upstream Rust source.
+package:
+  name: meilisearch
+  version: 1.53.2
+  epoch: 0
+  description: "Fast, developer-friendly search engine built from source"
+  copyright:
+    - license: MIT
+  dependencies:
+    # Wolfi also ships meilisearch. Keep apko pinned to this source build even
+    # while the upstream version is ahead of Wolfi's package.
+    provider-priority: 100
+
+vars:
+  sha256: 01ecd573e9327e12e6b6e3f40506e319d73601c380266bb9b6da0b87b9fd7a0f
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - rust-1.98
+      - openssl-dev
+      - pkgconf
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/meilisearch-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/meilisearch/meilisearch/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/meilisearch.tar.gz
+      echo "${{vars.sha256}}  /home/build/meilisearch.tar.gz" | sha256sum -c -
+      tar xzf /home/build/meilisearch.tar.gz \
+        -C /home/build/meilisearch-${{package.version}} --strip-components=1
+      rm /home/build/meilisearch.tar.gz
+
+  - runs: |
+      cd /home/build/meilisearch-${{package.version}}
+      # Match upstream's release build. Meilisearch deliberately disables a
+      # static CRT so its allocator and OpenSSL use the target runtime libc.
+      export RUSTFLAGS="-C target-feature=-crt-static"
+      export VERGEN_GIT_SHA="ec006cecec6f684b1dcaee093a45ab4c05707127"
+      export VERGEN_GIT_COMMIT_TIMESTAMP="2026-09-07T10:48:03Z"
+      export VERGEN_GIT_DESCRIBE="v${{package.version}}"
+      cargo build --release --locked -p meilisearch -p meilitool
+
+  - runs: |
+      cd /home/build/meilisearch-${{package.version}}
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      install -m 0755 target/release/meilisearch "${{targets.destdir}}/usr/bin/meilisearch"
+      install -m 0755 target/release/meilitool "${{targets.destdir}}/usr/bin/meilitool"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/meilisearch"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/meilitool"
+      # Melange's license scanner cannot normalize Cargo registry files whose
+      # permissions come from the downloaded crate archives.
+      rm -rf /home/build/.cargo/registry
+
+  - runs: |
+      echo "Verifying Meilisearch build..."
+      "${{targets.destdir}}/usr/bin/meilisearch" --version
+      "${{targets.destdir}}/usr/bin/meilitool" --help >/dev/null
+
+update:
+  enabled: true
+  github:
+    identifier: meilisearch/meilisearch
+    use-tag: true
+    tag-filter: "v1."
