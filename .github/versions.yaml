@@ -58,6 +58,20 @@
     releases: "https://github.com/qdrant/qdrant/releases"
     notes: "https://github.com/qdrant/qdrant/releases/tag/v{version}"
 
+- name: airflow
+  cron-enabled: true
+  files: [images/airflow/melange.yaml]
+  source: { type: json, url: "https://pypi.org/pypi/apache-airflow/json", jq: ".info.version" }
+  # TWO digests move together on a bump: the ASF sdist and the pinned constraints
+  # file that fixes the whole dependency closure. A single-hash row would leave
+  # constraints-sha256 stale and break the build on the next version.
+  tarballs:
+    - { url: "https://files.pythonhosted.org/packages/source/a/apache-airflow/apache_airflow-{version}.tar.gz", field: sha256 }
+    - { url: "https://raw.githubusercontent.com/apache/airflow/constraints-{version}/constraints-3.12.txt", field: constraints-sha256, algo: sha256 }
+  links:
+    releases: "https://github.com/apache/airflow/releases"
+    notes: "https://github.com/apache/airflow/releases/tag/{version}"
+
 - name: meilisearch
   cron-enabled: true
   files: [images/meilisearch/melange.yaml]
