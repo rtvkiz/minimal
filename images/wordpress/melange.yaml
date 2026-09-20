@@ -1,0 +1,133 @@
+# WordPress, from the official wordpress.org source release.
+#
+# WordPress is interpreted PHP: the .tar.gz published by wordpress.org IS the
+# source release — there is no compile step and no separate "source vs binary"
+# distinction to choose between. What this recipe does is pin that release by
+# digest, strip the parts a container must never serve, and author a wp-config
+# that takes its settings from the environment.
+#
+# WHY NOT WOLFI'S PACKAGE. Wolfi ships `wordpress` at 6.9.2 against upstream
+# 7.1.1 — a full major behind. That gap is the same reason meilisearch is
+# source-built here.
+package:
+  name: wordpress
+  version: 7.1.1
+  epoch: 0
+  description: "WordPress publishing platform from the official source release"
+  copyright:
+    - license: GPL-2.0-or-later
+  dependencies:
+    # Wolfi ships `wordpress` too, at an older major. apko resolves a top-level
+    # name across all repositories by version, so without this it would install
+    # Wolfi's 6.9.2 over our 7.1.1.
+    provider-priority: 100
+
+vars:
+  sha256: 3996fee13448ef12e07e9f0c77db2f655ffa1b7cde71c80a4965d3bf1fb956b3
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://wordpress.org/wordpress-${{package.version}}.tar.gz" \
+        -o /home/build/wordpress.tar.gz
+      echo "${{vars.sha256}}  /home/build/wordpress.tar.gz" | sha256sum -c -
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/share/wordpress"
+      tar xzf /home/build/wordpress.tar.gz \
+        -C "${{targets.destdir}}/usr/share/wordpress" --strip-components=1
+
+  - runs: |
+      cd "${{targets.destdir}}/usr/share/wordpress"
+      # Remove what a served site must not expose. readme.html and
+      # license.txt leak the exact version to unauthenticated scanners, and
+      # wp-config-sample.php is superseded by the env-driven config below.
+      rm -f readme.html license.txt wp-config-sample.php
+      # The stock .htaccess only applies to Apache; this image serves through
+      # PHP-FPM behind a separate web server, where it is dead weight.
+      rm -f .htaccess
+
+  - runs: |
+      # Env-driven configuration instead of a shell entrypoint.
+      #
+      # The official image generates wp-config.php at container start with a
+      # bash entrypoint. That would force a shell into the production image for
+      # the sake of string interpolation. PHP reads the environment itself, so
+      # the same result needs a static config file and no shell — which is what
+      # keeps this image shell-less.
+      #
+      # NB: every line below carries the block's 6-space indent, including the
+      # heredoc terminator. YAML strips that common indent before bash sees it,
+      # so the generated file has no leading whitespace — which matters: any
+      # byte before `<?php` is emitted as output and breaks header sending.
+      cat > "${{targets.destdir}}/usr/share/wordpress/wp-config.php" <<'PHP'
+      <?php
+      /**
+       * Environment-driven WordPress configuration.
+       * Every value comes from the container environment; nothing is baked in.
+       */
+      $_wp_env = static function (string $name, $default = null) {
+          $v = getenv($name);
+          return ($v === false || $v === '') ? $default : $v;
+      };
+
+      define('DB_NAME',     $_wp_env('WORDPRESS_DB_NAME', 'wordpress'));
+      define('DB_USER',     $_wp_env('WORDPRESS_DB_USER', 'wordpress'));
+      define('DB_PASSWORD', $_wp_env('WORDPRESS_DB_PASSWORD', ''));
+      define('DB_HOST',     $_wp_env('WORDPRESS_DB_HOST', 'localhost'));
+      define('DB_CHARSET',  $_wp_env('WORDPRESS_DB_CHARSET', 'utf8mb4'));
+      define('DB_COLLATE',  $_wp_env('WORDPRESS_DB_COLLATE', ''));
+
+      $table_prefix = $_wp_env('WORDPRESS_TABLE_PREFIX', 'wp_');
+
+      foreach ([
+          'AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY',
+          'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT',
+      ] as $_wp_salt) {
+          define($_wp_salt, $_wp_env('WORDPRESS_' . $_wp_salt, ''));
+      }
+
+      define('WP_DEBUG', filter_var($_wp_env('WORDPRESS_DEBUG', 'false'), FILTER_VALIDATE_BOOL));
+
+      define('DISALLOW_FILE_MODS', filter_var($_wp_env('WORDPRESS_DISALLOW_FILE_MODS', 'true'), FILTER_VALIDATE_BOOL));
+      define('AUTOMATIC_UPDATER_DISABLED', true);
+
+      if ($_wp_env('WORDPRESS_CONFIG_EXTRA')) {
+          eval($_wp_env('WORDPRESS_CONFIG_EXTRA'));
+      }
+
+      if (!defined('ABSPATH')) {
+          define('ABSPATH', __DIR__ . '/');
+      }
+      require_once ABSPATH . 'wp-settings.php';
+      PHP
+      chmod 0644 "${{targets.destdir}}/usr/share/wordpress/wp-config.php"
+
+  - runs: |
+      echo "Verifying WordPress payload..."
+      wp="${{targets.destdir}}/usr/share/wordpress"
+      # The version file is the only authoritative statement of what shipped.
+      grep -q "wp_version = '${{package.version}}'" "$wp/wp-includes/version.php"
+      test -f "$wp/wp-settings.php"
+      test -f "$wp/wp-login.php"
+      test -d "$wp/wp-admin"
+      test -d "$wp/wp-content"
+      # Assert the strip actually happened — these leak the version if served.
+      test ! -e "$wp/readme.html"
+      test ! -e "$wp/wp-config-sample.php"
+
+update:
+  enabled: true
+  release-monitor:
+    identifier: 3799

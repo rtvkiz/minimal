@@ -72,6 +72,15 @@
     releases: "https://github.com/apache/airflow/releases"
     notes: "https://github.com/apache/airflow/releases/tag/{version}"
 
+- name: wordpress
+  cron-enabled: true
+  files: [images/wordpress/melange.yaml]
+  source: { type: json, url: "https://api.wordpress.org/core/version-check/1.7/", jq: ".offers[0].current" }
+  tarball: { url: "https://wordpress.org/wordpress-{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://wordpress.org/download/releases/"
+    notes: "https://wordpress.org/documentation/wordpress-version/version-{version}/"
+
 - name: meilisearch
   cron-enabled: true
   files: [images/meilisearch/melange.yaml]
