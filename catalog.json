@@ -14,6 +14,18 @@
   ],
   "images": [
     {
+      "name": "airflow",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "airflow",
+      "upstream_url": "https://airflow.apache.org",
+      "summary": "Apache Airflow orchestration platform built from the ASF source distribution.",
+      "description": "Apache Airflow workflow orchestration platform, built from the official ASF source distribution, cosign-signed and SBOM-attested, rebuilt every six hours."
+    },
+    {
       "name": "alertmanager",
       "category": "Observability",
       "variants": [
@@ -638,18 +650,6 @@
       "description": "MariaDB LTS relational database, a drop-in MySQL alternative. Built from upstream source, cosign-signed with SBOM attestations and 6-hourly CVE rebuilds."
     },
     {
-      "name": "memcached",
-      "category": "Caches, Queues & Messaging",
-      "variants": [
-        "prod",
-        "dev"
-      ],
-      "primary_package": "memcached",
-      "upstream_url": "https://memcached.org",
-      "summary": "Shell-less Memcached built from source via melange.",
-      "description": "Memcached distributed memory object caching system. Compiled from upstream source, shell-less, signed and SBOM-attested, rebuilt every 6 hours."
-    },
-    {
       "name": "meilisearch",
       "category": "Databases",
       "variants": [
@@ -660,6 +660,18 @@
       "upstream_url": "https://www.meilisearch.com",
       "summary": "Shell-less Meilisearch full-text and vector search engine built from source.",
       "description": "Meilisearch fast, developer-friendly search engine with typo tolerance and REST APIs. Built from current upstream source, signed and rebuilt every six hours."
+    },
+    {
+      "name": "memcached",
+      "category": "Caches, Queues & Messaging",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "memcached",
+      "upstream_url": "https://memcached.org",
+      "summary": "Shell-less Memcached built from source via melange.",
+      "description": "Memcached distributed memory object caching system. Compiled from upstream source, shell-less, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
       "name": "metallb",

@@ -1,0 +1,105 @@
+# Apache Airflow, installed from the ASF source distribution published to PyPI.
+#
+# WHY THE SDIST AND NOT THE GITHUB TARBALL. Airflow 3.x serves a Vite-built React
+# UI from `airflow/ui/dist`. That directory is NOT in the git tree — building it
+# needs pnpm in the sandbox, the same frontend-in-bwrap blocker that keeps alloy
+# and authelia off the roadmap. The ASF sdist is the project's official release
+# artifact and it SHIPS the built UI (244 files under src/airflow/ui/dist), so
+# building from it is both the upstream-sanctioned path and the only one that
+# produces a working web server without npm.
+#
+# DETERMINISM. Upstream publishes a pinned constraints file per release; it is
+# what `apache/airflow`'s own Dockerfile installs against. Both the sdist and the
+# constraints file are sha256-verified here, so the dependency closure is fixed
+# for a given package.version rather than floating with PyPI.
+package:
+  name: airflow
+  version: 3.3.2
+  epoch: 0
+  description: "Apache Airflow workflow orchestration platform"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi ships `airflow-3`, which p:-provides the bare name `airflow` at a
+    # version ahead of some of our rebuilds. Without this, apko resolves the
+    # top-level name across all repositories by version and silently installs
+    # Wolfi's build over ours (the gitlab-runner/buildkit lesson).
+    provider-priority: 100
+    runtime:
+      - python-3.12
+
+vars:
+  sha256: cdbe0dcd47ff2e9ab267fcc050bc6e4fa6e40fb86bf3671e05d9672206da59bb
+  constraints-sha256: 821effd0f491975682f2774fca3427d7bc2f59ca6de68dcb413ad2c8f890e58c
+  python: "3.12"
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - python-3.12
+      - python-3.12-dev
+      - py3.12-pip
+      - libffi-dev
+      - openssl-dev
+
+pipeline:
+  - runs: |
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://files.pythonhosted.org/packages/source/a/apache-airflow/apache_airflow-${{package.version}}.tar.gz" \
+        -o /home/build/airflow.tar.gz
+      echo "${{vars.sha256}}  /home/build/airflow.tar.gz" | sha256sum -c -
+
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://raw.githubusercontent.com/apache/airflow/constraints-${{package.version}}/constraints-${{vars.python}}.txt" \
+        -o /home/build/constraints.txt
+      echo "${{vars.constraints-sha256}}  /home/build/constraints.txt" | sha256sum -c -
+
+  - runs: |
+      # Build the venv at its FINAL runtime path, not inside destdir. A venv is
+      # not relocatable: console-script shebangs are written as absolute paths,
+      # so creating it under ${{targets.destdir}} bakes the build-time prefix in
+      # and every entry point breaks at runtime. Building at /opt/airflow/venv
+      # and copying the tree afterwards keeps the shebangs correct.
+      python${{vars.python}} -m venv /opt/airflow/venv
+      /opt/airflow/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel
+      /opt/airflow/venv/bin/pip install --no-cache-dir \
+        "/home/build/airflow.tar.gz" \
+        --constraint /home/build/constraints.txt
+
+  - runs: |
+      # Trim what a running scheduler/API server never reads. Test trees and
+      # bytecode caches are a large share of the closure and carry their own
+      # scanner findings without ever being imported.
+      find /opt/airflow/venv -type d -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
+      find /opt/airflow/venv -type d -name 'tests' -prune -exec rm -rf {} + 2>/dev/null || true
+      find /opt/airflow/venv -type f -name '*.pyc' -delete 2>/dev/null || true
+
+      mkdir -p "${{targets.destdir}}/opt/airflow"
+      cp -a /opt/airflow/venv "${{targets.destdir}}/opt/airflow/venv"
+
+      # Relative symlink — an absolute one dangles during melange's verify step.
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf ../../opt/airflow/venv/bin/airflow "${{targets.destdir}}/usr/bin/airflow"
+
+  - runs: |
+      echo "Verifying Airflow build..."
+      # Run from the real path: the destdir copy's shebang points at
+      # /opt/airflow/venv/bin/python, which only resolves outside destdir.
+      /opt/airflow/venv/bin/airflow version | grep -q "${{package.version}}"
+      /opt/airflow/venv/bin/python -c "import airflow; print(airflow.__version__)"
+      # The prebuilt UI is the whole reason we build from the sdist — assert it
+      # actually landed rather than trusting the archive.
+      test -f "${{targets.destdir}}/opt/airflow/venv/lib/python${{vars.python}}/site-packages/airflow/ui/dist/index.html"
+
+update:
+  enabled: true
+  release-monitor:
+    identifier: 6597
