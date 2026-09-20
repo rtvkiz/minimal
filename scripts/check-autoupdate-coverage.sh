@@ -188,6 +188,47 @@ for img in "${prod[@]}"; do
     || err "$img: incompletely registered in patch-go-deps.yml (found $n/3 dict entries — needs MODROOTS + MAIN_MODULES + BUILD_MARKERS, or SKIP/TESTKEEP)"
 done
 
+# --- Non-Go transitive-dep patching: every source-built image that pulls
+# third-party dependencies from a language registry must be registered in
+# .github/patch-deps.yaml, or carry an explicit exemption below. Without this
+# the Go check above is the ONLY patch-registration gate, so a Python/Rust/Ruby
+# image can ship a completely unpatched dependency closure and no gate notices
+# — which is exactly how airflow shipped 142 pip distributions uncovered.
+#
+# Adding an ecosystem is one ECOSYSTEM entry; the detector mirrors the Go
+# heuristic above (match the install verb in the recipe, then require
+# registration). Note the leading "/" alternative: real recipes invoke the tool
+# by absolute path (/opt/airflow/venv/bin/pip install ...), which a
+# whitespace-only anchor misses.
+PDY=".github/patch-deps.yaml"
+ECOSYSTEM_RE=(
+  'pip install:python'
+  'cargo build:rust'
+  'gem install:bundler'
+)
+# Images that legitimately pull registry deps but must NOT be auto-patched.
+# Each needs a reason — an unexplained entry is how coverage rots.
+patch_exempt_reason() {
+  case "$1" in
+    ruby) echo "ships json pinned to an exact version by deliberate policy (auto-bumping re-creates the rails gem CVE oscillation) and bundler as an intentional loose pin refreshed by the 6-hourly rebuild" ;;
+    *)    echo "" ;;
+  esac
+}
+for img in "${prod[@]}"; do
+  [ -f "images/$img/melange.yaml" ] || continue
+  for entry in "${ECOSYSTEM_RE[@]}"; do
+    re="${entry%%:*}"; eco="${entry##*:}"
+    grep -qE "(^|[[:space:]]|/)$re" "images/$img/melange.yaml" || continue
+    grep -qE "name:[[:space:]]*${img}[,[:space:]}]" "$PDY" && continue
+    reason=$(patch_exempt_reason "$img")
+    if [ -n "$reason" ]; then
+      echo "  ℹ $img: $eco deps not auto-patched — $reason"
+      continue
+    fi
+    err "$img: builds $eco dependencies but is not registered in $PDY (add it to the $eco row's images list, or add a documented exemption in $(basename "$0"))"
+  done
+done
+
 if [ "$fail" -ne 0 ]; then
   echo
   echo "✗ auto-update coverage FAILED — every prod image must have exactly one live auto-update mechanism."

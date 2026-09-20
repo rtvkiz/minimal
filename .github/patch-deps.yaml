@@ -54,6 +54,33 @@
     - { name: meilisearch, src-root: "/home/build/meilisearch-<<PKG_VERSION>>", build-marker: "cargo build --release --locked -p meilisearch -p meilitool" }
     - { name: vaultwarden, src-root: "/home/build/vaultwarden-<<PKG_VERSION>>", build-marker: "cargo build --release" }
 
+- name: python
+  artifact-type: python
+  # --no-deps is deliberate. The install is already pinned by upstream's
+  # constraints file, so a CVE bump must replace exactly one distribution and
+  # leave the rest of the resolved set alone; letting pip re-resolve would
+  # silently move packages the constraints file deliberately fixed. This is the
+  # same surgical intent as the rust row's `cargo update --precise`.
+  update-template: "/opt/airflow/venv/bin/pip install --no-cache-dir --no-deps \"{pkg}=={ver}\""
+  verify-url:      "https://pypi.org/pypi/{pkg}/{ver}/json"
+  commit-title:    "fix(python-deps): patch vulnerable Python package dependencies"
+  pr-summary: |
+    Scans published Python images with grype, identifies distribution-level CVEs
+    with known fix versions, and emits targeted
+    `pip install --no-deps <pkg>==<ver>` commands in each image's melange.yaml.
+
+    Airflow installs ~142 distributions from upstream's pinned constraints file,
+    none of which any other patcher covered before this row existed: grype
+    reports these as `artifact.type: python`, while patch-go-deps only handles
+    Go modules and the bundler/rust/maven rows handle their own ecosystems.
+  images:
+    # build-marker must name a step that runs AFTER the pip install: the patcher
+    # splices its block BEFORE the marker's `- runs:`, and a pip bump only sticks
+    # if it lands on top of the constraints-pinned install rather than before it.
+    # `cp -a /opt/airflow/venv` is the copy-into-destdir step, so the bump happens
+    # after the install and before the venv is staged and trimmed.
+    - { name: airflow, src-root: "/home/build", build-marker: "cp -a /opt/airflow/venv" }
+
 - name: maven
   artifact-type: java-archive
   # Maven path uses {coord} (group:artifact) resolved from coord-map[pkg].
