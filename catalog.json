@@ -1490,6 +1490,18 @@
       "description": "VictoriaMetrics fast time-series database and Prometheus long-term storage. Built from source, signed with SLSA provenance, rebuilt every 6 hours."
     },
     {
+      "name": "wordpress",
+      "category": "Apps",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "wordpress",
+      "upstream_url": "https://wordpress.org",
+      "summary": "Shell-less WordPress on PHP-FPM, built from the official source release.",
+      "description": "WordPress publishing platform served over PHP-FPM, built from the official wordpress.org source release, signed and rebuilt every six hours."
+    },
+    {
       "name": "zipkin",
       "category": "Observability",
       "variants": [
