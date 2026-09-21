@@ -12,7 +12,7 @@ package:
   # bare, as cpe:2.3:a:velero:velero:*, so none of them matched, and the Wolfi
   # secdb missed it too.
   name: velero
-  version: 1.18.2
+  version: 1.18.3
   epoch: 0
   description: "Minimal Velero Kubernetes backup and restore tool built from source"
   copyright:
@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 of velero source tarball - updated by update-versions.yml
-  sha256: 68d8c95817d882b2832c4c08689eb5f7b14dd581f71292a6c794acd15633b6d9
+  sha256: 63ce48e63ae9104e241d323d098e49953ec1659ef243518de292bc479846d74b
 
 environment:
   contents:
