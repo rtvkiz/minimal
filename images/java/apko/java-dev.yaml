@@ -19,8 +19,8 @@ contents:
     - wolfi-baselayout
 
     # Full OpenJDK 26 (javac + java runtime; replaces -jre from prod)
-    - openjdk-26
-    - openjdk-26-default-jdk
+    - openjdk-27
+    - openjdk-27-default-jdk
 
     # Core runtime deps (same as prod)
     - glibc
@@ -72,8 +72,8 @@ entrypoint:
 work-dir: /app
 
 environment:
-  JAVA_HOME: /usr/lib/jvm/java-26-openjdk
-  PATH: /usr/lib/jvm/java-26-openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  JAVA_HOME: /usr/lib/jvm/java-27-openjdk
+  PATH: /usr/lib/jvm/java-27-openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
   SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
   LANG: C.UTF-8
 
