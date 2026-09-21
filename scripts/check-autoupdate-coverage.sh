@@ -229,6 +229,28 @@ for img in "${prod[@]}"; do
   done
 done
 
+# --- Smoke tests must not hardcode the version they assert. A literal version
+# in test.sh/test-dev.sh turns every auto-bump PR red on its own test while the
+# build is perfectly fine: meilisearch 1.54.0 (#744) built on both arches, then
+# failed prod and dev on a `grep -q "1.53.2"`. That makes the image's
+# auto-update mechanism non-live in practice, which is what this script exists
+# to prevent. Read the version from melange.yaml instead (see images/helm).
+# grep -F: the version is a fixed string, and unescaped dots in a regex match
+# far more than intended (that false-positived redis-exporter, which is fine).
+for img in "${prod[@]}"; do
+  m="images/$img/melange.yaml"
+  [ -f "$m" ] || continue
+  # Only images that actually auto-bump can regress this way.
+  grep -qE "^- name: ${img}\$" "$VERSIONS" || continue
+  ver=$(grep -m1 '^  version:' "$m" | awk '{print $2}')
+  [ -n "$ver" ] || continue
+  for t in "images/$img/test.sh" "images/$img/test-dev.sh"; do
+    [ -f "$t" ] || continue
+    grep -qF -- "$ver" "$t" \
+      && err "$img: $(basename "$t") hardcodes version '$ver' — every auto-bump PR will fail its own smoke test. Derive it: EXPECTED=\$(grep -m1 '^  version:' \"\$(dirname \"\$0\")/melange.yaml\" | awk '{print \$2}')"
+  done
+done
+
 if [ "$fail" -ne 0 ]; then
   echo
   echo "✗ auto-update coverage FAILED — every prod image must have exactly one live auto-update mechanism."
