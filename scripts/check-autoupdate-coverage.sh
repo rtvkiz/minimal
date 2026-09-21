@@ -246,7 +246,10 @@ for img in "${prod[@]}"; do
   [ -n "$ver" ] || continue
   for t in "images/$img/test.sh" "images/$img/test-dev.sh"; do
     [ -f "$t" ] || continue
-    grep -qF -- "$ver" "$t" \
+    # Strip comments first: the fix commit's own explanatory comment cites the
+    # version that triggered it, and matching that is a false positive — it
+    # fired on meilisearch the moment the bump branch merged the fix.
+    grep -vE '^[[:space:]]*#' "$t" | grep -qF -- "$ver" \
       && err "$img: $(basename "$t") hardcodes version '$ver' — every auto-bump PR will fail its own smoke test. Derive it: EXPECTED=\$(grep -m1 '^  version:' \"\$(dirname \"\$0\")/melange.yaml\" | awk '{print \$2}')"
   done
 done
