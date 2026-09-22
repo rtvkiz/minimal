@@ -1264,14 +1264,49 @@ jobs:
           max_attempts: 3
           command: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
+      # RETRIED. actions/download-artifact classifies a 403 from the artifact
+      # service as "non-retryable" and gives up instantly, so a momentary
+      # ListArtifacts 403 failed the whole job while the packages it wanted were
+      # sitting there intact — that is how the 2026-09-21 22:00 scheduled
+      # rebuild lost stern(dev) and thanos(prod), which blocks the 6-hourly
+      # cycle for every image. The action's own retry logic cannot be reached
+      # here, so retry the step, following the cosign/provenance convention used
+      # elsewhere in this file. The last attempt is NOT continue-on-error, so a
+      # genuinely missing artifact still fails loudly.
       - name: Download x86_64 packages
+        id: dl_x86
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: packages-${{ matrix.name }}-x86_64
+          path: ./packages-x86_64
+
+      - name: Back off before x86_64 download retry
+        if: steps.dl_x86.outcome == 'failure'
+        run: sleep 20
+
+      - name: Download x86_64 packages (retry)
+        if: steps.dl_x86.outcome == 'failure'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: packages-${{ matrix.name }}-x86_64
           path: ./packages-x86_64
 
       - name: Download aarch64 packages
+        id: dl_arm
         if: contains(matrix.arches, 'aarch64')
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: packages-${{ matrix.name }}-aarch64
+          path: ./packages-aarch64
+
+      - name: Back off before aarch64 download retry
+        if: contains(matrix.arches, 'aarch64') && steps.dl_arm.outcome == 'failure'
+        run: sleep 20
+
+      - name: Download aarch64 packages (retry)
+        if: contains(matrix.arches, 'aarch64') && steps.dl_arm.outcome == 'failure'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: packages-${{ matrix.name }}-aarch64
