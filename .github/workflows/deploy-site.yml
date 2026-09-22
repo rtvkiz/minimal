@@ -83,6 +83,35 @@ jobs:
           RID=""; RID_N=0
           BEST=""; BEST_N=0; BEST_MIN=0
 
+          # AN API FAILURE IS NOT "NO RUNS EXIST". This listing used to be a
+          # process substitution feeding the loop directly, so a 403 produced an
+          # empty loop, no candidates, and the fatal else-branch below — which is
+          # how installation rate limiting turned two deploys red while the
+          # published site was perfectly fine. Retry, then degrade: leaving the
+          # current site up is strictly better than a red pipeline, and the next
+          # deploy refreshes it. Only a non-zero exit counts as failure; a
+          # successful-but-empty listing still falls through to the real
+          # no-qualifying-run handling.
+          RUNS_LIST=""; runs_ok=false
+          for attempt in 1 2 3; do
+            if RUNS_LIST=$(gh api "repos/${{ github.repository }}/actions/workflows/build.yml/runs?status=success&branch=main&per_page=40" \
+                             --jq '.workflow_runs[] | "\(.id) \(.head_sha) \(.event)"' 2>/tmp/gh_runs_err); then
+              runs_ok=true; break
+            fi
+            echo "runs listing attempt $attempt failed: $(tail -1 /tmp/gh_runs_err 2>/dev/null)"
+            sleep $(( attempt * 15 ))
+          done
+          if [ "$runs_ok" != true ]; then
+            echo "::warning title=Deploy skipped::Could not list build runs after 3 attempts (GitHub API unavailable, typically installation rate limiting). The currently published site is left in place; the next deploy refreshes it."
+            echo "skip_deploy=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Scan data source"
+              echo
+              echo "- :warning: **deploy skipped** — GitHub API unavailable while resolving the source build run."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
           # per_page=40, and partial `push` builds are skipped outright: they
           # scan only changed images (6-8 reports is typical), so they can never
           # qualify and used to consume the search window. With a busy afternoon
@@ -114,8 +143,7 @@ jobs:
               RID=$id; RID_N=$N; RUN_IMAGES_SEL=$RUN_IMAGES; break
             fi
             if [ "${N:-0}" -gt "$BEST_N" ]; then BEST=$id; BEST_N=$N; BEST_MIN=$MIN; fi
-          done < <(gh api "repos/${{ github.repository }}/actions/workflows/build.yml/runs?status=success&branch=main&per_page=40" \
-                     --jq '.workflow_runs[] | "\(.id) \(.head_sha) \(.event)"')
+          done <<< "$RUNS_LIST"
 
           if [ -n "$RID" ]; then
             echo "Sourcing scan artifacts from complete build run $RID ($RID_N reports)"
@@ -150,6 +178,7 @@ jobs:
       # full build emits >100 (54+ reports, 44 packages-*, SBOMs, SARIF), so the
       # action silently drops reports past the cap and images show as "partial".
       - name: Download scan reports and SBOMs
+        if: steps.buildrun.outputs.skip_deploy != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -170,11 +199,13 @@ jobs:
           echo "Report files downloaded: $(ls reports 2>/dev/null | wc -l)"
 
       - name: Set up Node.js
+        if: steps.buildrun.outputs.skip_deploy != 'true'
         uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
           node-version: '22'
 
       - name: Install site dependencies
+        if: steps.buildrun.outputs.skip_deploy != 'true'
         working-directory: site
         run: npm ci
 
@@ -182,6 +213,7 @@ jobs:
       # Call the data script + astro directly (NOT `npm run build`, whose prebuild
       # hook would regenerate images.json WITHOUT the reports dir).
       - name: Build site
+        if: steps.buildrun.outputs.skip_deploy != 'true'
         working-directory: site
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -198,6 +230,7 @@ jobs:
       # commit and so ignores data-only refreshes on an unchanged main. The
       # branch is kept at a single commit (force-push) to avoid history bloat.
       - name: Publish to gh-pages
+        if: steps.buildrun.outputs.skip_deploy != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
