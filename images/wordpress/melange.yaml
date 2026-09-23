@@ -11,7 +11,7 @@
 # source-built here.
 package:
   name: wordpress
-  version: 7.1.1
+  version: 7.1.2
   epoch: 0
   description: "WordPress publishing platform from the official source release"
   copyright:
@@ -23,7 +23,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: 3996fee13448ef12e07e9f0c77db2f655ffa1b7cde71c80a4965d3bf1fb956b3
+  sha256: c0c666689d66b870d8825500bb8e402ed04de52602c61a6f516c6236b8c9ac67
 
 environment:
   contents:
