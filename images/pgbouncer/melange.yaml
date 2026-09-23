@@ -11,7 +11,7 @@ package:
   # product bare, as cpe:2.3:a:pgbouncer:pgbouncer:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: pgbouncer
-  version: 1.25.2
+  version: 1.26.0
   epoch: 0
   description: "Minimal PgBouncer PostgreSQL connection pooler built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of pgbouncer-{version}.tar.gz - updated by update-versions.yml
-  sha256: 924ad35113fd0a71c8e2dbe85b5d03445532e2b7b37a9f8a48983beea238b332
+  sha256: afd25dd61ee6775d37b40629b87ce08736b3e6955f3057bb212e410fbf21c71d
 
 environment:
   contents:
