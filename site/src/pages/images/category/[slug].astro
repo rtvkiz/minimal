@@ -1,7 +1,7 @@
 ---
 import Layout from '../../../components/Layout.astro';
 import ImageCard from '../../../components/ImageCard.astro';
-import { byCategory, categories, categorySlug, images } from '../../../lib/catalog';
+import { byCategory, categories, categorySlug, images, imageHref } from '../../../lib/catalog';
 
 // One indexable URL per category. /images groups by category already, but only
 // client-side, so "hardened database container images" had no page to rank —
@@ -42,7 +42,7 @@ const schema = [{
     '@type': 'ListItem',
     position: i + 1,
     name: `minimal-${img.name}`,
-    url: new URL(`/images/${img.name}`, Astro.site).href,
+    url: new URL(imageHref(img.name), Astro.site).href,
   })),
 }];
 ---
@@ -50,7 +50,7 @@ const schema = [{
   <section>
     <div class="container">
       <p style="margin:0 0 6px"><a href="/images/" class="small muted">← All {images.length} images</a></p>
-      <h1 class="section-title">{category}</h1>
+      <h1 class="section-title">Hardened {category} container images</h1>
       <p class="section-sub">{blurb}</p>
 
       <div class="grid" style="margin-top:28px">

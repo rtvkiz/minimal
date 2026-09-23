@@ -664,6 +664,7 @@
     {
       "name": "memcached",
       "category": "Caches, Queues & Messaging",
+      "seo_noun": "cache",
       "variants": [
         "prod",
         "dev"
@@ -783,6 +784,8 @@
     },
     {
       "name": "node-slim",
+      "seo_name": "node",
+      "display_name": "Node.js",
       "category": "Languages & Runtimes",
       "variants": [
         "prod",
@@ -963,6 +966,8 @@
     },
     {
       "name": "postgres-slim",
+      "seo_name": "postgres",
+      "display_name": "Postgres",
       "category": "Databases",
       "variants": [
         "prod",
@@ -1083,7 +1088,10 @@
     },
     {
       "name": "redis-slim",
+      "seo_name": "redis",
+      "display_name": "Redis",
       "category": "Caches, Queues & Messaging",
+      "seo_noun": "cache",
       "variants": [
         "prod",
         "dev"
@@ -1420,6 +1428,7 @@
     {
       "name": "valkey",
       "category": "Caches, Queues & Messaging",
+      "seo_noun": "cache",
       "variants": [
         "prod",
         "dev"

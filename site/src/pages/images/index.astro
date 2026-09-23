@@ -1,7 +1,7 @@
 ---
 import Layout from '../../components/Layout.astro';
 import ImageCard from '../../components/ImageCard.astro';
-import { byCategory, categories, categorySlug, images } from '../../lib/catalog';
+import { byCategory, categories, categorySlug, images, imageHref } from '../../lib/catalog';
 const grouped = byCategory();
 
 // ItemList tells a crawler this is a catalogue and what is in it, rather than
@@ -15,7 +15,7 @@ const schema = [{
     '@type': 'ListItem',
     position: i + 1,
     name: `minimal-${img.name}`,
-    url: new URL(`/images/${img.name}`, Astro.site).href,
+    url: new URL(imageHref(img.name), Astro.site).href,
   })),
 }];
 ---
@@ -26,7 +26,7 @@ const schema = [{
   breadcrumbs={[]}>
   <section>
     <div class="container">
-      <h1 class="section-title">Free hardened container images</h1>
+      <h1 class="section-title">All {images.length} hardened container images</h1>
       <p class="section-sub">{images.length} MIT-licensed hardened container images across {categories.length} categories — free, signed, no account required.</p>
 
       <div class="controls">

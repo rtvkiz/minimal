@@ -2,10 +2,12 @@
 import Layout from '../../components/Layout.astro';
 import CopyButton from '../../components/CopyButton.astro';
 import SeverityBar from '../../components/SeverityBar.astro';
-import { images, getImage, categorySlug } from '../../lib/catalog';
+import { images, getImage, categorySlug, imageTitle, imageHref } from '../../lib/catalog';
 
 export function getStaticPaths() {
-  return images.map((img) => ({ params: { name: img.name }, props: { image: img } }));
+  // Addressed by `slug`, not `name`: three images publish as minimal-<x>-slim but
+  // must live at /images/<x>/ to match what people search. See lib/catalog.ts.
+  return images.map((img) => ({ params: { name: img.slug }, props: { image: img } }));
 }
 
 const { image } = Astro.props;
@@ -31,7 +33,7 @@ const sevOrder = ['critical', 'high', 'medium', 'low'] as const;
 // on Wolfi."), which reads as duplicate boilerplate at meta-description length,
 // so it is padded with the facts that differ per image. The gate means this
 // path should not be reached in a normal build.
-const pageTitle = `${image.name} — free hardened container image`;
+const pageTitle = imageTitle(image);
 const pullRef = prod?.pullRef ?? `ghcr.io/rtvkiz/minimal-${image.name}`;
 const pageDescription =
   image.description?.trim() ||
@@ -55,7 +57,7 @@ const schema = [{
   applicationCategory: 'DeveloperApplication',
   description: image.summary,
   operatingSystem: 'Linux',
-  url: new URL(`/images/${image.name}`, Astro.site).href,
+  url: new URL(`/images/${image.slug}`, Astro.site).href,
   downloadUrl: `https://${pullRef.split(':')[0]}`,
   softwareHelp: new URL('/docs', Astro.site).href,
   license: 'https://spdx.org/licenses/MIT.html',
@@ -75,7 +77,7 @@ const schema = [{
     <div class="container">
       <p style="margin:0 0 6px"><a href="/images/" class="small muted">← All images</a></p>
       <h1>
-        {image.name}
+        {image.displayName}
         <a class="cat" href={`/images/category/${categorySlug(image.category)}/`}>{image.category}</a>
       </h1>
       <p class="summary">{image.summary}</p>
@@ -84,6 +86,9 @@ const schema = [{
         {prod?.specs?.archs?.length ? <span><b>Arch</b> {prod.specs.archs.join(', ')}</span> : null}
         {prod?.specs?.uid != null && <span><b>User</b> {prod.specs.user}</span>}
         {image.updatedAgo && <span><b>Updated</b> {image.updatedAgo}</span>}
+        {/* The registry name outlives the page name: these three publish as
+            minimal-<x>-slim, so say so rather than let the pull ref surprise. */}
+        {image.slug !== image.name && <span><b>Publishes as</b> <code class="kv-mono">minimal-{image.name}</code></span>}
         {image.upstreamUrl && <span><b>Upstream</b> <a href={image.upstreamUrl} rel="noopener">{image.upstreamUrl.replace(/^https?:\/\//, '')}</a></span>}
       </div>
     </div>
@@ -306,7 +311,7 @@ const schema = [{
             More <a href={`/images/category/${categorySlug(image.category)}/`}>{image.category}</a> images
           </h2>
           <div class="facets" style="margin-top:12px">
-            {siblings.map((s) => <a class="facet" href={`/images/${s.name}/`}>{s.name}</a>)}
+            {siblings.map((s) => <a class="facet" href={imageHref(s.name)}>{s.displayName}</a>)}
           </div>
         </>
       )}

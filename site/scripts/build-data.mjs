@@ -330,6 +330,22 @@ async function buildImage(entry) {
   const { name } = entry;
   const record = {
     name,
+    // Page identity, separate from registry identity.
+    //
+    // `name` is a contract: it builds the pull ref (minimal-redis-slim) that
+    // users have already written into Dockerfiles, so it cannot move. But three
+    // images carry a "-slim" suffix that nobody searches for, and those three
+    // (redis, postgres, node) are among the most-pulled images in existence.
+    // Minimus ranks #1 for "hardened redis container image" on /images/redis
+    // with the same page shape we have; /images/redis-slim does not appear.
+    //
+    // So the website addresses the page by `slug` and titles it by
+    // `displayName`, both optional in catalog.json and both defaulting to
+    // `name`. The pull ref below is untouched.
+    slug: entry.seo_name || name,
+    displayName: entry.display_name || name,
+    // Overrides the category default in the <title>; see categoryNoun in lib/catalog.ts.
+    seoNoun: entry.seo_noun || null,
     category: entry.category,
     summary: entry.summary || '',
     // Distinct 140-160 char meta description. `summary` is the short card line

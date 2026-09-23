@@ -52,10 +52,40 @@ const imageDates = (() => {
   try {
     const raw = JSON.parse(readFileSync('./src/data/images.json', 'utf8'));
     for (const img of (Array.isArray(raw) ? raw : raw.images ?? [])) {
-      if (img?.name && img?.builtAt) map.set(`/images/${img.name}/`, iso(img.builtAt));
+      // Keyed by slug: that is the URL the sitemap emits (see lib/catalog.ts).
+      const slug = img?.seo_name || img?.slug || img?.name;
+      if (slug && img?.builtAt) map.set(`/images/${slug}/`, iso(img.builtAt));
     }
   } catch { /* data not generated yet */ }
   return map;
+})();
+
+// --- legacy image URLs -------------------------------------------------------
+// Three images publish as minimal-<x>-slim but are addressed on the site as
+// /images/<x>/ (see site/src/lib/catalog.ts). Anything already linking or
+// indexed at the old path has to land on the new one rather than 404.
+//
+// GitHub Pages serves static files only, so there is no 301 available: Astro
+// emits an instant meta-refresh page with a canonical link, which Google treats
+// as a redirect signal. Weaker than a 301, and the reason the old paths are
+// also excluded from the sitemap below.
+//
+// Derived from images.json, the same file the pages are generated from — NOT
+// from catalog.json. Reading the two independently means a seed that predates
+// `slug` yields a redirect for /images/redis-slim while the page set still puts
+// the real page there, i.e. a route collision. Sharing the source makes the
+// redirect set exactly the complement of the page set, always.
+const legacyImageRedirects = (() => {
+  const out = {};
+  try {
+    const raw = JSON.parse(readFileSync('./src/data/images.json', 'utf8'));
+    for (const img of (Array.isArray(raw) ? raw : raw.images ?? [])) {
+      if (img?.slug && img?.name && img.slug !== img.name) {
+        out[`/images/${img.name}`] = `/images/${img.slug}`;
+      }
+    }
+  } catch { /* data not generated yet: emit no redirects rather than guess */ }
+  return out;
 })();
 
 const newest = (m) => {
@@ -82,6 +112,7 @@ const lastmodFor = (pathname) => {
 export default defineConfig({
   site: 'https://minimalcontainers.com',
   trailingSlash: 'ignore',
+  redirects: legacyImageRedirects,
   build: {
     format: 'directory',
   },
@@ -89,6 +120,10 @@ export default defineConfig({
   // crawling /images. `site` above is what makes the emitted URLs absolute.
   integrations: [
     sitemap({
+      // A redirect stub is not a destination. Listing /images/redis-slim/ next to
+      // /images/redis/ would ask Google to index both sides of a redirect.
+      filter: (page) => !Object.keys(legacyImageRedirects)
+        .some((from) => new URL(page).pathname.replace(/\/$/, '') === from),
       serialize(item) {
         // Priority ordering, highest intent first: the comparison pages exist to
         // catch "<vendor> alternative" queries, and the catalogue root is the

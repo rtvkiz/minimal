@@ -2,7 +2,7 @@
 import Layout from '../../components/Layout.astro';
 import CopyButton from '../../components/CopyButton.astro';
 import map from '../../data/bitnami-map.json';
-import { images } from '../../lib/catalog';
+import { images, imageHref } from '../../lib/catalog';
 
 const title = 'Bitnami alternative — free hardened replacements for deprecated Bitnami images';
 const description =
@@ -17,7 +17,7 @@ const schema = [{
     '@type': 'ListItem',
     position: i + 1,
     name: `${p.bitnami} → minimal-${p.minimal}`,
-    url: new URL(`/images/${p.minimal}`, Astro.site).href,
+    url: new URL(imageHref(p.minimal), Astro.site).href,
   })),
 }];
 ---
@@ -52,7 +52,7 @@ const schema = [{
             {map.pairs.map((p) => (
               <tr>
                 <td class="kv-mono">bitnami/{p.bitnami}</td>
-                <td><a href={`/images/${p.minimal}/`}>minimal-{p.minimal}</a></td>
+                <td><a href={imageHref(p.minimal)}>minimal-{p.minimal}</a></td>
                 <td style="text-align:right" class="kv-mono">{p.pulls ? p.pulls.toLocaleString('en-GB') : '—'}</td>
               </tr>
             ))}
