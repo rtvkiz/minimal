@@ -1,0 +1,120 @@
+# Minimal Neo4j image - built from source via melange (repackages the
+# official Community Edition release tarball; Neo4j is Java, so "source
+# build" here means our own melange recipe controls the version and
+# dependency wiring, not compiling from Java source — same pattern as kafka)
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base filesystem layout
+    - wolfi-baselayout
+
+    # Neo4j, built from source (provider-priority pins this over any future
+    # Wolfi bare `neo4j` alias — see melange.yaml). Pulls
+    # openjdk-21-default-jvm and bash as runtime dependencies.
+    - neo4j
+
+    # bash is NOT optional here: the neo4j / neo4j-admin / cypher-shell
+    # launchers are shell scripts and the package hard-depends on bash, so it
+    # is installed either way. Declared explicitly so the dependency is visible
+    # in review rather than arriving silently through the dependency graph.
+    # Same family as the flink/keycloak/opensearch/pulsar/solr images.
+    - busybox
+    - bash
+
+    # Core runtime dependencies
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libstdc++
+
+    # TLS/SSL certificates
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+# `console` runs the server in the foreground and logs to stdout, which is what
+# a container wants; the bare `neo4j` command daemonises.
+entrypoint:
+  command: /usr/bin/neo4j console
+
+work-dir: /usr/share/neo4j
+
+environment:
+  PATH: /usr/bin:/bin
+  LANG: C.UTF-8
+  HOME: /tmp
+  NEO4J_HOME: /usr/share/neo4j
+  NEO4J_CONF: /usr/share/neo4j/conf
+
+paths:
+  # The upstream release tree ships data/ and logs/ directly under
+  # NEO4J_HOME — not symlinked to a top-level /data,/logs (that was Wolfi
+  # package layout; our melange-built package keeps the tarball's own tree).
+  - path: /usr/share/neo4j/data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /usr/share/neo4j/logs
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  # Neo4j rewrites neo4j.conf on some admin operations and writes a pidfile
+  # into run/, so both must be writable by the runtime user.
+  - path: /usr/share/neo4j/conf
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /usr/share/neo4j/run
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /usr/share/neo4j/import
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /usr/share/neo4j/plugins
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /usr/share/neo4j/certificates
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-neo4j"
+  org.opencontainers.image.description: "Hardened Neo4j graph database built from source with CVE patches on every rebuild"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/neo4j"
+  org.opencontainers.image.licenses: "GPL-3.0-only"
+
+archs:
+  - x86_64
+  - aarch64

@@ -132,6 +132,7 @@ jobs:
             [trivy]="/home/build/trivy-${D}{{package.version}}"
             [thanos]="/home/build/thanos-${D}{{package.version}}"
             [cosign]="/home/build/cosign-${D}{{package.version}}"
+            [zot]="/home/build/zot-${D}{{package.version}}"
             [syncthing]="/home/build/syncthing-${D}{{package.version}}"
             [nsq]="/home/build/nsq-${D}{{package.version}}"
             [gitlab-runner]="/home/build/gitlab-runner-v${D}{{package.version}}"
@@ -221,6 +222,7 @@ jobs:
             [trivy]="github.com/aquasecurity/trivy"
             [thanos]="github.com/thanos-io/thanos"
             [cosign]="github.com/sigstore/cosign/v3"
+            [zot]="zotregistry.dev/zot/v2"
             [syncthing]="github.com/syncthing/syncthing"
             [nsq]="github.com/nsqio/nsq"
             [gitlab-runner]="gitlab.com/gitlab-org/gitlab-runner"
@@ -309,6 +311,7 @@ jobs:
             [trivy]='GOEXPERIMENT=jsonv2 go build'
             [thanos]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [cosign]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [zot]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [syncthing]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [nsq]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [gitlab-runner]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

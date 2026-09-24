@@ -1533,6 +1533,54 @@
       "upstream_url": "https://zookeeper.apache.org",
       "summary": "Apache ZooKeeper coordination service with custom jlink JRE.",
       "description": "Apache ZooKeeper coordination service for distributed configuration and leader election. Custom jlink JRE, cosign-signed, rebuilt every 6 hours."
+    },
+    {
+      "name": "zot",
+      "category": "Infrastructure",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "zot",
+      "upstream_url": "https://zotregistry.dev",
+      "summary": "Minimal OCI-native container registry (zot), built from source.",
+      "description": "Minimal OCI-native container registry (zot) implementing the OCI distribution spec, with the zli client. Shell-less, built from source, rebuilt every 6 hours."
+    },
+    {
+      "name": "erlang",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "erlang",
+      "upstream_url": "https://www.erlang.org",
+      "summary": "Erlang/OTP runtime for concurrent, fault-tolerant applications, built from source.",
+      "description": "Erlang/OTP runtime for concurrent, fault-tolerant applications, built from source (not Wolfi's package). Shell-required, rebuilt every 6 hours."
+    },
+    {
+      "name": "perl",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "perl",
+      "upstream_url": "https://www.perl.org",
+      "summary": "Minimal Perl interpreter, built from source.",
+      "description": "Perl interpreter for scripting, text processing, and CPAN modules, built from source (not Wolfi's package). Shell-less, rebuilt every 6 hours."
+    },
+    {
+      "name": "neo4j",
+      "category": "Databases",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "neo4j",
+      "upstream_url": "https://neo4j.com",
+      "summary": "Neo4j Community Edition graph database, built from the official release.",
+      "description": "Neo4j Community Edition graph database with Cypher query support, built from the official binary release. Bash-required, rebuilt every 6 hours."
     }
   ]
 }

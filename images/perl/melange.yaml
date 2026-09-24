@@ -1,0 +1,119 @@
+# Melange build configuration for minimal Perl
+# Built from source (Configure/make), not Wolfi's pre-built perl package.
+# Build recipe modeled on wolfi-dev/os's perl.yaml (Configure flags, zlib/
+# bzip2 unbundling), adapted to a single undivided package (no perl-dev /
+# miniperl split — this image's apko config expects Devel/Encode etc.
+# already present, matching our other single-package interpreter images).
+# License: Artistic-1.0-Perl OR GPL-1.0-or-later.
+
+package:
+  name: perl
+  version: 5.44.0
+  epoch: 0
+  description: "Minimal Perl interpreter built from source"
+  copyright:
+    - license: Artistic-1.0-Perl OR GPL-1.0-or-later
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo. Wolfi ships a
+    # bare `perl`, so without this apk could install Wolfi's build instead of
+    # this source-built one. provider-priority is evaluated BEFORE version in
+    # that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the perl source tarball - updated by update-versions.yml
+  sha256: 3b855066b92491cb40e86affb1ca57d1a388aa43e51b91c7806a32c2f65f96c3
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - bison
+      - zlib-dev
+      - bzip2-dev
+      - libxcrypt-dev
+
+pipeline:
+  # Download and verify Perl source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://www.cpan.org/src/5.0/perl-${{package.version}}.tar.gz" \
+        -o /home/build/perl.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/perl.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf perl.tar.gz
+      rm perl.tar.gz
+
+  - runs: |
+      cd /home/build/perl-${{package.version}}
+
+      # Use the system zlib/bzip2 (already runtime deps of this image)
+      # instead of the bundled copies vendored under cpan/.
+      rm -rf cpan/Compress-Raw-Zlib/zlib-src
+      rm -rf cpan/Compress-Raw-Bzip2/bzip2-src
+      sed -i '/\(bzip2\|zlib\)-src/d' MANIFEST
+
+      export BUILD_ZLIB=0 BUILD_BZIP2=0 BZIP2_LIB=/usr/lib BZIP2_INCLUDE=/usr/include
+
+      ./Configure -des \
+        -Dcc=gcc \
+        -Dcccdlflags='-fPIC' \
+        -Dccdlflags='-rdynamic' \
+        -Dprefix=/usr \
+        -Dprivlib=/usr/share/perl5/core_perl \
+        -Darchlib=/usr/lib/perl5/core_perl \
+        -Dvendorprefix=/usr \
+        -Dvendorlib=/usr/share/perl5/vendor_perl \
+        -Dvendorarch=/usr/lib/perl5/vendor_perl \
+        -Dsiteprefix=/usr/local \
+        -Dsitelib=/usr/local/share/perl5/site_perl \
+        -Dsitearch=/usr/local/lib/perl5/site_perl \
+        -Dlocincpth=' ' \
+        -Duselargefiles \
+        -Dusethreads \
+        -Duseshrplib \
+        -Dd_semctl_semun \
+        -Dman1dir=/usr/share/man/man1 \
+        -Dman3dir=/usr/share/man/man3 \
+        -Dinstallman1dir=/usr/share/man/man1 \
+        -Dinstallman3dir=/usr/share/man/man3 \
+        -Dman1ext='1' \
+        -Dman3ext='3pm' \
+        -Ud_csh
+
+      make depend
+      make -j"$(nproc)" libperl.so
+      make -j"$(nproc)"
+
+  - runs: |
+      cd /home/build/perl-${{package.version}}
+      make install DESTDIR="${{targets.destdir}}"
+
+      find "${{targets.destdir}}" -name '.*' -delete
+      rm -rf "${{targets.destdir}}/usr/share/man"
+      chmod -R +w "${{targets.destdir}}"
+
+      find "${{targets.destdir}}" -type f -perm -111 -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  - runs: |
+      echo "Verifying perl build..."
+      # -Duseshrplib links the perl binary against libperl.so via an absolute
+      # DT_RPATH (/usr/lib/perl5/core_perl/CORE) — that path doesn't exist yet
+      # under destdir at build time (only after apko installs the package to
+      # the real /usr), so LD_LIBRARY_PATH can't help and it can't be run
+      # here. Check the pieces exist instead; images/perl/test.sh exercises
+      # the real thing against the assembled image.
+      test -x "${{targets.destdir}}/usr/bin/perl"
+      test -f "${{targets.destdir}}/usr/lib/perl5/core_perl/CORE/libperl.so"
+      echo "perl binary and libperl.so present"

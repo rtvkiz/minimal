@@ -191,6 +191,53 @@
     releases: "https://github.com/sigstore/cosign/releases"
     notes: "https://github.com/sigstore/cosign/releases/tag/v{version}"
 
+- name: zot
+  cron-enabled: true
+  files: [images/zot/melange.yaml]
+  source: { type: github-releases-latest, repo: project-zot/zot, strip-v: true }
+  tarball: { url: "https://github.com/project-zot/zot/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/project-zot/zot/releases"
+    notes: "https://github.com/project-zot/zot/releases/tag/v{version}"
+
+- name: erlang
+  cron-enabled: true
+  files: [images/erlang/melange.yaml]
+  # Upstream tags releases as OTP-X.Y.Z; pattern is mandatory for
+  # github-tags (check-upstream.sh exits 1 without it).
+  source: { type: github-tags, repo: erlang/otp, pattern: '^OTP-[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'OTP-' }
+  tarball: { url: "https://github.com/erlang/otp/archive/refs/tags/OTP-{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/erlang/otp/releases"
+    notes: "https://github.com/erlang/otp/releases/tag/OTP-{version}"
+
+- name: perl
+  cron-enabled: true
+  files: [images/perl/melange.yaml]
+  # Perl's classic versioning: an EVEN second component (5.44) is a stable
+  # release; ODD (5.45) is a development series leading to the next stable
+  # (5.46). A plain highest-version scrape of cpan.org's listing would pick
+  # up 5.45.x dev snapshots, so the pattern restricts to filenames whose
+  # minor component's last digit is even before the version is extracted
+  # and semver-sorted — this still latest-tracks across stable majors
+  # (5.44 -> 5.46 -> ...) without ever landing on a dev release.
+  source: { type: scrape, urls: ["https://www.cpan.org/src/5.0/"], pattern: 'perl-5\.[0-9]*[02468]\.[0-9]+\.tar\.gz' }
+  tarball: { url: "https://www.cpan.org/src/5.0/perl-{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://www.cpan.org/src/5.0/"
+    notes: "https://metacpan.org/release/perl-{version}"
+
+- name: neo4j
+  cron-enabled: true
+  files: [images/neo4j/melange.yaml]
+  # Calendar versioning (YYYY.MM.P) since the 5.x era; the pattern excludes
+  # the older 3.x/4.x/5.x semver tags and any alpha/beta pre-release tags.
+  source: { type: github-tags, repo: neo4j/neo4j, pattern: '^[0-9]{4}\.[0-9]{2}\.[0-9]+$' }
+  tarball: { url: "https://dist.neo4j.org/neo4j-community-{version}-unix.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/neo4j/neo4j/releases"
+    notes: "https://github.com/neo4j/neo4j/releases/tag/{version}"
+
 - name: syft
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/syft/melange.yaml]
