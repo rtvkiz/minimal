@@ -1545,6 +1545,18 @@
       "upstream_url": "https://zotregistry.dev",
       "summary": "Minimal OCI-native container registry (zot), built from source.",
       "description": "Minimal OCI-native container registry (zot) implementing the OCI distribution spec, with the zli client. Shell-less, built from source, rebuilt every 6 hours."
+    },
+    {
+      "name": "erlang",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "erlang",
+      "upstream_url": "https://www.erlang.org",
+      "summary": "Erlang/OTP runtime for concurrent, fault-tolerant applications, built from source.",
+      "description": "Erlang/OTP runtime for concurrent, fault-tolerant applications, built from source (not Wolfi's package). Shell-required, rebuilt every 6 hours."
     }
   ]
 }

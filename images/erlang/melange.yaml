@@ -1,0 +1,123 @@
+# Melange build configuration for minimal Erlang/OTP
+# Built from source (autoconf/make), not Wolfi's pre-built erlang-29 package.
+# License: Apache-2.0.
+
+package:
+  # Named `erlang` (matching Wolfi's `provides: erlang=...` on erlang-29) so
+  # vulnerability scanners can identify it under the CPE/secdb entry the
+  # ecosystem already indexes Erlang/OTP under. A versioned or -minimal
+  # suffix produces a CPE that matches nothing (see cosign/haproxy melange
+  # comments for the measured impact of that mistake).
+  name: erlang
+  version: 29.1.1
+  epoch: 0
+  description: "Minimal Erlang/OTP runtime built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    runtime:
+      # mnesia (and ssl/crypto) need the CA bundle at runtime.
+      - ca-certificates-bundle
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo. Wolfi ships
+    # `erlang-29` which provides a bare `erlang`, so without this apk could
+    # install Wolfi's build instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in apko's comparator, so
+    # this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the erlang/otp source tarball - updated by update-versions.yml
+  sha256: 5971c156475408cd77db09a307949b6bcf186a99cde7bc771bb4fef831b1eb13
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - autoconf
+      - automake
+      - ncurses-dev
+      - openssl-dev
+      - perl-dev
+      - zlib-dev
+
+pipeline:
+  # Download and verify Erlang/OTP source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/erlang/otp/archive/refs/tags/OTP-${{package.version}}.tar.gz" \
+        -o /home/build/otp.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/otp.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf otp.tar.gz
+      rm otp.tar.gz
+
+  - runs: |
+      cd /home/build/otp-OTP-${{package.version}}
+      export CPPFLAGS="-D_BSD_SOURCE ${CPPFLAGS:-}"
+
+      ./otp_build autoconf
+
+      # Skip GUI (wx-based debugger/observer/et), jinterface (needs a JDK),
+      # and odbc (needs unixODBC/freetds) — none are needed for a headless
+      # runtime and each would pull in an extra build+runtime dependency.
+      ./configure \
+        --prefix=/usr \
+        --sysconfdir=/etc \
+        --mandir=/usr/share/man \
+        --infodir=/usr/share/info \
+        --host="$CHOST" \
+        --build="$CBUILD" \
+        --enable-threads \
+        --enable-shared-zlib \
+        --enable-ssl=dynamic-ssl-lib \
+        --enable-jit \
+        --without-wx \
+        --without-debugger \
+        --without-observer \
+        --without-et \
+        --without-jinterface \
+        --without-odbc
+
+      make -j"$(nproc)"
+
+  - runs: |
+      cd /home/build/otp-OTP-${{package.version}}
+      make install DESTDIR="${{targets.destdir}}"
+
+      # Drop source/example/doc trees the release copies alongside the
+      # compiled .beam files — they're not needed at runtime and add bulk
+      # (and, for src/, redundant scanner surface for code that never runs).
+      find "${{targets.destdir}}/usr/lib/erlang/lib" -maxdepth 2 -type d \
+        \( -name src -o -name examples -o -name doc -o -name c_src \) \
+        -exec rm -rf {} +
+      rm -rf "${{targets.destdir}}/usr/share/man" "${{targets.destdir}}/usr/share/info"
+
+      find "${{targets.destdir}}" -type f -perm -111 -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  - runs: |
+      echo "Verifying erlang build..."
+      # /usr/bin/erl is a wrapper that execs an absolute
+      # /usr/lib/erlang/erts-*/bin/erlexec path — that path doesn't exist yet
+      # under destdir at build time (only after apko installs the package to
+      # the real /usr), so it can't be run here. Check the binaries it needs
+      # exist and are executable instead; images/erlang/test.sh exercises the
+      # real thing against the assembled image.
+      test -e "${{targets.destdir}}/usr/bin/erl"
+      test -e "${{targets.destdir}}/usr/bin/escript"
+      test -e "${{targets.destdir}}/usr/bin/erlc"
+      erts_dir=$(find "${{targets.destdir}}/usr/lib/erlang" -maxdepth 1 -type d -name 'erts-*')
+      test -n "$erts_dir"
+      test -x "$erts_dir/bin/erlexec"
+      test -x "$erts_dir/bin/beam.smp"
+      echo "OTP binaries present: $erts_dir"

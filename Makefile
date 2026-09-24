@@ -99,6 +99,7 @@ OPENTOFU_VERSION ?= $(call melange_version,images/opentofu/melange.yaml)
 TRIVY_VERSION ?= $(call melange_version,images/trivy/melange.yaml)
 COSIGN_VERSION ?= $(call melange_version,images/cosign/melange.yaml)
 ZOT_VERSION ?= $(call melange_version,images/zot/melange.yaml)
+ERLANG_VERSION ?= $(call melange_version,images/erlang/melange.yaml)
 SYFT_VERSION ?= $(call melange_version,images/syft/melange.yaml)
 GRYPE_VERSION ?= $(call melange_version,images/grype/melange.yaml)
 ORAS_VERSION ?= $(call melange_version,images/oras/melange.yaml)
@@ -218,6 +219,7 @@ endef
 .PHONY: trivy trivy-melange test-trivy
 .PHONY: cosign cosign-melange test-cosign
 .PHONY: zot zot-melange zot-dev test-zot test-zot-dev
+.PHONY: erlang erlang-melange erlang-dev test-erlang test-erlang-dev
 .PHONY: syft syft-melange test-syft
 .PHONY: temporal-server temporal-server-melange temporal-admin-tools temporal-admin-tools-melange temporal-ui-server temporal-ui-server-melange
 .PHONY: grype grype-melange test-grype
@@ -1975,6 +1977,34 @@ zot: zot-melange
 	@echo "✓ minimal-zot built (source build)"
 
 $(eval $(call DEV_IMAGE_RULE,zot,zot-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+
+#------------------------------------------------------------------------------
+# ERLANG IMAGE (melange source build + apko; Erlang/OTP runtime)
+#------------------------------------------------------------------------------
+erlang-melange: keygen
+	@echo "Building Erlang/OTP $(ERLANG_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/erlang/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Erlang/OTP package built from source"
+
+erlang: erlang-melange
+	@echo "Assembling minimal-erlang image with apko..."
+	apko build images/erlang/apko/erlang.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-erlang:$(VERSION) \
+		erlang.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < erlang.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-erlang:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-erlang:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-erlang:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-erlang:latest
+	@rm -f erlang.tar sbom-*.spdx.json
+	@echo "✓ minimal-erlang built (source build)"
+
+$(eval $(call DEV_IMAGE_RULE,erlang,erlang-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # SYFT IMAGE (melange Go source build + apko; SBOM generation)
@@ -4044,6 +4074,14 @@ test-zot:
 	@echo "✓ zot tests passed"
 
 $(eval $(call DEV_TEST_RULE,zot))
+
+test-erlang:
+	@echo "Testing erlang image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-erlang:latest" && \
+		images/erlang/test.sh
+	@echo "✓ erlang tests passed"
+
+$(eval $(call DEV_TEST_RULE,erlang))
 
 test-syft:
 	@echo "Testing syft image..."
