@@ -211,6 +211,22 @@
     releases: "https://github.com/erlang/otp/releases"
     notes: "https://github.com/erlang/otp/releases/tag/OTP-{version}"
 
+- name: perl
+  cron-enabled: true
+  files: [images/perl/melange.yaml]
+  # Perl's classic versioning: an EVEN second component (5.44) is a stable
+  # release; ODD (5.45) is a development series leading to the next stable
+  # (5.46). A plain highest-version scrape of cpan.org's listing would pick
+  # up 5.45.x dev snapshots, so the pattern restricts to filenames whose
+  # minor component's last digit is even before the version is extracted
+  # and semver-sorted — this still latest-tracks across stable majors
+  # (5.44 -> 5.46 -> ...) without ever landing on a dev release.
+  source: { type: scrape, urls: ["https://www.cpan.org/src/5.0/"], pattern: 'perl-5\.[0-9]*[02468]\.[0-9]+\.tar\.gz' }
+  tarball: { url: "https://www.cpan.org/src/5.0/perl-{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://www.cpan.org/src/5.0/"
+    notes: "https://metacpan.org/release/perl-{version}"
+
 - name: syft
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/syft/melange.yaml]

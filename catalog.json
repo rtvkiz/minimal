@@ -1557,6 +1557,18 @@
       "upstream_url": "https://www.erlang.org",
       "summary": "Erlang/OTP runtime for concurrent, fault-tolerant applications, built from source.",
       "description": "Erlang/OTP runtime for concurrent, fault-tolerant applications, built from source (not Wolfi's package). Shell-required, rebuilt every 6 hours."
+    },
+    {
+      "name": "perl",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "perl",
+      "upstream_url": "https://www.perl.org",
+      "summary": "Minimal Perl interpreter, built from source.",
+      "description": "Perl interpreter for scripting, text processing, and CPAN modules, built from source (not Wolfi's package). Shell-less, rebuilt every 6 hours."
     }
   ]
 }

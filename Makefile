@@ -100,6 +100,7 @@ TRIVY_VERSION ?= $(call melange_version,images/trivy/melange.yaml)
 COSIGN_VERSION ?= $(call melange_version,images/cosign/melange.yaml)
 ZOT_VERSION ?= $(call melange_version,images/zot/melange.yaml)
 ERLANG_VERSION ?= $(call melange_version,images/erlang/melange.yaml)
+PERL_VERSION ?= $(call melange_version,images/perl/melange.yaml)
 SYFT_VERSION ?= $(call melange_version,images/syft/melange.yaml)
 GRYPE_VERSION ?= $(call melange_version,images/grype/melange.yaml)
 ORAS_VERSION ?= $(call melange_version,images/oras/melange.yaml)
@@ -220,6 +221,7 @@ endef
 .PHONY: cosign cosign-melange test-cosign
 .PHONY: zot zot-melange zot-dev test-zot test-zot-dev
 .PHONY: erlang erlang-melange erlang-dev test-erlang test-erlang-dev
+.PHONY: perl perl-melange perl-dev test-perl test-perl-dev
 .PHONY: syft syft-melange test-syft
 .PHONY: temporal-server temporal-server-melange temporal-admin-tools temporal-admin-tools-melange temporal-ui-server temporal-ui-server-melange
 .PHONY: grype grype-melange test-grype
@@ -2005,6 +2007,34 @@ erlang: erlang-melange
 	@echo "✓ minimal-erlang built (source build)"
 
 $(eval $(call DEV_IMAGE_RULE,erlang,erlang-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+
+#------------------------------------------------------------------------------
+# PERL IMAGE (melange source build + apko; Perl interpreter)
+#------------------------------------------------------------------------------
+perl-melange: keygen
+	@echo "Building Perl $(PERL_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/perl/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Perl package built from source"
+
+perl: perl-melange
+	@echo "Assembling minimal-perl image with apko..."
+	apko build images/perl/apko/perl.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-perl:$(VERSION) \
+		perl.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < perl.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-perl:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-perl:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-perl:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-perl:latest
+	@rm -f perl.tar sbom-*.spdx.json
+	@echo "✓ minimal-perl built (source build)"
+
+$(eval $(call DEV_IMAGE_RULE,perl,perl-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # SYFT IMAGE (melange Go source build + apko; SBOM generation)
@@ -4082,6 +4112,14 @@ test-erlang:
 	@echo "✓ erlang tests passed"
 
 $(eval $(call DEV_TEST_RULE,erlang))
+
+test-perl:
+	@echo "Testing perl image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-perl:latest" && \
+		images/perl/test.sh
+	@echo "✓ perl tests passed"
+
+$(eval $(call DEV_TEST_RULE,perl))
 
 test-syft:
 	@echo "Testing syft image..."

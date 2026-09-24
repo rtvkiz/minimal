@@ -125,7 +125,8 @@ jobs:
             {"name":"deno","variants":["prod","dev"]},
             {"name":"opensearch","variants":["prod","dev"]},
             {"name":"zot","variants":["prod","dev"]},
-            {"name":"erlang","variants":["prod","dev"]}
+            {"name":"erlang","variants":["prod","dev"]},
+            {"name":"perl","variants":["prod","dev"]}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},
