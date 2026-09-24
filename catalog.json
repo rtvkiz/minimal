@@ -1533,6 +1533,18 @@
       "upstream_url": "https://zookeeper.apache.org",
       "summary": "Apache ZooKeeper coordination service with custom jlink JRE.",
       "description": "Apache ZooKeeper coordination service for distributed configuration and leader election. Custom jlink JRE, cosign-signed, rebuilt every 6 hours."
+    },
+    {
+      "name": "zot",
+      "category": "Infrastructure",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "zot",
+      "upstream_url": "https://zotregistry.dev",
+      "summary": "Minimal OCI-native container registry (zot), built from source.",
+      "description": "Minimal OCI-native container registry (zot) implementing the OCI distribution spec, with the zli client. Shell-less, built from source, rebuilt every 6 hours."
     }
   ]
 }

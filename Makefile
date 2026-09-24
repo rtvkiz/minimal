@@ -98,6 +98,7 @@ OPENTOFU_VERSION ?= $(call melange_version,images/opentofu/melange.yaml)
 # --- Security tooling ---
 TRIVY_VERSION ?= $(call melange_version,images/trivy/melange.yaml)
 COSIGN_VERSION ?= $(call melange_version,images/cosign/melange.yaml)
+ZOT_VERSION ?= $(call melange_version,images/zot/melange.yaml)
 SYFT_VERSION ?= $(call melange_version,images/syft/melange.yaml)
 GRYPE_VERSION ?= $(call melange_version,images/grype/melange.yaml)
 ORAS_VERSION ?= $(call melange_version,images/oras/melange.yaml)
@@ -216,6 +217,7 @@ endef
 .PHONY: opentofu opentofu-melange test-opentofu
 .PHONY: trivy trivy-melange test-trivy
 .PHONY: cosign cosign-melange test-cosign
+.PHONY: zot zot-melange zot-dev test-zot test-zot-dev
 .PHONY: syft syft-melange test-syft
 .PHONY: temporal-server temporal-server-melange temporal-admin-tools temporal-admin-tools-melange temporal-ui-server temporal-ui-server-melange
 .PHONY: grype grype-melange test-grype
@@ -1945,6 +1947,34 @@ cosign: cosign-melange
 		$(REGISTRY)/$(OWNER)/minimal-cosign:latest
 	@rm -f cosign.tar sbom-*.spdx.json
 	@echo "✓ minimal-cosign built (source build)"
+
+#------------------------------------------------------------------------------
+# ZOT IMAGE (melange Go source build + apko; OCI-native container registry)
+#------------------------------------------------------------------------------
+zot-melange: keygen
+	@echo "Building zot $(ZOT_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/zot/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ zot package built from source"
+
+zot: zot-melange
+	@echo "Assembling minimal-zot image with apko..."
+	apko build images/zot/apko/zot.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-zot:$(VERSION) \
+		zot.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < zot.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-zot:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-zot:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-zot:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-zot:latest
+	@rm -f zot.tar sbom-*.spdx.json
+	@echo "✓ minimal-zot built (source build)"
+
+$(eval $(call DEV_IMAGE_RULE,zot,zot-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # SYFT IMAGE (melange Go source build + apko; SBOM generation)
@@ -4006,6 +4036,14 @@ test-cosign:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-cosign:latest" && \
 		images/cosign/test.sh
 	@echo "✓ cosign tests passed"
+
+test-zot:
+	@echo "Testing zot image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-zot:latest" && \
+		images/zot/test.sh
+	@echo "✓ zot tests passed"
+
+$(eval $(call DEV_TEST_RULE,zot))
 
 test-syft:
 	@echo "Testing syft image..."

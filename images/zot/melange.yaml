@@ -1,0 +1,98 @@
+# Melange build configuration for minimal zot
+# Pure Go from source. Static `zot` (OCI registry) + `zli` (client) binaries.
+# License: Apache-2.0.
+
+package:
+  # Named `zot` (not `zot-minimal`) so vulnerability scanners can identify it.
+  # Syft derives a package's CPE from its apk name, and a -minimal suffix
+  # produces CPEs NVD/the Wolfi secdb don't index (see cosign/haproxy melange
+  # comments for the measured impact).
+  name: zot
+  version: 2.1.21
+  epoch: 0
+  description: "Minimal zot OCI-native container registry built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo. Wolfi ships a
+    # bare `zot`, so without this apk could install Wolfi's build instead of
+    # this source-built one. provider-priority is evaluated BEFORE version in
+    # that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of zot source tarball - updated by update-versions.yml workflow
+  sha256: 5a9c236bae2cdb85cb0f538c96c556b0ff7a415e7f36eb2e746e83c2e74f9017
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  # Download and verify zot source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/project-zot/zot/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/zot.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/zot.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf zot.tar.gz
+      rm zot.tar.gz
+
+  # patch-go-deps: auto-generated — do not edit manually
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/zot-${{package.version}}
+      export GOWORK=off GOEXPERIMENT=jsonv2
+      COMMIT=$(git rev-parse HEAD 2>/dev/null || echo unknown)
+      GO_VERSION=$(go version | awk '{print $3}')
+      BUILDINFO=zotregistry.dev/zot/v2/pkg/api/config
+      # "minimal" build (no extra build tags): fewer deps, fewer CVEs, matches
+      # this project's minimal-footprint goal. Excludes search/scrub/sync/UI
+      # extensions that pull in extra transitive dependencies.
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X ${BUILDINFO}.releaseTag=v${{package.version}} \
+          -X ${BUILDINFO}.commit=${COMMIT} \
+          -X ${BUILDINFO}.binaryType=minimal \
+          -X ${BUILDINFO}.goVersion=${GO_VERSION}" \
+        -o /home/build/zot-bin \
+        ./cmd/zot
+      # cmd/zli/main.go carries `//go:build search` unconditionally — the zli
+      # client cannot be built at all without this tag (unlike zot itself,
+      # which builds fine untagged for the "minimal" server binary).
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -tags search \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X ${BUILDINFO}.commit=${COMMIT} \
+          -X ${BUILDINFO}.binaryType=minimal \
+          -X ${BUILDINFO}.goVersion=${GO_VERSION}" \
+        -o /home/build/zli-bin \
+        ./cmd/zli
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/zot-bin "${{targets.destdir}}/usr/bin/zot"
+      cp /home/build/zli-bin "${{targets.destdir}}/usr/bin/zli"
+      chmod 0755 "${{targets.destdir}}/usr/bin/zot" "${{targets.destdir}}/usr/bin/zli"
+
+  - runs: |
+      echo "Verifying zot binaries..."
+      "${{targets.destdir}}/usr/bin/zot" --version
+      "${{targets.destdir}}/usr/bin/zli" --version

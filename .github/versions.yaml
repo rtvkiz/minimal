@@ -191,6 +191,15 @@
     releases: "https://github.com/sigstore/cosign/releases"
     notes: "https://github.com/sigstore/cosign/releases/tag/v{version}"
 
+- name: zot
+  cron-enabled: true
+  files: [images/zot/melange.yaml]
+  source: { type: github-releases-latest, repo: project-zot/zot, strip-v: true }
+  tarball: { url: "https://github.com/project-zot/zot/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/project-zot/zot/releases"
+    notes: "https://github.com/project-zot/zot/releases/tag/v{version}"
+
 - name: syft
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/syft/melange.yaml]
