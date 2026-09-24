@@ -185,6 +185,17 @@ pipeline:
       _swap async-http-client-netty-utils org/asynchttpclient 2.15.0 2.16.1 5dc30eb034ec1daea2578e3ecf861ee3212f8693170f7da53cc3503a9ff44971 rename -
       _swap async-http-client org/asynchttpclient 2.15.0 2.16.1 9e76dd36d4ef6e13e81e2478f4e18723cabda0fe2e3b7ad6a4f41990969a7c90 rename -
       _swap bcprov-jdk18on org/bouncycastle 1.84 1.85 20af26bf6060bb8005cc2389916812c1e0e998dc48d2ced7131b89461b54cff7 rename -
+      _swap jline-builtins org/jline 4.2.1 4.3.1 1c9eb7a03796990cdc7266663f8330e27635dfc33904221d67ff1a8e21f1fbc3 rename -
+      _swap jline-native org/jline 4.2.1 4.3.1 ff94ab4bccc3c1549444082ce07a2760cbf1ad4dae04e43508597bd802bcb231 rename -
+      _swap jline-reader org/jline 4.2.1 4.3.1 02aa899906086ce9d9c992bb05aed776045e5915a180e717dcb661fb87ab84d3 rename -
+      _swap jline-remote-ssh org/jline 4.2.1 4.3.1 1964a098c6c401015e686623dad7afa4a457ab5d0b5642f984afa50f228d3d79 rename -
+      _swap jline-remote-telnet org/jline 4.2.1 4.3.1 f1a9e044a103b8e1fbda27c4958220a028d7684f8717fb93f18d5726bf2be0b1 rename -
+      _swap jline-shell org/jline 4.2.1 4.3.1 ce72054bd9a874dd667562d018a4fb26df27cc2a7f896b0fd92a548b69b0ece8 rename -
+      _swap jline-style org/jline 4.2.1 4.3.1 ba1f741d7faca9b624ea3c0ed1bd3d22c4663cfcba5784fda6dc50a233778e0a rename -
+      _swap jline-terminal-ffm org/jline 4.2.1 4.3.1 2913cea48e5eac3e0763f5838059701b05c19d6dc41e829aee16a06364a340d6 rename -
+      _swap jline-terminal-jni org/jline 4.2.1 4.3.1 1c4873798f36412827087013e424199bced29da7c8421f3850cfe7f31f274c1c rename -
+      _swap jline-terminal org/jline 4.2.1 4.3.1 272927363471fdbf2f38710befbfe866acc1ed3472062a8ced02b16686f27bcc rename -
+      _swap jline org/jline 4.2.1 4.3.1 c75761d4625467083c208563718fc37551af2a3468271a0758726b1f7f728d75 rename -
       _swap log4j-api org/apache/logging/log4j 2.25.4 2.25.5 64777f73ea0b3104c04eb82befbdccc30a425a19e83ad06cb2f93aa303511863 rename -
       _swap log4j-core org/apache/logging/log4j 2.25.4 2.25.5 050c4f85deb48b055e9c041ac39043fbb79ce477841a11a1eb2969c86c6a0072 rename -
       _swap log4j-layout-template-json org/apache/logging/log4j 2.25.4 2.25.5 27c37313e20c16bf0178e38d9d1a5c7320e34c03aa35bc2c66a589ea14abf545 rename -
@@ -216,6 +227,7 @@ pipeline:
       _strag=/tmp/_bj_stragglers; : > "$_strag"
       find "${{targets.destdir}}/opt/pulsar" \( -name "async*-2.15.*.jar" -o -name "async*-2.15.jar" \) ! -name "*-2.16.1.jar" ! -name "*-2.16.1-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "bcprov*-1.84.*.jar" -o -name "bcprov*-1.84.jar" \) ! -name "*-1.85.jar" ! -name "*-1.85-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "jline*-4.2.*.jar" -o -name "jline*-4.2.jar" \) ! -name "*-4.3.1.jar" ! -name "*-4.3.1-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "log4j*-2.25.*.jar" -o -name "log4j*-2.25.jar" \) ! -name "*-2.25.5.jar" ! -name "*-2.25.5-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "lz4*-1.10.*.jar" -o -name "lz4*-1.10.jar" \) ! -name "*-1.11.1.jar" ! -name "*-1.11.1-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "netty*-4.1.*.jar" -o -name "netty*-4.1.jar" \) ! -name "*-4.1.137.Final.jar" ! -name "*-4.1.137.Final-*.jar" >> "$_strag" 2>/dev/null || true
