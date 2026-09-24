@@ -11,7 +11,7 @@ package:
   # product bare, as cpe:2.3:a:registry:registry:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: registry
-  version: 3.1.1
+  version: 3.1.2
   epoch: 0
   description: "Minimal OCI distribution registry (Docker Registry v2) built from source"
   copyright:
@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 of the distribution source tarball - updated by update-versions.yml workflow
-  sha256: 419183e8c1426b5d625732cf6846a2d48ad8e898a1659d7bec7171b7d156673e
+  sha256: 2f9b6fc00bec854e62e9b720903a9c9b48018505177f7c7a8ce7b74da2b23e4f
 
 environment:
   contents:
