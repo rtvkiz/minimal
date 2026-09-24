@@ -1569,6 +1569,18 @@
       "upstream_url": "https://www.perl.org",
       "summary": "Minimal Perl interpreter, built from source.",
       "description": "Perl interpreter for scripting, text processing, and CPAN modules, built from source (not Wolfi's package). Shell-less, rebuilt every 6 hours."
+    },
+    {
+      "name": "neo4j",
+      "category": "Databases",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "neo4j",
+      "upstream_url": "https://neo4j.com",
+      "summary": "Neo4j Community Edition graph database, built from the official release.",
+      "description": "Neo4j Community Edition graph database with Cypher query support, built from the official binary release. Bash-required, rebuilt every 6 hours."
     }
   ]
 }

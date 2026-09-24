@@ -1,0 +1,114 @@
+# Development variant of minimal-neo4j.
+# Same Neo4j from prod, plus apk-tools/wget and curl/jq for HTTP/Bolt
+# troubleshooting. bash is already in prod (see neo4j.yaml), so this variant
+# doesn't need to add a shell — only the debugging tools.
+#
+# Runtime template (docs/dev-variants/CONVENTIONS.md).
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base filesystem layout
+    - wolfi-baselayout
+
+    # Neo4j, built from source (same as prod)
+    - neo4j
+
+    # Core runtime deps (same as prod)
+    - busybox
+    - bash
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libstdc++
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - apk-tools
+    - wget
+
+    # --- HTTP/Bolt troubleshooting ---
+    - curl
+    - jq
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/neo4j console
+
+work-dir: /var/lib/neo4j
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  LANG: C.UTF-8
+  HOME: /tmp
+  NEO4J_HOME: /var/lib/neo4j
+  NEO4J_CONF: /var/lib/neo4j/conf
+
+paths:
+  - path: /var/lib/neo4j/data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/neo4j/logs
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/neo4j/conf
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/neo4j/run
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/neo4j/import
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/neo4j/plugins
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/neo4j/certificates
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-neo4j-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-neo4j: same Neo4j + apk-tools and curl/jq for HTTP/Bolt troubleshooting. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/neo4j"
+  org.opencontainers.image.licenses: "GPL-3.0-only"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

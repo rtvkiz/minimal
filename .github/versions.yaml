@@ -227,6 +227,17 @@
     releases: "https://www.cpan.org/src/5.0/"
     notes: "https://metacpan.org/release/perl-{version}"
 
+- name: neo4j
+  cron-enabled: true
+  files: [images/neo4j/melange.yaml]
+  # Calendar versioning (YYYY.MM.P) since the 5.x era; the pattern excludes
+  # the older 3.x/4.x/5.x semver tags and any alpha/beta pre-release tags.
+  source: { type: github-tags, repo: neo4j/neo4j, pattern: '^[0-9]{4}\.[0-9]{2}\.[0-9]+$' }
+  tarball: { url: "https://dist.neo4j.org/neo4j-community-{version}-unix.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/neo4j/neo4j/releases"
+    notes: "https://github.com/neo4j/neo4j/releases/tag/{version}"
+
 - name: syft
   cron-enabled: true   # wave 8 (dispatch-validated 2026-07-08)
   files: [images/syft/melange.yaml]

@@ -101,6 +101,7 @@ COSIGN_VERSION ?= $(call melange_version,images/cosign/melange.yaml)
 ZOT_VERSION ?= $(call melange_version,images/zot/melange.yaml)
 ERLANG_VERSION ?= $(call melange_version,images/erlang/melange.yaml)
 PERL_VERSION ?= $(call melange_version,images/perl/melange.yaml)
+NEO4J_VERSION ?= $(call melange_version,images/neo4j/melange.yaml)
 SYFT_VERSION ?= $(call melange_version,images/syft/melange.yaml)
 GRYPE_VERSION ?= $(call melange_version,images/grype/melange.yaml)
 ORAS_VERSION ?= $(call melange_version,images/oras/melange.yaml)
@@ -222,6 +223,7 @@ endef
 .PHONY: zot zot-melange zot-dev test-zot test-zot-dev
 .PHONY: erlang erlang-melange erlang-dev test-erlang test-erlang-dev
 .PHONY: perl perl-melange perl-dev test-perl test-perl-dev
+.PHONY: neo4j neo4j-melange neo4j-dev test-neo4j test-neo4j-dev
 .PHONY: syft syft-melange test-syft
 .PHONY: temporal-server temporal-server-melange temporal-admin-tools temporal-admin-tools-melange temporal-ui-server temporal-ui-server-melange
 .PHONY: grype grype-melange test-grype
@@ -2035,6 +2037,34 @@ perl: perl-melange
 	@echo "✓ minimal-perl built (source build)"
 
 $(eval $(call DEV_IMAGE_RULE,perl,perl-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+
+#------------------------------------------------------------------------------
+# NEO4J IMAGE (melange source build + apko; Neo4j graph database)
+#------------------------------------------------------------------------------
+neo4j-melange: keygen
+	@echo "Building Neo4j $(NEO4J_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/neo4j/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Neo4j package built from source"
+
+neo4j: neo4j-melange
+	@echo "Assembling minimal-neo4j image with apko..."
+	apko build images/neo4j/apko/neo4j.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-neo4j:$(VERSION) \
+		neo4j.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < neo4j.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-neo4j:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-neo4j:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-neo4j:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-neo4j:latest
+	@rm -f neo4j.tar sbom-*.spdx.json
+	@echo "✓ minimal-neo4j built (source build)"
+
+$(eval $(call DEV_IMAGE_RULE,neo4j,neo4j-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # SYFT IMAGE (melange Go source build + apko; SBOM generation)
@@ -4120,6 +4150,14 @@ test-perl:
 	@echo "✓ perl tests passed"
 
 $(eval $(call DEV_TEST_RULE,perl))
+
+test-neo4j:
+	@echo "Testing neo4j image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-neo4j:latest" && \
+		images/neo4j/test.sh
+	@echo "✓ neo4j tests passed"
+
+$(eval $(call DEV_TEST_RULE,neo4j))
 
 test-syft:
 	@echo "Testing syft image..."
