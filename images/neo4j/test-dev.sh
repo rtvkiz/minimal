@@ -13,17 +13,17 @@ vol="minimal-neo4j-dev-test-$$"
 docker volume create "$vol" >/dev/null
 trap 'docker volume rm -f "$vol" >/dev/null 2>&1 || true' EXIT
 
-docker run --rm -u root -v "$vol:/var/lib/neo4j/data" \
-  --entrypoint /bin/sh "$IMAGE" -c 'chown -R 65532:65532 /var/lib/neo4j/data'
+docker run --rm -u root -v "$vol:/usr/share/neo4j/data" \
+  --entrypoint /bin/sh "$IMAGE" -c 'chown -R 65532:65532 /usr/share/neo4j/data'
 
 echo "Setting the initial password (offline)..."
-docker run --rm -v "$vol:/var/lib/neo4j/data" \
+docker run --rm -v "$vol:/usr/share/neo4j/data" \
   --entrypoint /usr/bin/neo4j-admin "$IMAGE" \
   dbms set-initial-password minimal-test-password 2>&1 || true
 
 echo "Starting neo4j and waiting for the HTTP endpoint..."
 cid=$(docker run -d -p 17475:7474 -p 17688:7687 \
-        -v "$vol:/var/lib/neo4j/data" \
+        -v "$vol:/usr/share/neo4j/data" \
         "$IMAGE")
 trap 'docker logs "$cid" 2>&1 | tail -40; docker rm -f "$cid" >/dev/null 2>&1 || true; docker volume rm -f "$vol" >/dev/null 2>&1 || true' EXIT
 ok=0
