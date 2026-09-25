@@ -98,6 +98,10 @@ OPENTOFU_VERSION ?= $(call melange_version,images/opentofu/melange.yaml)
 # --- Security tooling ---
 TRIVY_VERSION ?= $(call melange_version,images/trivy/melange.yaml)
 COSIGN_VERSION ?= $(call melange_version,images/cosign/melange.yaml)
+ZOT_VERSION ?= $(call melange_version,images/zot/melange.yaml)
+ERLANG_VERSION ?= $(call melange_version,images/erlang/melange.yaml)
+PERL_VERSION ?= $(call melange_version,images/perl/melange.yaml)
+NEO4J_VERSION ?= $(call melange_version,images/neo4j/melange.yaml)
 SYFT_VERSION ?= $(call melange_version,images/syft/melange.yaml)
 GRYPE_VERSION ?= $(call melange_version,images/grype/melange.yaml)
 ORAS_VERSION ?= $(call melange_version,images/oras/melange.yaml)
@@ -216,6 +220,10 @@ endef
 .PHONY: opentofu opentofu-melange test-opentofu
 .PHONY: trivy trivy-melange test-trivy
 .PHONY: cosign cosign-melange test-cosign
+.PHONY: zot zot-melange zot-dev test-zot test-zot-dev
+.PHONY: erlang erlang-melange erlang-dev test-erlang test-erlang-dev
+.PHONY: perl perl-melange perl-dev test-perl test-perl-dev
+.PHONY: neo4j neo4j-melange neo4j-dev test-neo4j test-neo4j-dev
 .PHONY: syft syft-melange test-syft
 .PHONY: temporal-server temporal-server-melange temporal-admin-tools temporal-admin-tools-melange temporal-ui-server temporal-ui-server-melange
 .PHONY: grype grype-melange test-grype
@@ -1945,6 +1953,118 @@ cosign: cosign-melange
 		$(REGISTRY)/$(OWNER)/minimal-cosign:latest
 	@rm -f cosign.tar sbom-*.spdx.json
 	@echo "✓ minimal-cosign built (source build)"
+
+#------------------------------------------------------------------------------
+# ZOT IMAGE (melange Go source build + apko; OCI-native container registry)
+#------------------------------------------------------------------------------
+zot-melange: keygen
+	@echo "Building zot $(ZOT_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/zot/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ zot package built from source"
+
+zot: zot-melange
+	@echo "Assembling minimal-zot image with apko..."
+	apko build images/zot/apko/zot.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-zot:$(VERSION) \
+		zot.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < zot.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-zot:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-zot:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-zot:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-zot:latest
+	@rm -f zot.tar sbom-*.spdx.json
+	@echo "✓ minimal-zot built (source build)"
+
+$(eval $(call DEV_IMAGE_RULE,zot,zot-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+
+#------------------------------------------------------------------------------
+# ERLANG IMAGE (melange source build + apko; Erlang/OTP runtime)
+#------------------------------------------------------------------------------
+erlang-melange: keygen
+	@echo "Building Erlang/OTP $(ERLANG_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/erlang/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Erlang/OTP package built from source"
+
+erlang: erlang-melange
+	@echo "Assembling minimal-erlang image with apko..."
+	apko build images/erlang/apko/erlang.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-erlang:$(VERSION) \
+		erlang.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < erlang.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-erlang:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-erlang:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-erlang:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-erlang:latest
+	@rm -f erlang.tar sbom-*.spdx.json
+	@echo "✓ minimal-erlang built (source build)"
+
+$(eval $(call DEV_IMAGE_RULE,erlang,erlang-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+
+#------------------------------------------------------------------------------
+# PERL IMAGE (melange source build + apko; Perl interpreter)
+#------------------------------------------------------------------------------
+perl-melange: keygen
+	@echo "Building Perl $(PERL_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/perl/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Perl package built from source"
+
+perl: perl-melange
+	@echo "Assembling minimal-perl image with apko..."
+	apko build images/perl/apko/perl.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-perl:$(VERSION) \
+		perl.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < perl.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-perl:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-perl:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-perl:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-perl:latest
+	@rm -f perl.tar sbom-*.spdx.json
+	@echo "✓ minimal-perl built (source build)"
+
+$(eval $(call DEV_IMAGE_RULE,perl,perl-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+
+#------------------------------------------------------------------------------
+# NEO4J IMAGE (melange source build + apko; Neo4j graph database)
+#------------------------------------------------------------------------------
+neo4j-melange: keygen
+	@echo "Building Neo4j $(NEO4J_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/neo4j/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ Neo4j package built from source"
+
+neo4j: neo4j-melange
+	@echo "Assembling minimal-neo4j image with apko..."
+	apko build images/neo4j/apko/neo4j.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-neo4j:$(VERSION) \
+		neo4j.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < neo4j.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-neo4j:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-neo4j:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-neo4j:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-neo4j:latest
+	@rm -f neo4j.tar sbom-*.spdx.json
+	@echo "✓ minimal-neo4j built (source build)"
+
+$(eval $(call DEV_IMAGE_RULE,neo4j,neo4j-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 
 #------------------------------------------------------------------------------
 # SYFT IMAGE (melange Go source build + apko; SBOM generation)
@@ -4006,6 +4126,38 @@ test-cosign:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-cosign:latest" && \
 		images/cosign/test.sh
 	@echo "✓ cosign tests passed"
+
+test-zot:
+	@echo "Testing zot image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-zot:latest" && \
+		images/zot/test.sh
+	@echo "✓ zot tests passed"
+
+$(eval $(call DEV_TEST_RULE,zot))
+
+test-erlang:
+	@echo "Testing erlang image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-erlang:latest" && \
+		images/erlang/test.sh
+	@echo "✓ erlang tests passed"
+
+$(eval $(call DEV_TEST_RULE,erlang))
+
+test-perl:
+	@echo "Testing perl image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-perl:latest" && \
+		images/perl/test.sh
+	@echo "✓ perl tests passed"
+
+$(eval $(call DEV_TEST_RULE,perl))
+
+test-neo4j:
+	@echo "Testing neo4j image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-neo4j:latest" && \
+		images/neo4j/test.sh
+	@echo "✓ neo4j tests passed"
+
+$(eval $(call DEV_TEST_RULE,neo4j))
 
 test-syft:
 	@echo "Testing syft image..."
