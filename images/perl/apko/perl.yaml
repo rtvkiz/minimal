@@ -1,0 +1,77 @@
+# Minimal Perl image - built from source via melange
+# Shell-less/distroless for security. Rebuilt every 6 hours; patched via
+# versions.yaml + the melange build, not Wolfi's package.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    # Base filesystem layout
+    - wolfi-baselayout
+
+    # Perl, built from source (provider-priority pins this over Wolfi's
+    # package — see melange.yaml)
+    - perl
+
+    # Core runtime dependencies
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+
+    # Perl core module dependencies (Compress::Raw::*, crypt())
+    - zlib
+    - libbz2-1
+    - libxcrypt
+
+    # TLS/SSL certificates
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/perl
+
+work-dir: /app
+
+environment:
+  PATH: /usr/bin:/bin
+  LANG: C.UTF-8
+  # Perl writes nothing to $HOME by default, but CPAN-installed modules and
+  # File::HomeDir consumers expect one to exist and be writable.
+  HOME: /tmp
+
+paths:
+  - path: /app
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-perl"
+  org.opencontainers.image.description: "Hardened shell-less Perl interpreter built from source with CVE patches on every rebuild"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/perl"
+  org.opencontainers.image.licenses: "Artistic-1.0-Perl OR GPL-1.0-or-later"
+
+archs:
+  - x86_64
+  - aarch64

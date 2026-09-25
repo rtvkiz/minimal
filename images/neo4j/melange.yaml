@@ -1,0 +1,96 @@
+# Melange build configuration for minimal Neo4j
+# Downloads the official Neo4j Community Edition binary release (Java, so
+# there's no "compile from source" step — same pattern as kafka: repackage
+# the upstream tarball, don't build it). License: GPL-3.0-only.
+
+package:
+  # Wolfi ships this versioned per calendar-release line (e.g. neo4j-2026.07),
+  # not a bare `neo4j` — so there's no naming collision to defend against
+  # here, but provider-priority costs nothing and future-proofs against
+  # Wolfi adding a bare alias later.
+  name: neo4j
+  version: 2026.09.0
+  epoch: 0
+  description: "Minimal Neo4j Community Edition graph database"
+  copyright:
+    - license: GPL-3.0-only
+  dependencies:
+    runtime:
+      - ca-certificates-bundle
+      - openjdk-21-default-jvm
+      # neo4j / neo4j-admin / cypher-shell are bash scripts, and the package
+      # hard-depends on bash for that reason (see images/neo4j/apko/neo4j.yaml).
+      - busybox
+      - bash
+    provider-priority: 100
+
+vars:
+  # SHA256 of the neo4j-community-{version}-unix.tar.gz release - updated by
+  # update-versions.yml
+  sha256: cdaa0905d9a533bbbc474d239c268f69978982eb5ca3177666c04c9792d1c399
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  # Download and verify the official Neo4j Community Edition release
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://dist.neo4j.org/neo4j-community-${{package.version}}-unix.tar.gz" \
+        -o /home/build/neo4j.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/neo4j.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf neo4j.tar.gz
+      rm neo4j.tar.gz
+
+  - runs: |
+      src=/home/build/neo4j-community-${{package.version}}
+
+      # NEO4J_HOME (apko sets it to /usr/share/neo4j) is the release tree
+      # itself — bin/, lib/, conf/ alongside the runtime's data/logs/plugins —
+      # matching upstream's own Docker image layout. Installed under /usr,
+      # NOT /var: melange's own SBOM step needs to create /var/lib/db after
+      # the pipeline runs, as the unprivileged host user, and a pipeline that
+      # creates so much as a /var/lib itself (owned by the sandboxed build
+      # uid) blocks that later mkdir with a permission error (see
+      # opensearch/melange.yaml, which installs under /usr/share/opensearch
+      # for the same reason — CI caught this locally-invisible failure since
+      # local melange happened to run privileged enough not to hit it).
+      mkdir -p "${{targets.destdir}}/usr/share/neo4j"
+      cp -a "$src"/. "${{targets.destdir}}/usr/share/neo4j"/
+      rm -f "${{targets.destdir}}/usr/share/neo4j"/LICENSE.txt \
+            "${{targets.destdir}}/usr/share/neo4j"/README.txt \
+            "${{targets.destdir}}/usr/share/neo4j"/ThirdPartyLicenses.txt \
+            "${{targets.destdir}}/usr/share/neo4j"/UPGRADE.txt
+
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      for b in neo4j neo4j-admin cypher-shell; do
+        ln -sf ../share/neo4j/bin/$b "${{targets.destdir}}/usr/bin/$b"
+      done
+
+      # The shipped default is commented out, which leaves every connector
+      # bound to localhost — useless in a container, where the client is
+      # always a different network namespace. Enable the same "listen on
+      # all interfaces" default the official Docker image sets.
+      sed -i 's/^#server\.default_listen_address=0\.0\.0\.0/server.default_listen_address=0.0.0.0/' \
+        "${{targets.destdir}}/usr/share/neo4j/conf/neo4j.conf"
+
+  - runs: |
+      echo "Verifying neo4j release layout..."
+      test -x "${{targets.destdir}}/usr/share/neo4j/bin/neo4j"
+      test -x "${{targets.destdir}}/usr/share/neo4j/bin/neo4j-admin"
+      test -x "${{targets.destdir}}/usr/share/neo4j/bin/cypher-shell"
+      test -d "${{targets.destdir}}/usr/share/neo4j/lib"
+      test -d "${{targets.destdir}}/usr/share/neo4j/conf"
+      echo "neo4j release layout present"
