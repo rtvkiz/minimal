@@ -68,13 +68,31 @@ pipeline:
       echo "${{vars.sha256}}  /home/build/fluent-bit.tar.gz" | sha256sum -c -
       cd /home/build && tar xzf fluent-bit.tar.gz && rm fluent-bit.tar.gz
 
+      # FLB_HTTP_SERVER vendors Monkey, whose tls_init_library() calls the
+      # legacy SSL_load_error_strings() unconditionally — even in the
+      # "OpenSSL >= 1.1.0" branch, where it's a redundant no-op
+      # (OPENSSL_init_ssl() already loads error strings by default). Current
+      # OpenSSL headers no longer declare it, and GCC 16 (Wolfi's build-base)
+      # promotes that implicit declaration to a hard error, so drop the
+      # redundant call rather than fight the header visibility.
+      sed -i '/^\s*SSL_load_error_strings();\s*$/d' \
+        /home/build/fluent-bit-${{package.version}}/lib/monkey/tls/tls_openssl.c
+
   # Build Fluent Bit (minimal plugins)
   - runs: |
       mkdir -p /home/build/fluent-bit-${{package.version}}/build
       cd /home/build/fluent-bit-${{package.version}}/build
+      # src/flb_crypto.c uses the legacy OpenSSL 1.x low-level RSA API
+      # (RSA_new/RSA_set0_key/EVP_PKEY_set1_RSA/RSA_free), which current
+      # OpenSSL headers hide behind OPENSSL_NO_DEPRECATED_3_0 by default —
+      # targeting the 1.1.0 API keeps that whole surface (RSA type included)
+      # visible without patching fluent-bit's own crypto code. This is
+      # OpenSSL's documented mechanism for exactly this: pre-3.0 callers
+      # building against current headers.
       cmake .. \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_C_FLAGS=-DOPENSSL_API_COMPAT=0x10100000L \
         -DFLB_RELEASE=On \
         -DFLB_JEMALLOC=Off \
         -DFLB_TLS=On \
