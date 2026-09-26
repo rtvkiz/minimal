@@ -11,7 +11,7 @@ package:
   # product bare, as cpe:2.3:a:step-cli:step-cli:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: step-cli
-  version: 0.30.6
+  version: 0.31.0
   epoch: 0
   description: "Minimal smallstep step CLI (PKI/certificate toolkit) built from source"
   copyright:
@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 of step-cli source tarball - updated by update-versions.yml workflow
-  sha256: 0c8562b95150cc24bf69ba18fcf9f0bf671f334f5d3ccb39f287692b61531b7c
+  sha256: 7eb9ba3d1d8edc07fe6e3bae0ee5a3b6fc7a60bbd850d334ccc74d02b5e4f0fe
 
 environment:
   contents:
