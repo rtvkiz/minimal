@@ -1593,6 +1593,18 @@
       "upstream_url": "https://konghq.com",
       "summary": "Kong API Gateway built on Nginx and OpenResty.",
       "description": "Kong API Gateway built on Nginx and OpenResty. DB-less by default, signed and SBOM-attested, rebuilt every 6 hours against upstream CVE fixes."
+    },
+    {
+      "name": "couchdb",
+      "category": "Databases",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "couchdb-3.3",
+      "upstream_url": "https://couchdb.apache.org",
+      "summary": "Apache CouchDB document database, built on Wolfi.",
+      "description": "Apache CouchDB document-oriented database with a native HTTP/JSON API and multi-master replication. Signed, SBOM-attested, rebuilt every 6 hours."
     }
   ]
 }
