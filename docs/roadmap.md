@@ -176,20 +176,20 @@ package ⇒ `wolfi-versioned`; `(r)` = unversioned/rolling ⇒ `wolfi-rolling`.
 
 | ✓ | Image | Wolfi package | License | 🐳 pulls | Category | Notes |
 |---|---|---|---|---:|---|---|
-| [ ] | wordpress | `wordpress` (r) + `wordpress-oci-entrypoint` | 🟡 GPL-2.0-or-later | 1.5B | Apps | Largest single demand number in the survey. Pairs with our `php`/`httpd`; Wolfi ships the OCI entrypoint too. Fills the thinnest category (Apps, 6). |
-| [ ] | sonarqube | `sonarqube` (r) | 🟡 LGPL-3.0 | 1.2B | K8s, CI & IaC | Community Build. Heavier than it looks — bundles Elasticsearch and needs an external Postgres; smoke test = boot + `/api/system/status`. |
-| [ ] | nextcloud | `nextcloud-server-33` (v) | 🟡 AGPL-3.0 | 1.0B | Apps | AGPL precedent already set (loki/tempo/mimir/minio/vaultwarden). PHP-FPM. |
+| [ ] | wordpress | `wordpress` (r) + `wordpress-oci-entrypoint` | 🟡 GPL-2.0-or-later | 1.5B | Apps | Largest single demand number in the survey. Pairs with our `php`/`httpd`; Wolfi ships the OCI entrypoint too. Fills the thinnest category (Apps, 6). Note: shipped separately as our own `wordpress` (php-fpm, not this Wolfi package) — see W3 note below on why sonarqube/nextcloud didn't follow the same cheap path. |
+| moved → W3 | sonarqube | `sonarqube` (r) | 🟡 LGPL-3.0 | 1.2B | K8s, CI & IaC | **Reclassified 2026-09-28: not W1.** See Tier W3. |
+| moved → W3 | nextcloud | `nextcloud-server-33` (v) | 🟡 AGPL-3.0 | 1.0B | Apps | **Reclassified 2026-09-28: not W1.** See Tier W3. |
 | [ ] | maven | `maven-3.9` (v) | 🟢 Apache-2.0 | 767M | Languages & Runtimes | Build-tool image on top of our `java`. Near-zero effort, very high demand. |
-| [ ] | kong | `kong` (r) + `kong-entrypoint` | 🟢 Apache-2.0 | 359M | Web Servers & Proxies | The Wolfi package removes the OpenResty/Lua build problem that keeps `apisix` deferred. Fills a thin category (8). |
-| [ ] | neo4j | `neo4j-2025.12` (v) | 🟡 GPL-3.0 | 322M | Databases | Graph DB — a category we have zero coverage of. GPL precedent: dnsmasq, keepalived. |
+| [x] | kong | `kong` (r) + coreutils + busybox | 🟢 Apache-2.0 | 359M | Web Servers & Proxies | **Shipped 2026-09-28.** Not `kong-entrypoint` (needs bash for KONG_* env translation that CLI/env overrides already do). Two real gaps found in the Wolfi package: LuaJIT's shared lib isn't on the default loader path (needs `LD_LIBRARY_PATH`), and `kong start` shells out `ulimit -n` internally — carries `busybox` only (never bash) for that one call, same exception shape as the postgres family. |
+| [x] | neo4j | `neo4j-2025.12` (v) | 🟡 GPL-3.0 | 322M | Databases | **Shipped** (source-built, ahead of this survey). |
 | [ ] | gradle | `gradle-9` (v) | 🟢 Apache-2.0 | 300M | Languages & Runtimes | Same shape as maven. |
-| [ ] | perl | `perl` (r) | 🟡 Artistic-1.0 / GPL-1.0+ | 255M | Languages & Runtimes | Trivial; the last mainstream scripting runtime we're missing. |
-| [ ] | couchdb | `couchdb-3.3` (v) | 🟢 Apache-2.0 | 205M | Databases | Already named in Batch J as an Erlang source build — the Wolfi package makes it a W1, not an own-effort. |
+| [x] | perl | `perl` (r) | 🟡 Artistic-1.0 / GPL-1.0+ | 255M | Languages & Runtimes | **Shipped** (source-built, ahead of this survey). |
+| [x] | couchdb | `couchdb-3.3` (v) + busybox | 🟢 Apache-2.0 | 205M | Databases | **Shipped 2026-09-28.** `/usr/bin/couchdb` is itself a `#!/bin/sh` launcher script that builds the `erlexec` command line — no way to start it without a shell, so it carries `busybox` only (never bash), same exception shape as the postgres family. No admin account ships by default (CouchDB refuses to boot without one) — mount your own `local.ini`. |
 | [ ] | argo-cd | `argo-cd-3.2` + `-repo-server` (v) | 🟢 Apache-2.0 | 148M | K8s, CI & IaC | **Re-opens a deferred item.** Wolfi packaging removes the yarn-frontend build; the repo-server's runtime git/helm/kustomize needs still apply, so this is multi-image, not one. |
 | [ ] | rust | `rust-1.92` (v) | 🟢 MIT OR Apache-2.0 | 143M | Languages & Runtimes | Toolchain image (builder-shaped, like our `go`). |
-| [ ] | erlang | `erlang-28` (v) | 🟢 Apache-2.0 | 65M | Languages & Runtimes | Natural companion to `rabbitmq`. |
+| [x] | erlang | `erlang-28` (v) | 🟢 Apache-2.0 | 65M | Languages & Runtimes | **Shipped** (source-built, ahead of this survey). |
 | [x] | meilisearch | source-built | 🟢 MIT | 51M | Databases | Wolfi lagged seven releases, so v1.53.2 was built from source using the established Rust pattern. |
-| [ ] | temporal | `temporal` (r) | 🟢 MIT | 47M | Apps | Durable-execution server. Wolfi also has `temporal-ui-server-oci-entrypoint` if we want the UI later. |
+| [x] | temporal | source-built (temporal-server/-admin-tools/-ui-server) | 🟢 MIT | 47M | Apps | **Shipped** (source-built, three images, ahead of this survey — not the single apko-only `temporal` package this row originally named). |
 
 **Also packaged in Wolfi, parked deliberately:** `argo-workflows` (🟢 Apache — take
 with argo-cd or not at all), `harbor-2.14-*` (🟢 Apache, but 5+ images — own
@@ -280,6 +280,8 @@ exists to fill. It also keeps full auto-update coverage via
 | emqx | 47M pulls, but the repo is `NOASSERTION` (Apache core + BSL-ish enterprise pieces) and it's a large Erlang build. License read required first. |
 | timescaledb | 123M pulls, but the tree is split Apache-2.0 / TSL (source-available) — an Apache-only build is possible and is the only version we could ship. Own effort. |
 | pgadmin4 | 444M pulls (🟢 PostgreSQL license), Python + prebuilt frontend. Plausible via pip wheels; needs its own investigation. |
+| nextcloud | **Reclassified from W1, verified 2026-09-28.** `nextcloud-server-33` (307MB) bundles the full upstream Docker entrypoint model: Apache + PHP-FPM + cron + `docker-entrypoint-hooks.d` + `su-exec`, designed to boot as **root**, fix ownership, then `su -p "$user"` to a www-data-equivalent account for the actual server process — except that account does not exist in this package's `/etc/passwd`. That's an architecture mismatch with our nonroot-by-default model, not a config tweak: needs either a real user added at the apko layer plus reworking the entrypoint's privilege-drop assumptions, or accepting a root-then-drop exception like the postgres family but scoped to a much bigger, more stateful app (occ install flow, external DB requirement, persistent config/data volumes). Own effort, like harbor/argo-cd. |
+| sonarqube | **Reclassified from W1, verified 2026-09-28.** `sonarqube-10` (874MB) hard-depends on `bash`, `systemd-dev`, `zstd-dev`, and its own `sonarqube-startup` wrapper package — heavier packaging than a plain Java web app suggests. Bundles Elasticsearch internally and needs an external Postgres to run at all, so a meaningful smoke test is a multi-container compose, not a single `docker run`. Own effort, like harbor/argo-cd. |
 
 ### Confirmed avoid (🔴 non-OSS) — checked in this survey
 
@@ -294,6 +296,11 @@ Six images, all W1, no new build template, spanning four categories:
 **gitlab-runner · wordpress · maven · gradle · kong · perl** — the two largest
 demand numbers we're missing, the two cheapest Languages entries, and the first
 addition to Web Servers & Proxies since oauth2-proxy.
+
+**2026-09-28 batch:** kong + couchdb shipped (PR #779). sonarqube and nextcloud
+were pulled from this wave after inspection showed they need real design work
+(see the Tier W3 entries above), not a quick apko-only crank — don't onboard
+either from this table's original notes without re-reading the W3 entry first.
 
 ## Execution model
 
