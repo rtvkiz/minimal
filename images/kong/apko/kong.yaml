@@ -1,0 +1,90 @@
+# Minimal Kong image - using Wolfi's pre-built package
+# CVE patching via the 6-hourly rebuild (Wolfi rolling package)
+# Carries busybox only (never bash) for kong start's internal `ulimit -n`
+# shell-out — see the exception note below, same shape as the postgres family.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Kong from Wolfi (CVE-patched). Not kong-entrypoint: it depends on bash,
+    # and its only job is translating KONG_* env vars into kong.conf, which
+    # `kong start --<key> <value>` CLI overrides already do without a shell.
+    - kong
+
+    # The `kong` CLI is a `#!/usr/bin/env resty` Lua script, and `resty` is
+    # itself a `#!/usr/bin/env perl` script — both shebangs need /usr/bin/env
+    # to resolve, which no other package here provides. coreutils is a
+    # collection of file/text utilities, not a shell interpreter.
+    - coreutils
+
+    # Known exception (same shape as the postgres family, see onboarding.md
+    # §3): `kong start` shells out `ulimit -n` via Penlight's executeex to
+    # compute nginx's worker_rlimit_nofile default, during prefix prepare.
+    # `ulimit` is a shell builtin, not an executable, so with no /bin/sh this
+    # fails with an unhelpful blank error and kong never starts. busybox
+    # provides /bin/sh (ash) for exactly this one internal call — never bash.
+    - busybox
+
+    # Certificates (upstream/TLS connections)
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: kong
+      gid: 65532
+  users:
+    - username: kong
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+# `kong start` only takes -c/-p/--nginx-conf/--run-migrations/--db-timeout/
+# --lock-timeout as CLI flags — DB mode and daemon behavior are kong.conf
+# properties, set here as KONG_* env vars instead (upstream's own convention).
+# DB-less: no Postgres dependency, no declarative config required (an unset
+# KONG_DECLARATIVE_CONFIG starts with an empty route table). KONG_NGINX_DAEMON
+# off keeps nginx in the foreground so the container's PID 1 stays attached.
+entrypoint:
+  command: /usr/local/bin/kong start --prefix /usr/local/kong
+
+work-dir: /usr/local/kong
+
+environment:
+  PATH: /usr/local/bin:/usr/bin:/bin
+  # The Wolfi kong package ships OpenResty's bundled LuaJIT at a non-default
+  # loader path (not the system libdir), and does not declare it as a `so:`
+  # dependency — without this, `openresty -V` itself fails with "cannot open
+  # shared object file: libluajit-5.1.so.2" and every `kong` invocation dies.
+  LD_LIBRARY_PATH: /usr/local/openresty/luajit/lib
+  KONG_PREFIX: /usr/local/kong
+  KONG_DATABASE: "off"
+  KONG_NGINX_DAEMON: "off"
+
+paths:
+  - path: /usr/local/kong
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-kong"
+  org.opencontainers.image.description: "Hardened shell-less Kong API Gateway built on Wolfi with CVE patches on every rebuild"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kong"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

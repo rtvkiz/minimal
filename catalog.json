@@ -1581,6 +1581,18 @@
       "upstream_url": "https://neo4j.com",
       "summary": "Neo4j Community Edition graph database, built from the official release.",
       "description": "Neo4j Community Edition graph database with Cypher query support, built from the official binary release. Bash-required, rebuilt every 6 hours."
+    },
+    {
+      "name": "kong",
+      "category": "Web Servers & Proxies",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "kong",
+      "upstream_url": "https://konghq.com",
+      "summary": "Kong API Gateway built on Nginx and OpenResty.",
+      "description": "Kong API Gateway built on Nginx and OpenResty. DB-less by default, signed and SBOM-attested, rebuilt every 6 hours against upstream CVE fixes."
     }
   ]
 }
