@@ -38,7 +38,12 @@ jobs:
     # For workflow_run, only proceed when the build actually succeeded.
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Grown from a comfortable ~2min to right at the old 10min cap as the
+    # catalog passed 130 images (scan-report download + Astro build both
+    # scale with image count) — 2026-09-28 run finished (gh-pages force-push
+    # landed) but got marked "cancelled" because cleanup ran past the cap.
+    # Doubled for headroom; revisit if the catalog keeps growing.
+    timeout-minutes: 20
     permissions:
       contents: write    # force-push the built site to the gh-pages branch
       actions: read      # download artifacts from the build run
