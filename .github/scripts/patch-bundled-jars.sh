@@ -202,6 +202,7 @@ for i in $(seq 0 $((image_count - 1))); do
   # SWAPS lines: "artifact|group-path|installed|newver|sha256"
   SWAPS=""
   LIFT_DECLINED=""
+  GUARD_SAFE=""
   declare -A seen=()
   while IFS=$'\t' read -r artifact installed fix purl; do
     [ -n "$artifact" ] || continue
@@ -300,11 +301,33 @@ for i in $(seq 0 $((image_count - 1))); do
           sibgpath=$(printf '%s' "${sibgroup:-$group}" | tr . /)
           published "$sibgpath" "$sib" "$fixv" || {
             # Not every module in a family publishes every patch release —
-            # jackson-annotations stops at 2.21 while jackson-databind goes to
-            # 2.21.5. Declining is correct, but the straggler guard below must
-            # be told, or it fails the build for the very artifact we just
-            # decided (rightly) to leave alone.
-            echo "  family lift: $sib has no $fixv under $group, leaving it"
+            # jackson-annotations tracks the MINOR line only (2.22, no .2)
+            # while jackson-databind ships patch releases (2.22.2). Declining
+            # is correct, but the straggler guard below must be told, or it
+            # fails the build for the very artifact we just decided (rightly)
+            # to leave alone.
+            #
+            # That "tell the guard" step is NOT the blanket LIFT_DECLINED
+            # exclusion tried and reverted on 2026-08-27 (see the guard's own
+            # comment below) — that one silenced every decline regardless of
+            # cause and let cassandra ship jackson-annotations-2.19.2 beside
+            # jackson-databind-2.21.5, a genuine cross-minor-series mismatch,
+            # which crashed at runtime. The discriminator here is series: only
+            # exclude a decline when $fixv's own major.minor equals $sib's
+            # CURRENT major.minor — i.e. the sibling is already living in the
+            # target's minor line and simply has no patch-level release to
+            # move to, so leaving it in place cannot desync the classpath.
+            # A decline that lands in a genuinely different minor series (the
+            # cassandra case) still falls through to LIFT_DECLINED only and
+            # the guard correctly fails the build on it.
+            sib_series=$(printf '%s' "$sibver" | cut -d. -f1,2)
+            target_series=$(printf '%s' "$fixv" | cut -d. -f1,2)
+            if [ "$sib_series" = "$target_series" ]; then
+              echo "  family lift: $sib has no $fixv under $group (tracks minor-only releases in $sib_series); leaving $sib $sibver, guard-exempt"
+              GUARD_SAFE="${GUARD_SAFE}${sib}|${sibver}"$'\n'
+            else
+              echo "  family lift: $sib has no $fixv under $group, leaving it"
+            fi
             LIFT_DECLINED="${LIFT_DECLINED}${sib}"$'\n'
             continue; }
           tmp=$(mktemp)
@@ -550,25 +573,30 @@ for i in $(seq 0 $((image_count - 1))); do
         key="${pfx}|${series}|${fixv}"
         [ -n "${guarded[$key]:-}" ] && continue
         guarded[$key]=1
-        # NOTE: do NOT exclude artifacts the family lift declined.
-        #
-        # That was tried on 2026-08-27 and was wrong. jackson-annotations
-        # publishes no 2.21.5 (it tracks the MINOR line: 2.21 exists, 2.21.5
-        # does not), so the lift declined it and the exclusion told the guard
-        # to ignore it. The build then went green and cassandra died at
-        # runtime instead:
+        # Do NOT blanket-exclude every artifact the family lift declined — that
+        # was tried on 2026-08-27 and was wrong. jackson-annotations publishes
+        # no 2.21.5 (it tracks the MINOR line: 2.21 exists, 2.21.5 does not),
+        # the lift declined it, and an unconditional exclusion told the guard
+        # to ignore it. The build went green and cassandra died at runtime:
         #
         #   NoClassDefFoundError: com/fasterxml/jackson/annotation/JsonSerializeAs
         #   classpath: jackson-annotations-2.19.2.jar + jackson-databind-2.21.5.jar
         #
-        # The guard was right. A sibling that cannot reach $fixv is exactly the
-        # incompatible-family case it exists to catch, and silencing it only
-        # moved a cheap build failure into an expensive runtime one.
-        #
-        # The real fix is for the lift to fall back to the newest version in
-        # the same series (annotations 2.19.2 -> 2.21) rather than declining.
-        # Until that exists, images whose families need it stay report-only.
+        # That decline was NOT the same-series case: annotations was on 2.19,
+        # the fix target was 2.21 — a different minor series, so leaving it
+        # behind really is the incompatible classpath the guard exists to
+        # catch. GUARD_SAFE only ever holds declines where $fixv's own
+        # major.minor already equals the sibling's current major.minor (the
+        # opensearch/solr case: annotations sits at 2.22, databind moves to
+        # 2.22.2, and 2.22 is not a version annotations ever publishes) — the
+        # sibling is already living in the target's minor line, so excluding
+        # that one exact, already-verified file cannot desync the classpath.
         _excl=""
+        while IFS='|' read -r _gsib _gver; do
+          [ -n "$_gsib" ] || continue
+          case "$_gsib" in "$pfx"*) ;; *) continue ;; esac
+          _excl="${_excl} ! -name \"${_gsib}-${_gver}.jar\""
+        done <<< "$GUARD_SAFE"
         printf '      find "${{targets.destdir}}/%s" \\( -name "%s*-%s.*.jar" -o -name "%s*-%s.jar" \\) ! -name "*-%s.jar" ! -name "*-%s-*.jar"%s >> "$_strag" 2>/dev/null || true\n' \
           "$jar_root" "$pfx" "$series" "$pfx" "$series" "$fixv" "$fixv" "$_excl"
       done <<< "$SWAPS"
