@@ -142,7 +142,9 @@ jobs:
             {"name":"java","grep":"openjdk-[0-9]+","variants":["prod","dev"]},
             {"name":"dnsmasq","grep":"dnsmasq","variants":["prod","dev"]},
             {"name":"vector","grep":"vector","variants":["prod","dev"]},
-            {"name":"patroni","grep":"patroni","variants":["prod","dev"]}
+            {"name":"patroni","grep":"patroni","variants":["prod","dev"]},
+            {"name":"kong","grep":"kong","variants":["prod","dev"]},
+            {"name":"couchdb","grep":"couchdb-3.3","variants":["prod","dev"]}
           ]'
 
           # Determine if full rebuild is needed
