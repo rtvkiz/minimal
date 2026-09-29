@@ -1,0 +1,71 @@
+# Minimal CouchDB image - using Wolfi's pre-built package
+# CVE patching via the 6-hourly rebuild (Wolfi versioned package)
+# Carries busybox only (never bash): the `couchdb` launcher is itself a
+# `#!/bin/sh` script (plain POSIX, no bashisms) that builds the erl command
+# line — there is no way to start CouchDB without a shell.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # CouchDB from Wolfi (CVE-patched)
+    - couchdb-3.3
+
+    # /usr/bin/couchdb is a #!/bin/sh launcher script — no shell, no start.
+    - busybox
+
+    # Certificates
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: couchdb
+      gid: 65532
+  users:
+    - username: couchdb
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+# No admin account ships by default — CouchDB refuses to start without one
+# ("no admin account found, aborting startup"). Mount your own local.ini at
+# /usr/share/couchdb/etc/local.ini with an [admins] section (and, in
+# production, TLS + a real database_dir/view_index_dir outside the image).
+# database_dir/view_index_dir default to "./data" (relative to the process
+# cwd), so work-dir is set to /data and the same path is pre-created and
+# owned by nonroot for a bind-mounted volume.
+entrypoint:
+  command: /usr/bin/couchdb
+
+work-dir: /data
+
+environment:
+  PATH: /usr/bin:/bin
+
+paths:
+  - path: /data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-couchdb"
+  org.opencontainers.image.description: "Hardened CouchDB document database built on Wolfi with CVE patches on every rebuild"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/couchdb"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64
