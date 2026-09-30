@@ -10,7 +10,7 @@ package:
   # as cpe:2.3:a:opa:opa:*, so none of them matched, and the Wolfi secdb missed
   # it too.
   name: opa
-  version: 1.21.0
+  version: 1.21.1
   epoch: 0
   description: "Minimal Open Policy Agent (OPA) built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 of opa source tarball - updated by update-versions.yml workflow
-  sha256: 0e486b6a7707ee60a55f239d632d6d3d5b8eca485145f8e1eb630262aac00d7d
+  sha256: 8989ae9dfc1a0e5406eed6a65fcecca97a0f1f57f50b533c97e65f06643ec275
 
 environment:
   contents:
