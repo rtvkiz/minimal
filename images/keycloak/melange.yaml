@@ -160,8 +160,16 @@ pipeline:
         rm -f /tmp/_bj.jar
       }
       _swap bcprov-jdk18on org/bouncycastle 1.84 1.85 20af26bf6060bb8005cc2389916812c1e0e998dc48d2ced7131b89461b54cff7 keep-filename -
-      _swap jackson-core com/fasterxml/jackson/core 2.21.2 2.21.5 b64b5874162b503a0e58a8f7758266e8dd9f91bf49e3a59ae0b5f47589a231b7 keep-filename -
-      _swap jackson-databind com/fasterxml/jackson/core 2.21.2 2.21.5 507418c0fafd38b2b2cfb704521630da613a8e4cc8381195a6f418017883e2c0 keep-filename -
+      _swap jackson-core com/fasterxml/jackson/core 2.21.5 2.21.6 36111c3a4372cd5c2be6f4ec44a050382487920f3fc38ca3015c9c1678bd7c56 keep-filename -
+      _swap jackson-databind com/fasterxml/jackson/core 2.21.5 2.21.6 62134a98de12d0a421cd2f5b9854c8e63f10f524b0341e66cfd31a4326f6a329 keep-filename -
+      _swap jackson-dataformat-cbor com/fasterxml/jackson/dataformat 2.21.5 2.21.6 1682391f5deb36acbd34702eeeecd9f2f450c8e468504de05784a27aabdef5e3 keep-filename -
+      _swap jackson-dataformat-yaml com/fasterxml/jackson/dataformat 2.21.5 2.21.6 e5a4ea8c86f9f8d068bb280b69be5c450f263343b4bf1d81be8586d4e8d5c698 keep-filename -
+      _swap jackson-datatype-jdk8 com/fasterxml/jackson/datatype 2.21.5 2.21.6 ffcb606cc9fec4ad22c096fdc101bf1b6eb17b5f53c741ab306632ecdf4a438e keep-filename -
+      _swap jackson-datatype-jsr310 com/fasterxml/jackson/datatype 2.21.5 2.21.6 1d82027afe574c63e24df72eb109f98de02dff3bb5adf81f0174b27088490067 keep-filename -
+      _swap jackson-jakarta-rs-base com/fasterxml/jackson/jakarta/rs 2.21.5 2.21.6 4e8da867d765d2911d3484ef2f10d7a6f10ac45e1eda6b50c8505d0b4f997b0e keep-filename -
+      _swap jackson-jakarta-rs-yaml-provider com/fasterxml/jackson/jakarta/rs 2.21.5 2.21.6 cc0c924b7b534d99bfe7038f6727dabb8b945eddb7832754b9e9b36ee43a0847 keep-filename -
+      _swap jackson-module-jakarta-xmlbind-annotations com/fasterxml/jackson/module 2.21.5 2.21.6 9fe4f941ba14dfa49b6120a0f2c307b06bfd60bce797f9cfed72a2abca8befdf keep-filename -
+      _swap jackson-module-parameter-names com/fasterxml/jackson/module 2.21.5 2.21.6 24f5c6f75fad85d7e2e3f600ef4832a839def8a2bf1e6f2fc5a0577cef54e01d keep-filename -
       _swap micrometer-commons io/micrometer 1.16.3 1.16.6 45aff76226830db257f4bc39a5bcff83d633e572fee9dc4e45cfa12af9a0a49a keep-filename -
       _swap micrometer-core io/micrometer 1.16.3 1.16.6 1957ef2deaffbc1fb98cebfd0f5b3109ecf19c994d7e5378598c20747ba8d68b keep-filename -
       _swap micrometer-observation io/micrometer 1.16.3 1.16.6 4c0826d5e7c8522a8e111470b4e77f77b0a10f520eb5502ddd143fdbcedb2340 keep-filename -

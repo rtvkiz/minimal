@@ -185,6 +185,17 @@ pipeline:
       _swap async-http-client-netty-utils org/asynchttpclient 2.15.0 2.16.1 5dc30eb034ec1daea2578e3ecf861ee3212f8693170f7da53cc3503a9ff44971 rename -
       _swap async-http-client org/asynchttpclient 2.15.0 2.16.1 9e76dd36d4ef6e13e81e2478f4e18723cabda0fe2e3b7ad6a4f41990969a7c90 rename -
       _swap bcprov-jdk18on org/bouncycastle 1.84 1.85 20af26bf6060bb8005cc2389916812c1e0e998dc48d2ced7131b89461b54cff7 rename -
+      _swap jackson-annotations com/fasterxml/jackson/core 2.18.9 2.18.10 67634a683cfb1695e55c78e351c5f38f4de0d8c64ed567419b8fe2d1dc354ada rename -
+      _swap jackson-core com/fasterxml/jackson/core 2.18.9 2.18.10 e4544eec5754d2dd06c6b16cfc9d2883a523f7177c2429ab04b29ab5fab445c9 rename -
+      _swap jackson-databind com/fasterxml/jackson/core 2.18.9 2.18.10 ead55a0c649b11af6148a0c097323f5438afc5f563e7139681ad8277fff520bf rename -
+      _swap jackson-dataformat-yaml com/fasterxml/jackson/dataformat 2.18.9 2.18.10 8b4fae8cb7f12985f315dc10a743c4cc10aea21e8fbb422c2c2898251e719b34 rename -
+      _swap jackson-datatype-jdk8 com/fasterxml/jackson/datatype 2.18.9 2.18.10 0d33f154b223288e8c0a8dad89db6e1c1405639c342a215cff0126fc5d21a0e4 rename -
+      _swap jackson-datatype-jsr310 com/fasterxml/jackson/datatype 2.18.9 2.18.10 6ffb3871a5ce3479c56136b1e5053854bd1cfb9dbc7de1b18208089f7a33c592 rename -
+      _swap jackson-jaxrs-base com/fasterxml/jackson/jaxrs 2.18.9 2.18.10 884108d2ee5adf442daf48bccba3d42b9ada6442a84e1bdaf91911b3e61da705 rename -
+      _swap jackson-jaxrs-json-provider com/fasterxml/jackson/jaxrs 2.18.9 2.18.10 536fb938910897d6934488028fd6ff546dd4c76d3754be5f007ebee52bbcc28a rename -
+      _swap jackson-module-jaxb-annotations com/fasterxml/jackson/module 2.18.9 2.18.10 a741b5e1f2d8eb8657bf571dc1f8bef0f23307dc0fc64603231e4ef468d1987d rename -
+      _swap jackson-module-jsonSchema com/fasterxml/jackson/module 2.18.9 2.18.10 08c3e900dfbde81a91b70a42cfd4eabebf11dc078bddfe567c4d24efac567eec rename -
+      _swap jackson-module-parameter-names com/fasterxml/jackson/module 2.18.9 2.18.10 89981bea2259611821740cb59dbd8691742edfe568134d38e52c19937bf8872d rename -
       _swap jline-builtins org/jline 4.2.1 4.3.1 1c9eb7a03796990cdc7266663f8330e27635dfc33904221d67ff1a8e21f1fbc3 rename -
       _swap jline-native org/jline 4.2.1 4.3.1 ff94ab4bccc3c1549444082ce07a2760cbf1ad4dae04e43508597bd802bcb231 rename -
       _swap jline-reader org/jline 4.2.1 4.3.1 02aa899906086ce9d9c992bb05aed776045e5915a180e717dcb661fb87ab84d3 rename -
@@ -227,6 +238,7 @@ pipeline:
       _strag=/tmp/_bj_stragglers; : > "$_strag"
       find "${{targets.destdir}}/opt/pulsar" \( -name "async*-2.15.*.jar" -o -name "async*-2.15.jar" \) ! -name "*-2.16.1.jar" ! -name "*-2.16.1-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "bcprov*-1.84.*.jar" -o -name "bcprov*-1.84.jar" \) ! -name "*-1.85.jar" ! -name "*-1.85-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "jackson*-2.18.*.jar" -o -name "jackson*-2.18.jar" \) ! -name "*-2.18.10.jar" ! -name "*-2.18.10-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "jline*-4.2.*.jar" -o -name "jline*-4.2.jar" \) ! -name "*-4.3.1.jar" ! -name "*-4.3.1-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "log4j*-2.25.*.jar" -o -name "log4j*-2.25.jar" \) ! -name "*-2.25.5.jar" ! -name "*-2.25.5-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "lz4*-1.10.*.jar" -o -name "lz4*-1.10.jar" \) ! -name "*-1.11.1.jar" ! -name "*-1.11.1-*.jar" >> "$_strag" 2>/dev/null || true
