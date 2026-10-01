@@ -74,6 +74,12 @@ pipeline:
         "/home/build/airflow.tar.gz" \
         --constraint /home/build/constraints.txt
 
+  # patch-python-deps: auto-generated — do not edit manually
+  - runs: |
+      cd /home/build
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "pyjwt==2.15.0"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "urllib3==2.8.0"
+  # end-patch-python-deps
   - runs: |
       # Trim what a running scheduler/API server never reads. Test trees and
       # bytecode caches are a large share of the closure and carry their own
