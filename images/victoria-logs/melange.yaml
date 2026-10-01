@@ -8,14 +8,14 @@ package:
   # for the image. See docs/onboarding.md "Package naming and scanner
   # visibility" (haproxy-minimal: 0 findings vs haproxy: 14, same version).
   name: victoria-logs
-  version: 1.52.0
+  version: 1.53.0
   epoch: 0
   description: "VictoriaLogs log database built from source via melange."
   copyright:
     - license: Apache-2.0
 
 vars:
-  sha256: 90d20500b5d9ecc41b0e1c2487696cde8aa16b025a1f2d176d53d759490d8f90
+  sha256: 9dab43bfb2ccc2b3009a2e7cacd798f12b561a92f4a29c8a697c60295a383874
 
 environment:
   contents:
