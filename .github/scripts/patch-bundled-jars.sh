@@ -399,6 +399,42 @@ for i in $(seq 0 $((image_count - 1))); do
       $0 ~ "# end-" id {inb=0}
       inb && $1 == "_swap" { print $2"|"$3"|"$4"|"$5"|"$6"|"($8==""?"-":$8) }
     ' "$melange")
+    # Sticky guard-safe exemptions. GUARD_SAFE above is only populated when
+    # THIS cycle's syft family-lift walk independently re-derives a decline
+    # (e.g. jackson-annotations has no patch release for the new series) —
+    # that walk only runs over artifacts present in THIS cycle's fresh SWAPS.
+    # When the scan finds nothing new (the sticky-merge case right below,
+    # pulling the swap list from the prior block instead), the lift never
+    # runs and GUARD_SAFE comes back empty even though the straggler guard
+    # is about to be rebuilt for an artifact whose exemption was earned on a
+    # previous cycle. That dropped the solr jackson-annotations exemption
+    # entirely on a cycle where grype returned 0 new findings (#783) and
+    # failed the build over a jar that was never actually wrong. Read back
+    # any extra `! -name "<artifact>-<version>.jar"` clauses already baked
+    # into the existing guard (beyond the two standard `*-$fixv[-*].jar`
+    # clauses every guard line carries) and carry them forward exactly like
+    # PRIOR does for swaps.
+    PRIOR_GUARD_LINES=$(awk -v id="$marker_id" '
+      $0 ~ "# " id ": auto-generated" {inb=1; next}
+      $0 ~ "# end-" id {inb=0}
+      inb && /^ *find / { print }
+    ' "$melange")
+    if [ -n "$PRIOR_GUARD_LINES" ]; then
+      while IFS= read -r fline; do
+        [ -n "$fline" ] || continue
+        fixv=$(printf '%s' "$fline" | grep -oP '(?<=! -name "\*-)[^"]+(?=\.jar")' | head -1)
+        [ -n "$fixv" ] || continue
+        while IFS= read -r ex; do
+          [ -n "$ex" ] || continue
+          case "$ex" in "*-${fixv}.jar"|"*-${fixv}-"*) continue ;; esac
+          base="${ex%.jar}"
+          exver="${base##*-}"
+          exname="${base%-"${exver}"}"
+          [ -n "$exname" ] && [ -n "$exver" ] || continue
+          GUARD_SAFE="${GUARD_SAFE}${exname}|${exver}"$'\n'
+        done < <(printf '%s' "$fline" | grep -oP '(?<=! -name ")[^"]+(?=")')
+      done <<< "$PRIOR_GUARD_LINES"
+    fi
     if [ -n "$PRIOR" ]; then
       scan_n=$(printf '%s' "$SWAPS" | grep -c . || true)
       declare -A BEST=()
