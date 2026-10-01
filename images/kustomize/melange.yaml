@@ -10,7 +10,7 @@ package:
   # product bare, as cpe:2.3:a:kustomize:kustomize:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: kustomize
-  version: 5.8.1
+  version: 5.8.2
   epoch: 0
   description: "Minimal Kustomize Kubernetes config tool built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 of kustomize source tarball - updated by update-versions.yml workflow
-  sha256: 4ea5a974c46ad6efcde4fd9c339ab1bd278a80b6872dda2d1a366936e4638475
+  sha256: b70517ccd6986c3ec19a636bb877da9687d3420216d359e26628e5e03714b758
 
 environment:
   contents:
