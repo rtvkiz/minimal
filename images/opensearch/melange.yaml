@@ -16,7 +16,7 @@ package:
   # product bare, as cpe:2.3:a:opensearch:opensearch:*, so none of them
   # matched, and the Wolfi secdb missed it too.
   name: opensearch
-  version: 3.8.0
+  version: 3.9.0
   epoch: 0
   description: "Minimal OpenSearch from the official upstream min distribution"
   copyright:
@@ -35,8 +35,8 @@ package:
 vars:
   # SHA512 of the official opensearch-min-<ver>-linux-<arch>.tar.gz, from the
   # upstream .sha512 files. Updated by update-versions.yml.
-  sha512_x86: d29783b45a3ce99b47cab6b0bf1209fc856be6e530b3b95d247af48cd4ccc18b70c5e9cb4cde332bd65b615ac51047ea97ac96249178b47fea618ad3fa416f24
-  sha512_arm: 244b0c4ff07079636c48f75788814937516f8a8dfb94c04d3dd149da7f23476503e9801f4a20fe62e0c701f6c74adb2dd50ec0c9e8d97b5e5a9774f5a1089755
+  sha512_x86: adb28c45a873946211e203bbf92ba8d618183c9aff4aede66aa04b6ff40c0a4a04d35c77584743760409e8092821683bdc93ff2fb92f952791f6b7f27facb842
+  sha512_arm: 68e484ad6a141bfc66a8ac259fddeee0c876985a9a12f6db37503b9da5cba46ed75efb7dcd2ddd096fc23421b461a17bbf51435ba65a12af807e307f4f1e79c2
 
 environment:
   contents:
@@ -175,11 +175,11 @@ pipeline:
       _swap netty-transport-native-unix-common io/netty 4.2.16.Final 4.2.17.Final e01aa467b9104de54a57c08c290f70b22e53ec97cf5583c87c112170ef5832cc rename -
       _swap netty-transport io/netty 4.2.16.Final 4.2.17.Final d2409ce3a735cbab4188d0ea5d82abed823a6a07a8389f49af4a9e1243a562bc rename -
       _strag=/tmp/_bj_stragglers; : > "$_strag"
-      find "${{targets.destdir}}/usr/share/opensearch" \( -name "httpclient5*-5.6.*.jar" -o -name "httpclient5*-5.6.jar" \) ! -name "*-5.6.3.jar" ! -name "*-5.6.3-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/usr/share/opensearch" \( -name "httpclient5*-5.6.*.jar" -o -name "httpclient5*-5.6.jar" \) ! -name "*-5.6.4.jar" ! -name "*-5.6.4-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/usr/share/opensearch" \( -name "httpcore5*-5.4.*.jar" -o -name "httpcore5*-5.4.jar" \) ! -name "*-5.4.3.jar" ! -name "*-5.4.3-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/usr/share/opensearch" \( -name "jackson*-2.22.*.jar" -o -name "jackson*-2.22.jar" \) ! -name "*-2.22.2.jar" ! -name "*-2.22.2-*.jar" ! -name "jackson-annotations-2.22.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/usr/share/opensearch" \( -name "log4j*-2.25.*.jar" -o -name "log4j*-2.25.jar" \) ! -name "*-2.25.5.jar" ! -name "*-2.25.5-*.jar" >> "$_strag" 2>/dev/null || true
-      find "${{targets.destdir}}/usr/share/opensearch" \( -name "netty*-4.2.*.jar" -o -name "netty*-4.2.jar" \) ! -name "*-4.2.17.Final.jar" ! -name "*-4.2.17.Final-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/usr/share/opensearch" \( -name "netty*-4.2.*.jar" -o -name "netty*-4.2.jar" \) ! -name "*-4.2.18.Final.jar" ! -name "*-4.2.18.Final-*.jar" >> "$_strag" 2>/dev/null || true
       if [ -s "$_strag" ]; then
         echo "patch-bundled-jars: jars left on a superseded version:" >&2
         sort -u "$_strag" >&2
