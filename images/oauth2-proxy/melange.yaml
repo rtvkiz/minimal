@@ -12,7 +12,7 @@ package:
   # this product bare, as cpe:2.3:a:oauth2-proxy:oauth2-proxy:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: oauth2-proxy
-  version: 7.15.4
+  version: 7.15.5
   epoch: 0
   description: "Minimal OAuth2 Proxy (OIDC/OAuth2 authenticating reverse proxy) built from source"
   copyright:
@@ -30,7 +30,7 @@ package:
 
 vars:
   # SHA256 of oauth2-proxy source tarball - updated by update-versions.yml workflow
-  sha256: 52e46276359e8e06cc53e9636f605784b9d6f21819c2592d07f9cf5c1eb78779
+  sha256: cf8055fecef1f89bcc89834d3342009b4067e80b1994e6bb5c2456d8ff68995b
 
 environment:
   contents:
