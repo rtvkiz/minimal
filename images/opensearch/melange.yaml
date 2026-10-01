@@ -175,11 +175,11 @@ pipeline:
       _swap netty-transport-native-unix-common io/netty 4.2.16.Final 4.2.17.Final e01aa467b9104de54a57c08c290f70b22e53ec97cf5583c87c112170ef5832cc rename -
       _swap netty-transport io/netty 4.2.16.Final 4.2.17.Final d2409ce3a735cbab4188d0ea5d82abed823a6a07a8389f49af4a9e1243a562bc rename -
       _strag=/tmp/_bj_stragglers; : > "$_strag"
-      find "${{targets.destdir}}/usr/share/opensearch" \( -name "httpclient5*-5.6.*.jar" -o -name "httpclient5*-5.6.jar" \) ! -name "*-5.6.3.jar" ! -name "*-5.6.3-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/usr/share/opensearch" \( -name "httpclient5*-5.6.*.jar" -o -name "httpclient5*-5.6.jar" \) ! -name "*-5.6.4.jar" ! -name "*-5.6.4-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/usr/share/opensearch" \( -name "httpcore5*-5.4.*.jar" -o -name "httpcore5*-5.4.jar" \) ! -name "*-5.4.3.jar" ! -name "*-5.4.3-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/usr/share/opensearch" \( -name "jackson*-2.22.*.jar" -o -name "jackson*-2.22.jar" \) ! -name "*-2.22.2.jar" ! -name "*-2.22.2-*.jar" ! -name "jackson-annotations-2.22.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/usr/share/opensearch" \( -name "log4j*-2.25.*.jar" -o -name "log4j*-2.25.jar" \) ! -name "*-2.25.5.jar" ! -name "*-2.25.5-*.jar" >> "$_strag" 2>/dev/null || true
-      find "${{targets.destdir}}/usr/share/opensearch" \( -name "netty*-4.2.*.jar" -o -name "netty*-4.2.jar" \) ! -name "*-4.2.17.Final.jar" ! -name "*-4.2.17.Final-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/usr/share/opensearch" \( -name "netty*-4.2.*.jar" -o -name "netty*-4.2.jar" \) ! -name "*-4.2.18.Final.jar" ! -name "*-4.2.18.Final-*.jar" >> "$_strag" 2>/dev/null || true
       if [ -s "$_strag" ]; then
         echo "patch-bundled-jars: jars left on a superseded version:" >&2
         sort -u "$_strag" >&2
