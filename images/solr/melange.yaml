@@ -379,11 +379,11 @@ pipeline:
         rm -f /tmp/_bj.jar
       }
       _swap httpclient5 org/apache/httpcomponents/client5 5.2.1 5.6.3 80712ff129210d7c73d9fcc1195cbee5c3c34744965c7a05ea107b3648922f18 rename -
-      _swap jackson-core com/fasterxml/jackson/core 2.21.6 2.21.7 8c5623b98f32d5f7e1287ff61ed50e08ab7b11381e991fff89327faabba42261 rename -
-      _swap jackson-databind com/fasterxml/jackson/core 2.21.6 2.21.7 1290c2795e93e8a6861a6c4d9ff0d844d32f5ea178362cb2721edf5561e828b1 rename -
-      _swap jackson-dataformat-cbor com/fasterxml/jackson/dataformat 2.21.6 2.21.7 8f223039151b495787e5c706ead12feeb9a5cdfe3b8df50464a4fb985047236c rename -
-      _swap jackson-dataformat-smile com/fasterxml/jackson/dataformat 2.21.6 2.21.7 52f6549816e1166b5e658624d3ea71d3978cc37058a8a853afa59d91c534555c rename -
-      _swap jackson-module-jakarta-xmlbind-annotations com/fasterxml/jackson/module 2.21.6 2.21.7 76054ca6e252e7142fec9c0e9a146bd8c43cde13dddf2d1cdaecd9db981c2ddc rename -
+      _swap jackson-core com/fasterxml/jackson/core 2.21.5 2.21.7 8c5623b98f32d5f7e1287ff61ed50e08ab7b11381e991fff89327faabba42261 rename -
+      _swap jackson-databind com/fasterxml/jackson/core 2.21.5 2.21.7 1290c2795e93e8a6861a6c4d9ff0d844d32f5ea178362cb2721edf5561e828b1 rename -
+      _swap jackson-dataformat-cbor com/fasterxml/jackson/dataformat 2.21.5 2.21.7 8f223039151b495787e5c706ead12feeb9a5cdfe3b8df50464a4fb985047236c rename -
+      _swap jackson-dataformat-smile com/fasterxml/jackson/dataformat 2.21.5 2.21.7 52f6549816e1166b5e658624d3ea71d3978cc37058a8a853afa59d91c534555c rename -
+      _swap jackson-module-jakarta-xmlbind-annotations com/fasterxml/jackson/module 2.21.5 2.21.7 76054ca6e252e7142fec9c0e9a146bd8c43cde13dddf2d1cdaecd9db981c2ddc rename -
       _swap log4j-1.2-api org/apache/logging/log4j 2.25.4 2.25.5 4dd812dc5a6343f542a9e0046b1ec78ecf10bdd5a8c15745101cdd8b9aa24974 rename -
       _swap log4j-api org/apache/logging/log4j 2.25.4 2.25.5 64777f73ea0b3104c04eb82befbdccc30a425a19e83ad06cb2f93aa303511863 rename -
       _swap log4j-core org/apache/logging/log4j 2.25.4 2.25.5 050c4f85deb48b055e9c041ac39043fbb79ce477841a11a1eb2969c86c6a0072 rename -
