@@ -43,7 +43,7 @@ environment:
       - cmake
       - flex
       - bison
-      - openssl-dev
+      - openssl-4.0-dev
       - curl-dev
       - zlib-dev
       - yaml-dev
