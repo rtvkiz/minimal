@@ -146,12 +146,12 @@ pipeline:
       _swap httpcore5-h2 org/apache/httpcomponents/core5 5.4 5.4.3 c7db7026b8e2dea39132b04a6069f6671e2858309b20a146ec5c7dd6ed73a0b6 rename -
       _swap httpcore5-reactive org/apache/httpcomponents/core5 5.4 5.4.3 f3b7c80d6021fee8ad42628d41eb826905fb3b595c211f001fdffa7fa1ecec3d rename -
       _swap httpcore5 org/apache/httpcomponents/core5 5.4 5.4.3 18bfbbabb478dfb67f31aeaf428c387f3c3df654582e1309f708ee1f3086830a rename -
-      _swap jackson-core com/fasterxml/jackson/core 2.22.1 2.22.2 ff167a6317be15895706c26668f45b898efe40ab8780970658210fe1393d52a6 rename -
-      _swap jackson-databind com/fasterxml/jackson/core 2.22.1 2.22.2 d0da14c12b16b5d54719aa172d83b542ff4abeb8b0fb7db476fde8ceece760ca rename -
-      _swap jackson-dataformat-cbor com/fasterxml/jackson/dataformat 2.22.1 2.22.2 66bd4b08703fa2278c696e6bc85fb1ce955cb63d80c18763853ee55e21f75664 rename -
-      _swap jackson-dataformat-smile com/fasterxml/jackson/dataformat 2.22.1 2.22.2 de84384341c6113fd8832d5cb472373df074371e4a7215c600dfa1de95e8f7ea rename -
-      _swap jackson-dataformat-yaml com/fasterxml/jackson/dataformat 2.22.1 2.22.2 f5e52c7d8914f23c5fcc00d0afbef77e20557228a6200e184bb61f69ab03fc44 rename -
-      _swap jackson-datatype-jsr310 com/fasterxml/jackson/datatype 2.22.1 2.22.2 9df71cc7fb3781fd0bed6c05eebbfa8b39292a49f5619e76fdd0d889f64c8f33 rename -
+      _swap jackson-core tools/jackson/core 3.2.2 3.2.3 a0c17e7e665a5e95c82f5fb45c0fec2ae3dc556c80f0016452c9c84cd23f3817 rename -
+      _swap jackson-databind com/fasterxml/jackson/core 2.22.2 2.22.3 556db5439e206114346043f68d200497dc96a0bca62a360a81784092ebd0e0a9 rename -
+      _swap jackson-dataformat-cbor tools/jackson/dataformat 3.2.2 3.2.3 b7e4e671e2f2ceab70b75119d59d527b89e039c1a8c21eac6267a1a8ecf637be rename -
+      _swap jackson-dataformat-smile tools/jackson/dataformat 3.2.2 3.2.3 acb78b50561181a4811da09702cf96f7f5dd0e15d06b085a547eee9ec0d6f742 rename -
+      _swap jackson-dataformat-yaml tools/jackson/dataformat 3.2.2 3.2.3 260dd15f1a044dc00cbefd6f01198403fe45ff4ae5fc37895a7842cab6c583d0 rename -
+      _swap jackson-datatype-jsr310 com/fasterxml/jackson/datatype 2.22.2 2.22.3 ec7052ee48c9d873bb8148338a643f02cf89c01d035dd219411473030d6d2b22 rename -
       _swap log4j-api org/apache/logging/log4j 2.25.4 2.25.5 64777f73ea0b3104c04eb82befbdccc30a425a19e83ad06cb2f93aa303511863 rename -
       _swap log4j-core org/apache/logging/log4j 2.25.4 2.25.5 050c4f85deb48b055e9c041ac39043fbb79ce477841a11a1eb2969c86c6a0072 rename -
       _swap log4j-jul org/apache/logging/log4j 2.25.4 2.25.5 23c0b34c3c31811bea7716a33137d1e9e8e228f9f8c240b69f30cdca9afe9a7a rename -
@@ -175,11 +175,12 @@ pipeline:
       _swap netty-transport-native-unix-common io/netty 4.2.16.Final 4.2.17.Final e01aa467b9104de54a57c08c290f70b22e53ec97cf5583c87c112170ef5832cc rename -
       _swap netty-transport io/netty 4.2.16.Final 4.2.17.Final d2409ce3a735cbab4188d0ea5d82abed823a6a07a8389f49af4a9e1243a562bc rename -
       _strag=/tmp/_bj_stragglers; : > "$_strag"
-      find "${{targets.destdir}}/usr/share/opensearch" \( -name "httpclient5*-5.6.*.jar" -o -name "httpclient5*-5.6.jar" \) ! -name "*-5.6.4.jar" ! -name "*-5.6.4-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/usr/share/opensearch" \( -name "httpclient5*-5.6.*.jar" -o -name "httpclient5*-5.6.jar" \) ! -name "*-5.6.3.jar" ! -name "*-5.6.3-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/usr/share/opensearch" \( -name "httpcore5*-5.4.*.jar" -o -name "httpcore5*-5.4.jar" \) ! -name "*-5.4.3.jar" ! -name "*-5.4.3-*.jar" >> "$_strag" 2>/dev/null || true
-      find "${{targets.destdir}}/usr/share/opensearch" \( -name "jackson*-2.22.*.jar" -o -name "jackson*-2.22.jar" \) ! -name "*-2.22.2.jar" ! -name "*-2.22.2-*.jar" ! -name "jackson-annotations-2.22.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/usr/share/opensearch" \( -name "jackson*-3.2.*.jar" -o -name "jackson*-3.2.jar" \) ! -name "*-3.2.3.jar" ! -name "*-3.2.3-*.jar" ! -name "jackson-annotations-2.22.jar" ! -name "jackson-annotations-2.22.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/usr/share/opensearch" \( -name "jackson*-2.22.*.jar" -o -name "jackson*-2.22.jar" \) ! -name "*-2.22.3.jar" ! -name "*-2.22.3-*.jar" ! -name "jackson-annotations-2.22.jar" ! -name "jackson-annotations-2.22.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/usr/share/opensearch" \( -name "log4j*-2.25.*.jar" -o -name "log4j*-2.25.jar" \) ! -name "*-2.25.5.jar" ! -name "*-2.25.5-*.jar" >> "$_strag" 2>/dev/null || true
-      find "${{targets.destdir}}/usr/share/opensearch" \( -name "netty*-4.2.*.jar" -o -name "netty*-4.2.jar" \) ! -name "*-4.2.18.Final.jar" ! -name "*-4.2.18.Final-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/usr/share/opensearch" \( -name "netty*-4.2.*.jar" -o -name "netty*-4.2.jar" \) ! -name "*-4.2.17.Final.jar" ! -name "*-4.2.17.Final-*.jar" >> "$_strag" 2>/dev/null || true
       if [ -s "$_strag" ]; then
         echo "patch-bundled-jars: jars left on a superseded version:" >&2
         sort -u "$_strag" >&2
