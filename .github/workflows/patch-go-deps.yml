@@ -549,8 +549,9 @@ jobs:
               # sweep above when grype happens to flag it directly. Bumping
               # otel/sdk/log alone (which requires a newer otel/log) leaves
               # otel/log behind, and every log exporter that imports it —
-              # otlploggrpc, otlploghttp, stdout/stdoutlog, each versioned on
-              # their OWN separate 0.x line — fails to compile against the
+              # otlploggrpc, otlploghttp, stdout/stdoutlog, and the
+              # contrib/bridges/otellogrus bridge — each versioned on their
+              # OWN separate 0.x line — fails to compile against the
               # mismatched API ("undefined: log.Value", "api.KeyValue" ...).
               # Hit loki/mimir/tempo/temporal-server/traefik/zot at once
               # (2026-10-04) because none of them run TEST-AND-KEEP probing,
@@ -567,7 +568,8 @@ jobs:
                 for logexp in \
                   go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc \
                   go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp \
-                  go.opentelemetry.io/otel/exporters/stdout/stdoutlog; do
+                  go.opentelemetry.io/otel/exporters/stdout/stdoutlog \
+                  go.opentelemetry.io/contrib/bridges/otellogrus; do
                   exp_latest=$(curl -fs --max-time 10 "https://proxy.golang.org/${logexp}/@latest" 2>/dev/null | jq -r '.Version // ""')
                   [ -z "$exp_latest" ] && continue
                   FIXES=$(echo "$FIXES" | grep -v "^${logexp}@" || true)
