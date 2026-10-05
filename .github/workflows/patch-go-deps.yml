@@ -534,14 +534,81 @@ jobs:
               OTEL_GRYPE_TOP=$(echo "$OTEL_LINES" | sed 's/.*@//' | sort -V | tail -1)
               OTEL_PROXY_TOP=$(curl -fs --max-time 10 "https://proxy.golang.org/go.opentelemetry.io/otel/@latest" 2>/dev/null | jq -r '.Version // ""')
               OTEL_TOP=$(printf '%s\n%s\n' "$OTEL_GRYPE_TOP" "$OTEL_PROXY_TOP" | grep -v '^$' | sort -V | tail -1)
+              OTEL_TOP_MAJOR="${OTEL_TOP#v}"; OTEL_TOP_MAJOR="${OTEL_TOP_MAJOR%%.*}"
               echo "  Detected go.opentelemetry.io/* bumps — harmonizing to ${OTEL_TOP} (grype top=$OTEL_GRYPE_TOP, proxy latest=$OTEL_PROXY_TOP)"
+              # go.opentelemetry.io/otel/log, otel/sdk/log, the otlplog
+              # exporters, and the contrib log bridges (otellogrus, otelzap)
+              # each carry their OWN independent version line — some are
+              # still pre-1.0 (v0.x) for images whose vendored source predates
+              # the otel-go release that graduated them to v1.x (verified
+              # against traefik v3.7.13's and temporal-server v1.32.0's own
+              # go.mod on 2026-10-04: both pin otel/log and otel/sdk/log at
+              # v0.20.0, not v1.x). Forcing a v0.x entry up to OTEL_TOP (v1.x)
+              # is a breaking major-version jump — their own vendored code
+              # calls log.String/log.KeyValue as package functions that
+              # v1.47.0's restructured API no longer exports — and broke
+              # temporal-server/traefik even though loki/mimir/tempo/zot (on
+              # the newer v1.x-era API already) needed exactly this bump.
+              # Chainguard/Wolfi's own packages hit the identical fork and
+              # resolve it by pinning the log family to its own compatible
+              # version instead of forcing it to the core otel version
+              # (wolfi-dev/os temporal.yaml: `otel/log@v0.20.0` with an
+              # explicit `replaces` pin, while otel/otel-sdk/otlptrace* move
+              # to v1.44.0) — so only harmonize an entry to OTEL_TOP when it
+              # is already on the SAME major line; an entry on a different
+              # major is left at its own grype-suggested fix version instead
+              # of being silently skipped, so a genuine same-line CVE fix
+              # still lands.
               NEW_OTEL=""
+              SDK_LOG_ON_OTEL_TOP=false
               while IFS= read -r line; do
                 pkg="${line%@*}"
-                NEW_OTEL=$(printf '%s\n%s@%s' "$NEW_OTEL" "$pkg" "$OTEL_TOP")
+                cur_major="${line##*@v}"; cur_major="${cur_major%%.*}"
+                if [ "$cur_major" = "$OTEL_TOP_MAJOR" ]; then
+                  NEW_OTEL=$(printf '%s\n%s@%s' "$NEW_OTEL" "$pkg" "$OTEL_TOP")
+                  [ "$pkg" = "go.opentelemetry.io/otel/sdk/log" ] && SDK_LOG_ON_OTEL_TOP=true
+                else
+                  echo "    keep $line: on v${cur_major}.x, OTEL_TOP is v${OTEL_TOP_MAJOR}.x (different major line, not forcing)"
+                  NEW_OTEL=$(printf '%s\n%s' "$NEW_OTEL" "$line")
+                fi
               done <<< "$OTEL_LINES"
               FIXES=$(echo "$FIXES" | grep -vE "^go\.opentelemetry\.io/" || true)
               FIXES=$(printf '%s%s' "$FIXES" "$NEW_OTEL")
+
+              # otel/log family sweep: only once sdk/log has actually landed
+              # on OTEL_TOP's major line above (i.e. this image's own source
+              # already expects the newer API) do otel/log and its exporters/
+              # bridges need to move too — otherwise leave them alone, same
+              # as the guard above. Bumping otel/sdk/log alone (which
+              # requires a newer otel/log) leaves otel/log behind, and every
+              # log exporter that imports it — otlploggrpc, otlploghttp,
+              # stdout/stdoutlog, and the contrib/bridges/otellogrus and
+              # otelzap bridges — each versioned on their OWN separate 0.x
+              # line — fails to compile against the mismatched API
+              # ("undefined: log.Value", "api.KeyValue" ...). Hit loki/mimir/
+              # tempo at once (2026-10-04) because none of them run
+              # TEST-AND-KEEP probing, so nothing caught the broken graph
+              # before it shipped. `go get` on a module an image doesn't
+              # actually import is a harmless no-op that `go mod tidy -e`
+              # prunes right back out, so this is safe to apply unconditionally
+              # once the major-line guard above confirms it is warranted.
+              if [ "$SDK_LOG_ON_OTEL_TOP" = true ]; then
+                FIXES=$(echo "$FIXES" | grep -v "^go\.opentelemetry\.io/otel/log@" || true)
+                FIXES=$(printf '%s\n%s@%s' "$FIXES" "go.opentelemetry.io/otel/log" "$OTEL_TOP")
+                echo "    + go.opentelemetry.io/otel/log@${OTEL_TOP} (sibling of sdk/log)"
+                for logexp in \
+                  go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc \
+                  go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp \
+                  go.opentelemetry.io/otel/exporters/stdout/stdoutlog \
+                  go.opentelemetry.io/contrib/bridges/otellogrus \
+                  go.opentelemetry.io/contrib/bridges/otelzap; do
+                  exp_latest=$(curl -fs --max-time 10 "https://proxy.golang.org/${logexp}/@latest" 2>/dev/null | jq -r '.Version // ""')
+                  [ -z "$exp_latest" ] && continue
+                  FIXES=$(echo "$FIXES" | grep -v "^${logexp}@" || true)
+                  FIXES=$(printf '%s\n%s@%s' "$FIXES" "$logexp" "$exp_latest")
+                  echo "    + ${logexp}@${exp_latest} (otel/log exporter sibling)"
+                done
+              fi
             fi
 
             X_FAMILY_SEEN=$(echo "$FIXES" | grep -oE "^golang\.org/x/[a-z]+" | sort -u || true)
