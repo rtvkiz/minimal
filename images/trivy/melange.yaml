@@ -10,7 +10,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:trivy:trivy:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: trivy
-  version: 0.74.0
+  version: 0.75.0
   epoch: 0
   description: "Minimal Trivy (vulnerability/IaC/secret scanner) built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 of trivy source tarball - updated by update-versions.yml workflow
-  sha256: 04268af574690b84bc3474a5f19e002cd6da3e16899fac9fd39c6e84e7843940
+  sha256: 4ee2010384f90bf23d4059ae49c11129e5041816a3754d890a90ae80f678d765
 
 environment:
   contents:
@@ -40,15 +40,13 @@ environment:
       - ca-certificates-bundle
       - curl
       - build-base
-      # Pinned to go-1.26, NOT the bare `go` provider. `go` is a virtual
-      # provider and apk takes the highest version, so the moment Wolfi
-      # published go-1.27 (2026-08-19) every image using bare `go` jumped
-      # toolchains silently. Only trivy broke, because only trivy builds with
-      # GOEXPERIMENT=jsonv2: it imports the stdlib `encoding/json/v2` and calls
-      # json.SkipFunc (pkg/x/json/json.go:109), which Go 1.27 changed —
-      # "undefined: json.SkipFunc". Upstream trivy 0.74.0 (current latest) has
-      # not adapted yet. Drop this pin once trivy builds clean on 1.27.
-      - go-1.26
+      # Pinned to a specific go-1.NN provider, NOT the bare `go` virtual
+      # provider (apk takes the highest version, so a new Wolfi go release
+      # jumps every image using bare `go` silently). trivy 0.75.0's go.mod
+      # requires go >= 1.27.0, and 1.26 (used through 0.74.0, see history)
+      # no longer builds it, so the pin tracks 1.27 now. Drop/bump this pin
+      # again if a future trivy bump needs a newer minimum.
+      - go-1.27
       - git
 
 pipeline:
