@@ -1,262 +1,272 @@
 {
-  "generated": "2026-09-28",
+  "generated": "2026-10-05",
   "source": "github.com/bitnami/containers (image list) + Docker Hub API (pull counts)",
-  "bitnamiImages": 376,
+  "bitnamiImages": 379,
   "pairs": [
     {
       "bitnami": "kubectl",
       "minimal": "kubectl",
-      "pulls": 5372363227
+      "pulls": 5375666788
     },
     {
       "bitnami": "postgresql",
       "minimal": "postgres-slim",
-      "pulls": 3766284418
+      "pulls": 3766514302
     },
     {
       "bitnami": "redis",
       "minimal": "redis-slim",
-      "pulls": 3344486738
+      "pulls": 3344813408
     },
     {
       "bitnami": "external-dns",
       "minimal": "external-dns",
-      "pulls": 1081811515
+      "pulls": 1081811886
     },
     {
       "bitnami": "mariadb",
       "minimal": "mariadb",
-      "pulls": 837485406
+      "pulls": 837540499
     },
     {
       "bitnami": "rabbitmq",
       "minimal": "rabbitmq",
-      "pulls": 658448905
+      "pulls": 658461100
     },
     {
       "bitnami": "nginx",
       "minimal": "nginx",
-      "pulls": 438589423
+      "pulls": 438707232
     },
     {
       "bitnami": "zookeeper",
       "minimal": "zookeeper",
-      "pulls": 337332482
+      "pulls": 337337982
     },
     {
       "bitnami": "kafka",
       "minimal": "kafka",
-      "pulls": 331251573
+      "pulls": 331265579
     },
     {
       "bitnami": "mysql",
       "minimal": "mysql",
-      "pulls": 211651289
+      "pulls": 211654125
     },
     {
       "bitnami": "redis-exporter",
       "minimal": "redis-exporter",
-      "pulls": 170650549
+      "pulls": 170731202
     },
     {
       "bitnami": "metrics-server",
       "minimal": "metrics-server",
-      "pulls": 146633112
+      "pulls": 146633331
     },
     {
       "bitnami": "etcd",
       "minimal": "etcd",
-      "pulls": 139738100
+      "pulls": 139740129
     },
     {
       "bitnami": "memcached",
       "minimal": "memcached",
-      "pulls": 131896426
+      "pulls": 131910279
     },
     {
       "bitnami": "wordpress",
       "minimal": "wordpress",
-      "pulls": 109899187
+      "pulls": 109944254
     },
     {
       "bitnami": "oauth2-proxy",
       "minimal": "oauth2-proxy",
-      "pulls": 97302426
+      "pulls": 97307388
     },
     {
       "bitnami": "node-exporter",
       "minimal": "node-exporter",
-      "pulls": 95551396
+      "pulls": 95551908
     },
     {
       "bitnami": "postgres-exporter",
       "minimal": "postgres-exporter",
-      "pulls": 74161631
+      "pulls": 74182405
     },
     {
       "bitnami": "apache",
       "minimal": "httpd",
-      "pulls": 72666833
+      "pulls": 72671608
     },
     {
       "bitnami": "cassandra",
       "minimal": "cassandra",
-      "pulls": 70249517
+      "pulls": 70250023
     },
     {
       "bitnami": "kube-state-metrics",
       "minimal": "kube-state-metrics",
-      "pulls": 63903557
+      "pulls": 63903931
     },
     {
       "bitnami": "prometheus",
       "minimal": "prometheus",
-      "pulls": 60205187
+      "pulls": 60206967
     },
     {
       "bitnami": "nats",
       "minimal": "nats",
-      "pulls": 48020993
+      "pulls": 48021212
     },
     {
       "bitnami": "alertmanager",
       "minimal": "alertmanager",
-      "pulls": 46951855
+      "pulls": 46952260
     },
     {
       "bitnami": "node",
       "minimal": "node-slim",
-      "pulls": 38885009
+      "pulls": 38891453
     },
     {
       "bitnami": "keycloak",
       "minimal": "keycloak",
-      "pulls": 32144071
+      "pulls": 32146750
     },
     {
       "bitnami": "thanos",
       "minimal": "thanos",
-      "pulls": 29658302
+      "pulls": 29658845
     },
     {
       "bitnami": "ruby",
       "minimal": "ruby",
-      "pulls": 28374736
+      "pulls": 28380725
     },
     {
       "bitnami": "envoy",
       "minimal": "envoy",
-      "pulls": 23908362
+      "pulls": 23908741
     },
     {
       "bitnami": "solr",
       "minimal": "solr",
-      "pulls": 23709258
+      "pulls": 23709831
     },
     {
       "bitnami": "pgbouncer",
       "minimal": "pgbouncer",
-      "pulls": 20445967
+      "pulls": 20451522
     },
     {
       "bitnami": "php-fpm",
       "minimal": "php",
-      "pulls": 13979346
+      "pulls": 13999645
     },
     {
       "bitnami": "neo4j",
       "minimal": "neo4j",
-      "pulls": 13902414
+      "pulls": 13902494
     },
     {
       "bitnami": "consul",
       "minimal": "consul",
-      "pulls": 13142768
+      "pulls": 13142958
     },
     {
       "bitnami": "blackbox-exporter",
       "minimal": "blackbox-exporter",
-      "pulls": 11641546
+      "pulls": 11641781
     },
     {
       "bitnami": "airflow",
       "minimal": "airflow",
-      "pulls": 10462163
+      "pulls": 10462864
     },
     {
       "bitnami": "tomcat",
       "minimal": "tomcat",
-      "pulls": 9533063
+      "pulls": 9541331
     },
     {
       "bitnami": "fluent-bit",
       "minimal": "fluent-bit",
-      "pulls": 9193949
+      "pulls": 9194351
     },
     {
       "bitnami": "jenkins",
       "minimal": "jenkins",
-      "pulls": 8909542
+      "pulls": 8910315
     },
     {
       "bitnami": "python",
       "minimal": "python",
-      "pulls": 6142428
+      "pulls": 6152484
     },
     {
       "bitnami": "rclone",
       "minimal": "rclone",
-      "pulls": 4083467
+      "pulls": 4083473
     },
     {
       "bitnami": "java",
       "minimal": "java",
-      "pulls": 2880443
+      "pulls": 2885833
     },
     {
       "bitnami": "oras",
       "minimal": "oras",
-      "pulls": 2729453
+      "pulls": 2729455
     },
     {
       "bitnami": "valkey",
       "minimal": "valkey",
-      "pulls": 2671631
+      "pulls": 2725317
+    },
+    {
+      "bitnami": "kong",
+      "minimal": "kong",
+      "pulls": 1888278
     },
     {
       "bitnami": "cosign",
       "minimal": "cosign",
-      "pulls": 1569224
+      "pulls": 1577158
     },
     {
       "bitnami": "trivy",
       "minimal": "trivy",
-      "pulls": 1322599
+      "pulls": 1322953
     },
     {
       "bitnami": "pushgateway",
       "minimal": "pushgateway",
-      "pulls": 990256
+      "pulls": 990435
+    },
+    {
+      "bitnami": "couchdb",
+      "minimal": "couchdb",
+      "pulls": 981998
     },
     {
       "bitnami": "haproxy",
       "minimal": "haproxy",
-      "pulls": 972101
+      "pulls": 973445
     },
     {
       "bitnami": "kaniko",
       "minimal": "kaniko",
-      "pulls": 798620
+      "pulls": 798637
     },
     {
       "bitnami": "opensearch",
       "minimal": "opensearch",
-      "pulls": 656946
+      "pulls": 657001
     },
     {
       "bitnami": "dex",
       "minimal": "dex",
-      "pulls": 393803
+      "pulls": 393804
     },
     {
       "bitnami": "flink",
@@ -266,12 +276,12 @@
     {
       "bitnami": "gitlab-runner",
       "minimal": "gitlab-runner",
-      "pulls": 294160
+      "pulls": 294498
     },
     {
       "bitnami": "gitea",
       "minimal": "gitea",
-      "pulls": 260149
+      "pulls": 260168
     },
     {
       "bitnami": "dotnet",
@@ -281,17 +291,17 @@
     {
       "bitnami": "jaeger",
       "minimal": "jaeger",
-      "pulls": 202726
+      "pulls": 202907
     },
     {
       "bitnami": "telegraf",
       "minimal": "telegraf",
-      "pulls": 197362
+      "pulls": 197372
     },
     {
       "bitnami": "seaweedfs",
       "minimal": "seaweedfs",
-      "pulls": 64530
+      "pulls": 64649
     },
     {
       "bitnami": "zipkin",
@@ -321,52 +331,52 @@
   "topGaps": [
     {
       "bitnami": "sealed-secrets-controller",
-      "pulls": 3129075961
+      "pulls": 3129352762
     },
     {
       "bitnami": "mongodb",
-      "pulls": 1736271222
+      "pulls": 1736386286
     },
     {
       "bitnami": "redis-cluster",
-      "pulls": 274112958
+      "pulls": 274114051
     },
     {
       "bitnami": "azure-cli",
-      "pulls": 207822283
+      "pulls": 207822456
     },
     {
       "bitnami": "redis-sentinel",
-      "pulls": 183678341
+      "pulls": 183710198
     },
     {
       "bitnami": "ghost",
-      "pulls": 131033824
+      "pulls": 131033911
     },
     {
       "bitnami": "elasticsearch",
-      "pulls": 117130963
+      "pulls": 117131688
     },
     {
       "bitnami": "phpmyadmin",
-      "pulls": 76533687
+      "pulls": 76536712
     },
     {
       "bitnami": "mongodb-exporter",
-      "pulls": 73522136
+      "pulls": 73527265
     },
     {
       "bitnami": "grafana",
-      "pulls": 72434914
+      "pulls": 72435349
     },
     {
       "bitnami": "postgresql-repmgr",
-      "pulls": 65491299
+      "pulls": 65492044
     },
     {
       "bitnami": "fluentd",
-      "pulls": 62404562
+      "pulls": 62404614
     }
   ],
-  "gapCount": 308
+  "gapCount": 309
 }
