@@ -12,7 +12,7 @@ package:
   # indexes this product bare, as cpe:2.3:a:redis-exporter:redis-exporter:*, so
   # none of them matched, and the Wolfi secdb missed it too.
   name: redis-exporter
-  version: 1.92.1
+  version: 1.93.0
   epoch: 0
   description: "Minimal Redis exporter for Prometheus built from source"
   copyright:
@@ -30,7 +30,7 @@ package:
 
 vars:
   # SHA256 of redis_exporter source tarball - updated by update-versions.yml
-  sha256: e3d05d302df4240277ad418cdf37ce9e8b73691f0fd35980e3851daafffb9489
+  sha256: b6b149cccbd16b68b4a85db3751e6ec517a6eed0e9ee116be4c1cf922983dfbd
 
 environment:
   contents:
