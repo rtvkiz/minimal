@@ -100,7 +100,12 @@ pipeline:
       daemonize no
       dir /data
       pidfile /data/kvrocks.pid
-      log-dir /data
+      # log-dir deliberately unset: kvrocks only defaults to "dir,stdout" (both
+      # the data dir AND the console) when this is empty (src/config/config.cc,
+      # `if (log_dir.empty()) log_dir = dir + ",stdout"`). Setting it explicitly
+      # to a bare path drops the stdout half, so `docker logs` sees nothing and
+      # the smoke test's "ready to accept connections" grep never matches even
+      # though the server is healthy.
       CFG
 
   - runs: |
