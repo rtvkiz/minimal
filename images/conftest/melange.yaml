@@ -11,7 +11,7 @@ package:
   # product bare, as cpe:2.3:a:conftest:conftest:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: conftest
-  version: 0.71.0
+  version: 0.71.1
   epoch: 0
   description: "Conftest (OPA policy testing for structured config) CLI built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of conftest source tarball - updated by update-versions.yml workflow
-  sha256: c881be645a6295a6a5bb7d85e5d45f9f157d810c82d7c0a230072b1ab8df7b6a
+  sha256: 1bf5a6ff4b9d7bd943b9713ace13c83c40b77fd3fcf2a9659f32be67c4a2c368
 
 environment:
   contents:
