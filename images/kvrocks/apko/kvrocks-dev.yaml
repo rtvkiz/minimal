@@ -33,7 +33,10 @@ contents:
     - wget
 
     # --- RESP client for manual poking (kvrocks speaks the Redis protocol) ---
-    - valkey
+    # Wolfi splits valkey into `valkey` (server, cmd:valkey-server) and a
+    # separate `valkey-cli` package (cmd:valkey-cli) — only the latter is
+    # needed here.
+    - valkey-cli
 
     # --- HTTP/socket debugging ---
     - curl
