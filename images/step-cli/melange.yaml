@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 of step-cli source tarball - updated by update-versions.yml workflow
-  sha256: 7eb9ba3d1d8edc07fe6e3bae0ee5a3b6fc7a60bbd850d334ccc74d02b5e4f0fe
+  sha256: cc79207697f733eade1017a2be0da067362bf3bc0c05a6c68eeb7bbd288713d3
 
 environment:
   contents:
