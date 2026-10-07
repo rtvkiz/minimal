@@ -10,7 +10,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:gitea:gitea:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: gitea
-  version: 28.0.0
+  version: 28.1.0
   epoch: 0
   description: "Minimal Gitea git hosting server built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball
-  sha256: 0b417beea204cb54f90132161b8e9554bc7e54e07e6be5ec1d6294df889c527f
+  sha256: 784ef896ade5dbbd099808f8bb6787c2176a280ac24fb3110b390c5ffd8362c2
 
 environment:
   contents:
