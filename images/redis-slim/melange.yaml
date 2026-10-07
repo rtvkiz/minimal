@@ -47,7 +47,16 @@ environment:
       - curl
       - build-base
       - linux-headers
-      - openssl-dev
+      # Pinned, not bare `openssl-dev`: Wolfi now ships both an openssl-3.6
+      # track and a new openssl-4.0 preview, and the bare provider resolves to
+      # whichever is highest (same bare-toolchain-provider trap as go/nodejs/
+      # rust — see scripts/check-toolchain-pins.sh). Pinning to 3.6 keeps
+      # redis-server linked against so:libssl.so.3/libcrypto.so.3, matching
+      # the apko runtime's explicit libssl3/libcrypto3 — leaving it bare
+      # silently relinked against libssl.so.4 and left both OpenSSL majors
+      # installed in the runtime image (the 4.0 half pulled in automatically
+      # by apk's auto-provides, the 3.6 half still listed explicitly below).
+      - openssl-3.6-dev
       - jemalloc-dev
 
 pipeline:
@@ -67,10 +76,16 @@ pipeline:
   # Build Redis from source
   - runs: |
       cd /home/build/redis-${{package.version}}
+      # WARN override: redis's src/Makefile promotes deprecated-declarations
+      # to -Werror. Wolfi's openssl-dev tracks a 4.0 preview where
+      # X509_NAME_get_text_by_NID (used by tls.c) is newly deprecated, which
+      # turns a harmless upstream warning into a hard build failure. Drop just
+      # that one -Werror= promotion; keep every other warning redis enables.
       make -j$(nproc) \
         BUILD_TLS=yes \
         USE_SYSTEMD=no \
-        MALLOC=jemalloc
+        MALLOC=jemalloc \
+        WARN="-Wall -W -Wno-missing-field-initializers -Wstrict-prototypes"
       make install PREFIX=/home/build/redis-install
 
   # Install to destdir
