@@ -1451,6 +1451,18 @@
       "description": "Vaultwarden lightweight Bitwarden-compatible password manager server. Shell-less Rust build from source, signed and rebuilt every 6 hours against CVEs."
     },
     {
+      "name": "kvrocks",
+      "category": "Caches, Queues & Messaging",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "kvrocks",
+      "upstream_url": "https://github.com/apache/kvrocks",
+      "summary": "Shell-less Kvrocks Redis-compatible store on RocksDB built from source.",
+      "description": "Kvrocks is a Redis-protocol store backed by RocksDB, for datasets larger than RAM. Shell-less C++ build, signed and rebuilt every 6 hours against CVEs."
+    },
+    {
       "name": "vector",
       "category": "Observability",
       "variants": [
