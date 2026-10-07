@@ -43,7 +43,15 @@ environment:
       - build-base
       - cmake
       - linux-headers
-      - openssl-dev
+      # Pinned, not bare `openssl-dev`: Wolfi now ships both an openssl-3.6
+      # track and a new openssl-4.0 preview, and the bare provider resolves to
+      # whichever is highest (same bare-toolchain-provider trap as go/nodejs/
+      # rust — see scripts/check-toolchain-pins.sh). mysql 8.4.11's
+      # cmake/ssl.cmake only special-cases OPENSSL_VERSION_MAJOR == 3; on 4.0
+      # it falls through to a legacy OPENSSL_VERSION_NUMBER regex that no
+      # longer matches anything, so FIND_OPENSSL_VERSION silently produces an
+      # empty version ("OPENSSL_VERSION (system) is ..") and configure fails.
+      - openssl-3.6-dev
       - ncurses-dev
       - libevent-dev
       - bison
