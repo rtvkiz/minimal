@@ -611,6 +611,16 @@
     releases: "https://github.com/dani-garcia/vaultwarden/releases"
     notes: "https://github.com/dani-garcia/vaultwarden/releases/tag/{version}"
 
+- name: kvrocks
+  cron-enabled: true   # onboarded 2026-10-05 (dispatch-validated: current=2.17.0 latest=2.17.0)
+  files: [images/kvrocks/melange.yaml]
+  source: { type: github-releases-latest, repo: apache/kvrocks, strip-v: true, pin-major: 2 }
+  tarball: { url: "https://github.com/apache/kvrocks/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/apache/kvrocks/releases"
+    notes: "https://github.com/apache/kvrocks/releases/tag/v{version}"
+
 - name: flink
   cron-enabled: true   # onboarded 2026-08-15 (dispatch-validated)
   files: [images/flink/melange.yaml]
