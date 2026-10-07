@@ -1,0 +1,121 @@
+# Melange build configuration for minimal Kvrocks
+# Builds Kvrocks (Redis-compatible store on RocksDB) from source via CMake.
+# Wolfi ships no `kvrocks`/`rocksdb` package, so RocksDB, jemalloc's autotools
+# bootstrap, TBB, snappy, lz4 and friends are all fetched and compiled in-tree
+# by kvrocks' own CMakeLists (FetchContent) — this is a heavy, from-scratch
+# C++ build, not a thin wrapper around a Wolfi apk.
+
+package:
+  # Named `kvrocks` so vulnerability scanners can identify it — Wolfi has no
+  # package of this name, so there is no collision to guard against with
+  # provider-priority.
+  name: kvrocks
+  version: 2.17.0
+  epoch: 0
+  description: "Minimal Kvrocks (Redis-compatible store on RocksDB) built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  sha256: 1e47c9b561e618f154ee7a610bb03b8636332cc239a4d6cbf72e301de654f6eb
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - clang
+      - cmake
+      - autoconf
+      - automake
+      - libtool
+      - python3
+      - git
+      - linux-headers
+      - openssl-dev
+      - libatomic
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/apache/kvrocks/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/kvrocks.tar.gz
+      echo "${{vars.sha256}}  /home/build/kvrocks.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf kvrocks.tar.gz && rm kvrocks.tar.gz
+
+  # kvrocks' 128-bit std::atomic use (slot_migrate.cc) needs libatomic, but
+  # passing -latomic via CMAKE_EXE_LINKER_FLAGS fails: that variable feeds
+  # Makefile generator's <LINK_FLAGS>, which the link rule places BEFORE
+  # <OBJECTS>/<LINK_LIBRARIES> — so -latomic is already consumed by the time
+  # ld reaches the object that needs it ("undefined reference to
+  # __atomic_compare_exchange"). Patch CMakeLists.txt instead, appending
+  # `atomic` to EXTERNAL_LIBS right before the `kvrocks` target links it via
+  # `target_link_libraries(kvrocks PRIVATE kvrocks_objs ${EXTERNAL_LIBS})` —
+  # that puts it after kvrocks_objs in the link line, where ld can see it.
+  - runs: |
+      cd /home/build/kvrocks-${{package.version}}
+      sed -i '/list(APPEND EXTERNAL_LIBS Threads::Threads)/a list(APPEND EXTERNAL_LIBS atomic)' CMakeLists.txt
+
+  # Configure + build. Mirrors upstream's own Dockerfile invocation of x.py:
+  # clang, Release, PORTABLE (no -march=native, so the binary runs on any
+  # x86_64/aarch64 host), OpenSSL for TLS support. RocksDB/jemalloc/tbb/snappy/
+  # lz4/zstd/lua(jit)/etc. are pulled by CMake FetchContent from GitHub during
+  # this step — expect a long, network-heavy build.
+  - runs: |
+      cd /home/build/kvrocks-${{package.version}}
+      mkdir -p build && cd build
+      # DISABLE_JEMALLOC: jemalloc 5.4.0's bundled jemalloc_cpp.cpp calls the
+      # libstdc++-internal std::__throw_bad_alloc(), which Wolfi's GCC 16
+      # libstdc++ headers no longer declare (functexcept.h dropped it) — the
+      # jemalloc build fails before kvrocks itself is even touched. kvrocks
+      # exposes DISABLE_JEMALLOC precisely to fall back to glibc malloc; this
+      # also turns off RocksDB's WITH_JEMALLOC (gated on the same flag), so
+      # nothing half-links against jemalloc.
+      cmake .. \
+        -DCMAKE_C_COMPILER=clang \
+        -DCMAKE_CXX_COMPILER=clang++ \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DENABLE_OPENSSL=ON \
+        -DDISABLE_JEMALLOC=ON \
+        -DPORTABLE=1
+      cmake --build . -j"$(nproc)" -t kvrocks
+
+  - runs: |
+      cd /home/build/kvrocks-${{package.version}}
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp build/kvrocks "${{targets.destdir}}/usr/bin/"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/kvrocks"
+
+      mkdir -p "${{targets.destdir}}/etc/kvrocks"
+      cat > "${{targets.destdir}}/etc/kvrocks/kvrocks.conf" << 'CFG'
+      bind 0.0.0.0
+      port 6666
+      daemonize no
+      dir /data
+      pidfile /data/kvrocks.pid
+      # log-dir deliberately unset: kvrocks only defaults to "dir,stdout" (both
+      # the data dir AND the console) when this is empty (src/config/config.cc,
+      # `if (log_dir.empty()) log_dir = dir + ",stdout"`). Setting it explicitly
+      # to a bare path drops the stdout half, so `docker logs` sees nothing and
+      # the smoke test's "ready to accept connections" grep never matches even
+      # though the server is healthy.
+      CFG
+
+  - runs: |
+      echo "Verifying Kvrocks build..."
+      "${{targets.destdir}}/usr/bin/kvrocks" -v
+      ls -lh "${{targets.destdir}}/usr/bin/kvrocks"
+
+update:
+  enabled: true
+  github:
+    identifier: apache/kvrocks
+    use-tag: true
+    tag-filter: "v2."

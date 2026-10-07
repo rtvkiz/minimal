@@ -70,6 +70,7 @@ MEILISEARCH_VERSION ?= $(call melange_version,images/meilisearch/melange.yaml)
 AIRFLOW_VERSION ?= $(call melange_version,images/airflow/melange.yaml)
 WORDPRESS_VERSION ?= $(call melange_version,images/wordpress/melange.yaml)
 VAULTWARDEN_VERSION ?= $(call melange_version,images/vaultwarden/melange.yaml)
+KVROCKS_VERSION ?= $(call melange_version,images/kvrocks/melange.yaml)
 OPENSEARCH_VERSION ?= $(call melange_version,images/opensearch/melange.yaml)
 
 # --- Registries ---
@@ -266,6 +267,7 @@ endef
 .PHONY: blackbox-exporter blackbox-exporter-melange test-blackbox-exporter
 .PHONY: flink flink-melange test-flink
 .PHONY: vaultwarden vaultwarden-melange test-vaultwarden
+.PHONY: kvrocks kvrocks-melange kvrocks-dev test-kvrocks test-kvrocks-dev
 .PHONY: redis-exporter redis-exporter-melange test-redis-exporter
 .PHONY: kube-state-metrics kube-state-metrics-melange test-kube-state-metrics
 .PHONY: pushgateway pushgateway-melange test-pushgateway
@@ -278,7 +280,7 @@ endef
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -355,6 +357,7 @@ $(eval $(call DEV_IMAGE_RULE,meilisearch,meilisearch-melange,--repository-append
 $(eval $(call DEV_IMAGE_RULE,airflow,airflow-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,wordpress,wordpress-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,vaultwarden,vaultwarden-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,kvrocks,kvrocks-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,keycloak,keycloak-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,registry,registry-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,mailpit,mailpit-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -3013,6 +3016,32 @@ vaultwarden: vaultwarden-melange
 	@echo "✓ minimal-vaultwarden built (source build)"
 
 #------------------------------------------------------------------------------
+# KVROCKS IMAGE (melange C++ source build + apko; Redis-compatible store on RocksDB)
+#------------------------------------------------------------------------------
+kvrocks-melange: keygen
+	@echo "Building kvrocks $(KVROCKS_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/kvrocks/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ kvrocks package built from source"
+
+kvrocks: kvrocks-melange
+	@echo "Assembling minimal-kvrocks image with apko..."
+	apko build images/kvrocks/apko/kvrocks.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-kvrocks:$(VERSION) \
+		kvrocks.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < kvrocks.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kvrocks:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kvrocks:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kvrocks:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kvrocks:latest
+	@rm -f kvrocks.tar sbom-*.spdx.json
+	@echo "✓ minimal-kvrocks built (source build)"
+
+#------------------------------------------------------------------------------
 # FLINK IMAGE (Apache binary release + jlink JRE via melange; stream processing)
 #------------------------------------------------------------------------------
 flink-melange: keygen
@@ -3358,7 +3387,7 @@ scan-%:
 		$(REGISTRY)/$(OWNER)/minimal-$*:latest
 	@echo "✓ minimal-$*: scan passed"
 
-scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb
+scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -3722,7 +3751,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb
+test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev
 
 $(eval $(call DEV_TEST_RULE,python))
 $(eval $(call DEV_TEST_RULE,node-slim))
@@ -3781,6 +3810,7 @@ $(eval $(call DEV_TEST_RULE,unbound))
 $(eval $(call DEV_TEST_RULE,dnsmasq))
 $(eval $(call DEV_TEST_RULE,kong))
 $(eval $(call DEV_TEST_RULE,couchdb))
+$(eval $(call DEV_TEST_RULE,kvrocks))
 $(eval $(call DEV_TEST_RULE,patroni))
 $(eval $(call DEV_TEST_RULE,vector))
 $(eval $(call DEV_TEST_RULE,keepalived))
@@ -4653,6 +4683,12 @@ test-vaultwarden:
 		images/vaultwarden/test.sh
 	@echo "✓ vaultwarden tests passed"
 
+test-kvrocks:
+	@echo "Testing kvrocks image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kvrocks:latest" && \
+		images/kvrocks/test.sh
+	@echo "✓ kvrocks tests passed"
+
 test-qdrant:
 	@echo "Testing Qdrant image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-qdrant:latest" && \
@@ -4708,7 +4744,7 @@ push-%:
 	docker push $(REGISTRY)/$(OWNER)/minimal-$*:$(or $(PUSH_VER_$*),$(VERSION))
 	docker push $(REGISTRY)/$(OWNER)/minimal-$*:latest
 
-push: push-python push-node-slim push-bun push-go push-java push-ruby push-php push-dotnet push-deno push-mysql push-mariadb push-postgres-slim push-pgbouncer push-unbound push-dnsmasq push-keepalived push-vector push-patroni push-metrics-server push-external-dns push-velero push-kaniko push-step-ca push-skopeo push-sqlite push-opensearch push-meilisearch push-airflow push-wordpress push-redis-slim push-valkey push-memcached push-kafka push-zookeeper push-cassandra push-solr push-pulsar push-tomcat push-rabbitmq push-nats push-mosquitto push-nginx push-httpd push-caddy push-haproxy push-traefik push-envoy push-oauth2-proxy push-prometheus push-alertmanager push-victoria-metrics push-thanos push-mimir push-jaeger push-loki push-tempo push-otelcol push-fluent-bit push-telegraf push-node-exporter push-blackbox-exporter push-pushgateway push-coredns push-etcd push-openbao push-keycloak push-qdrant push-registry push-consul push-helm push-kubectl push-opentofu push-trivy push-cosign push-syft push-grype push-osv-scanner push-oras push-notation push-conftest push-kubeconform push-kube-bench push-trufflehog push-flux push-kustomize push-sops push-crane push-kubeseal push-helmfile push-regctl push-stern push-gitleaks push-step-cli push-opa push-jenkins push-gitea push-minio push-rails push-mailpit push-external-secrets push-kyverno push-flagger push-reloader push-postgres-exporter push-headscale push-victoria-logs push-metallb push-temporal-server push-temporal-admin-tools push-temporal-ui-server push-kong push-couchdb
+push: push-python push-node-slim push-bun push-go push-java push-ruby push-php push-dotnet push-deno push-mysql push-mariadb push-postgres-slim push-pgbouncer push-unbound push-dnsmasq push-keepalived push-vector push-patroni push-metrics-server push-external-dns push-velero push-kaniko push-step-ca push-skopeo push-sqlite push-opensearch push-meilisearch push-airflow push-wordpress push-redis-slim push-valkey push-memcached push-kafka push-zookeeper push-cassandra push-solr push-pulsar push-tomcat push-rabbitmq push-nats push-mosquitto push-nginx push-httpd push-caddy push-haproxy push-traefik push-envoy push-oauth2-proxy push-prometheus push-alertmanager push-victoria-metrics push-thanos push-mimir push-jaeger push-loki push-tempo push-otelcol push-fluent-bit push-telegraf push-node-exporter push-blackbox-exporter push-pushgateway push-coredns push-etcd push-openbao push-keycloak push-qdrant push-registry push-consul push-helm push-kubectl push-opentofu push-trivy push-cosign push-syft push-grype push-osv-scanner push-oras push-notation push-conftest push-kubeconform push-kube-bench push-trufflehog push-flux push-kustomize push-sops push-crane push-kubeseal push-helmfile push-regctl push-stern push-gitleaks push-step-cli push-opa push-jenkins push-gitea push-minio push-rails push-mailpit push-external-secrets push-kyverno push-flagger push-reloader push-postgres-exporter push-headscale push-victoria-logs push-metallb push-temporal-server push-temporal-admin-tools push-temporal-ui-server push-kong push-couchdb push-kvrocks
 
 #------------------------------------------------------------------------------
 # CLEANUP
