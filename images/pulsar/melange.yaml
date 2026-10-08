@@ -212,7 +212,7 @@ pipeline:
       _swap log4j-layout-template-json org/apache/logging/log4j 2.25.4 2.25.5 27c37313e20c16bf0178e38d9d1a5c7320e34c03aa35bc2c66a589ea14abf545 rename -
       _swap log4j-slf4j2-impl org/apache/logging/log4j 2.25.4 2.25.5 8cab16dd6fc4c8f14c1c473022cb217512f2bbb2d59a70f8ec90a268d64d8831 rename -
       _swap log4j-web org/apache/logging/log4j 2.25.4 2.25.5 9cf04225fab77a5d433dcad2ee62b8341cc0546d0e6941515bb9f8d5a199377c rename -
-      _swap lz4-java at/yawk/lz4 1.10.3 1.11.1 e5e31b195fcc7e9c5da4b191af3b0082ee616c13f61cbd79409ffa65e4dd5c47 rename -
+      _swap lz4-java at/yawk/lz4 1.11.1 1.11.4 58c8e0b813960d2a248e050c353baea73139b48a2ffc55382d42c69707e17325 rename -
       _swap netty-buffer io/netty 4.1.136.Final 4.1.137.Final f474b14c7734f15e0540394cb6f39d67777b7581a42919e4ac89d253d4efd929 rename -
       _swap netty-codec-dns io/netty 4.1.136.Final 4.1.137.Final 2d9a33ce41bd9f6f607df95039e42518a1fca16f83c9bbfe72beb57df6e2489f rename -
       _swap netty-codec-haproxy io/netty 4.1.136.Final 4.1.137.Final 5ffa58b94c5ac48fb7e41843c18acf7a268e90b5b85423987829c9291ce3a5df rename -
@@ -241,7 +241,7 @@ pipeline:
       find "${{targets.destdir}}/opt/pulsar" \( -name "jackson*-2.18.*.jar" -o -name "jackson*-2.18.jar" \) ! -name "*-2.18.11.jar" ! -name "*-2.18.11-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "jline*-4.2.*.jar" -o -name "jline*-4.2.jar" \) ! -name "*-4.3.1.jar" ! -name "*-4.3.1-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "log4j*-2.25.*.jar" -o -name "log4j*-2.25.jar" \) ! -name "*-2.25.5.jar" ! -name "*-2.25.5-*.jar" >> "$_strag" 2>/dev/null || true
-      find "${{targets.destdir}}/opt/pulsar" \( -name "lz4*-1.10.*.jar" -o -name "lz4*-1.10.jar" \) ! -name "*-1.11.1.jar" ! -name "*-1.11.1-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "lz4*-1.11.*.jar" -o -name "lz4*-1.11.jar" \) ! -name "*-1.11.4.jar" ! -name "*-1.11.4-*.jar" >> "$_strag" 2>/dev/null || true
       find "${{targets.destdir}}/opt/pulsar" \( -name "netty*-4.1.*.jar" -o -name "netty*-4.1.jar" \) ! -name "*-4.1.137.Final.jar" ! -name "*-4.1.137.Final-*.jar" >> "$_strag" 2>/dev/null || true
       if [ -s "$_strag" ]; then
         echo "patch-bundled-jars: jars left on a superseded version:" >&2
