@@ -12,7 +12,7 @@ package:
   # product bare, as cpe:2.3:a:pushgateway:pushgateway:*, so none of them
   # matched, and the Wolfi secdb missed it too.
   name: pushgateway
-  version: 1.11.3
+  version: 1.11.4
   epoch: 0
   description: "Minimal Prometheus pushgateway (metrics push for batch jobs) built from source"
   copyright:
@@ -30,7 +30,7 @@ package:
 
 vars:
   # SHA256 of pushgateway source tarball - updated by update-versions.yml workflow
-  sha256: 5bcd6e57a012c303e68e2c1c84d6d86ae8c9cad8c948ee2538e6200390c0eff9
+  sha256: 7ae6541d891c9f700f81f2ef10f2d465fd61cc73b14a6f92ba0ce6b6250b5649
 
 environment:
   contents:
