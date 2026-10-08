@@ -10,7 +10,7 @@ package:
   # identify it. Syft derives a package's CPE from its apk name; a suffix
   # produces cpe:2.3:a:buildkit-minimal:buildkit-minimal:*, matching nothing.
   name: buildkit
-  version: 0.33.1
+  version: 0.34.0
   epoch: 0
   description: "Minimal BuildKit concurrent container image builder built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 of buildkit source tarball - updated by update-versions.yml workflow
-  sha256: 044ab46b73e8aac007f504cf4e8c3ee3a2eb05c4c2a65018bd8b6f2c56a17f62
+  sha256: b51e3a6bb7e0a0381adef47bffb8527817409f477fc5d26054517af29a11ff65
 
 environment:
   contents:
