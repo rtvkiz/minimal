@@ -10,7 +10,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:syft:syft:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: syft
-  version: 1.54.0
+  version: 1.54.1
   epoch: 0
   description: "Minimal Syft (SBOM generation from images & filesystems) built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 of syft source tarball - updated by update-versions.yml workflow
-  sha256: bcc7ef841cf0671c46b9c10cb13466a833a5a1dc010c68cc5e3658151c758c2d
+  sha256: e3a8b41ef4050665edb7cb35bea1ffe49ab7bbdd3127e756ea7cf979d41e9dd5
 
 environment:
   contents:
