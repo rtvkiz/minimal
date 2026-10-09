@@ -16,7 +16,7 @@ package:
   # wrong product — worse than not matching at all, because the comparison is
   # meaningless rather than merely missing.
   name: nats-server
-  version: 2.15.0
+  version: 2.15.1
   epoch: 0
   description: "Minimal NATS Server built from source"
   copyright:
@@ -34,7 +34,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: 24ce9fe9a069d049f6050231b81f2c9e00ad4f456801c002fb9a5bf15ebd6cc2
+  sha256: 41b25fcb78a174f3afce4ec1eca0c1035439abf580f0a0569dbb03bd0d955e08
 
 environment:
   contents:
