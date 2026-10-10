@@ -17,7 +17,7 @@ package:
   # cpe:2.3:a:dex-minimal:dex-minimal:*, ...). NVD indexes this product bare,
   # as cpe:2.3:a:linuxfoundation:dex:*, so none of them matched.
   name: dex
-  version: 2.45.1
+  version: 2.46.0
   epoch: 0
   description: "Minimal Dex OpenID Connect identity provider built from source"
   copyright:
@@ -34,7 +34,7 @@ package:
 
 vars:
   # SHA256 of dex source tarball - updated by update-versions.yml workflow
-  sha256: 6dc9bf768d67723d8117268d5177c7450519608f5403cd10e857c89465fa2b9e
+  sha256: 3c09c0f2be88719d5bc2a061d3df9310052c8220b651a3b72d774eecd9b50b65
 
 environment:
   contents:
