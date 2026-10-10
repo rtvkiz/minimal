@@ -16,7 +16,7 @@ package:
   # (cpe:2.3:a:tailscale:tailscale-minimal:*, ...). NVD indexes this product
   # bare, as cpe:2.3:a:tailscale:tailscale:*, so none of them matched.
   name: tailscale
-  version: 1.102.5
+  version: 1.104.1
   epoch: 0
   description: "Minimal Tailscale WireGuard mesh VPN (tailscaled + CLI) built from source"
   copyright:
@@ -33,7 +33,7 @@ package:
 
 vars:
   # SHA256 of tailscale source tarball - updated by update-versions.yml workflow
-  sha256: 110b0d0586e981fccb83149d0ac4e7aac3c879fd372772b0dee1818f204893bc
+  sha256: bf868b2b1a46b9485d55bcda12c2d7573279ce4474bc6d607f42f1495db36ed8
 
 environment:
   contents:
