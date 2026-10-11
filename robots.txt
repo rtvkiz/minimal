@@ -1,0 +1,6 @@
+# minimalcontainers.com
+# Everything here is public documentation for a public image catalogue.
+User-agent: *
+Allow: /
+
+Sitemap: https://minimalcontainers.com/sitemap-index.xml

@@ -1,0 +1,95 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Kafka 4.x moved your config paths and didn&#39;t make a fuss about it — Minimal Containers</title><meta name="description" content="KRaft, Log4j 2, a renamed StorageTool class — Kafka 4.x changed four things upgraders hit blind, because the errors don't mention that a major version happened."><link rel="canonical" href="https://minimalcontainers.com/blog/kafka-4-config-paths-changed/"><meta property="og:title" content="Kafka 4.x moved your config paths and didn't make a fuss about it — Minimal Containers"><meta property="og:description" content="KRaft, Log4j 2, a renamed StorageTool class — Kafka 4.x changed four things upgraders hit blind, because the errors don't mention that a major version happened."><meta property="og:type" content="article"><meta property="og:url" content="https://minimalcontainers.com/blog/kafka-4-config-paths-changed/"><meta property="og:site_name" content="Minimal Containers"><meta property="og:image" content="https://minimalcontainers.com/og.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Kafka 4.x moved your config paths and didn't make a fuss about it — Minimal Containers"><meta name="twitter:description" content="KRaft, Log4j 2, a renamed StorageTool class — Kafka 4.x changed four things upgraders hit blind, because the errors don't mention that a major version happened."><meta name="twitter:image" content="https://minimalcontainers.com/og.png"><meta property="article:published_time" content="2026-09-28"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Kafka 4.x moved your config paths and didn't make a fuss about it","description":"KRaft, Log4j 2, a renamed StorageTool class — Kafka 4.x changed four things upgraders hit blind, because the errors don't mention that a major version happened.","datePublished":"2026-09-28","dateModified":"2026-09-28","url":"https://minimalcontainers.com/blog/kafka-4-config-paths-changed","author":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"},"publisher":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://minimalcontainers.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://minimalcontainers.com/blog/"},{"@type":"ListItem","position":3,"name":"Kafka 4.x moved your config paths and didn't make a fuss about it — Minimal Containers","item":"https://minimalcontainers.com/blog/kafka-4-config-paths-changed/"}]}</script><link rel="icon" type="image/svg+xml" href="/icon.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;640;680;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- GoatCounter: cookieless, no personal data, no consent banner needed.
+       Dashboard is private by default (goatcounter settings.go defaults
+       `Public` to "private"), so the numbers are not publicly visible.
+       Loaded async so it never blocks render, and the site works fine when
+       ad blockers drop it — expect undercounting on a technical audience. --><script data-goatcounter="https://minimal.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script><link rel="stylesheet" href="/_astro/about.DULL6dUB.css"></head> <body> <header class="site-header"> <div class="container"> <a href="/" class="brand"> <img src="/icon.svg" alt="" class="logo" width="26" height="26"> <span class="brand-name">minimal</span> </a> <nav class="nav"> <a href="/images/">Images</a> <a href="/docs/">Docs</a> <a href="/compare/">Compare</a> <a href="/blog/">Blog</a> <a href="/about/">Verify</a> <a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a> </nav> </div> </header> <main>  <section> <div class="container-narrow"> <p style="margin:0 0 6px"><a href="/blog/" class="small muted">← Blog</a></p> <h1 class="section-title">Kafka 4.x moved your config paths and didn&#39;t make a fuss about it</h1> <p class="small muted"> <time datetime="2026-09-28">28 September 2026</time>  </p> <article class="prose" style="margin-top:28px"> <p>Upgrading a Kafka image from 3.x to 4.x looks like a version bump. It isn’t.
+Four things moved, and each one fails with an error message that never
+mentions “4.x” — you just get a stack trace or a missing file, and the fix
+is to know what changed.</p>
+<h2 id="1-kraft-is-gone-from-the-config-directory">1. <code>kraft/</code> is gone from the config directory</h2>
+<p>Kafka has shipped both ZooKeeper-mode and KRaft-mode config templates side by
+side for years, with KRaft’s living under <code>config/kraft/server.properties</code>.
+In 4.x, ZooKeeper support was removed entirely, and the KRaft config moved up
+a level:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>config/server.properties       # was config/kraft/server.properties in 3.x</span></span></code></pre>
+<p>If your entrypoint script or Dockerfile still references the old path, it
+fails with a plain “no such file” — nothing in the error tells you the
+directory structure changed upstream, because from the shell’s point of view
+a missing file is a missing file.</p>
+<h2 id="2-storagetool-moved-packages">2. <code>StorageTool</code> moved packages</h2>
+<p>Before you can start a KRaft broker for the first time, you format its
+storage directory:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>java -cp '/opt/kafka/libs/*' kafka.tools.StorageTool random-uuid</span></span>
+<span class="line"><span>java -cp '/opt/kafka/libs/*' kafka.tools.StorageTool format \</span></span>
+<span class="line"><span>  -t "$CLUSTER_ID" -c /opt/kafka/config/server.properties</span></span></code></pre>
+<p>The class is <code>kafka.tools.StorageTool</code> — not <code>org.apache.kafka.tools.StorageTool</code>.
+It’s an easy guess to get wrong, because most of Kafka’s public API lives
+under <code>org.apache.kafka.*</code>, and this one doesn’t. Get the package wrong and
+you get <code>ClassNotFoundException</code>, which looks like a broken classpath, not a
+wrong class name.</p>
+<h2 id="3-log4j-1--log4j-2-and-the-flag-changed-with-it">3. Log4j 1 → Log4j 2, and the flag changed with it</h2>
+<p>Kafka 4.0 migrated logging from Log4j 1 to Log4j 2. Three things changed
+together:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th></th><th>Kafka 3.x</th><th>Kafka 4.x</th></tr></thead><tbody><tr><td>Config file</td><td><code>config/log4j.properties</code></td><td><code>config/log4j2.yaml</code></td></tr><tr><td>Format</td><td>Java properties</td><td>YAML</td></tr><tr><td>JVM flag</td><td><code>-Dlog4j.configuration=</code></td><td><code>-Dlog4j.configurationFile=</code></td></tr></tbody></table>
+<p>Passing the old flag name with the new config file doesn’t error — Log4j 2
+just falls back to its own default logging config and starts anyway, quietly
+discarding whatever you thought you configured. No crash, no warning, just a
+broker that logs at the wrong level or to the wrong place, which you notice
+hours later when you go looking for a log line that was never written the
+way you expected.</p>
+<h2 id="4-jlink-needs-javadesktop-for-a-reason-that-has-nothing-to-do-with-a-gui">4. jlink needs <code>java.desktop</code> for a reason that has nothing to do with a GUI</h2>
+<p>If you’re building a custom JRE with <code>jlink</code> to keep the image small, it’s
+tempting to drop every module that sounds unrelated to a headless broker —
+and <code>java.desktop</code> sounds like exactly that: AWT, Swing, none of which Kafka
+uses.</p>
+<p>Drop it and Log4j 2 fails at startup with a <code>NoClassDefFoundError</code> reaching
+for <code>java.beans.PropertyChangeEvent</code>. That class has lived in <code>java.beans</code>
+since Java 9, and <code>java.beans</code> is part of the <code>java.desktop</code> module — not
+because Kafka needs a desktop, but because <code>java.beans</code> was bundled with AWT
+decades ago and nobody has split it out since. Log4j 2’s <code>LoggerContext</code>
+calls <code>updateLoggers()</code>, which fires a <code>PropertyChangeEvent</code>, which requires
+the class to exist at all — whether or not anything is actually watching for
+the change.</p>
+<p>The fix is one line in the <code>jlink --add-modules</code> list:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>--add-modules java.base,java.desktop,java.logging,java.management,...</span></span></code></pre>
+<p>It’s a strange module to have to include in a “minimal” JRE for a headless
+service, and that’s exactly why it’s worth writing down: the next person
+trimming this list will look at <code>java.desktop</code> and assume it’s dead weight.</p>
+<h2 id="the-pattern-across-all-four">The pattern across all four</h2>
+<p>None of these four failures says “you’re missing a Kafka 4.x migration
+step.” They say “file not found,” “class not found,” nothing at all, and
+“class not found” again — because upstream’s own release notes are the only
+place that connects the dots, and nothing in the runtime error path quotes
+them back to you. If you’re scripting an upgrade across a major version,
+read the release notes before the first failure, not after the fourth.</p> </article> </div> </section>  </main> <footer class="site-footer"> <div class="container"> <div>
+Minimal Containers · MIT-licensed · built from
+<a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
+<a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+</div> <div>
+Updated 2026-10-11 02:32 UTC  · <a href="https://github.com/rtvkiz/minimal/actions/runs/38105338262" rel="noopener">47b872e</a>
+· &copy; 2026 </div> </div> </footer> <script type="module">document.addEventListener("click",e=>{const t=e.target.closest("[data-copy]");if(!t)return;const n=t.getAttribute("data-copy")||"";navigator.clipboard.writeText(n).then(()=>{const o=t.textContent;t.textContent="Copied",setTimeout(()=>{t.textContent=o},1400)}).catch(()=>{t.textContent="Failed"})});</script> </body> </html>
