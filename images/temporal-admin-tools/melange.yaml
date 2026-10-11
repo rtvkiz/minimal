@@ -7,14 +7,14 @@ package:
   # and nothing in the Wolfi secdb, and grype would report zero CVEs for the
   # image. See docs/onboarding.md "Package naming and scanner visibility".
   name: temporal-admin-tools
-  version: 1.32.0
+  version: 1.32.1
   epoch: 0
   description: "Temporal admin and schema tooling built from source"
   copyright:
     - license: MIT
 
 vars:
-  sha256: a089b27f11b6910ee2ff7e7bb429831f87f1fe3dd6d82419cef3aca24039c47c
+  sha256: 9a1766efcdc2acf03165e0304549d00930e18ff4fbf2c5abe27732fe7c04f7ee
   # Secondary upstreams. Each is tracked by its own versions.yaml row
   # (temporal-cli / temporal-tctl) writing these fields, so none of them can
   # freeze silently — that is what check-autoupdate exists to prevent.
