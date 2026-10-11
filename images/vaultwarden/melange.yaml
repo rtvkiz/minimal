@@ -9,7 +9,7 @@ package:
   # nothing in NVD and has no Wolfi secdb entry, and grype then reports zero
   # findings for an unscanned image.
   name: vaultwarden
-  version: 1.37.3
+  version: 1.37.4
   epoch: 0
   description: "Minimal Vaultwarden (Bitwarden-compatible server) built from source"
   copyright:
@@ -30,7 +30,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: 64a3cd2117e82f226c01a9eb2d3a59b5629b527438d1f9cd0a85c9883c7a9b39
+  sha256: d31a3ef5456619cfe424f0586f4ecadd186e22513a93bbeab6bc2f09cda803a7
   # The web vault is a separate prebuilt release, not built here. Building it
   # would mean running the Bitwarden npm/Angular toolchain inside bwrap — the
   # frontend quagmire that keeps grafana and argocd off the catalog. Upstream
