@@ -11,7 +11,7 @@ package:
   # product bare, as cpe:2.3:a:osv-scanner:osv-scanner:*, so none of them
   # matched, and the Wolfi secdb missed it too.
   name: osv-scanner
-  version: 2.6.0
+  version: 2.7.0
   epoch: 0
   description: "Minimal OSV-Scanner (dependency vulnerability scanner) built from source"
   copyright:
@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 of osv-scanner source tarball - updated by update-versions.yml workflow
-  sha256: 848ead2e06aa6e6150cecc2d82b867da7636d241e50b88f0922511acdac00a00
+  sha256: acd8ebbf345a9a04eb299cb8e1339512fd4f2ad402f8f40972edcffa3eb45109
 
 environment:
   contents:
