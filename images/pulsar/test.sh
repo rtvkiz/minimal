@@ -18,7 +18,7 @@ docker run --rm --entrypoint /bin/sh "$IMAGE" \
 
 echo "Testing 'pulsar version' (offline, exercises the JRE + launcher)..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" \
-  -c "/opt/pulsar/bin/pulsar version" | grep -E '4\.2'
+  -c "/opt/pulsar/bin/pulsar version" | grep -E '5\.0'
 
 echo "Testing standalone config present..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" \
