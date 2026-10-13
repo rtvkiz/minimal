@@ -11,7 +11,7 @@ package:
   # product bare, as cpe:2.3:a:keycloak:keycloak:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: keycloak
-  version: 26.8.0
+  version: 26.8.1
   epoch: 0
   description: "Minimal Keycloak identity and access management server"
   copyright:
@@ -27,7 +27,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: 9e41da899f838a58cd510fc98ed4f7cadc715aed5683e42aca20a0c9a2a3980a
+  sha256: 4e2740b181faa2ea623a1c2ecf00855935311e546046e2f857615a47ed24cbe8
 
 environment:
   contents:
