@@ -1,5 +1,5 @@
 # Development variant of minimal-python.
-# Same Python 3.14 runtime as prod, plus shell, package manager, build
+# Same Python 3.15 runtime as prod, plus shell, package manager, build
 # toolchain, pip/setuptools/uv, and common native-extension dependencies.
 # Intended for CI build stages and in-pod debugging. NOT for production.
 #
@@ -67,8 +67,8 @@ contents:
     - python-3.15-dev
 
     # --- Python package management (baked in) ---
-    - py3.14-pip
-    - py3.14-setuptools
+    - py3.15-pip
+    - py3.15-setuptools
     - py3-pip-wheel
     - uv
 
