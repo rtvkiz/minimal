@@ -571,16 +571,64 @@ jobs:
               # on the pre-rewrite API). Never auto-apply a grype suggestion
               # for this family unless it lands on OTEL_TOP's major line.
               LOG_FAMILY_RE='^go\.opentelemetry\.io/(otel/log|otel/sdk/log|otel/exporters/otlp/otlplog/|otel/exporters/stdout/stdoutlog|contrib/bridges/otellogrus|contrib/bridges/otelzap)'
+
+              # otel-go's CORE module started hard-requiring otel/log at its
+              # own version starting with the v1.47.0 release (verified:
+              # v1.44.0/v1.46.0 go.mod has no otel/log require line, v1.47.0
+              # does). So forcing core otel/otel-sdk/otlptrace* up to an
+              # OTEL_TOP of v1.47.0+ drags otel/log along even when nothing
+              # in FIXES explicitly asked for it — broke loki/mimir/tempo/
+              # temporal-server a SECOND time (2026-10-12) after the
+              # log-family-only guard above already landed, because the
+              # break comes from the core bump, not from an explicit
+              # otel/log entry. Detect this once per run and, if the image's
+              # OWN log family is still pre-1.0 (checked below), refuse to
+              # force ANY otel-family package to OTEL_TOP — core included —
+              # and fall back to each package's own grype-suggested version.
+              OTEL_TOP_REQUIRES_LOG=false
+              OTEL_TOP_CORE_MOD=$(curl -fs --max-time 10 "https://proxy.golang.org/go.opentelemetry.io/otel/@v/${OTEL_TOP}.mod" 2>/dev/null || true)
+              echo "$OTEL_TOP_CORE_MOD" | grep -qE '^[[:space:]]+go\.opentelemetry\.io/otel/log[[:space:]]' && OTEL_TOP_REQUIRES_LOG=true
+
+              SOURCE_ON_OLD_LOG_API=false
+              while IFS= read -r line; do
+                pkg="${line%@*}"
+                if echo "$pkg" | grep -qE "$LOG_FAMILY_RE"; then
+                  cur_major="${line##*@v}"; cur_major="${cur_major%%.*}"
+                  [ "$cur_major" != "$OTEL_TOP_MAJOR" ] && SOURCE_ON_OLD_LOG_API=true
+                fi
+              done <<< "$OTEL_LINES"
+              # The grype-derived signal above only fires when grype's scan
+              # of the CURRENTLY PUBLISHED image happens to also flag a
+              # log-family CVE in the same run — incidental, not guaranteed.
+              # temporal-server broke a THIRD time (2026-10-13) with the
+              # signal above never firing: its published image apparently
+              # didn't trip a log-family grype match that run, so OTEL_LINES
+              # had no log-family entry, SOURCE_ON_OLD_LOG_API stayed false,
+              # and the core bump to v1.47.0 went through unguarded even
+              # though temporal-server v1.32.1's own go.mod verifiably pins
+              # otel/log at v0.20.0. Back it with a direct, verified list
+              # instead of depending on grype's luck.
+              case " loki mimir tempo temporal-server " in
+                *" $IMAGE "*) SOURCE_ON_OLD_LOG_API=true ;;
+              esac
+              [ "$OTEL_TOP_REQUIRES_LOG" = true ] && [ "$SOURCE_ON_OLD_LOG_API" = true ] && \
+                echo "  OTEL_TOP (${OTEL_TOP}) requires otel/log and this image's log family is still pre-1.0 — not forcing ANY otel-family package to OTEL_TOP"
+
               NEW_OTEL=""
               SDK_LOG_ON_OTEL_TOP=false
               while IFS= read -r line; do
                 pkg="${line%@*}"
                 cur_major="${line##*@v}"; cur_major="${cur_major%%.*}"
-                if [ "$cur_major" = "$OTEL_TOP_MAJOR" ]; then
+                is_log_family=false
+                echo "$pkg" | grep -qE "$LOG_FAMILY_RE" && is_log_family=true
+                if [ "$is_log_family" = true ] && [ "$cur_major" != "$OTEL_TOP_MAJOR" ]; then
+                  echo "    drop $line: log-family pre-1.0 fix version is the breaking log.KeyValue/log.String rewrite, not safe to auto-apply"
+                elif [ "$is_log_family" = false ] && [ "$OTEL_TOP_REQUIRES_LOG" = true ] && [ "$SOURCE_ON_OLD_LOG_API" = true ]; then
+                  echo "    keep $line: not forcing to OTEL_TOP (${OTEL_TOP}) — it requires otel/log, which this image's source isn't on"
+                  NEW_OTEL=$(printf '%s\n%s' "$NEW_OTEL" "$line")
+                elif [ "$cur_major" = "$OTEL_TOP_MAJOR" ]; then
                   NEW_OTEL=$(printf '%s\n%s@%s' "$NEW_OTEL" "$pkg" "$OTEL_TOP")
                   [ "$pkg" = "go.opentelemetry.io/otel/sdk/log" ] && SDK_LOG_ON_OTEL_TOP=true
-                elif echo "$pkg" | grep -qE "$LOG_FAMILY_RE"; then
-                  echo "    drop $line: log-family pre-1.0 fix version is the breaking log.KeyValue/log.String rewrite, not safe to auto-apply"
                 else
                   echo "    keep $line: on v${cur_major}.x, OTEL_TOP is v${OTEL_TOP_MAJOR}.x (different major line, not forcing)"
                   NEW_OTEL=$(printf '%s\n%s' "$NEW_OTEL" "$line")

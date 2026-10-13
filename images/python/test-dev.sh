@@ -7,7 +7,7 @@ set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 : "${IMAGE:?IMAGE env var required}"
 
 echo "Testing Python version (parity with prod)..."
-docker run --rm "$IMAGE" --version | grep -q "Python 3.14"
+docker run --rm "$IMAGE" --version | grep -q "Python 3.15"
 
 echo "Testing /bin/sh (busybox)..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo sh-ok" | grep -q sh-ok
@@ -21,8 +21,8 @@ docker run --rm --entrypoint /bin/sh "$IMAGE" -c "apk --version" | grep -q apk-t
 echo "Testing C toolchain (gcc, make, pkgconf)..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" -c "gcc --version && make --version && pkgconf --version" >/dev/null
 
-echo "Testing Python C headers (python-3.14-dev)..."
-docker run --rm --entrypoint /bin/sh "$IMAGE" -c "ls /usr/include/python3.14/Python.h" >/dev/null
+echo "Testing Python C headers (python-3.15-dev)..."
+docker run --rm --entrypoint /bin/sh "$IMAGE" -c "ls /usr/include/python3.15/Python.h" >/dev/null
 
 echo "Testing git..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" -c "git --version" | grep -q "git version"
