@@ -597,6 +597,20 @@ jobs:
                   [ "$cur_major" != "$OTEL_TOP_MAJOR" ] && SOURCE_ON_OLD_LOG_API=true
                 fi
               done <<< "$OTEL_LINES"
+              # The grype-derived signal above only fires when grype's scan
+              # of the CURRENTLY PUBLISHED image happens to also flag a
+              # log-family CVE in the same run — incidental, not guaranteed.
+              # temporal-server broke a THIRD time (2026-10-13) with the
+              # signal above never firing: its published image apparently
+              # didn't trip a log-family grype match that run, so OTEL_LINES
+              # had no log-family entry, SOURCE_ON_OLD_LOG_API stayed false,
+              # and the core bump to v1.47.0 went through unguarded even
+              # though temporal-server v1.32.1's own go.mod verifiably pins
+              # otel/log at v0.20.0. Back it with a direct, verified list
+              # instead of depending on grype's luck.
+              case " loki mimir tempo temporal-server " in
+                *" $IMAGE "*) SOURCE_ON_OLD_LOG_API=true ;;
+              esac
               [ "$OTEL_TOP_REQUIRES_LOG" = true ] && [ "$SOURCE_ON_OLD_LOG_API" = true ] && \
                 echo "  OTEL_TOP (${OTEL_TOP}) requires otel/log and this image's log family is still pre-1.0 — not forcing ANY otel-family package to OTEL_TOP"
 
