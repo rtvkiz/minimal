@@ -535,6 +535,14 @@
   links:
     releases: "https://github.com/bitnami/sealed-secrets/releases"
     notes: "https://github.com/bitnami/sealed-secrets/releases/tag/v{version}"
+- name: cmctl
+  # cron-enabled: true          # validate via `gh workflow run update-versions.yml -f only=cmctl` first
+  files: [images/cmctl/melange.yaml]
+  source: { type: github-releases-latest, repo: cert-manager/cmctl, strip-v: true }
+  tarball: { url: "https://github.com/cert-manager/cmctl/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/cert-manager/cmctl/releases"
+    notes: "https://github.com/cert-manager/cmctl/releases/tag/v{version}"
 
 - name: helmfile
   cron-enabled: true   # tier 2 (validated 2026-07-12)
