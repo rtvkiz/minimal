@@ -536,7 +536,7 @@
     releases: "https://github.com/bitnami/sealed-secrets/releases"
     notes: "https://github.com/bitnami/sealed-secrets/releases/tag/v{version}"
 - name: cmctl
-  # cron-enabled: true          # validate via `gh workflow run update-versions.yml -f only=cmctl` first
+  cron-enabled: true   # validated via `gh workflow run update-versions.yml -f only=cmctl` (2026-10-14)
   files: [images/cmctl/melange.yaml]
   source: { type: github-releases-latest, repo: cert-manager/cmctl, strip-v: true }
   tarball: { url: "https://github.com/cert-manager/cmctl/archive/refs/tags/v{version}.tar.gz", field: sha256 }
