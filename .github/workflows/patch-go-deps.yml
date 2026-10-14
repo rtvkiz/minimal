@@ -171,6 +171,7 @@ jobs:
             [sops]="/home/build/sops-${D}{{package.version}}"
             [crane]="/home/build/crane-${D}{{package.version}}"
             [kubeseal]="/home/build/kubeseal-${D}{{package.version}}"
+            [cmctl]="/home/build/cmctl-${D}{{package.version}}"
             [helmfile]="/home/build/helmfile-${D}{{package.version}}"
             [regctl]="/home/build/regctl-${D}{{package.version}}"
             [stern]="/home/build/stern-${D}{{package.version}}"
@@ -261,6 +262,7 @@ jobs:
             [sops]="github.com/getsops/sops/v3"
             [crane]="github.com/google/go-containerregistry"
             [kubeseal]="github.com/bitnami/sealed-secrets"
+            [cmctl]="github.com/cert-manager/cmctl/v2"
             [helmfile]="github.com/helmfile/helmfile"
             [regctl]="github.com/regclient/regclient"
             [stern]="github.com/stern/stern"
@@ -350,6 +352,7 @@ jobs:
             [sops]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [crane]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [kubeseal]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [cmctl]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [helmfile]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [regctl]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [stern]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

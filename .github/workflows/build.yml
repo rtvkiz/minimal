@@ -113,6 +113,7 @@ jobs:
             {"name":"sops","variants":["prod","dev"]},
             {"name":"crane","variants":["prod","dev"]},
             {"name":"kubeseal","variants":["prod","dev"]},
+            {"name":"cmctl","variants":["prod","dev"]},
             {"name":"helmfile","variants":["prod","dev"]},
             {"name":"regctl","variants":["prod","dev"]},
             {"name":"stern","variants":["prod","dev"]},
