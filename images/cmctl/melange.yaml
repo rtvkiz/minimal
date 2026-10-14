@@ -1,0 +1,65 @@
+# Melange build configuration for minimal cmctl
+# Pure Go from source. Single static `cmctl` binary (cert-manager CLI). License: Apache-2.0.
+
+package:
+  # Named `cmctl` (not `cmctl-minimal`) so vulnerability scanners can identify
+  # it — see docs/onboarding.md "Package naming and scanner visibility".
+  name: cmctl
+  version: 2.6.1
+  epoch: 0
+  description: "Minimal cmctl cert-manager CLI built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo. Wolfi has no
+    # bare `cmctl` package today, but provider-priority pins resolution to our
+    # package permanently if it ever does.
+    provider-priority: 100
+
+vars:
+  # SHA256 of cmctl source tarball - updated by update-versions.yml workflow
+  sha256: 83226abe4516e4e39953dee0d341b26e4c6f5a7f2f62ea07074bd2f8dd55c664
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/cmctl-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/cert-manager/cmctl/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/cmctl.tar.gz
+      echo "${{vars.sha256}}  /home/build/cmctl.tar.gz" | sha256sum -c -
+      tar xzf /home/build/cmctl.tar.gz -C /home/build/cmctl-${{package.version}} --strip-components=1
+      rm /home/build/cmctl.tar.gz
+
+  - runs: |
+      cd /home/build/cmctl-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/cert-manager/cert-manager/pkg/util.AppVersion=${{package.version}} \
+          -X k8s.io/client-go/pkg/version.gitVersion=${{package.version}}" \
+        -o /home/build/cmctl-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/cmctl-bin "${{targets.destdir}}/usr/bin/cmctl"
+      chmod 0755 "${{targets.destdir}}/usr/bin/cmctl"
+
+  - runs: |
+      echo "Verifying cmctl binary..."
+      "${{targets.destdir}}/usr/bin/cmctl" version --client

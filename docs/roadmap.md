@@ -47,10 +47,10 @@ Single static Go binaries **and** genuinely run as containers. Best impact-per-e
 | [x] | sops | getsops/sops | 🟢 MPL-2.0 | — | 22k | secrets in CI, CG-gated |
 | [x] | crane | google/go-containerregistry | 🟢 Apache-2.0 | — | 4k | registry ops, heavy CI use |
 | [x] | kubeseal | bitnami/sealed-secrets | 🟢 Apache-2.0 | — | 9k | sealed-secrets CLI (canonical repo, not bitnami-labs 301) |
+| [x] | cmctl | cert-manager/cmctl | 🟢 Apache-2.0 | — | 1k | cert-manager CLI — the "klone build" note below was wrong: `go_cmctl_main_dir := .` builds the repo root directly with four plain `-X` ldflags (`make/00_mod.mk`); klone only vendors cert-manager's own shared Makefile tooling, it is not a build dependency. Generated API-conversion code ships pre-committed. |
 
 **Reclassified out of Tier 1 (not clean Go single-binaries — moved to "deferred"):**
 - **pomerium** — huge demand (1.6B pulls) but `//go:embed`s an arch-specific **Envoy** binary as its data plane → Tier-3-complexity build, own effort.
-- **cmctl** — cert-manager's `makefile-modules`/klone build, no clean `-X` version injection → needs its own investigation.
 
 ## Tier 2 — solid demand, easy Go CLIs
 
@@ -85,11 +85,11 @@ by effort. Fills the catalog's thinnest categories (databases, proxies, apps).
 | varnish | varnishd compiles VCL → C → `.so` by invoking `cc` at runtime (`VCC_CC="exec cc … -fpic -shared -o %o %s"`), on every config load. A working prod image must therefore ship gcc + binutils + C headers + varnish's headers — a permanent compiler/attack-surface that breaks the "no compiler, minimum packages" thesis (Chainguard ships the toolchain for the same reason). Revisit only as a deliberate, documented exception, or pick a compiler-free HTTP-cache alternative. |
 | kubescape | Go, but a large build — needs ~40 G local disk freed (stale `/tmp/bubblewrap-guest-*`). Recipe already generated in batch-b; onboard once disk allows. |
 | pomerium | 1.6B pulls but `//go:embed`s an arch-specific Envoy binary (data plane). Needs an Envoy-fetch step + cross-arch handling — Envoy-image-class effort, not a clean crank. |
-| cmctl | cert-manager's `makefile-modules`/klone build; no clean `-X` version injection. Needs its own investigation of the version mechanism. |
 | cert-manager (core) | Multi-image (controller + webhook + cainjector + startupapicheck + acmesolver). High demand, in-cluster. Mirror the upstream image split — own effort after Tier 1. |
 | flux (controllers) | source/kustomize/helm/notification-controller, separate repos. Multi-image, in-cluster. Own effort. |
 | uptime-kuma | 166M pulls (MIT) but Node/yarn frontend → the bwrap frontend quagmire (see grafana). Backend-from-source + prebuilt frontend assets, own effort. |
 | argocd | Embeds a yarn-built React UI **and** repo-server needs git/helm/kustomize at runtime (fights distroless). Grafana-bucket effort. |
+| pgadmin4 | **Blocked — frontend-in-bwrap, verified 2026-10-14.** Upstream's own `Dockerfile` builds `web/` with `yarn install --immutable && yarn run bundle` in a Node stage; no prebuilt JS bundle is committed to the repo and no sdist/wheel ships one either. Same shape as alloy/authelia/argocd — no build without npm/yarn in the sandbox. |
 
 ## Deprioritized — popular but low container demand (laptop / CLI / embedded)
 
@@ -150,7 +150,8 @@ patroni (🟢 MIT, Postgres HA — new Python-daemon pattern) — **DONE**.
 couchdb (🟢 Apache, Erlang — rabbitmq precedent) remaining.
 
 ### Batch K — own-effort revisit
-cmctl (🟢 Apache — revisit klone build) · + one of {cert-manager core (multi-image) / pomerium (Envoy fetch) / apisix (OpenResty)}.
+cmctl shipped 2026-10-14 (the klone build was never a real blocker — see Tier 1 note).
+Remaining: one of {cert-manager core (multi-image) / pomerium (Envoy fetch) / apisix (OpenResty)}.
 
 Batches H–K name more candidates than the 4 slots left to 100; the last slots go to
 whichever land first.
@@ -279,7 +280,7 @@ exists to fill. It also keeps full auto-update coverage via
 | influxdb | 1.1B pulls on `library/influxdb`, but that number is v1/v2 (Go, MIT); current upstream is **InfluxDB 3 Core in Rust** (🟢 Apache-2.0), no Wolfi package, and our time-series slot is already served by prometheus/mimir/victoria-metrics/thanos. Worth it only if we want line-protocol coverage. |
 | emqx | 47M pulls, but the repo is `NOASSERTION` (Apache core + BSL-ish enterprise pieces) and it's a large Erlang build. License read required first. |
 | timescaledb | 123M pulls, but the tree is split Apache-2.0 / TSL (source-available) — an Apache-only build is possible and is the only version we could ship. Own effort. |
-| pgadmin4 | 444M pulls (🟢 PostgreSQL license), Python + prebuilt frontend. Plausible via pip wheels; needs its own investigation. |
+| pgadmin4 | **Blocked — frontend-in-bwrap, verified 2026-10-14.** 444M pulls (🟢 PostgreSQL license), but there is no prebuilt frontend: upstream's own `Dockerfile` builds `web/` from source with `yarn install --immutable && yarn run bundle`. Moved to the deferred table above. |
 | nextcloud | **Reclassified from W1, verified 2026-09-28.** `nextcloud-server-33` (307MB) bundles the full upstream Docker entrypoint model: Apache + PHP-FPM + cron + `docker-entrypoint-hooks.d` + `su-exec`, designed to boot as **root**, fix ownership, then `su -p "$user"` to a www-data-equivalent account for the actual server process — except that account does not exist in this package's `/etc/passwd`. That's an architecture mismatch with our nonroot-by-default model, not a config tweak: needs either a real user added at the apko layer plus reworking the entrypoint's privilege-drop assumptions, or accepting a root-then-drop exception like the postgres family but scoped to a much bigger, more stateful app (occ install flow, external DB requirement, persistent config/data volumes). Own effort, like harbor/argo-cd. |
 | sonarqube | **Reclassified from W1, verified 2026-09-28.** `sonarqube-10` (874MB) hard-depends on `bash`, `systemd-dev`, `zstd-dev`, and its own `sonarqube-startup` wrapper package — heavier packaging than a plain Java web app suggests. Bundles Elasticsearch internally and needs an external Postgres to run at all, so a meaningful smoke test is a multi-container compose, not a single `docker run`. Own effort, like harbor/argo-cd. |
 
