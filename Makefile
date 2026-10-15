@@ -129,6 +129,7 @@ SOPS_VERSION ?= $(call melange_version,images/sops/melange.yaml)
 CRANE_VERSION ?= $(call melange_version,images/crane/melange.yaml)
 KUBESEAL_VERSION ?= $(call melange_version,images/kubeseal/melange.yaml)
 CMCTL_VERSION ?= $(call melange_version,images/cmctl/melange.yaml)
+TIMESCALEDB_VERSION ?= $(call melange_version,images/timescaledb/melange.yaml)
 HELMFILE_VERSION ?= $(call melange_version,images/helmfile/melange.yaml)
 REGCTL_VERSION ?= $(call melange_version,images/regctl/melange.yaml)
 STERN_VERSION ?= $(call melange_version,images/stern/melange.yaml)
@@ -256,6 +257,7 @@ endef
 .PHONY: crane crane-melange test-crane
 .PHONY: kubeseal kubeseal-melange test-kubeseal
 .PHONY: cmctl cmctl-melange test-cmctl
+.PHONY: timescaledb timescaledb-melange test-timescaledb
 .PHONY: helmfile helmfile-melange test-helmfile
 .PHONY: regctl regctl-melange test-regctl
 .PHONY: stern stern-melange test-stern
@@ -2713,6 +2715,29 @@ cmctl: cmctl-melange
 	@rm -f cmctl.tar sbom-*.spdx.json
 	@echo "✓ minimal-cmctl built (source build)"
 
+timescaledb-melange: keygen
+	@echo "Building timescaledb $(TIMESCALEDB_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/timescaledb/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ timescaledb package built from source"
+
+timescaledb: timescaledb-melange
+	@echo "Assembling minimal-timescaledb image with apko..."
+	apko build images/timescaledb/apko/timescaledb.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-timescaledb:$(VERSION) \
+		timescaledb.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < timescaledb.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-timescaledb:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-timescaledb:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-timescaledb:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-timescaledb:latest
+	@rm -f timescaledb.tar sbom-*.spdx.json
+	@echo "✓ minimal-timescaledb built (source build)"
+
 kubeseal: kubeseal-melange
 	@echo "Assembling minimal-kubeseal image with apko..."
 	apko build images/kubeseal/apko/kubeseal.yaml \
@@ -4423,6 +4448,12 @@ test-cmctl:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-cmctl:latest" && \
 		images/cmctl/test.sh
 	@echo "✓ cmctl tests passed"
+
+test-timescaledb:
+	@echo "Testing timescaledb image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-timescaledb:latest" && \
+		images/timescaledb/test.sh
+	@echo "✓ timescaledb tests passed"
 
 test-helmfile:
 	@echo "Testing helmfile image..."

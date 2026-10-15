@@ -552,6 +552,17 @@
     releases: "https://github.com/cert-manager/cmctl/releases"
     notes: "https://github.com/cert-manager/cmctl/releases/tag/v{version}"
 
+- name: timescaledb
+  # cron-enabled: true          # validate via `gh workflow run update-versions.yml -f only=timescaledb` first
+  files: [images/timescaledb/melange.yaml]
+  # Upstream tags bare versions (2.30.2, no leading v) and has no other release
+  # train mixed into /releases/latest (unlike descheduler's helm-chart tags).
+  source: { type: github-releases-latest, repo: timescale/timescaledb }
+  tarball: { url: "https://github.com/timescale/timescaledb/archive/refs/tags/{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/timescale/timescaledb/releases"
+    notes: "https://github.com/timescale/timescaledb/releases/tag/{version}"
+
 - name: helmfile
   cron-enabled: true   # tier 2 (validated 2026-07-12)
   files: [images/helmfile/melange.yaml]

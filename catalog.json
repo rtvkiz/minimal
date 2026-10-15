@@ -602,6 +602,18 @@
       "description": "cmctl is the cert-manager CLI: approve CertificateRequests, renew certs, check issuer health. Shell-less Go binary, signed and SBOM-attested, every 6 hours."
     },
     {
+      "name": "timescaledb",
+      "category": "Databases",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "timescaledb",
+      "upstream_url": "https://www.timescale.com",
+      "summary": "PostgreSQL 18 + TimescaleDB, built Apache-2.0-only from source via melange.",
+      "description": "TimescaleDB time-series extension for Postgres, built Apache-2.0-only from source. Shell-less PostgreSQL 18 image, signed, SBOM-attested, rebuilt every 6 hours."
+    },
+    {
       "name": "kustomize",
       "category": "Kubernetes, CI & IaC",
       "variants": [

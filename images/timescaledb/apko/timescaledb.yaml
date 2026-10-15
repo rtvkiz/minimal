@@ -1,0 +1,151 @@
+# Minimal TimescaleDB image - PostgreSQL 18 (Wolfi's package) + our
+# source-built timescaledb extension (Apache-2.0-only, -DAPACHE_ONLY=1).
+# Same shape as postgres-slim, plus the extension preloaded via a CLI flag
+# (no config-file editing or entrypoint script needed).
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+
+    # Shell — REQUIRED, not a convenience. Same postgres-family exception as
+    # postgres-slim/patroni: initdb runs `"postgres" -V` through popen(), which
+    # execs /bin/sh. busybox only — no bash, no apk-tools.
+    - busybox
+
+    # PostgreSQL from Wolfi (CVE-patched) + our timescaledb extension
+    - postgresql-18
+    - postgresql-18-base
+    - postgresql-18-client
+    - postgresql-18-client-base
+    - postgresql-18-contrib
+    - libpq-18
+    - pgaudit-18
+    - timescaledb
+
+    # Core libraries
+    - glibc
+    - glibc-locale-posix
+    - glibc-locale-en
+    - ld-linux
+    - libgcc
+    - libstdc++
+    - libcrypt1
+    - libxcrypt
+
+    # SSL/TLS libraries
+    - libssl3
+    - libcrypto3
+
+    # ICU (internationalization)
+    - libicu78
+    - icu78-data-full
+
+    # Authentication/security libraries
+    - cyrus-sasl
+    - heimdal-libs
+    - krb5-libs
+    - krb5-conf
+    - keyutils-libs
+    - libldap-2.6
+    - libverto
+    - linux-pam
+    - libselinux
+    - libsepol
+
+    # XML/XSLT
+    - libxml2-16
+    - libxslt
+
+    # Compression
+    - liblz4-1
+    - libzstd1
+    - zlib
+
+    # Database/utility libraries
+    - libedit
+    - libffi
+    - libpcre2-8-0
+    - libuuid
+    - libcom_err
+    - sqlite-libs
+    - gdbm
+
+    # Terminal
+    - ncurses
+    - ncurses-terminfo-base
+    - readline
+
+    # Locale and timezone
+    - localedef
+    - tzdata
+
+    # Certificates
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: postgres
+      gid: 70
+  users:
+    - username: postgres
+      uid: 70
+      gid: 70
+      shell: /bin/false
+  run-as: 70
+
+entrypoint:
+  # Bare, matching postgres-slim exactly - `docker run $IMAGE --version` must
+  # keep working for scanners/tests/users. Baking `-c
+  # shared_preload_libraries=timescaledb` in here instead breaks that: Docker
+  # appends CMD args AFTER the entrypoint's own args, so `--version` lands
+  # after `-c name=value` and postgres's arg parser rejects the combination
+  # ("FATAL: --version requires a value" - verified against this image).
+  #
+  # shared_preload_libraries IS required (not just CREATE EXTENSION) because
+  # timescaledb installs background workers and hooks at postmaster startup -
+  # pass it explicitly at `docker run`/`initdb` time, e.g.:
+  #   postgres -D "$PGDATA" -c shared_preload_libraries=timescaledb
+  # (see images/timescaledb/test.sh for the full initdb+start sequence).
+  command: /usr/bin/postgres
+
+environment:
+  PGDATA: /var/lib/postgresql/data
+  LANG: en_US.UTF-8
+  PATH: /usr/lib/postgresql18/bin:/usr/bin:/bin
+
+paths:
+  - path: /var/lib/postgresql
+    type: directory
+    uid: 70
+    gid: 70
+    permissions: 0o700
+  - path: /var/lib/postgresql/data
+    type: directory
+    uid: 70
+    gid: 70
+    permissions: 0o700
+  - path: /var/run/postgresql
+    type: directory
+    uid: 70
+    gid: 70
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 70
+    gid: 70
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-timescaledb"
+  org.opencontainers.image.description: "Hardened PostgreSQL 18 + TimescaleDB (Apache-2.0-only build) with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/timescaledb"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

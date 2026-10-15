@@ -1,0 +1,86 @@
+# Melange build configuration for minimal TimescaleDB
+# PostgreSQL extension (C, CMake), built Apache-2.0-only. License: Apache-2.0.
+#
+# Upstream's tree is split: everything outside tsl/ is Apache-2.0, everything
+# inside tsl/ is the Timescale License (source-available, not OSS). Upstream's
+# own CMakeLists.txt ships an official `-DAPACHE_ONLY=1` flag (and their own
+# Docker build, timescale/timescaledb-docker, uses the same flag for their
+# "-oss" tagged images) that skips `add_subdirectory(tsl)` entirely — so this
+# is an upstream-supported build mode, not a patch or a reinterpretation of
+# their license split.
+#
+# This package ships ONLY the compiled extension (.so + .control + .sql files)
+# for Wolfi's postgresql-18, matching how Wolfi's own postgresql-18-contrib
+# packages extensions. It is not a standalone binary — see
+# images/timescaledb/apko/timescaledb.yaml, which installs this package
+# alongside postgresql-18 itself.
+package:
+  name: timescaledb
+  version: 2.30.2
+  epoch: 0
+  description: "TimescaleDB PostgreSQL extension, built Apache-2.0-only from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of timescaledb-{version}.tar.gz (bare version, no leading v) -
+  # updated by update-versions.yml
+  sha256: a7003a70836477dc8d575d95a4c515d8a22ed219d0cb03b3640bb813f04e1b42
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - bash # upstream's ./bootstrap script has a `#!/usr/bin/env bash` shebang
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - cmake
+      - git
+      - postgresql-18
+      - postgresql-18-dev
+      - openssl-dev
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/timescaledb-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/timescale/timescaledb/archive/refs/tags/${{package.version}}.tar.gz" \
+        -o /home/build/timescaledb.tar.gz
+      echo "${{vars.sha256}}  /home/build/timescaledb.tar.gz" | sha256sum -c -
+      tar xzf /home/build/timescaledb.tar.gz -C /home/build/timescaledb-${{package.version}} --strip-components=1
+      rm /home/build/timescaledb.tar.gz
+
+  - runs: |
+      cd /home/build/timescaledb-${{package.version}}
+      ./bootstrap \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DAPACHE_ONLY=1 \
+        -DREGRESS_CHECKS=OFF \
+        -DTAP_CHECKS=OFF \
+        -DWARNINGS_AS_ERRORS=OFF \
+        -DPG_CONFIG=/usr/bin/pg_config
+      cd build
+      make -j"$(nproc)"
+
+  - runs: |
+      cd /home/build/timescaledb-${{package.version}}/build
+      make install DESTDIR="${{targets.destdir}}"
+      # APACHE_ONLY=1 already skips building the tsl/ subdirectory, so there is
+      # no timescaledb-tsl-*.so to remove - this just asserts that stays true,
+      # the same way upstream's own OSS-only Docker build does, so a future
+      # CMakeLists change that starts building it anyway is caught here rather
+      # than silently shipping Timescale-licensed code.
+      if find "${{targets.destdir}}" -name 'timescaledb-tsl-*' | grep -q .; then
+        echo "::error::APACHE_ONLY build produced a tsl artifact - license split broken upstream?"
+        exit 1
+      fi
+
+  - runs: |
+      echo "Verifying extension files installed..."
+      find "${{targets.destdir}}/usr/lib/postgresql18" -name 'timescaledb-*.so' | grep -q .
+      find "${{targets.destdir}}/usr/share/postgresql18/extension" -name 'timescaledb*.control' | grep -q .
