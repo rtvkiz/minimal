@@ -2,7 +2,7 @@
   "version": "0.109.1",
   "sbom_tool": "syft",
   "sbom_version": "1.18.1",
-  "started_at": "2026-10-15T08:36:54Z",
+  "started_at": "2026-10-15T12:14:35Z",
   "vex_applied": false,
   "db_schema": "v6.1.10",
   "db_built": "2026-10-15T06:30:36Z",
