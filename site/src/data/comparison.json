@@ -14,7 +14,7 @@
     "2026-10-01",
     "2026-10-15"
   ],
-  "csvRows": 405,
+  "csvRows": 540,
   "minimus": {
     "rival": "minimus",
     "pairs": [
@@ -1024,21 +1024,6 @@
         "versionMatch": "exact"
       },
       {
-        "image": "helm",
-        "ours": 1,
-        "theirs": 6,
-        "delta": -5,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 1,
-        "theirsHigh": 3,
-        "oursRef": "ghcr.io/rtvkiz/minimal-helm:latest",
-        "theirsRef": "reg.mini.dev/helm:latest",
-        "oursVersion": "4.3.0",
-        "theirsVersion": "4.3.0",
-        "versionMatch": "exact"
-      },
-      {
         "image": "kube-vip",
         "ours": 1,
         "theirs": 6,
@@ -1159,6 +1144,21 @@
         "versionMatch": "exact"
       },
       {
+        "image": "helm",
+        "ours": 1,
+        "theirs": 1,
+        "delta": 0,
+        "oursCritical": 0,
+        "oursHigh": 0,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-helm:latest",
+        "theirsRef": "reg.mini.dev/helm:latest",
+        "oursVersion": "4.3.0",
+        "theirsVersion": "4.3.1",
+        "versionMatch": "minor"
+      },
+      {
         "image": "opa",
         "ours": 1,
         "theirs": 1,
@@ -1236,11 +1236,11 @@
     ],
     "available": 104,
     "compared": 81,
-    "lower": 75,
-    "tie": 5,
+    "lower": 74,
+    "tie": 6,
     "higher": 1,
     "oursTotal": 215,
-    "theirsTotal": 1094,
+    "theirsTotal": 1089,
     "excludedMismatch": 13,
     "excludedUnknown": 10,
     "rivalUnavailable": 31
@@ -1499,5 +1499,19 @@
     "excludedMismatch": 2,
     "excludedUnknown": 2,
     "rivalUnavailable": 115
+  },
+  "distroless": {
+    "rival": "distroless",
+    "pairs": [],
+    "available": 3,
+    "compared": 0,
+    "lower": 0,
+    "tie": 0,
+    "higher": 0,
+    "oursTotal": 0,
+    "theirsTotal": 0,
+    "excludedMismatch": 1,
+    "excludedUnknown": 2,
+    "rivalUnavailable": 132
   }
 }
