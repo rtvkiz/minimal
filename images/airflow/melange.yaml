@@ -77,8 +77,7 @@ pipeline:
   # patch-python-deps: auto-generated — do not edit manually
   - runs: |
       cd /home/build
-      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "pyjwt==2.15.0"
-      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "urllib3==2.8.0"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "mako==1.4.2"
   # end-patch-python-deps
   - runs: |
       # Trim what a running scheduler/API server never reads. Test trees and
