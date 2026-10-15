@@ -367,9 +367,17 @@
     notes: "https://github.com/tailscale/tailscale/releases/tag/v{version}"
 
 - name: descheduler
-  cron-enabled: true   # validated 2026-08-27 (see PR)
+  cron-enabled: true   # validated 2026-08-27 (see PR); re-validated 2026-10-15 (source-type switch)
   files: [images/descheduler/melange.yaml]
-  source: { type: github-releases-latest, repo: kubernetes-sigs/descheduler, strip-v: true }
+  # kubernetes-sigs/descheduler also tags+releases a separate
+  # `descheduler-helm-chart-X.Y.Z` train alongside the real `vX.Y.Z` app
+  # releases, published a little later each time — so /releases/latest
+  # returns the helm-chart release, not the app version. Broke the
+  # 2026-10-14 scheduled run with "invalid upstream version received:
+  # descheduler-helm-chart-0.37.0" (the N.N.N shape guard caught it, but
+  # every run fails the same way until a new release ships). Switched to
+  # github-tags with a pattern that only matches the `vX.Y.Z` app tags.
+  source: { type: github-tags, repo: kubernetes-sigs/descheduler, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
   tarball: { url: "https://github.com/kubernetes-sigs/descheduler/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   links:
     releases: "https://github.com/kubernetes-sigs/descheduler/releases"
@@ -535,6 +543,14 @@
   links:
     releases: "https://github.com/bitnami/sealed-secrets/releases"
     notes: "https://github.com/bitnami/sealed-secrets/releases/tag/v{version}"
+- name: cmctl
+  cron-enabled: true   # validated via `gh workflow run update-versions.yml -f only=cmctl` (2026-10-14)
+  files: [images/cmctl/melange.yaml]
+  source: { type: github-releases-latest, repo: cert-manager/cmctl, strip-v: true }
+  tarball: { url: "https://github.com/cert-manager/cmctl/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/cert-manager/cmctl/releases"
+    notes: "https://github.com/cert-manager/cmctl/releases/tag/v{version}"
 
 - name: helmfile
   cron-enabled: true   # tier 2 (validated 2026-07-12)

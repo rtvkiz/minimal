@@ -11,7 +11,7 @@ package:
   # (cpe:2.3:a:descheduler:descheduler-minimal:*, ...). NVD indexes this
   # product bare, so none of them matched.
   name: descheduler
-  version: 0.36.0
+  version: 0.37.0
   epoch: 0
   description: "Minimal Kubernetes descheduler built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of descheduler source tarball - updated by update-versions.yml workflow
-  sha256: 9b7fc9a457642f80c8683b96fafecc58e2229097399b300826bbb07d5de8effe
+  sha256: 1f615fac1e9e79488b265593d3693c0d27604e8b4d0fb660c761f8dc185c1644
 
 environment:
   contents:
@@ -172,7 +172,7 @@ pipeline:
         ( set -e
           cd "$root"
           cp go.mod .pgd-orig.mod
-          _PGDA=$(_pgd_filter github.com/google/cel-go@v0.29.0 google.golang.org/grpc@v1.83.2 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc@v1.47.0 go.opentelemetry.io/otel/exporters/otlp/otlptrace@v1.47.0 go.opentelemetry.io/otel/sdk@v1.47.0 go.opentelemetry.io/otel@v1.47.0 golang.org/x/crypto@v0.57.0 golang.org/x/net@v0.59.0 golang.org/x/sys@v0.48.0 golang.org/x/text@v0.42.0 golang.org/x/term@v0.46.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.23.0 golang.org/x/tools@v0.51.0)
+          _PGDA=$(_pgd_filter github.com/google/cel-go@v0.29.0 google.golang.org/grpc@v1.83.2 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc@v1.47.0 go.opentelemetry.io/otel/exporters/otlp/otlptrace@v1.47.0 go.opentelemetry.io/otel/sdk@v1.47.0 go.opentelemetry.io/otel@v1.47.0 golang.org/x/crypto@v0.58.0 golang.org/x/net@v0.61.0 golang.org/x/sys@v0.49.0 golang.org/x/text@v0.43.0 golang.org/x/term@v0.47.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.24.0 golang.org/x/tools@v0.52.0)
           if [ -n "$_PGDA" ]; then _pgd_get $_PGDA; fi
           go mod tidy -e
           # go mod tidy can downgrade a source-pinned require below what the

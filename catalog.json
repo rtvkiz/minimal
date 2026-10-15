@@ -590,6 +590,18 @@
       "description": "kubeseal encrypting Kubernetes Secrets into SealedSecrets safe to commit to git. Shell-less Go binary, signed and SBOM-attested, rebuilt every 6 hours."
     },
     {
+      "name": "cmctl",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "cmctl",
+      "upstream_url": "https://cert-manager.io/docs/reference/cmctl/",
+      "summary": "Shell-less cmctl cert-manager CLI, built from source via melange.",
+      "description": "cmctl is the cert-manager CLI: approve CertificateRequests, renew certs, check issuer health. Shell-less Go binary, signed and SBOM-attested, every 6 hours."
+    },
+    {
       "name": "kustomize",
       "category": "Kubernetes, CI & IaC",
       "variants": [

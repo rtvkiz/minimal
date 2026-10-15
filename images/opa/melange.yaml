@@ -10,7 +10,7 @@ package:
   # as cpe:2.3:a:opa:opa:*, so none of them matched, and the Wolfi secdb missed
   # it too.
   name: opa
-  version: 1.21.1
+  version: 1.21.2
   epoch: 0
   description: "Minimal Open Policy Agent (OPA) built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 of opa source tarball - updated by update-versions.yml workflow
-  sha256: 8989ae9dfc1a0e5406eed6a65fcecca97a0f1f57f50b533c97e65f06643ec275
+  sha256: ae553c9cc7f13a1443b3434e10ed83ba770d874168b2f00431225853e3dca9ff
 
 environment:
   contents:
@@ -164,7 +164,7 @@ pipeline:
         ( set -e
           cd "$root"
           cp go.mod .pgd-orig.mod
-          _PGDA=$(_pgd_filter github.com/klauspost/compress@v1.18.7 google.golang.org/grpc@v1.83.1 golang.org/x/crypto@v0.57.0 golang.org/x/net@v0.59.0 golang.org/x/sys@v0.48.0 golang.org/x/text@v0.42.0 golang.org/x/term@v0.46.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.23.0 golang.org/x/tools@v0.51.0)
+          _PGDA=$(_pgd_filter github.com/klauspost/compress@v1.18.7 google.golang.org/grpc@v1.83.1 golang.org/x/crypto@v0.58.0 golang.org/x/net@v0.61.0 golang.org/x/sys@v0.49.0 golang.org/x/text@v0.43.0 golang.org/x/term@v0.47.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.24.0 golang.org/x/tools@v0.52.0)
           if [ -n "$_PGDA" ]; then _pgd_get $_PGDA; fi
           go mod tidy -e
           # go mod tidy can downgrade a source-pinned require below what the

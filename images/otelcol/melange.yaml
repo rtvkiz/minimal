@@ -11,7 +11,7 @@ package:
   # bare, as cpe:2.3:a:otelcol:otelcol:*, so none of them matched, and the
   # Wolfi secdb missed it too.
   name: otelcol
-  version: 0.162.0
+  version: 0.163.0
   epoch: 0
   description: "Minimal OpenTelemetry Collector built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: fb8d2bd8987e18054a63606e6015d4c8a10aa01eaea7f0d15d82ebdec11ab69e
+  sha256: 885f3506748cba298c703f545d34703edf48d6a593e3e3c9c2c60006e6f23a24
 
 environment:
   contents:
@@ -155,7 +155,7 @@ pipeline:
         ( set -e
           cd "$root"
           cp go.mod .pgd-orig.mod
-          _PGDA=$(_pgd_filter google.golang.org/grpc@v1.83.1 golang.org/x/crypto@v0.57.0 golang.org/x/net@v0.59.0 golang.org/x/sys@v0.48.0 golang.org/x/text@v0.42.0 golang.org/x/term@v0.46.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.23.0 golang.org/x/tools@v0.51.0)
+          _PGDA=$(_pgd_filter google.golang.org/grpc@v1.83.1 golang.org/x/crypto@v0.58.0 golang.org/x/net@v0.61.0 golang.org/x/sys@v0.49.0 golang.org/x/text@v0.43.0 golang.org/x/term@v0.47.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.24.0 golang.org/x/tools@v0.52.0)
           if [ -n "$_PGDA" ]; then _pgd_get $_PGDA; fi
           go mod tidy -e
           # go mod tidy can downgrade a source-pinned require below what the
