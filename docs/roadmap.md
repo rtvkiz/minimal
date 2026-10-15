@@ -73,10 +73,11 @@ by effort. Fills the catalog's thinnest categories (databases, proxies, apps).
 | [ ] | ~~varnish~~ | varnishcache/varnish-cache | 🟢 BSD | C | 21M | 4k | **Deferred → see below.** varnishd compiles VCL with `cc` at runtime → needs gcc+binutils+headers in prod (breaks the shell-less/minimal thesis). |
 | [ ] | apisix | apache/apisix | 🟢 Apache-2.0 | C/Lua/OpenResty | 37M | 17k | API gateway (harder: OpenResty) |
 | [x] | vaultwarden | dani-garcia/vaultwarden | 🟡 AGPL-3.0 | Rust | 304M | 64k | self-hosted Bitwarden — shipped |
-| [ ] | kvrocks | apache/kvrocks | 🟢 Apache-2.0 | C++ | 3.5M | 4k | Redis-on-RocksDB |
+| [x] | kvrocks | apache/kvrocks | 🟢 Apache-2.0 | C++ | 3.5M | 4k | Redis-on-RocksDB — shipped |
 | [x] | patroni | patroni/patroni | 🟢 MIT | Python | — | 9k | Postgres HA — shipped; first Python-daemon pattern |
-| [ ] | woodpecker | woodpecker-ci/woodpecker | 🟢 Apache-2.0 | Go+frontend | 2.7M | 7k | CI server (has web UI) |
+| [ ] | ~~woodpecker~~ | woodpecker-ci/woodpecker | 🟢 Apache-2.0 | Go+frontend | 2.7M | 7k | **Blocked → see below.** |
 | [x] | zipkin | openzipkin/zipkin | 🟢 Apache-2.0 | JVM-jlink | 60M | 17k | distributed tracing — shipped; Spring Boot fat jar EXPLODED so its 157 bundled jars are scannable/patchable |
+| [x] | timescaledb | timescale/timescaledb | 🟢 Apache-2.0 (APACHE_ONLY=1) | C/CMake (Postgres ext) | 123M | 19k | time-series Postgres extension — shipped 2026-10-15, see below for why it needed its own image instead of folding into postgres-slim |
 
 ## Deferred / heavier efforts (own project, not a batch)
 
@@ -90,6 +91,7 @@ by effort. Fills the catalog's thinnest categories (databases, proxies, apps).
 | uptime-kuma | 166M pulls (MIT) but Node/yarn frontend → the bwrap frontend quagmire (see grafana). Backend-from-source + prebuilt frontend assets, own effort. |
 | argocd | Embeds a yarn-built React UI **and** repo-server needs git/helm/kustomize at runtime (fights distroless). Grafana-bucket effort. |
 | pgadmin4 | **Blocked — frontend-in-bwrap, verified 2026-10-14.** Upstream's own `Dockerfile` builds `web/` with `yarn install --immutable && yarn run bundle` in a Node stage; no prebuilt JS bundle is committed to the repo and no sdist/wheel ships one either. Same shape as alloy/authelia/argocd — no build without npm/yarn in the sandbox. |
+| woodpecker (server) | **Blocked — frontend-in-bwrap, verified 2026-10-15.** `web/` is source-only (`src/`, `package.json`, `pnpm-lock.yaml`, no `dist/`), and `web/web.go`'s `//go:embed all:dist/*` (the default, non-`external_web`-tagged build) hard-requires that directory at compile time. Upstream's own `make build-server` depends on `build-ui` (pnpm). Confirmed via `make build-agent`/`make build-cli`: **those two targets never touch `web/` at all** (plain `CGO_ENABLED=0 go build ./cmd/agent`\|`./cmd/cli`, no frontend dependency) — but the agent/cli alone don't serve the "self-hosted CI server" demand this item tracks (nobody runs just an agent with no server to connect to), so not shipped as a consolation. Revisit only if there's standalone demand for the agent/cli, or the frontend-in-bwrap pattern gets solved generally. |
 
 ## Deprioritized — popular but low container demand (laptop / CLI / embedded)
 
@@ -250,9 +252,10 @@ the top of the demand curve. Every remaining high-demand candidate is either
 Wolfi-packaged (so apko-only), blocked by a frontend build (alloy, authelia,
 woodpecker), or already free from Chainguard. What is left to build from source
 is genuinely hard and much lower demand: influxdb (1.2B, but that number is
-v1/v2 — current upstream is a Rust rewrite), kvrocks (3.5M, C++), apisix (37M,
-OpenResty), emqx (Erlang, licence read needed), timescaledb (split licence),
-pgadmin4 (Python + prebuilt frontend), fluentd (Ruby).
+v1/v2 — current upstream is a Rust rewrite), apisix (37M, OpenResty), emqx
+(Erlang, licence read needed), fluentd (Ruby). kvrocks and timescaledb (split
+licence, shipped 2026-10-15 via upstream's own `-DAPACHE_ONLY=1` flag) are
+done; pgadmin4 and woodpecker (both frontend-in-bwrap) are blocked, see above.
 
 So Wave 3 is a **decision**, not a queue: continue insisting on source builds
 and accept far lower demand per unit of effort, or take the apko-only route for
@@ -279,7 +282,6 @@ exists to fill. It also keeps full auto-update coverage via
 |---|---|
 | influxdb | 1.1B pulls on `library/influxdb`, but that number is v1/v2 (Go, MIT); current upstream is **InfluxDB 3 Core in Rust** (🟢 Apache-2.0), no Wolfi package, and our time-series slot is already served by prometheus/mimir/victoria-metrics/thanos. Worth it only if we want line-protocol coverage. |
 | emqx | 47M pulls, but the repo is `NOASSERTION` (Apache core + BSL-ish enterprise pieces) and it's a large Erlang build. License read required first. |
-| timescaledb | 123M pulls, but the tree is split Apache-2.0 / TSL (source-available) — an Apache-only build is possible and is the only version we could ship. Own effort. |
 | pgadmin4 | **Blocked — frontend-in-bwrap, verified 2026-10-14.** 444M pulls (🟢 PostgreSQL license), but there is no prebuilt frontend: upstream's own `Dockerfile` builds `web/` from source with `yarn install --immutable && yarn run bundle`. Moved to the deferred table above. |
 | nextcloud | **Reclassified from W1, verified 2026-09-28.** `nextcloud-server-33` (307MB) bundles the full upstream Docker entrypoint model: Apache + PHP-FPM + cron + `docker-entrypoint-hooks.d` + `su-exec`, designed to boot as **root**, fix ownership, then `su -p "$user"` to a www-data-equivalent account for the actual server process — except that account does not exist in this package's `/etc/passwd`. That's an architecture mismatch with our nonroot-by-default model, not a config tweak: needs either a real user added at the apko layer plus reworking the entrypoint's privilege-drop assumptions, or accepting a root-then-drop exception like the postgres family but scoped to a much bigger, more stateful app (occ install flow, external DB requirement, persistent config/data volumes). Own effort, like harbor/argo-cd. |
 | sonarqube | **Reclassified from W1, verified 2026-09-28.** `sonarqube-10` (874MB) hard-depends on `bash`, `systemd-dev`, `zstd-dev`, and its own `sonarqube-startup` wrapper package — heavier packaging than a plain Java web app suggests. Bundles Elasticsearch internally and needs an external Postgres to run at all, so a meaningful smoke test is a multi-container compose, not a single `docker run`. Own effort, like harbor/argo-cd. |
