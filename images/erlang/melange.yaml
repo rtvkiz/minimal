@@ -9,7 +9,7 @@ package:
   # suffix produces a CPE that matches nothing (see cosign/haproxy melange
   # comments for the measured impact of that mistake).
   name: erlang
-  version: 29.1.1
+  version: 29.1.2
   epoch: 0
   description: "Minimal Erlang/OTP runtime built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of the erlang/otp source tarball - updated by update-versions.yml
-  sha256: 5971c156475408cd77db09a307949b6bcf186a99cde7bc771bb4fef831b1eb13
+  sha256: 7a4235d19e460ea91798e46a42cf910278d56b56a69af846a058986f703658da
 
 environment:
   contents:
