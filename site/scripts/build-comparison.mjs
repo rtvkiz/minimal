@@ -129,10 +129,12 @@ const out = {
   csvRows: rows.length,
   minimus: compare('minimus'),
   chainguard: compare('chainguard'),
+  distroless: compare('distroless'),
 };
 
 writeFileSync(join(root, 'src/data/comparison.json'), JSON.stringify(out, null, 2));
 console.log(
   `comparison.json — minimus ${out.minimus.compared} pairs (${out.minimus.lower}/${out.minimus.tie}/${out.minimus.higher}), ` +
-  `chainguard ${out.chainguard.compared} pairs (${out.chainguard.lower}/${out.chainguard.tie}/${out.chainguard.higher})`
+  `chainguard ${out.chainguard.compared} pairs (${out.chainguard.lower}/${out.chainguard.tie}/${out.chainguard.higher}), ` +
+  `distroless ${out.distroless.compared} pairs (${out.distroless.lower}/${out.distroless.tie}/${out.distroless.higher})`
 );

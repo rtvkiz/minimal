@@ -1,0 +1,123 @@
+---
+import Layout from '../../components/Layout.astro';
+import CompareTable from '../../components/CompareTable.astro';
+import CompareMethod from '../../components/CompareMethod.astro';
+import CopyButton from '../../components/CopyButton.astro';
+import data from '../../data/comparison.json';
+
+const s = data.distroless;
+const pending = s.available === 0 && s.compared === 0;
+const title = 'Distroless alternative — Minimal vs Google distroless, scanned head-to-head';
+const description = pending
+  ? 'Google distroless publishes minimal base images for Python, Java and Node.js. A head-to-head Grype scan against Minimal’s equivalents is queued for the next comparison run.'
+  : `A free Google distroless alternative with published scan data: ${s.compared} version-matched images scanned with one Grype build on ${data.scanDate}. Minimal lower on ${s.lower}, tied on ${s.tie}, higher on ${s.higher}.`;
+const versionExcluded = s.excludedMismatch + s.excludedUnknown;
+
+const datasetSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Dataset',
+  name: `Container image vulnerability comparison, ${data.scanDate}`,
+  description: `Grype scan results for Minimal, Minimus, publicly pullable Chainguard and Google distroless container images, scanned with ${data.scanner} against a single frozen vulnerability database on ${data.scanDate}.`,
+  url: new URL('/compare', Astro.site).href,
+  license: 'https://spdx.org/licenses/MIT.html',
+  isAccessibleForFree: true,
+  creator: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
+  dateCreated: data.scanDate,
+  measurementTechnique: `${data.scanner}, vulnerability DB schema ${data.dbSchema}, platform ${data.platform}`,
+  variableMeasured: 'Unique CVE identifiers per container image',
+  distribution: [{
+    '@type': 'DataDownload',
+    encodingFormat: 'text/csv',
+    contentUrl: new URL(data.csvPath, Astro.site).href,
+  }],
+};
+---
+<Layout title={title} description={description} schema={pending ? [] : [datasetSchema]} breadcrumbs={[{ name: 'Compare', href: '/compare/' }]}>
+  <section>
+    <div class="container-narrow">
+      <h1 class="section-title">Minimal vs Google distroless</h1>
+      <p class="section-sub">
+        distroless (<code class="kv-mono">gcr.io/distroless/*</code>) is not a competing catalog —
+        it ships a handful of bare language runtimes meant as a base layer for your own image, not
+        a full set of databases, proxies and apps. This page only compares the images where both
+        projects actually publish something: Python, Java and Node.js runtimes.
+      </p>
+
+      {pending ? (
+        <>
+          <h2 class="section-title" style="margin-top:36px">First scan queued</h2>
+          <p>
+            This comparison was just added to the scan pipeline. No numbers are published here
+            yet — the fortnightly <a href="/compare/">benchmark run</a> (or a manually triggered
+            one) will populate this page with real, checkable Grype results. Until then this page
+            makes no CVE-count claim in either direction.
+          </p>
+          <p>
+            The images covered are <b>python</b>, <b>java</b> and <b>node-slim</b>, matched against
+            <code class="kv-mono"> gcr.io/distroless/python3-debian12</code>,
+            <code class="kv-mono"> gcr.io/distroless/java21-debian12</code> and
+            <code class="kv-mono"> gcr.io/distroless/nodejs22-debian12</code> respectively — see
+            <code class="kv-mono"> tools/cve-compare/mappings.json</code> for the exact mapping.
+          </p>
+        </>
+      ) : (
+        <>
+          <h2 class="section-title" style="margin-top:36px">The honest framing</h2>
+          <p>
+            distroless publishes <b>{s.available}</b> images with a direct Minimal equivalent —
+            Python, Java and Node.js bare runtimes. Of those, <b>{s.compared}</b> were exact or
+            same-major/minor version pairs and were scored; {versionExcluded} mismatched or
+            unknown-version pairs were excluded. Most comparisons here come down to upstream
+            version lag rather than a meaningful hardening difference — distroless images often
+            ship an older major of the runtime than Minimal's 6-hourly-rebuilt pin, which is a
+            version-currency question, not a vulnerability-count one.
+          </p>
+
+          <div class="stats" style="margin-top:28px">
+            <div class="stat"><div class="num">{s.lower}</div><div class="lbl">Minimal lower</div></div>
+            <div class="stat"><div class="num">{s.tie}</div><div class="lbl">Tied</div></div>
+            <div class="stat"><div class="num">{s.higher}</div><div class="lbl">Minimal higher</div></div>
+            <div class="stat"><div class="num">{s.compared}</div><div class="lbl">Version-matched</div></div>
+          </div>
+
+          <h2 class="section-title" style="margin-top:44px">Full head-to-head</h2>
+          <p class="small muted">
+            Exact and same-major/minor version pairs only. Δ is Minimal minus distroless, so
+            negative is better for Minimal.
+          </p>
+          <CompareTable set={s} rivalLabel="distroless" />
+
+          <CompareMethod data={data} />
+        </>
+      )}
+
+      <h2 class="section-title" style="margin-top:44px">Where distroless and Minimal differ</h2>
+      <table class="data">
+        <thead><tr><th></th><th>Minimal</th><th>distroless</th></tr></thead>
+        <tbody>
+          <tr><td><b>Scope</b></td><td>Full catalog of apps, databases, proxies and runtimes</td><td>Base runtime layers only — you build your app on top</td></tr>
+          <tr><td><b>Shell / package manager</b></td><td>No</td><td>No (on the non-debug tags)</td></tr>
+          <tr><td><b>Maintainer</b></td><td>Independent, MIT, one repo</td><td>Google, Apache-2.0</td></tr>
+          <tr><td><b>Rebuild cadence</b></td><td>Every 6 hours</td><td>Not published as a fixed SLA</td></tr>
+          <tr><td><b>Signing / SBOM / provenance</b></td><td>Cosign-signed, SBOM-attested, SLSA v1.0 Build L2</td><td>Varies by image; not uniformly published</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title" style="margin-top:44px">When distroless is the right answer</h2>
+      <p>
+        If you are building your own application image and only need a Python, Java, Node, C or
+        static-binary base layer — not a pre-built database, proxy or application — distroless is
+        a well-established, Google-maintained choice with broad ecosystem familiarity.
+      </p>
+      <p>
+        Minimal fits when you want the full application already built and hardened — a Postgres,
+        a Redis, an nginx — not just the runtime underneath one, with a small enough catalog to
+        audit end to end and no vendor in the loop.
+      </p>
+
+      <h2 class="section-title" style="margin-top:44px">Trying it</h2>
+      <CopyButton code={`docker pull ghcr.io/rtvkiz/minimal-python:latest
+grype ghcr.io/rtvkiz/minimal-python:latest`} />
+    </div>
+  </section>
+</Layout>
