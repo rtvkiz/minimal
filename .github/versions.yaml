@@ -553,7 +553,7 @@
     notes: "https://github.com/cert-manager/cmctl/releases/tag/v{version}"
 
 - name: timescaledb
-  # cron-enabled: true          # validate via `gh workflow run update-versions.yml -f only=timescaledb` first
+  cron-enabled: true   # validated via `gh workflow run update-versions.yml -f only=timescaledb` (2026-10-15)
   files: [images/timescaledb/melange.yaml]
   # Upstream tags bare versions (2.30.2, no leading v) and has no other release
   # train mixed into /releases/latest (unlike descheduler's helm-chart tags).
