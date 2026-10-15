@@ -27,7 +27,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: e032fba9080c5bde7babc006d46789371a4fc3e0f7b9943f80aea24d04d16f4f
+  sha256: cfdb83fe8912529e70421a4302374fd0695808a33b8a47f8dd748a64a3257a58
 
 environment:
   contents:
