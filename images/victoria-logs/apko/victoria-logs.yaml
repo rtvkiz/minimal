@@ -45,7 +45,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-victoria-logs"
-  org.opencontainers.image.description: "VictoriaLogs is a fast, resource-efficient log database from the VictoriaMetrics team. Built from source, signed with SLSA provenance, rebuilt every six hours."
+  org.opencontainers.image.description: "VictoriaLogs is a fast, resource-efficient log database from the VictoriaMetrics team. Built from source, signed with SLSA provenance, rebuilt daily."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/victoria-logs"
   org.opencontainers.image.licenses: "Apache-2.0"

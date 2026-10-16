@@ -65,14 +65,25 @@ ok "hard-coded image counts agree with catalog.json ($CAT_IMAGES)"
 [ "$CAT_CATS" -gt 0 ] && ok "catalog declares $CAT_CATS categories"
 
 # --- 2. Rebuild cadence -----------------------------------------------------
-# "rebuilt every 6 hours" appears in meta descriptions on every image page.
+# "rebuilt daily" appears in meta descriptions on every image page. build.yml
+# moved from 6-hourly to daily (see its cron comment for why) - the cron's
+# hour field is a single fixed hour now (no `*/N` repeat), so a claim of
+# "every N hours" for any N > 24 worth of repeat is a regression, and the
+# site must actually say "daily", not a stale "every 6 hours".
 CRON=$(grep -oE "cron: *'[^']+'" .github/workflows/build.yml | head -1 | grep -oE "'[^']+'" | tr -d "'")
-CLAIMED_H=$(grep -rhoE 'every [0-9]+ hours' "$SITE" | grep -oE '[0-9]+' | sort -u | head -1)
-CRON_H=$(printf '%s' "$CRON" | awk '{print $2}' | grep -oE '[0-9]+$')
-if [ -n "$CLAIMED_H" ] && [ "$CLAIMED_H" != "${CRON_H:-}" ]; then
-  note "site claims a ${CLAIMED_H}h rebuild cadence but build.yml cron is '$CRON'"
+CRON_HOUR_FIELD=$(printf '%s' "$CRON" | awk '{print $2}')
+STALE_HOURLY_CLAIM=$(grep -rhoE 'every [0-9]+ hours?' "$SITE" | sort -u || true)
+if [[ "$CRON_HOUR_FIELD" == */* ]]; then
+  note "build.yml cron '$CRON' still repeats hourly (*/N) - the daily-cadence site claims no longer match"
+elif [ -n "$STALE_HOURLY_CLAIM" ]; then
+  note "build.yml cron '$CRON' is once-daily but the site still claims: $STALE_HOURLY_CLAIM"
 else
-  ok "rebuild cadence claim (${CLAIMED_H}h) matches build.yml cron '$CRON'"
+  DAILY_CLAIM_COUNT=$(grep -rlE '\brebuilt? daily\b|\bevery 24 hours\b' "$SITE" | wc -l)
+  if [ "$DAILY_CLAIM_COUNT" -eq 0 ]; then
+    note "build.yml cron '$CRON' is once-daily but no page claims a daily rebuild cadence"
+  else
+    ok "rebuild cadence claim (daily) matches build.yml cron '$CRON'"
+  fi
 fi
 
 # --- 3. Claims we retracted and must not reintroduce ------------------------

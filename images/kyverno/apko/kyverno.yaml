@@ -37,7 +37,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-kyverno"
-  org.opencontainers.image.description: "Kyverno Kubernetes-native policy engine validating, mutating and generating resources with no new language. Built from source, signed, rebuilt every 6 hours."
+  org.opencontainers.image.description: "Kyverno Kubernetes-native policy engine validating, mutating and generating resources with no new language. Built from source, signed, rebuilt daily."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kyverno"
   org.opencontainers.image.licenses: "Apache-2.0"

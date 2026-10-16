@@ -1,5 +1,5 @@
 # Minimal Perl image - built from source via melange
-# Shell-less/distroless for security. Rebuilt every 6 hours; patched via
+# Shell-less/distroless for security. Rebuilt daily; patched via
 # versions.yaml + the melange build, not Wolfi's package.
 
 contents:

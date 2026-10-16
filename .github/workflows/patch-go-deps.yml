@@ -2,9 +2,11 @@ name: Patch Go Transitive Dependencies
 
 on:
   schedule:
-    # Every 6h, aligned ahead of the build.yml rebuild cadence so freshly-published
-    # Go advisories get patched before the next image rebuild picks them up.
-    - cron: '0 1,7,13,19 * * *'
+    # Once daily, aligned ahead of build.yml's daily rebuild (00:17 UTC) so
+    # freshly-published Go advisories get patched before that day's rebuild
+    # picks them up. Matches build.yml's move from 6-hourly to daily - keeps
+    # the last of the four former daily slots, ~5h before the new build time.
+    - cron: '0 19 * * *'
   workflow_dispatch:
 
 permissions: {}
@@ -391,7 +393,7 @@ jobs:
           # to hand-resolve these locally, and Chainguard does not force-bump them
           # either. For excluded images, transitive CVEs are picked up via the
           # upstream app-version bump (update-versions.yml — the vendor bumps
-          # their own go.mod) plus the 6-hourly base rebuild; a genuinely
+          # their own go.mod) plus the daily base rebuild; a genuinely
           # reachable gap gets a manual targeted bump or a VEX not_affected.
           # trivy/kaniko/skopeo vendor the docker/moby/buildkit/containers stack,
           # so grype's fixes can't be force-bumped wholesale (docker/docker breaks

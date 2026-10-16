@@ -4,7 +4,7 @@ name: Lint workflows
 # change to them. Most workflows here run only on schedule/workflow_dispatch, so a
 # shell syntax error inside a `run:` block never executes on the PR that introduces
 # it — it detonates hours later on the scheduled run on main, blocking the shared
-# 6-hourly rebuild. This job runs actionlint + shellcheck (error severity) so such
+# daily rebuild. This job runs actionlint + shellcheck (error severity) so such
 # breaks fail the PR instead. Same entrypoint as local `make lint-workflows`.
 
 on:

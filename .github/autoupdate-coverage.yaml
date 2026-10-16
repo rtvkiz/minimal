@@ -9,7 +9,7 @@
 # two valid mechanisms:
 
 # wolfi-versioned: apko pins a *versioned* Wolfi package (e.g. python-3.14, go-1.26).
-# Patch/minor releases flow in on the 6-hourly rebuild; a MAJOR-line bump requires
+# Patch/minor releases flow in on the daily rebuild; a MAJOR-line bump requires
 # editing the apko package name, which update-wolfi-packages.yml detects and PRs.
 wolfi-versioned:
   - python          # python-3.14
@@ -24,7 +24,7 @@ wolfi-versioned:
 
 # wolfi-rolling: apko references an *unversioned / rolling* Wolfi package
 # (e.g. apache2, nginx-mainline, sqlite, bun). Wolfi keeps that single package at
-# the latest release, so the image is always current via the 6-hourly rebuild.
+# the latest release, so the image is always current via the daily rebuild.
 # No dedicated updater is needed by design.
 wolfi-rolling:
   - nginx           # nginx-mainline (rolling)

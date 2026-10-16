@@ -1,5 +1,5 @@
 # Minimal Kvrocks image - built from source via melange
-# Redis-compatible store on RocksDB; CVE patching via 6-hourly rebuilds from upstream source
+# Redis-compatible store on RocksDB; CVE patching via daily rebuilds from upstream source
 
 contents:
   repositories:

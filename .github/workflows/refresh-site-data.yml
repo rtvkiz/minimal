@@ -21,7 +21,7 @@ name: Refresh site data
 on:
   schedule:
     # Weekly, Monday 04:20 UTC. Off the hour to avoid the GitHub cron stampede,
-    # and clear of the 6-hourly image build.
+    # and clear of the daily image build (00:17 UTC).
     - cron: '20 4 * * 1'
   workflow_dispatch:
 

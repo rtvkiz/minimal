@@ -1,6 +1,6 @@
 # Minimal Erlang/OTP image - built from source via melange
-# Shell-less is not possible here (see busybox note below). Rebuilt every 6
-# hours; patched via versions.yaml + the melange build, not Wolfi's package.
+# Shell-less is not possible here (see busybox note below). Rebuilt daily;
+# patched via versions.yaml + the melange build, not Wolfi's package.
 
 contents:
   repositories:

@@ -36,7 +36,7 @@ const faqs = [
   },
   {
     q: 'How often are the images rebuilt?',
-    a: 'Every six hours. A rebuild picks up new Wolfi packages, so a fix that lands upstream reaches a published tag the same day rather than at the next release. Each rebuild is re-scanned with Grype and the counts are published on this site.',
+    a: 'Daily. A rebuild picks up new Wolfi packages, so a fix that lands upstream reaches a published tag within 24 hours rather than at the next release. Each rebuild is re-scanned with Grype and the counts are published on this site.',
   },
   {
     q: 'How do these compare to Chainguard, Minimus or Docker Hardened Images?',
@@ -55,7 +55,7 @@ const schema = [
     name: 'Minimal Containers',
     url: 'https://minimalcontainers.com',
     logo: 'https://minimalcontainers.com/icon.svg',
-    description: `Free, hardened, MIT-licensed container images — ${stats.images} of them, rebuilt every 6 hours.`,
+    description: `Free, hardened, MIT-licensed container images — ${stats.images} of them, rebuilt daily.`,
     sameAs: ['https://github.com/rtvkiz/minimal'],
   },
   {
@@ -81,8 +81,8 @@ const schema = [
       <span class="eyebrow">Open source · MIT licensed</span>
       <h1>Free hardened container images</h1>
       <p class="lead">
-        Free. Signed. Verifiable. Small images — most built from source — rebuilt every six
-        hours, each one cosign-signed with an SPDX SBOM and SLSA v1.0 build provenance. No
+        Free. Signed. Verifiable. Small images — most built from source — rebuilt
+        daily, each one cosign-signed with an SPDX SBOM and SLSA v1.0 build provenance. No
         account, no Docker Hub pull limits.
       </p>
       <div class="cta">
@@ -92,7 +92,7 @@ const schema = [
       <div class="stats" style="margin-top:36px">
         <div class="stat"><div class="num">{stats.images}</div><div class="lbl">Images</div></div>
         <div class="stat"><div class="num">L2</div><div class="lbl">SLSA provenance</div></div>
-        <div class="stat"><div class="num">6h</div><div class="lbl">Rebuild cadence</div></div>
+        <div class="stat"><div class="num">24h</div><div class="lbl">Rebuild cadence</div></div>
         <div class="stat"><div class="num">$0</div><div class="lbl">Cost</div></div>
       </div>
     </div>

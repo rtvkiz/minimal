@@ -12,7 +12,7 @@
 #   package-based (no melange.yaml)
 #       -> declared in .github/autoupdate-coverage.yaml as either
 #          wolfi-versioned (major-bump PR via update-wolfi-packages.yml) or
-#          wolfi-rolling (auto-current via the 6-hourly rebuild), or exempt.
+#          wolfi-rolling (auto-current via the daily rebuild), or exempt.
 #
 # Same entrypoint locally (`make check-autoupdate`) and in CI (build.yml
 # validate-catalog job), so they cannot drift. jq is assumed present (it is on
@@ -210,7 +210,7 @@ ECOSYSTEM_RE=(
 # Each needs a reason — an unexplained entry is how coverage rots.
 patch_exempt_reason() {
   case "$1" in
-    ruby) echo "ships json pinned to an exact version by deliberate policy (auto-bumping re-creates the rails gem CVE oscillation) and bundler as an intentional loose pin refreshed by the 6-hourly rebuild" ;;
+    ruby) echo "ships json pinned to an exact version by deliberate policy (auto-bumping re-creates the rails gem CVE oscillation) and bundler as an intentional loose pin refreshed by the daily rebuild" ;;
     *)    echo "" ;;
   esac
 }

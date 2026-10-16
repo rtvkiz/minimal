@@ -76,7 +76,7 @@ pipeline:
   # them to exact fix versions fights Go's MVS into cascading conflicts. trivy is
   # excluded from patch-go-deps.yml (SKIP_IMAGES); its transitive CVEs are picked
   # up via the upstream version bump (update-versions.yml — Aqua bumps their own
-  # go.mod) plus the 6-hourly base rebuild. Build from pure upstream source.
+  # go.mod) plus the daily base rebuild. Build from pure upstream source.
   # patch-go-deps: auto-generated — do not edit manually (test-and-keep)
   - runs: |
       export GOWORK=off

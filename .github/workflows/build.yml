@@ -12,8 +12,14 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Rebuild every 6 hours to keep images and vulnerability counts fresh
-    - cron: '17 */6 * * *'
+    # Rebuild daily to keep images and vulnerability counts fresh. Matches
+    # Chainguard's and Minimus's own cadence (both daily) - the prior 6-hourly
+    # schedule bought no real security benefit over daily (a few hours'
+    # difference in patch latency essentially never matters) while costing
+    # runner contention and automated PRs going stale mid-review as main
+    # moved underneath them. Keeps the historical :17 minute-offset; this is
+    # the first of the four former daily slots (00:17, 06:17, 12:17, 18:17).
+    - cron: '17 0 * * *'
   workflow_dispatch:
 
 permissions: {}

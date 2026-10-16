@@ -40,7 +40,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-postgres-exporter"
-  org.opencontainers.image.description: "Prometheus exporter for PostgreSQL server metrics, pairing with postgres-slim and prometheus. Built from source, signed with SLSA provenance, rebuilt every 6h."
+  org.opencontainers.image.description: "Prometheus exporter for PostgreSQL server metrics, pairing with postgres-slim and prometheus. Built from source, signed with SLSA provenance, rebuilt daily."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/postgres-exporter"
   org.opencontainers.image.licenses: "Apache-2.0"

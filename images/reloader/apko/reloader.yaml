@@ -37,7 +37,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-reloader"
-  org.opencontainers.image.description: "Reloader watches ConfigMaps and Secrets and rolls the Deployments that mount them. Built from source, signed with SLSA provenance, rebuilt every six hours."
+  org.opencontainers.image.description: "Reloader watches ConfigMaps and Secrets and rolls the Deployments that mount them. Built from source, signed with SLSA provenance, rebuilt daily."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/reloader"
   org.opencontainers.image.licenses: "Apache-2.0"

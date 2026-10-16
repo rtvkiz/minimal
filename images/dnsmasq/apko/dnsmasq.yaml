@@ -1,6 +1,6 @@
 # Minimal dnsmasq image - using Wolfi's pre-built package
 # Shell-less/distroless for security
-# CVE patching via the 6-hourly rebuild (Wolfi rolling package)
+# CVE patching via the daily rebuild (Wolfi rolling package)
 
 contents:
   repositories:

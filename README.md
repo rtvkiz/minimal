@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>135 small, hardened container images. Free, MIT-licensed, signed, and rebuilt every six hours.</strong>
+  <strong>135 small, hardened container images. Free, MIT-licensed, signed, and rebuilt daily.</strong>
 </p>
 
 <p align="center">
@@ -54,7 +54,7 @@ v1.0 build provenance tied to the workflow and commit that produced it.
   application permits it, and run as non-root by default.
 - **Built from source** — public, readable `melange` recipes, not a repackaged
   base image. Native `amd64` and `arm64`.
-- **Never stale** — rebuilt every six hours against current Wolfi packages;
+- **Never stale** — rebuilt daily against current Wolfi packages;
   upstream releases and transitive CVEs open their own auto-merging PRs.
 - **Verifiable** — signed, with SBOM and provenance attached to every digest.
 

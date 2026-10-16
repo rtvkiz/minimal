@@ -55,7 +55,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-headscale"
-  org.opencontainers.image.description: "Headscale is a self-hosted open source implementation of the Tailscale control server. Built from source, signed with SLSA provenance, rebuilt every six hours."
+  org.opencontainers.image.description: "Headscale is a self-hosted open source implementation of the Tailscale control server. Built from source, signed with SLSA provenance, rebuilt daily."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/headscale"
   org.opencontainers.image.licenses: "BSD-3-Clause"

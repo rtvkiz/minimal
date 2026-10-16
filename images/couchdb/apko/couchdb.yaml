@@ -1,5 +1,5 @@
 # Minimal CouchDB image - using Wolfi's pre-built package
-# CVE patching via the 6-hourly rebuild (Wolfi versioned package)
+# CVE patching via the daily rebuild (Wolfi versioned package)
 # Carries busybox only (never bash): the `couchdb` launcher is itself a
 # `#!/bin/sh` script (plain POSIX, no bashisms) that builds the erl command
 # line — there is no way to start CouchDB without a shell.

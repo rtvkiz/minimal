@@ -39,7 +39,7 @@ const pageDescription =
   image.description?.trim() ||
   [
     image.summary,
-    `Signed, SBOM-attested${image.size ? `, ${image.size.human} compressed` : ''}, rebuilt every 6 hours.`,
+    `Signed, SBOM-attested${image.size ? `, ${image.size.human} compressed` : ''}, rebuilt daily.`,
     `Free and public — pull ${pullRef.split(':')[0]} with no account.`,
   ].join(' ');
 

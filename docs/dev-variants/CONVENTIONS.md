@@ -31,7 +31,7 @@ These properties are mechanical guarantees, not best-effort:
 - **Same workdir.**
 - **Same nonroot UID** (`65532`) and group.
 - **Same publish cadence**: every push to main, plus the scheduled
-  rebuild every 6h.
+  rebuild daily.
 - **Same signing, SBOM, and SLSA build provenance pipeline.**
 
 ## What is intentionally different

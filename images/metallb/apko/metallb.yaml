@@ -37,7 +37,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-metallb"
-  org.opencontainers.image.description: "MetalLB provides LoadBalancer services for bare-metal Kubernetes clusters via ARP and BGP. Built from source, signed, rebuilt every six hours."
+  org.opencontainers.image.description: "MetalLB provides LoadBalancer services for bare-metal Kubernetes clusters via ARP and BGP. Built from source, signed, rebuilt daily."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/metallb"
   org.opencontainers.image.licenses: "Apache-2.0"

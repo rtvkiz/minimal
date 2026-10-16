@@ -5,7 +5,7 @@ and deployed to GitHub Pages on the custom domain **minimalcontainers.com**.
 
 It is built and deployed by `.github/workflows/deploy-site.yml`, which reuses the scan and
 SBOM artifacts produced by the image build (`build.yml`) — so it stays in sync with what's
-published to `ghcr.io/rtvkiz/minimal-*`, while deploying independently of the 6-hour build.
+published to `ghcr.io/rtvkiz/minimal-*`, while deploying independently of the daily build.
 
 **Deploy is decoupled from the image build.** `deploy-site.yml` triggers on:
 - `workflow_run` — after each build completes, to redeploy with fresh scan data;

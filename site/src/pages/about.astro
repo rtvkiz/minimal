@@ -1,6 +1,7 @@
 ---
 import Layout from '../components/Layout.astro';
 import CopyButton from '../components/CopyButton.astro';
+import { images } from '../lib/catalog';
 ---
 <Layout title="Verify container image signatures, SBOM and SLSA provenance" description="Check cosign signatures, SPDX SBOM attestations and SLSA v1.0 build provenance on any Minimal image from your terminal — no account required.">
   <section>
@@ -26,12 +27,12 @@ import CopyButton from '../components/CopyButton.astro';
       <table class="data">
         <thead><tr><th></th><th>Minimal</th><th>Chainguard</th><th>Docker Hardened</th></tr></thead>
         <tbody>
-          <tr><td><b>Catalog size</b></td><td>108</td><td>Thousands</td><td>1,000+ free</td></tr>
+          <tr><td><b>Catalog size</b></td><td>{images.length}</td><td>Thousands</td><td>1,000+ free</td></tr>
           <tr><td><b>Cost</b></td><td>$0, whole catalog</td><td>Free tier; paid for the full catalog</td><td>$0 for 1,000+ images (Apache-2.0, Dec 2025); paid for SLA/FIPS/STIG</td></tr>
           <tr><td><b>Auth to pull</b></td><td>No</td><td>No (free tier)</td><td>No (community tier)</td></tr>
           <tr><td><b>Build recipes public</b></td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
           <tr><td><b>Cosign + SBOM + provenance</b></td><td>Yes (SLSA Build L2)</td><td>Yes</td><td>Yes (SLSA Build L3)</td></tr>
-          <tr><td><b>Rebuild cadence</b></td><td>Every 6 hours</td><td>Daily or faster</td><td>Daily or faster</td></tr>
+          <tr><td><b>Rebuild cadence</b></td><td>Daily</td><td>Daily or faster</td><td>Daily or faster</td></tr>
         </tbody>
       </table>
       <p class="small muted" style="margin-top:14px">

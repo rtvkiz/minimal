@@ -27,7 +27,7 @@ make test-<name>      # runs the per-image smoke test
 
 If any step fails, fix the root cause and re-run. Do **not** rely on CI to find
 breakage a one-line `make` would have caught, and do **not** disable a failing
-test to go green. A red build on `main` blocks the every-6h scheduled rebuild for
+test to go green. A red build on `main` blocks the daily scheduled rebuild for
 **every** image. (Exceptions: pure docs and workflow-only changes that don't
 affect any image's build inputs.)
 
@@ -41,7 +41,7 @@ on x86_64 locally — that's expected; CI covers ARM.
 
 | Type | You write | Version tracked by | Example |
 |---|---|---|---|
-| **apko-only** (preferred) | assembles a Wolfi pre-built apk | Wolfi (via 6-hourly rebuild) | `httpd`, `nginx`, `go`, `python` |
+| **apko-only** (preferred) | assembles a Wolfi pre-built apk | Wolfi (via daily rebuild) | `httpd`, `nginx`, `go`, `python` |
 | **source-built** | compiles from upstream source via melange | `versions.yaml` row | `cosign`, `kafka`, `trivy` |
 
 **Try apko-only first.** Only build from source when Wolfi doesn't ship the
@@ -379,7 +379,7 @@ because that is exactly the boilerplate the field exists to escape.
 
 ```
 ✅ "Redis-compatible in-memory data store. Shell-less, non-root, signed and
-    SBOM-attested, rebuilt every 6 hours against upstream CVE fixes."
+    SBOM-attested, rebuilt daily against upstream CVE fixes."
 ❌ "Shell-less Valkey built on Wolfi."          (that's the summary, and boilerplate)
 ```
 
@@ -423,7 +423,7 @@ cannot be onboarded without it. Which mechanism depends on the image type:
   `wolfi-versioned` if apko pins a versioned package (`python-3.14`, `go-1.26`) whose
   major-line bumps come from `update-wolfi-packages.yml`; `wolfi-rolling` if apko
   references an unversioned/rolling package (`apache2`, `nginx-mainline`, `sqlite`)
-  that is always current via the 6-hourly rebuild. (`exempt`/`bespoke` exist as
+  that is always current via the daily rebuild. (`exempt`/`bespoke` exist as
   documented escape hatches — each requires a reason.)
 - **source-built** — add a `cron-enabled` `versions.yaml` row (below).
 

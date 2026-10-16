@@ -11,10 +11,10 @@ const repo = 'https://github.com/rtvkiz/minimal/blob/main';
       <h1 class="section-title">How images stay current</h1>
       <p class="section-sub">Rebuilding an image and upgrading its application are different operations, so they run on separate loops. Neither waits on the other, and neither needs a human.</p>
 
-      <h2 class="section-title" style="margin-top:40px">1 · Six-hour rebuilds</h2>
+      <h2 class="section-title" style="margin-top:40px">1 · Daily rebuilds</h2>
       <p>
         <a href={`${repo}/.github/workflows/build.yml`} rel="noopener">build.yml</a> rebuilds the complete
-        catalog every six hours. It keeps the currently pinned application version but consumes current
+        catalog daily. It keeps the currently pinned application version but consumes current
         Wolfi packages and toolchains — so an upstream glibc or OpenSSL fix reaches every image without
         anyone changing a line of code.
       </p>
@@ -42,14 +42,14 @@ const repo = 'https://github.com/rtvkiz/minimal/blob/main';
       </p>
       <p class="small muted">For package-based images:</p>
       <ul class="small muted">
-        <li>Rolling Wolfi packages (<code class="kv-mono">nginx-mainline</code>, <code class="kv-mono">apache2</code>, <code class="kv-mono">sqlite</code>, <code class="kv-mono">bun</code>) advance through the six-hour rebuild.</li>
+        <li>Rolling Wolfi packages (<code class="kv-mono">nginx-mainline</code>, <code class="kv-mono">apache2</code>, <code class="kv-mono">sqlite</code>, <code class="kv-mono">bun</code>) advance through the daily rebuild.</li>
         <li>Versioned families (Python, Go, Node.js, .NET, Java, PostgreSQL) get patch releases through rebuilds, while <a href={`${repo}/.github/workflows/update-wolfi-packages.yml`} rel="noopener">update-wolfi-packages.yml</a> opens PRs when the package family itself must change.</li>
       </ul>
 
       <h2 class="section-title" style="margin-top:44px">3 · Transitive dependency patches</h2>
       <p>
         <a href={`${repo}/.github/workflows/patch-go-deps.yml`} rel="noopener">patch-go-deps.yml</a> scans
-        published Go binaries every six hours and proposes targeted module updates for fixable
+        published Go binaries daily and proposes targeted module updates for fixable
         vulnerabilities. It preserves existing security pins, harmonizes related module families, and for
         dependency-sensitive applications <b>probes each candidate fix against a real compile</b>, keeping
         only those that still build.

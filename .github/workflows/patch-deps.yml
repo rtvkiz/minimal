@@ -14,9 +14,9 @@ name: Patch transitive dependencies
 
 on:
   schedule:
-    # Same cadence the three old patch-{bundler,rust,maven}-deps.yml shared:
-    # every 6 hours, offset 30 min after patch-go-deps to avoid PR-race.
-    - cron: '30 1,7,13,19 * * *'
+    # Once daily, offset 30 min after patch-go-deps to avoid PR-race. Matches
+    # build.yml's and patch-go-deps.yml's move from 6-hourly to daily.
+    - cron: '30 19 * * *'
   workflow_dispatch:
     inputs:
       only:

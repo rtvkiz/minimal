@@ -1,5 +1,5 @@
 # Minimal kube-state-metrics image - built from source via melange
-# CVE patching via the 6-hourly rebuild from upstream source
+# CVE patching via the daily rebuild from upstream source
 
 contents:
   repositories:

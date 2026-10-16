@@ -268,7 +268,7 @@ you've verified the dispatch run produces a clean PR.
 ### 6. (Optional) Wire up transitive-dep CVE patching
 
 If your image ships Ruby gems, Rust crates, or Maven JARs and you want
-grype-driven CVE patches auto-opened on a 6h cron, add an entry under
+grype-driven CVE patches auto-opened on a daily cron, add an entry under
 the matching row in `.github/patch-deps.yaml`:
 
 ```yaml
@@ -316,7 +316,7 @@ declare -A BUILD_MARKERS=(
 
 After adding, dispatch the workflow once (`gh workflow run patch-go-deps.yml`)
 to validate the splice and produce an initial patch PR. Without this step,
-the next 6h scheduled run will still skip your image.
+the next daily scheduled run will still skip your image.
 
 ## Build Locally
 

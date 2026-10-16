@@ -158,7 +158,7 @@ subpackages:
           mkdir -p "${GEMDIR}" "${SUBPKG}/usr/bin"
 
           # Loose pin — picks up whatever bundler is current at build time.
-          # 6h scheduled rebuild + smoke tests catch any regression.
+          # daily scheduled rebuild + smoke tests catch any regression.
           gem install --no-document --no-user-install \
             --install-dir "${GEMDIR}" \
             --bindir "${SUBPKG}/usr/bin" \

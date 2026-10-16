@@ -10,7 +10,7 @@ debugging "why didn't image X get the new upstream release?".
 Two independent schedulers keep an image current. They do **different** jobs;
 confusing them is the root of most "why is this stale?" questions.
 
-### Loop 1 — Rebuild (`build.yml`, cron `17 */6 * * *`, every 6h)
+### Loop 1 — Rebuild (`build.yml`, cron `17 0 * * *`, daily)
 
 Rebuilds **every** image *at its currently-pinned version* against the latest
 Wolfi apks. It re-runs melange, which re-downloads the **same** app source

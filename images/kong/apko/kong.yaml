@@ -1,5 +1,5 @@
 # Minimal Kong image - using Wolfi's pre-built package
-# CVE patching via the 6-hourly rebuild (Wolfi rolling package)
+# CVE patching via the daily rebuild (Wolfi rolling package)
 # Carries busybox only (never bash) for kong start's internal `ulimit -n`
 # shell-out — see the exception note below, same shape as the postgres family.
 
