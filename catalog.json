@@ -38,6 +38,30 @@
       "description": "Prometheus Alertmanager handling alert dedup, grouping, silencing and routing. Built from upstream source, cosign-signed, rebuilt every 6 hours."
     },
     {
+      "name": "argo-cd",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "argo-cd-3.4",
+      "upstream_url": "https://argo-cd.readthedocs.io",
+      "summary": "Argo CD GitOps controller for Kubernetes, built on Wolfi.",
+      "description": "Argo CD declarative GitOps continuous delivery for Kubernetes: the server, controller and notifications binary. Signed, SBOM-attested, rebuilt every 6 hours."
+    },
+    {
+      "name": "argo-cd-repo-server",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "argo-cd-3.4-repo-server",
+      "upstream_url": "https://argo-cd.readthedocs.io",
+      "summary": "Argo CD repo-server with bundled git, Helm and Kustomize, built on Wolfi.",
+      "description": "Argo CD repo-server rendering manifests from git with bundled Helm and Kustomize. Shell-less despite the tooling, signed, rebuilt every 6 hours."
+    },
+    {
       "name": "blackbox-exporter",
       "category": "Observability",
       "variants": [
