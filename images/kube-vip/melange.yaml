@@ -11,7 +11,7 @@ package:
   # (cpe:2.3:a:kube-vip:kube-vip-minimal:*, ...). NVD indexes this product
   # bare, so none of them matched.
   name: kube-vip
-  version: 1.3.0
+  version: 1.3.1
   epoch: 0
   description: "Minimal kube-vip Kubernetes control-plane VIP and load balancer built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of kube-vip source tarball - updated by update-versions.yml workflow
-  sha256: 880c81f14da2bbc9691e052d615720488b990f5147714126b6482e3701fe4490
+  sha256: 83d8fb28f66db3d0f24c6409fe4b6500355a2b82242bcfe179e8403422e7f85e
 
 environment:
   contents:
