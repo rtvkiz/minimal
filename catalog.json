@@ -47,7 +47,7 @@
       "primary_package": "argo-cd-3.4",
       "upstream_url": "https://argo-cd.readthedocs.io",
       "summary": "Argo CD GitOps controller for Kubernetes, built on Wolfi.",
-      "description": "Argo CD declarative GitOps continuous delivery for Kubernetes: the server, controller and notifications binary. Signed, SBOM-attested, rebuilt every 6 hours."
+      "description": "Argo CD declarative GitOps continuous delivery for Kubernetes: the server, controller and notifications binary. Signed, SBOM-attested, rebuilt daily."
     },
     {
       "name": "argo-cd-repo-server",
@@ -59,7 +59,7 @@
       "primary_package": "argo-cd-3.4-repo-server",
       "upstream_url": "https://argo-cd.readthedocs.io",
       "summary": "Argo CD repo-server with bundled git, Helm and Kustomize, built on Wolfi.",
-      "description": "Argo CD repo-server rendering manifests from git with bundled Helm and Kustomize. Shell-less despite the tooling, signed, rebuilt every 6 hours."
+      "description": "Argo CD repo-server rendering manifests from git with bundled Helm and Kustomize. Shell-less despite the tooling, signed, rebuilt daily against CVE fixes."
     },
     {
       "name": "blackbox-exporter",
