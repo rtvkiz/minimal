@@ -62,6 +62,18 @@
       "description": "Argo CD repo-server rendering manifests from git with bundled Helm and Kustomize. Shell-less despite the tooling, signed, rebuilt daily against CVE fixes."
     },
     {
+      "name": "karpenter",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "karpenter-1.12",
+      "upstream_url": "https://karpenter.sh",
+      "summary": "Karpenter Kubernetes node autoscaler controller (AWS provider), built on Wolfi.",
+      "description": "Karpenter Kubernetes node autoscaler controller (AWS provider), built on Wolfi. Shell-less, signed and SBOM-attested, rebuilt daily against CVE fixes."
+    },
+    {
       "name": "blackbox-exporter",
       "category": "Observability",
       "variants": [

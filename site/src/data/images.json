@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-19T23:47:19.826Z",
-  "buildDate": "2026-10-19 23:47 UTC",
+  "generatedAt": "2026-10-20T22:36:46.300Z",
+  "buildDate": "2026-10-20 22:36 UTC",
   "commitSha": "",
   "runUrl": "",
   "registry": "ghcr.io",
@@ -18,8 +18,8 @@
   ],
   "hasScanData": false,
   "counts": {
-    "images": 137,
-    "full": 137,
+    "images": 138,
+    "full": 138,
     "degraded": 0
   },
   "images": [
@@ -584,6 +584,16 @@
           "digest": null
         },
         {
+          "name": "3.4.3-r1-20261020",
+          "created": null,
+          "digest": null
+        },
+        {
+          "name": "3.4.3-r1-20261020-dev",
+          "created": null,
+          "digest": null
+        },
+        {
           "name": "3.4.3-r1-dev",
           "created": null,
           "digest": null
@@ -766,6 +776,16 @@
           "digest": null
         },
         {
+          "name": "3.4.3-r1-20261020",
+          "created": null,
+          "digest": null
+        },
+        {
+          "name": "3.4.3-r1-20261020-dev",
+          "created": null,
+          "digest": null
+        },
+        {
           "name": "3.4.3-r1-dev",
           "created": null,
           "digest": null
@@ -795,6 +815,118 @@
         "sbom": false,
         "config": false,
         "tags": "full"
+      },
+      "degraded": null,
+      "notes": []
+    },
+    {
+      "name": "karpenter",
+      "slug": "karpenter",
+      "displayName": "karpenter",
+      "seoNoun": null,
+      "category": "Kubernetes, CI & IaC",
+      "summary": "Karpenter Kubernetes node autoscaler controller (AWS provider), built on Wolfi.",
+      "description": "Karpenter Kubernetes node autoscaler controller (AWS provider), built on Wolfi. Shell-less, signed and SBOM-attested, rebuilt daily against CVE fixes.",
+      "upstreamUrl": "https://karpenter.sh",
+      "primaryPackage": "karpenter-1.12",
+      "repo": "ghcr.io/rtvkiz/minimal-karpenter",
+      "variants": {
+        "prod": {
+          "tagSuffix": "",
+          "pullRef": "ghcr.io/rtvkiz/minimal-karpenter:latest",
+          "specs": {
+            "entrypoint": "/usr/bin/controller",
+            "cmd": null,
+            "env": {
+              "PATH": "/usr/bin:/bin",
+              "HOME": "/tmp"
+            },
+            "user": "nonroot (65532)",
+            "uid": 65532,
+            "workdir": "/tmp",
+            "archs": [
+              "x86_64",
+              "aarch64"
+            ],
+            "labels": {
+              "org.opencontainers.image.title": "minimal-karpenter",
+              "org.opencontainers.image.description": "Hardened shell-less Karpenter Kubernetes node autoscaler built on Wolfi with CVE patches on every rebuild",
+              "org.opencontainers.image.url": "https://github.com/rtvkiz/minimal",
+              "org.opencontainers.image.source": "https://github.com/rtvkiz/minimal/tree/main/images/karpenter",
+              "org.opencontainers.image.licenses": "Apache-2.0"
+            },
+            "packagesRequested": [
+              "wolfi-baselayout",
+              "karpenter-1.12",
+              "ca-certificates-bundle"
+            ]
+          }
+        },
+        "dev": {
+          "tagSuffix": "-dev",
+          "pullRef": "ghcr.io/rtvkiz/minimal-karpenter:latest-dev",
+          "specs": {
+            "entrypoint": "/usr/bin/controller",
+            "cmd": null,
+            "env": {
+              "PATH": "/usr/bin:/bin",
+              "HOME": "/tmp"
+            },
+            "user": "nonroot (65532)",
+            "uid": 65532,
+            "workdir": "/tmp",
+            "archs": [
+              "x86_64",
+              "aarch64"
+            ],
+            "labels": {
+              "org.opencontainers.image.title": "minimal-karpenter-dev",
+              "org.opencontainers.image.description": "Dev variant of minimal-karpenter: same controller binary + shell + debugging tools. Not for production.",
+              "org.opencontainers.image.url": "https://github.com/rtvkiz/minimal",
+              "org.opencontainers.image.source": "https://github.com/rtvkiz/minimal/tree/main/images/karpenter",
+              "org.opencontainers.image.licenses": "Apache-2.0",
+              "dev.minimal.variant": "dev"
+            },
+            "packagesRequested": [
+              "wolfi-baselayout",
+              "karpenter-1.12",
+              "ca-certificates-bundle",
+              "busybox",
+              "bash",
+              "apk-tools",
+              "wget",
+              "curl",
+              "jq"
+            ]
+          }
+        }
+      },
+      "tags": [
+        {
+          "name": "latest",
+          "created": null,
+          "digest": null
+        },
+        {
+          "name": "latest-dev",
+          "created": null,
+          "digest": null
+        }
+      ],
+      "tagsStatus": "partial",
+      "size": null,
+      "digest": null,
+      "builtAt": null,
+      "updatedAgo": null,
+      "vulnerabilities": null,
+      "packages": null,
+      "dataStatus": {
+        "apko": true,
+        "grype": false,
+        "meta": false,
+        "sbom": false,
+        "config": false,
+        "tags": "partial"
       },
       "degraded": null,
       "notes": []
@@ -10843,6 +10975,16 @@
           "digest": null
         },
         {
+          "name": "2.6.1-r0-20261020",
+          "created": null,
+          "digest": null
+        },
+        {
+          "name": "2.6.1-r0-20261020-dev",
+          "created": null,
+          "digest": null
+        },
+        {
           "name": "2.6.1-r0-dev",
           "created": null,
           "digest": null
@@ -11110,6 +11252,16 @@
         },
         {
           "name": "2.30.2-r0-20261019-dev",
+          "created": null,
+          "digest": null
+        },
+        {
+          "name": "2.30.2-r0-20261020",
+          "created": null,
+          "digest": null
+        },
+        {
+          "name": "2.30.2-r0-20261020-dev",
           "created": null,
           "digest": null
         },

@@ -26,6 +26,10 @@ wolfi-versioned:
                         # neo4j today - update-wolfi-packages.yml has no explicit block
                         # for any of these, so a MAJOR-line bump (3.4 -> 3.5) needs a
                         # manual apko package name + build.yml grep edit, same as those
+  - karpenter           # karpenter-1.12; same major-line gap as argo-cd/couchdb/kong -
+                        # multiple karpenter-X.Y packages coexist in Wolfi's index, all
+                        # providing the bare "karpenter" name, so the apko package is
+                        # pinned to the exact versioned name to avoid ambiguity
 
 # wolfi-rolling: apko references an *unversioned / rolling* Wolfi package
 # (e.g. apache2, nginx-mainline, sqlite, bun). Wolfi keeps that single package at
