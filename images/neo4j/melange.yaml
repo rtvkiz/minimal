@@ -9,7 +9,7 @@ package:
   # here, but provider-priority costs nothing and future-proofs against
   # Wolfi adding a bare alias later.
   name: neo4j
-  version: 2026.09.0
+  version: 2026.10.0
   epoch: 0
   description: "Minimal Neo4j Community Edition graph database"
   copyright:
@@ -27,7 +27,7 @@ package:
 vars:
   # SHA256 of the neo4j-community-{version}-unix.tar.gz release - updated by
   # update-versions.yml
-  sha256: cdaa0905d9a533bbbc474d239c268f69978982eb5ca3177666c04c9792d1c399
+  sha256: 36f68f8af6ab86f29b2ebe46361f50fc9be68076156623e86d1e12b801169d6d
 
 environment:
   contents:
