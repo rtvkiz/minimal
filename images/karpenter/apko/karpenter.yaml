@@ -1,0 +1,66 @@
+# Minimal karpenter image - using Wolfi's pre-built package
+# CVE patching via the daily rebuild (Wolfi versioned package)
+#
+# karpenter-1.12 is the AWS-provider build of the Kubernetes node autoscaler
+# controller: a single static Go binary (no D: deps in the APKINDEX entry),
+# installed as /usr/bin/controller. It runs in-cluster against the Kubernetes
+# API and the AWS API, reading its configuration from env vars and the mounted
+# service-account token - no flags are baked in here.
+#
+# Package name is pinned to the versioned "karpenter-1.12" (not the bare
+# "karpenter" provide) because multiple karpenter-X.Y packages coexist in
+# Wolfi's index, each providing the unversioned name - same ambiguity argo-cd
+# and couchdb hit. A MAJOR-line bump (1.12 -> 1.13) needs a manual apko
+# package name + build.yml grep edit, same as those.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Karpenter (AWS provider) from Wolfi (CVE-patched)
+    - karpenter-1.12
+
+    # Certificates (Kubernetes API + AWS API are both TLS)
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/controller
+
+work-dir: /tmp
+
+environment:
+  PATH: /usr/bin:/bin
+  HOME: /tmp
+
+paths:
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-karpenter"
+  org.opencontainers.image.description: "Hardened shell-less Karpenter Kubernetes node autoscaler built on Wolfi with CVE patches on every rebuild"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/karpenter"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64
