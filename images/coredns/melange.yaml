@@ -10,7 +10,7 @@ package:
   # bare, as cpe:2.3:a:coredns:coredns:*, so none of them matched, and the
   # Wolfi secdb missed it too.
   name: coredns
-  version: 1.14.7
+  version: 1.15.0
   epoch: 0
   description: "Minimal CoreDNS DNS server built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: c3ecdf3ebaba0c453e3dc62643548dbece09999d589513f25ca00ca4eca89423
+  sha256: 6631fd1d6daccb6eea5a31f31cf8295080aa43c9d0683ff6680b19224c4c2d57
 
 environment:
   contents:
