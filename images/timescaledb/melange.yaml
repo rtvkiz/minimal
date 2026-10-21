@@ -16,7 +16,7 @@
 # alongside postgresql-18 itself.
 package:
   name: timescaledb
-  version: 2.30.2
+  version: 2.31.0
   epoch: 0
   description: "TimescaleDB PostgreSQL extension, built Apache-2.0-only from source"
   copyright:
@@ -25,7 +25,7 @@ package:
 vars:
   # SHA256 of timescaledb-{version}.tar.gz (bare version, no leading v) -
   # updated by update-versions.yml
-  sha256: a7003a70836477dc8d575d95a4c515d8a22ed219d0cb03b3640bb813f04e1b42
+  sha256: 7a0135283240abb64c87713e3280d70461954028d6426374b7e4e59f7dca6a56
 
 environment:
   contents:
