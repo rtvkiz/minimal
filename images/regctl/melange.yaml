@@ -10,7 +10,7 @@ package:
   # bare, as cpe:2.3:a:regctl:regctl:*, so none of them matched, and the Wolfi
   # secdb missed it too.
   name: regctl
-  version: 0.11.6
+  version: 0.11.7
   epoch: 0
   description: "Minimal regctl OCI registry client built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of regctl source tarball - updated by update-versions.yml workflow
-  sha256: 6e1d1ba693e0bb47afe6e32fd85513cbb78dc20d9564b5de380a6b5e275a7c83
+  sha256: a648fcf3b5b81c55773f47f6d7401d1904675c32520a76159d960a9e8798badd
 
 environment:
   contents:
