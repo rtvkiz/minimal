@@ -9,7 +9,7 @@ package:
   # (indexed as cpe:2.3:a:php:php:*) and nothing in the Wolfi secdb either, so
   # both of grype's matchers missed every CVE for this package.
   name: php
-  version: 8.5.11
+  version: 8.5.12
   epoch: 0
   description: "Minimal PHP CLI built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 from https://www.php.net/releases/?json&version=8.5
-  sha256: 338630ba9450f0b938bef8d740162c61c33bf64a1b421c6333c01df8a9fdb0ab
+  sha256: 81a0f450349e84b08eb43faa85f8a4c835684f3cc1c50471775d1317a046c525
 
 environment:
   contents:
