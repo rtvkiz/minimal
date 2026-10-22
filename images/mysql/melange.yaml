@@ -10,7 +10,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:mysql:mysql:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: mysql
-  version: 8.4.11
+  version: 8.4.13
   epoch: 0
   description: "Minimal MySQL server and client built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: eb3051164d625dd346a8203f76e0d5d5d9aec51dbe9d51788e39ec6b3f1394c2
+  sha256: f6ddc7f7fb6462bab8b533b13c06af3fff57fa9ca12259b81ab13cd9930b9d58
 
 environment:
   contents:
