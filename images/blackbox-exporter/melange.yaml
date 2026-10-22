@@ -13,7 +13,7 @@ package:
   # cpe:2.3:a:blackbox-exporter:blackbox-exporter:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: blackbox-exporter
-  version: 0.29.0
+  version: 0.29.1
   epoch: 0
   description: "Minimal Prometheus blackbox_exporter (endpoint probing) built from source"
   copyright:
@@ -31,7 +31,7 @@ package:
 
 vars:
   # SHA256 of blackbox_exporter source tarball - updated by update-versions.yml workflow
-  sha256: 1485bb56baa53a1e9494ddb18e115203e9458727589ccd3fcf746e4bdb906df2
+  sha256: 2d7ab72d6dbb4ec8bc6a4f875fe0c8f8792685cc1e5b9209bd999b174b20774f
 
 environment:
   contents:
