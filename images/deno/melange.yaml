@@ -14,7 +14,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:deno:deno:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: deno
-  version: 2.9.7
+  version: 2.9.8
   epoch: 0
   description: "Minimal Deno from the official upstream release binary"
   copyright:
@@ -33,8 +33,8 @@ vars:
   # SHA256 of the official deno-<arch>-unknown-linux-gnu.zip release assets,
   # updated by update-versions.yml. From:
   #   https://github.com/denoland/deno/releases/download/v<ver>/deno-<arch>-unknown-linux-gnu.zip.sha256sum
-  sha256_x86: c6527f24f4b16031d3ae4fa9f658d5f11534c8d84ce7dc8502420280919c3490
-  sha256_arm: c832298b1ad4422481334855f6003e0f54145762c5a134f20a489511d2f65bbf
+  sha256_x86: e890975bc2549807bbcc0b584ffafda72cc7c93349dd99c80483dd784f6c4609
+  sha256_arm: d49596c20b9788cf8f5d8ddf644103d4bde56ed239753f0bdb92ba9361d51905
 
 environment:
   contents:
