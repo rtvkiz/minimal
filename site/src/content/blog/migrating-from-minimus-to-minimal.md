@@ -10,9 +10,9 @@ are the same ones every time: something calls `/bin/sh`, something writes to a
 directory it does not own, or someone pinned `:latest` and got moved across a
 major version.
 
-This covers what Minimal does. It does not describe Minimus's internals — their
-docs are the authority there, and guessing at someone else's images is how
-comparison content ends up wrong.
+This covers what Minimal does. It does not describe Minimus's internals;
+their docs are the authority there, and guessing at someone else's images is
+how comparison content ends up wrong.
 
 ## Change the reference
 
@@ -29,7 +29,7 @@ No login, no account:
 docker pull ghcr.io/rtvkiz/minimal-python:latest
 ```
 
-Names follow the upstream project — `nginx`, `redis-slim`, `postgres-slim`,
+Names follow the upstream project: `nginx`, `redis-slim`, `postgres-slim`,
 `kafka`. Before you go further, check the [image directory](/images/) and confirm
 everything you depend on is actually there. The catalog is deliberately smaller
 than a commercial vendor's. Finding the gap now is much cheaper than finding it
@@ -48,7 +48,7 @@ wants, so decide deliberately:
 
 Most people want the major line. You keep getting security rebuilds and you
 never get moved across an upstream breaking release. Note that an exact version
-tag like `:2.11.4-r0` is not the safe conservative choice it looks like — it
+tag like `:2.11.4-r0` is not the safe conservative choice it looks like. It
 never moves, which also means it never picks up a fix. [Tags and
 pinning](/docs/tags/) has the rest.
 
@@ -69,8 +69,8 @@ So this stops working:
 command: ["/bin/sh", "-c", "exec myapp --flag"]
 ```
 
-Two ways out. The better one is to keep the shell in the builder stage only —
-every image has a `-dev` companion carrying a shell, package manager and
+Two ways out. The better one is to keep the shell in the builder stage only.
+Every image has a `-dev` companion carrying a shell, package manager and
 toolchain, which exists for exactly this:
 
 ```dockerfile
@@ -160,8 +160,8 @@ example.
 
 ## Rolling it out
 
-Start with something you can afford to break — an internal tool, a batch job —
-and run it through your normal tests. You are watching for the three failure
+Start with something you can afford to break, an internal tool or a batch
+job, and run it through your normal tests. You are watching for the three failure
 modes above, not for subtle runtime differences; if it starts and serves
 traffic, it is almost certainly fine.
 

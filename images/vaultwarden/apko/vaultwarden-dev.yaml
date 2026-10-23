@@ -66,7 +66,7 @@ annotations:
   org.opencontainers.image.description: "Dev variant of minimal-vaultwarden: same server + shell and debug tools. Not for production."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/vaultwarden"
-  org.opencontainers.image.licenses: "AGPL-3.0-only AND GPL-3.0-only"
+  org.opencontainers.image.licenses: "AGPL-3.0-only"
 
 archs:
   - x86_64

@@ -63,7 +63,7 @@ annotations:
   org.opencontainers.image.description: "Dev variant of minimal-loki: same Loki + shell + curl/openssl/dig/jq. Not for production."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/loki"
-  org.opencontainers.image.licenses: "Apache-2.0"
+  org.opencontainers.image.licenses: "AGPL-3.0"
   dev.minimal.variant: "dev"
 
 archs:
