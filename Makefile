@@ -203,6 +203,7 @@ endef
 .PHONY: argo-cd argo-cd-dev test-argo-cd test-argo-cd-dev
 .PHONY: argo-cd-repo-server argo-cd-repo-server-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev
 .PHONY: karpenter karpenter-dev test-karpenter test-karpenter-dev
+.PHONY: keda keda-dev test-keda test-keda-dev
 .PHONY: patroni patroni-dev test-patroni test-patroni-dev
 .PHONY: vector vector-dev test-vector test-vector-dev
 .PHONY: keepalived keepalived-melange keepalived-dev test-keepalived test-keepalived-dev
@@ -287,7 +288,7 @@ endef
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl argo-cd argo-cd-repo-server karpenter
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl argo-cd argo-cd-repo-server karpenter keda
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -379,6 +380,7 @@ $(eval $(call DEV_IMAGE_RULE,couchdb))
 $(eval $(call DEV_IMAGE_RULE,argo-cd))
 $(eval $(call DEV_IMAGE_RULE,argo-cd-repo-server))
 $(eval $(call DEV_IMAGE_RULE,karpenter))
+$(eval $(call DEV_IMAGE_RULE,keda))
 $(eval $(call DEV_IMAGE_RULE,patroni))
 $(eval $(call DEV_IMAGE_RULE,vector))
 $(eval $(call DEV_IMAGE_RULE,keepalived,keepalived-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -1407,6 +1409,23 @@ karpenter:
 		$(REGISTRY)/$(OWNER)/minimal-karpenter:latest
 	@rm -f karpenter.tar sbom-*.spdx.json
 	@echo "✓ minimal-karpenter built (Wolfi package)"
+
+#------------------------------------------------------------------------------
+# KEDA IMAGE (Wolfi pre-built package; Kubernetes event-driven autoscaler)
+#------------------------------------------------------------------------------
+keda:
+	@echo "Assembling minimal-keda image with apko..."
+	apko build images/keda/apko/keda.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-keda:$(VERSION) \
+		keda.tar \
+		--arch x86_64
+	docker load < keda.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-keda:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-keda:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-keda:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-keda:latest
+	@rm -f keda.tar sbom-*.spdx.json
+	@echo "✓ minimal-keda built (Wolfi package)"
 
 #------------------------------------------------------------------------------
 # SQLITE IMAGE (Wolfi pre-built package, shell-less)
@@ -3495,7 +3514,7 @@ scan-%:
 		$(REGISTRY)/$(OWNER)/minimal-$*:latest
 	@echo "✓ minimal-$*: scan passed"
 
-scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks scan-cmctl scan-argo-cd scan-argo-cd-repo-server scan-karpenter
+scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks scan-cmctl scan-argo-cd scan-argo-cd-repo-server scan-karpenter scan-keda
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -3634,6 +3653,12 @@ scan-karpenter:
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-karpenter:latest
 	@echo "✓ minimal-karpenter: scan passed"
+
+scan-keda:
+	@echo "Scanning minimal-keda..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-keda:latest
+	@echo "✓ minimal-keda: scan passed"
 
 scan-sqlite:
 	@echo "Scanning minimal-sqlite..."
@@ -3939,6 +3964,7 @@ $(eval $(call DEV_TEST_RULE,couchdb))
 $(eval $(call DEV_TEST_RULE,argo-cd))
 $(eval $(call DEV_TEST_RULE,argo-cd-repo-server))
 $(eval $(call DEV_TEST_RULE,karpenter))
+$(eval $(call DEV_TEST_RULE,keda))
 $(eval $(call DEV_TEST_RULE,kvrocks))
 $(eval $(call DEV_TEST_RULE,patroni))
 $(eval $(call DEV_TEST_RULE,vector))
@@ -4684,6 +4710,12 @@ test-karpenter:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-karpenter:latest" && \
 		images/karpenter/test.sh
 	@echo "✓ karpenter tests passed"
+
+test-keda:
+	@echo "Testing keda image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-keda:latest" && \
+		images/keda/test.sh
+	@echo "✓ keda tests passed"
 
 test-unbound:
 	@echo "Testing unbound image..."

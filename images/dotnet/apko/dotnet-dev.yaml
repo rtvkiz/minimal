@@ -108,7 +108,7 @@ annotations:
   org.opencontainers.image.description: "Dev variant of minimal-dotnet: full .NET 10 SDK + shell + git + full ICU + tzdata. Not for production."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/dotnet"
-  org.opencontainers.image.licenses: "Apache-2.0"
+  org.opencontainers.image.licenses: "MIT"
   dev.minimal.variant: "dev"
 
 archs:
