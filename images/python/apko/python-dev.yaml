@@ -129,7 +129,7 @@ annotations:
   org.opencontainers.image.description: "Dev variant of minimal-python: same Python runtime + shell + build toolchain + pip/uv. Not for production."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/python"
-  org.opencontainers.image.licenses: "Apache-2.0"
+  org.opencontainers.image.licenses: "PSF-2.0"
   dev.minimal.variant: "dev"
 
 archs:
