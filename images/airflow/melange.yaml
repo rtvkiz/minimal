@@ -78,7 +78,18 @@ pipeline:
   - runs: |
       cd /home/build
       /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "certifi==2026.10.19"
+      # opentelemetry-api is pinned exactly by opentelemetry-sdk's own
+      # Requires-Dist, and sdk in turn pins semantic-conventions exactly —
+      # bumping api alone leaves sdk importing symbols the new api removed
+      # (ImportError: _ExtendedAttributes). Move the whole family together.
       /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-api==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-sdk==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-semantic-conventions==0.66b1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-exporter-otlp==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-exporter-otlp-proto-common==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-exporter-otlp-proto-grpc==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-exporter-otlp-proto-http==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-proto==1.45.1"
       /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "pyjwt==2.15.0"
       /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "urllib3==2.8.0"
   # end-patch-python-deps
