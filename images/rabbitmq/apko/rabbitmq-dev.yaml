@@ -88,7 +88,7 @@ annotations:
   org.opencontainers.image.description: "Dev variant of minimal-rabbitmq: same broker + shell + curl/socat/jq for HTTP API debugging. Not for production."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/rabbitmq"
-  org.opencontainers.image.licenses: "Apache-2.0"
+  org.opencontainers.image.licenses: "MPL-2.0"
   dev.minimal.variant: "dev"
 
 archs:

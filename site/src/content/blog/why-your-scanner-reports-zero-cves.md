@@ -15,9 +15,9 @@ look identical:
 The second one is worse than a report full of findings, because it is
 indistinguishable from success. Nobody escalates a green scan.
 
-We hit this in a way that was easy to measure. Two builds of HAProxy, the same
-upstream version, the same source, the same everything — except the name of the
-apk package inside. One reported **0 findings**. The other reported **14**. The
+We hit this in a way that was easy to measure. Two builds of HAProxy, same
+upstream version, same source, same everything, except the name of the apk
+package inside. One reported **0 findings**. The other reported **14**. The
 binaries were byte-identical in every way that matters to an attacker.
 
 ## What the scanner is actually doing
@@ -31,13 +31,13 @@ against vulnerability data. Two of those matching paths matter here:
 | Distro security database (e.g. `wolfi:distro:wolfi:rolling`) | the apk package **name** |
 | `nvd:cpe` | a CPE that Syft **derives from** the apk package name |
 
-Both are keyed on a string. Not a hash, not a symbol table, not the contents of
-the binary — the name recorded in the package database.
+Both are keyed on a string. Not a hash, not a symbol table, not the contents
+of the binary. The name recorded in the package database, nothing else.
 
 So if the package inside your image is called `haproxy`, the distro database has
 an entry under `haproxy`, NVD has `cpe:2.3:a:haproxy:haproxy:*`, and both paths
-hit. If you named it something reasonable-sounding but nonstandard —
-`haproxy-minimal`, `haproxy-slim`, `our-haproxy` — then:
+hit. Name it something reasonable-sounding but nonstandard instead
+(`haproxy-minimal`, `haproxy-slim`, `our-haproxy`) and:
 
 - the distro database has no entry under that name, so that path finds nothing;
 - Syft derives `cpe:2.3:a:haproxy-minimal:haproxy-minimal:*`, which matches
@@ -63,9 +63,9 @@ the identity, and renaming the package is the only fix.
 
 If your image is a Go binary, you may have never seen this, and that is luck
 rather than design. Syft's `go-module` cataloguer reads the build information
-that the Go toolchain embeds in every binary — module path and dependency
-versions. That gives the image a second, independent identity that has nothing
-to do with the apk name.
+that the Go toolchain embeds in every binary: module path and dependency
+versions. That gives the image a second, independent identity that has
+nothing to do with the apk name.
 
 The practical consequence is uneven: a Go image with a mangled package name
 still gets its dependencies scanned. A C image with the same mistake is
@@ -90,8 +90,8 @@ Look at the CPEs it derived, which is where a bad name shows up:
 syft <your-image> -o json | jq -r '.artifacts[].cpes[]?' | sort -u
 ```
 
-If you see a product field that no vendor would ever publish — your internal
-suffix, your company name, a `-slim` or `-minimal` — that entry is matching
+If you see a product field that no vendor would ever publish (your internal
+suffix, your company name, a `-slim` or `-minimal`), that entry is matching
 nothing.
 
 Then confirm the negative is real. Scan a version you *know* has published
@@ -108,26 +108,19 @@ scanning pipeline you have not verified before.
 
 ## What we do about it
 
-Every package we build carries the name upstream uses — `haproxy`, `nginx`,
-`redis`, `postgresql` — never a decorated variant. The image is called
+Every package we build carries the name upstream uses: `haproxy`, `nginx`,
+`redis`, `postgresql`, never a decorated variant. The image is called
 `minimal-haproxy`; the *package* inside it is `haproxy`. Those are different
-namespaces and only one of them is load-bearing for scanners.
+namespaces and only one of them is load-bearing for scanners. A check on
+every pull request enforces that, rather than leaving it to convention,
+because it's exactly the kind of thing that stays invisible until someone
+re-reads it. A suffix, or a mismatch between the package we build and the
+package the image config asks for, fails the build.
 
-That rule is enforced by a check that runs on every pull request, not by
-convention, because it is exactly the kind of thing that is invisible until
-someone re-reads it. A suffix, or a mismatch between the package we build and
-the package the image config asks for, fails the build.
-
-The honest caveat: matching by name means you inherit whatever the advisory
-feeds say about that name, including their mistakes and their timing. Naming
-things correctly gets you into the conversation. It does not end it.
-
-## The general point
-
-Scanner output is a claim about what was *identified*, not about what is
-*present*. Before you trust a clean report — ours or anyone's — confirm the
-scanner listed the software you expected, with a version you recognise, under a
-name the advisory databases actually use.
-
-A clean scan of an unidentified image is not a security result. It is an empty
-question.
+That comes with an honest caveat: matching by name means you inherit
+whatever the advisory feeds say about that name, including their mistakes
+and their timing. Naming things correctly gets you into the conversation. It
+doesn't end it. Before you trust a clean report, ours or anyone's, confirm
+the scanner actually listed the software you expected, with a version you
+recognise, under a name the advisory databases use. A clean scan of an
+unidentified image isn't a security result. It's an empty question.
