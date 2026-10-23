@@ -21,9 +21,9 @@ first.
 
 ## 1. Run a different binary in the same image
 
-`--entrypoint` replaces the command without changing the image. Most of what you
-want to know early — is the binary there, what version is it, does it parse the
-config — needs no shell at all:
+`--entrypoint` replaces the command without changing the image. Most of what
+you want to know early (is the binary there, what version is it, does it
+parse the config) needs no shell at all:
 
 ```
 docker run --rm --entrypoint /usr/bin/haproxy ghcr.io/rtvkiz/minimal-haproxy:latest -vv
@@ -91,7 +91,7 @@ nslookup my-service.default.svc.cluster.local
 ## 4. Use the dev variant
 
 Every image we publish has a `-dev` tag carrying the same primary binary plus a
-shell and the usual tools — `bash`, `curl`, `openssl`, `dig`, `jq`, `git`, `apk`:
+shell and the usual tools: `bash`, `curl`, `openssl`, `dig`, `jq`, `git`, `apk`.
 
 ```
 docker run --rm -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-nginx:latest-dev
@@ -128,6 +128,7 @@ that is diagnostic, and you gain that the same absence works against an
 attacker, continuously, in every container you run.
 
 If you find yourself needing a shell in production repeatedly for the same
-reason, that is a signal about the image or the workload — a missing health
-endpoint, a config that cannot be validated ahead of time, logs that do not say
-enough. Fixing the underlying gap is better than keeping a shell around for it.
+reason, that is a signal about the image or the workload: a missing health
+endpoint, a config that cannot be validated ahead of time, logs that do not
+say enough. Fixing the underlying gap is better than keeping a shell around
+for it.

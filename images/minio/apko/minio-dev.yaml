@@ -76,7 +76,7 @@ annotations:
   org.opencontainers.image.description: "Dev variant of minimal-minio: same server + shell + curl/openssl/dig/jq for S3 API debugging. Not for production."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/minio"
-  org.opencontainers.image.licenses: "Apache-2.0"
+  org.opencontainers.image.licenses: "AGPL-3.0-only"
   dev.minimal.variant: "dev"
 
 archs:
