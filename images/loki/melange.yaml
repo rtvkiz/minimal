@@ -10,7 +10,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:loki:loki:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: loki
-  version: 3.7.8
+  version: 3.7.9
   epoch: 0
   description: "Minimal Loki log aggregation server built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: 313a9c2de71ca7ffca1189f6ac2916073df36f498f2d6f77130d07bcd6fc5724
+  sha256: 374cc8b5f9aab740b44b1b0d9689e69b0e6f2c0feb41942cb52d3e1c4bb7bdeb
 
 environment:
   contents:
