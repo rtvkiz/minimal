@@ -171,7 +171,7 @@ annotations:
   org.opencontainers.image.description: "Hardened shell-less Jenkins image with jlink custom JRE, built from source via melange"
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/jenkins"
-  org.opencontainers.image.licenses: "Apache-2.0"
+  org.opencontainers.image.licenses: "MIT"
 
 archs:
   - x86_64

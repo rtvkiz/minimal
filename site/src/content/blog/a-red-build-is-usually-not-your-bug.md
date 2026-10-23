@@ -6,30 +6,31 @@ published: "2026-09-06"
 
 A build that pulls from GitHub, a module proxy, Maven Central and a package
 index has four ways to fail that have nothing to do with your code. In a
-pipeline that rebuilds continuously, those transient failures outnumber the real
-ones — and the expensive mistake is spending an hour debugging a change that was
-never broken.
+pipeline that rebuilds continuously, those transient failures outnumber the
+real ones, and the expensive mistake is spending an hour debugging a change
+that was never broken.
 
 The problem is that upstream outages rarely announce themselves. They arrive
 wearing an error message about your code.
 
 ## Three real examples
 
-**"No release of log4j-web 2.25.4"** — a build step checked whether an artifact
-existed and reported it missing. It was not missing. Maven Central was returning
-`403` because we had been rate-limited, and the check used `curl -sfI`, where
-`-f` collapses every HTTP error into the same non-zero exit. "Server refused to
-answer me" and "the file is not there" became the same signal. The fix was to
-read the status code instead of the exit code, and say `unavailable` when the
-answer is neither 200 nor 404.
+**"No release of log4j-web 2.25.4."** A build step checked whether an artifact
+existed and reported it missing. It was not missing. Maven Central was
+returning `403` because we had been rate-limited, and the check used
+`curl -sfI`, where `-f` collapses every HTTP error into the same non-zero
+exit. "Server refused to answer me" and "the file is not there" became the
+same signal. The fix was to read the status code instead of the exit code,
+and say `unavailable` when the answer is neither 200 nor 404.
 
-**"Missing go.sum entry"** — a classic real error, and this time it was a stream
-error from `proxy.golang.org` mid-download. The next run passed with no change.
+**"Missing go.sum entry."** A classic real error, except this time it was a
+stream error from `proxy.golang.org` mid-download. The next run passed with
+no change.
 
-**A dependency conflict that named the wrong module** — the resolver reported a
+**A dependency conflict that named the wrong module.** The resolver reported a
 version requirement conflict, and the actual cause was a workspace file pinned
-below what a bumped dependency required. The message pointed at the module; the
-fix was three directories up.
+below what a bumped dependency required. The message pointed at the module.
+The fix was three directories up.
 
 Pattern: the error is generated at the point of *failure*, which is often far
 from the *cause*.
@@ -39,10 +40,10 @@ from the *cause*.
 **If one architecture passes and the other fails on the same commit, it is
 almost never your code.**
 
-The source is identical. The build config is identical. A genuine bug in either
-would fail both. What differs is which runner, which mirror, which moment in
-time — so a split result points at the network or the environment, not the
-diff.
+The source is identical. The build config is identical. A genuine bug in
+either would fail both. What differs is which runner, which mirror, which
+moment in time, so a split result points at the network or the environment,
+not the diff.
 
 This one observation resolves more red builds than any other, and it takes five
 seconds to check. Look at the matrix before you look at the diff.
@@ -57,7 +58,7 @@ code is not the variable.
 
 **2. Do the failures cluster by architecture, or by upstream?**
 One arch failing is environmental. Several unrelated images failing the same
-step at the same time is an upstream outage — unrelated images do not develop
+step at the same time is an upstream outage; unrelated images do not develop
 the same bug simultaneously.
 
 **3. What is the actual status code?**
@@ -67,8 +68,8 @@ will eventually report an outage as a missing file.
 
 **4. Does it reproduce on a re-run?**
 Cheap, and decisive. A flake fails once. A real bug fails every time. Re-run
-*before* you start reading code — but re-run **once**. Re-running until green is
-how a real intermittent bug gets shipped.
+*before* you start reading code, but re-run **once**. Re-running until green
+is how a real intermittent bug gets shipped.
 
 ## Building this into the pipeline
 
@@ -77,7 +78,7 @@ encoding:
 
 **Retry with meaning.** Add retries to network fetches, but be careful what you
 retry with. `curl -sfI --retry 5` does not retry HTTP errors the way people
-expect — without `--retry-all-errors`, and with `-f` in play, a `403` is not
+expect: without `--retry-all-errors`, and with `-f` in play, a `403` is not
 necessarily a retryable condition to curl. Test that your retry actually
 retries; a flag that looks right and does nothing is worse than no flag, because
 it stops anyone from looking again.
@@ -92,21 +93,17 @@ with:
 
 ```
 Maven Central unreachable for log4j-web (HTTP 403 after retries)
-  — transient, not a missing release
+  transient, not a missing release
 ```
 
 Same failure, and the second one ends the investigation in the first line. Every
 check that reaches the network should be able to distinguish "the answer is no"
 from "there was no answer", and should say which it got.
 
-## What this is not
-
-This is not an argument for ignoring red builds. It is an argument for spending
-the first two minutes deciding *which kind* of red you have, because the two
-kinds need completely different responses — and the wrong response to a
-transient failure is a code change that papers over it.
-
-The failure mode to avoid is the opposite one: treating everything as flaky and
-re-running until green. That is how a genuine intermittent bug reaches
-production with a green checkmark on it. The discipline is to classify honestly,
-not to classify optimistically.
+None of this is an argument for ignoring red builds. Spend the first two
+minutes deciding *which kind* of red you have, because the two kinds need
+completely different responses, and the wrong response to a transient failure
+is a code change that papers over it. The opposite failure mode is just as
+real: treat everything as flaky and re-run until green, and that's how a
+genuine intermittent bug reaches production with a checkmark on it. Classify
+honestly. Not optimistically.

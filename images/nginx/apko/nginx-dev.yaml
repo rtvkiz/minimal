@@ -84,7 +84,7 @@ annotations:
   org.opencontainers.image.description: "Dev variant of minimal-nginx: same nginx mainline + shell + curl/openssl/dig for HTTP/TLS/DNS debugging. Not for production."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/nginx"
-  org.opencontainers.image.licenses: "Apache-2.0"
+  org.opencontainers.image.licenses: "BSD-2-Clause"
   dev.minimal.variant: "dev"
 
 archs:
