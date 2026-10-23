@@ -17,7 +17,10 @@ package:
   epoch: 0
   description: "Minimal Redis server and CLI built from source"
   copyright:
-    - license: SSPL-1.0
+    # Redis 8.0 (May 2025) added AGPLv3 as a third licensing option alongside
+    # SSPLv1/RSALv2. We build under AGPL since it's the OSI-approved choice;
+    # this field was still SSPL-1.0 from the 2026-01-29 onboarding commit.
+    - license: AGPL-3.0-only
   dependencies:
     # apko resolves a top-level package name across ALL repositories and picks
     # the highest version — it does not prefer our local repo (apko v1.1.6
