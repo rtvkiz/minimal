@@ -10,7 +10,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:tempo:tempo:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: tempo
-  version: 3.1.0
+  version: 3.1.1
   epoch: 0
   description: "Minimal Grafana Tempo distributed tracing backend built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 of tempo source tarball - updated by update-versions.yml workflow
-  sha256: 69302279a96cf7a58f19ed910f2e782b6b87aba7577ab02c93130e2764ebd211
+  sha256: c39b5ae755523f784e3a5c17864052ab05cb48604468644264a60ebc405e7a0b
 
 environment:
   contents:
