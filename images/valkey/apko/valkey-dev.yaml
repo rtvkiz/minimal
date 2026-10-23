@@ -80,7 +80,7 @@ annotations:
   org.opencontainers.image.description: "Dev variant of minimal-valkey: same valkey-server + shell + valkey-cli + curl/socat/jq. Not for production."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/valkey"
-  org.opencontainers.image.licenses: "Apache-2.0"
+  org.opencontainers.image.licenses: "BSD-3-Clause"
   dev.minimal.variant: "dev"
 
 archs:
