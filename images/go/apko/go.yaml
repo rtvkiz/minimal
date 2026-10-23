@@ -152,7 +152,7 @@ annotations:
   org.opencontainers.image.description: "Hardened Go builder image built on Wolfi with daily CVE patches"
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/go"
-  org.opencontainers.image.licenses: "Apache-2.0"
+  org.opencontainers.image.licenses: "BSD-3-Clause"
 
 archs:
   - x86_64

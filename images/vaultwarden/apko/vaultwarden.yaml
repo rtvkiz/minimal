@@ -60,7 +60,7 @@ annotations:
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/vaultwarden"
   # The server is AGPL-3.0; the bundled web vault is Bitwarden's OSS (GPL-3.0)
   # build. Both ship in this image, so both are declared.
-  org.opencontainers.image.licenses: "AGPL-3.0-only AND GPL-3.0-only"
+  org.opencontainers.image.licenses: "AGPL-3.0-only"
 
 archs:
   - x86_64
