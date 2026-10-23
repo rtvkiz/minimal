@@ -74,6 +74,18 @@
       "description": "Karpenter Kubernetes node autoscaler controller (AWS provider), built on Wolfi. Shell-less, signed and SBOM-attested, rebuilt daily against CVE fixes."
     },
     {
+      "name": "keda",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "keda-2.19",
+      "upstream_url": "https://keda.sh",
+      "summary": "KEDA Kubernetes event-driven autoscaler operator, built on Wolfi.",
+      "description": "KEDA Kubernetes event-driven autoscaler operator, scaling workloads on external metrics. Built on Wolfi, shell-less, signed, rebuilt daily against CVE fixes."
+    },
+    {
       "name": "blackbox-exporter",
       "category": "Observability",
       "variants": [

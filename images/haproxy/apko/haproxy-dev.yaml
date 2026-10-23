@@ -91,7 +91,7 @@ annotations:
   org.opencontainers.image.description: "Dev variant of minimal-haproxy: same haproxy + shell + socat (admin socket) + curl/openssl/dig. Not for production."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/haproxy"
-  org.opencontainers.image.licenses: "Apache-2.0"
+  org.opencontainers.image.licenses: "GPL-2.0-or-later"
   dev.minimal.variant: "dev"
 
 archs:

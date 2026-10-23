@@ -81,7 +81,7 @@ annotations:
   org.opencontainers.image.description: "Hardened MariaDB LTS image built from source via melange with daily CVE patches"
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/mariadb"
-  org.opencontainers.image.licenses: "Apache-2.0"
+  org.opencontainers.image.licenses: "GPL-2.0-only"
 
 archs:
   - x86_64

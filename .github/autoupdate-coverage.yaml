@@ -30,6 +30,9 @@ wolfi-versioned:
                         # multiple karpenter-X.Y packages coexist in Wolfi's index, all
                         # providing the bare "karpenter" name, so the apko package is
                         # pinned to the exact versioned name to avoid ambiguity
+  - keda                # keda-2.19; same major-line gap as karpenter/argo-cd/couchdb/
+                        # kong - multiple keda-X.Y packages coexist in Wolfi's index,
+                        # so the apko package is pinned to the exact versioned name
 
 # wolfi-rolling: apko references an *unversioned / rolling* Wolfi package
 # (e.g. apache2, nginx-mainline, sqlite, bun). Wolfi keeps that single package at

@@ -133,7 +133,7 @@ annotations:
   org.opencontainers.image.description: "Dev variant of minimal-rails: same Rails + Ruby + bundler runtime + shell + build toolchain + Node.js for assets. Not for production."
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/rails"
-  org.opencontainers.image.licenses: "Apache-2.0"
+  org.opencontainers.image.licenses: "Ruby AND MIT"
   dev.minimal.variant: "dev"
 
 archs:
