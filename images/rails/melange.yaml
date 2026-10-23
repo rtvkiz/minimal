@@ -10,7 +10,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:rails:rails:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: rails
-  version: 4.0.8
+  version: 4.0.9
   epoch: 0
   description: "Minimal Ruby + Rails built from source"
   copyright:
@@ -29,10 +29,10 @@ package:
     provider-priority: 100
 
 vars:
-  ruby_version: 4.0.8
+  ruby_version: 4.0.9
   rails_version: 8.1.4
   # SHA256 from https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.1.tar.gz
-  sha256: 0968e2ac4cbd6f1fd85d3092aed66cd3c2d8ba4a5e2493d6e6c6cb0c431897d2
+  sha256: c35350682ff050b79702d57ade4516e7336063f510155d19fb2fb5b3f3909511
 
 environment:
   contents:
