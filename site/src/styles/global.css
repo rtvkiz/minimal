@@ -39,8 +39,8 @@
   --shadow: 0 1px 2px rgba(10, 12, 16, 0.04), 0 8px 24px -12px rgba(10, 12, 16, 0.12);
   --shadow-lg: 0 1px 3px rgba(10, 12, 16, 0.05), 0 20px 40px -20px rgba(10, 12, 16, 0.18);
 
-  --sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "Inter Variable", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
   --maxw: 1160px;
 }
@@ -271,7 +271,7 @@ table.data td.mono { font-family: var(--mono); font-size: 0.82rem; color: var(--
 .prose ul, .prose ol { padding-left: 22px; }
 .prose li + li { margin-top: 8px; }
 .prose code {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.88em;
   background: var(--bg-muted);
   border: 1px solid var(--border);

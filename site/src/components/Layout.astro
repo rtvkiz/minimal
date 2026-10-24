@@ -1,5 +1,10 @@
 ---
 import '../styles/global.css';
+// Self-hosted variable fonts: avoids the fonts.googleapis.com/fonts.gstatic.com
+// render-blocking third-party origin, and the variable weight axis preserves
+// the odd in-between weights (550/640/680) global.css relies on.
+import '@fontsource-variable/inter/wght.css';
+import '@fontsource-variable/jetbrains-mono/wght.css';
 import { dataset } from '../lib/catalog';
 export interface Props {
   title?: string;
@@ -68,9 +73,6 @@ const allSchema = [...schema, ...(breadcrumbSchema ? [breadcrumbSchema] : [])];
     <script type="application/ld+json" set:html={JSON.stringify(s)} />
   ))}
   <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;640;680;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <!-- GoatCounter: cookieless, no personal data, no consent banner needed.
        Dashboard is private by default (goatcounter settings.go defaults
