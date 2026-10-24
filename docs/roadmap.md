@@ -195,11 +195,23 @@ package ⇒ `wolfi-versioned`; `(r)` = unversioned/rolling ⇒ `wolfi-rolling`.
 | [x] | temporal | source-built (temporal-server/-admin-tools/-ui-server) | 🟢 MIT | 47M | Apps | **Shipped** (source-built, three images, ahead of this survey — not the single apko-only `temporal` package this row originally named). |
 
 **Also packaged in Wolfi, parked deliberately:** `argo-workflows` (🟢 Apache — take
-with argo-cd or not at all), `harbor-2.14-*` (🟢 Apache, but 5+ images — own
-effort like cert-manager), `mattermost-11.4` (⚠️ mixed AGPL + Mattermost Source
+with argo-cd or not at all), `mattermost-11.4` (⚠️ mixed AGPL + Mattermost Source
 Available License in the same tree — needs a license read before onboarding),
 `apisix-ingress-controller` (🟢 Apache — note Wolfi packages the *controller*,
 not apisix itself, so the Tier-3 apisix entry above is unchanged).
+
+**Harbor — partially shipped, 2026-10-24.** `harbor-2.14-portal` (UI + nginx
+reverse proxy) shipped as `harbor-portal`: cheap to build and smoke-test, same
+shape as our other nginx-fronted apko images. The rest of the stack
+(`harbor-2.14` core, `harbor-2.14-jobservice`, `harbor-2.14-registryctl` +
+`harbor-registry`) remains deliberately deferred: none of those binaries has a
+graceful `--version`/`--help` exit — every invocation falls straight into full
+startup, which reads `conf/app.conf`/`config.yml` and then needs live
+Postgres **and** Redis to get anywhere. A real smoke test for those three means
+a 3-container compose plus hand-authored config, not a `make test-<name>`
+one-liner — genuinely the "own effort like cert-manager" scope the original
+entry called out, confirmed empirically (binaries extracted and run directly)
+rather than assumed from the packaging.
 
 ### Wave 3 survey — verified 2026-09-07
 
@@ -245,7 +257,7 @@ Pull counts read from Docker Hub on 2026-09-07:
 | erlang | 66M | 🟢 Apache-2.0 | Languages & Runtimes | Companion to rabbitmq |
 | meilisearch | 52M | 🟢 MIT | Databases | **Shipped source-built** because Wolfi lagged seven upstream releases. |
 | temporal | 48M | 🟢 MIT | Apps | Durable execution; fills the thinnest category |
-| cert-manager · keda · karpenter · harbor · zot | — | 🟢 Apache-2.0 | K8s, CI & IaC | All in Wolfi, all gated on Chainguard. **No pull counts exist** — they publish to quay/ghcr/registry.k8s.io, so demand cannot be ranked the way the rest of this table is. (argo-cd was in this row too — **shipped 2026-10-16**, see Tier W2.) |
+| cert-manager · keda · karpenter · harbor · zot | — | 🟢 Apache-2.0 | K8s, CI & IaC | All in Wolfi, all gated on Chainguard. **No pull counts exist** — they publish to quay/ghcr/registry.k8s.io, so demand cannot be ranked the way the rest of this table is. (argo-cd was in this row too — **shipped 2026-10-16**, see Tier W2. keda and zot shipped since; harbor's portal component shipped 2026-10-24, core/jobservice/registryctl still deferred — see the Harbor note above.) |
 
 **The finding that shapes the next wave:** the source-built well has run dry at
 the top of the demand curve. Every remaining high-demand candidate is either
