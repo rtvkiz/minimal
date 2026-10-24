@@ -1,0 +1,54 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>A dependency bump that fixed nothing and broke four builds — Minimal Containers</title><meta name="description" content="An automated CVE patcher bumped a module nobody had a vulnerability in, and four builds broke the same way. Harmonizing a dependency family's versions is not the same thing as patching one."><link rel="canonical" href="https://minimalcontainers.com/blog/a-dependency-bump-that-fixed-nothing-and-broke-four-builds/"><meta property="og:title" content="A dependency bump that fixed nothing and broke four builds — Minimal Containers"><meta property="og:description" content="An automated CVE patcher bumped a module nobody had a vulnerability in, and four builds broke the same way. Harmonizing a dependency family's versions is not the same thing as patching one."><meta property="og:type" content="article"><meta property="og:url" content="https://minimalcontainers.com/blog/a-dependency-bump-that-fixed-nothing-and-broke-four-builds/"><meta property="og:site_name" content="Minimal Containers"><meta property="og:image" content="https://minimalcontainers.com/og.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="A dependency bump that fixed nothing and broke four builds — Minimal Containers"><meta name="twitter:description" content="An automated CVE patcher bumped a module nobody had a vulnerability in, and four builds broke the same way. Harmonizing a dependency family's versions is not the same thing as patching one."><meta name="twitter:image" content="https://minimalcontainers.com/og.png"><meta property="article:published_time" content="2026-10-14"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"A dependency bump that fixed nothing and broke four builds","description":"An automated CVE patcher bumped a module nobody had a vulnerability in, and four builds broke the same way. Harmonizing a dependency family's versions is not the same thing as patching one.","datePublished":"2026-10-14","dateModified":"2026-10-14","url":"https://minimalcontainers.com/blog/a-dependency-bump-that-fixed-nothing-and-broke-four-builds","author":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"},"publisher":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://minimalcontainers.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://minimalcontainers.com/blog/"},{"@type":"ListItem","position":3,"name":"A dependency bump that fixed nothing and broke four builds — Minimal Containers","item":"https://minimalcontainers.com/blog/a-dependency-bump-that-fixed-nothing-and-broke-four-builds/"}]}</script><link rel="icon" type="image/svg+xml" href="/icon.svg"><!-- GoatCounter: cookieless, no personal data, no consent banner needed.
+       Dashboard is private by default (goatcounter settings.go defaults
+       `Public` to "private"), so the numbers are not publicly visible.
+       Loaded async so it never blocks render, and the site works fine when
+       ad blockers drop it — expect undercounting on a technical audience. --><script data-goatcounter="https://minimal.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script><link rel="stylesheet" href="/_astro/Layout.B6xdBa_-.css"></head><body><header class="site-header"><div class="container"><a href="/" class="brand"><img src="/icon.svg" alt="" class="logo" width="26" height="26"><span class="brand-name">minimal</span></a><nav class="nav"><a href="/images/">Images</a><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="/blog/">Blog</a><a href="/about/">Verify</a><a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a></nav></div></header><main><section><div class="container-narrow"><p style="margin:0 0 6px"><a href="/blog/" class="small muted">← Blog</a></p><h1 class="section-title">A dependency bump that fixed nothing and broke four builds</h1><p class="small muted"><time datetime="2026-10-14">14 October 2026</time></p><article class="prose" style="margin-top:28px"><p>A transitive-dependency bot exists to do one job: find a package with a known
+CVE, bump it to the fixed version, open a PR. The failure mode worth knowing
+about is the one where it does that job correctly and still breaks your build,
+because “bump the vulnerable package” quietly became “bump everything that
+shares its namespace.”</p>
+<h2 id="what-actually-happened">What actually happened</h2>
+<p><code>go.opentelemetry.io/otel/sdk/log</code> had a CVE-fix suggestion pointing at
+<code>v0.21.0</code>. Reasonable so far: that’s the next release in its own line. But
+<code>v0.21.0</code> is also the release where OpenTelemetry Go rewrote the logs API:
+<code>log.KeyValue</code> and <code>log.String</code>, which existed as package-level functions
+through <code>v0.20.0</code>, were removed in favor of <code>attribute.KeyValue</code>. You can
+verify this yourself: the file <code>log/keyvalue.go</code> is present in the <code>log/v0.20.0</code>
+tag of <code>open-telemetry/opentelemetry-go</code> and absent in <code>log/v0.21.0</code>.</p>
+<p>Four separate codebases were still calling the old API directly. Bumping the
+one module that had a CVE pulled in an API their own source code didn’t
+support, and <code>go build</code> failed with <code>undefined: log.KeyValue</code>. Nothing in that
+error mentions a version number, a security patch, or otel.</p>
+<h2 id="the-second-break-was-worse">The second break was worse</h2>
+<p>The first fix was: stop forcing that one submodule past the API boundary.
+That held for exactly one run. The next time the bot ran, the same four builds
+broke again. Different log lines this time, same root symptom.</p>
+<p>The actual mechanism: <code>go.opentelemetry.io/otel</code>, the <em>core</em> module, started
+hard-requiring <code>go.opentelemetry.io/otel/log</code> at its own version as of the
+<code>v1.47.0</code> release. <code>v1.44.0</code> and <code>v1.46.0</code>’s <code>go.mod</code> have no such line;
+<code>v1.47.0</code>’s does. Core <code>otel</code> had nothing to do with the logs API and had its
+own legitimate, unrelated fix version, but bumping it dragged the same
+breaking log API in as a transitive requirement. No <code>otel/log</code> entry showed up
+anywhere in the bot’s own diff to warn about it.</p>
+<p>This is the part worth remembering: the dangerous version wasn’t the one
+grype flagged. It was a module the CVE never mentioned, pulled in by a
+dependency <em>of</em> the module grype flagged.</p>
+<h2 id="the-fix-that-actually-held">The fix that actually held</h2>
+<p>Stop treating “these modules share a namespace, so harmonize them to the same
+version” as safe by default. A log-family submodule and a core module are
+different Go modules with independent version lines; nothing requires them to
+move together except a human assumption that they should. Once the fix
+checked whether the harmonized <em>core</em> version itself introduced a new
+cross-module requirement, not just whether the log submodule’s own version
+looked risky, the bot’s regenerated PRs stopped reintroducing the break, even
+across several more automated re-runs.</p>
+<p>That’s really the whole lesson, stated more generally than one otel bug
+deserves: if your dependency bot (or your own <code>go get</code>) bumps package A for a
+real CVE, and A’s own <code>go.mod</code> picks up a new hard requirement on package B as
+a side effect, you now have B’s new behavior in your build whether or not B
+had anything to fix. “Does the fix version satisfy what my code calls” and
+“does the fix version satisfy what <em>its own dependencies</em> now require” are two
+different questions. A patcher that only asks the first one will eventually
+ship something that compiles against last week’s dependency graph and fails
+against today’s.</p>
+</article></div></section></main><footer class="site-footer"><div class="container"><div>Minimal Containers · MIT-licensed · built from<a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with<a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.</div><div>Updated 2026-10-24 22:02 UTC · <a href="https://github.com/rtvkiz/minimal/actions/runs/40136629865" rel="noopener">24e82b8</a>· &copy; 2026</div></div></footer><script type="module">document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-copy]`);if(!t)return;let n=t.getAttribute(`data-copy`)||``;navigator.clipboard.writeText(n).then(()=>{let e=t.textContent;t.textContent=`Copied`,setTimeout(()=>{t.textContent=e},1400)}).catch(()=>{t.textContent=`Failed`})});</script></body></html>
