@@ -8,14 +8,14 @@ package:
   # for the image. See docs/onboarding.md "Package naming and scanner
   # visibility" (haproxy-minimal: 0 findings vs haproxy: 14, same version).
   name: headscale
-  version: 0.29.5
+  version: 0.29.6
   epoch: 0
   description: "Headscale self-hosted Tailscale control server, from source."
   copyright:
     - license: BSD-3-Clause
 
 vars:
-  sha256: b4ea4abd8b333181906dacc379edceeb3df562aa3d40df086476728fa30e4e8f
+  sha256: 021bbd166a7b5fd2b6fdc28e4127dfa0cfd2a4090ac87a8ff6215b26dddba602
 
 environment:
   contents:
