@@ -33,6 +33,9 @@ wolfi-versioned:
   - keda                # keda-2.19; same major-line gap as karpenter/argo-cd/couchdb/
                         # kong - multiple keda-X.Y packages coexist in Wolfi's index,
                         # so the apko package is pinned to the exact versioned name
+  - harbor-portal       # harbor-2.14-portal; same major-line gap as keda/karpenter/
+                        # argo-cd/couchdb/kong - harbor-2.14-* packages coexist
+                        # alongside future harbor-2.1X-* lines in Wolfi's index
 
 # wolfi-rolling: apko references an *unversioned / rolling* Wolfi package
 # (e.g. apache2, nginx-mainline, sqlite, bun). Wolfi keeps that single package at

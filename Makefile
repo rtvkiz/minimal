@@ -202,6 +202,7 @@ endef
 .PHONY: couchdb couchdb-dev test-couchdb test-couchdb-dev
 .PHONY: argo-cd argo-cd-dev test-argo-cd test-argo-cd-dev
 .PHONY: argo-cd-repo-server argo-cd-repo-server-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev
+.PHONY: harbor-portal harbor-portal-dev test-harbor-portal test-harbor-portal-dev
 .PHONY: karpenter karpenter-dev test-karpenter test-karpenter-dev
 .PHONY: keda keda-dev test-keda test-keda-dev
 .PHONY: patroni patroni-dev test-patroni test-patroni-dev
@@ -288,7 +289,7 @@ endef
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl argo-cd argo-cd-repo-server karpenter keda
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl argo-cd argo-cd-repo-server karpenter keda harbor-portal
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -381,6 +382,7 @@ $(eval $(call DEV_IMAGE_RULE,argo-cd))
 $(eval $(call DEV_IMAGE_RULE,argo-cd-repo-server))
 $(eval $(call DEV_IMAGE_RULE,karpenter))
 $(eval $(call DEV_IMAGE_RULE,keda))
+$(eval $(call DEV_IMAGE_RULE,harbor-portal))
 $(eval $(call DEV_IMAGE_RULE,patroni))
 $(eval $(call DEV_IMAGE_RULE,vector))
 $(eval $(call DEV_IMAGE_RULE,keepalived,keepalived-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -1426,6 +1428,23 @@ keda:
 		$(REGISTRY)/$(OWNER)/minimal-keda:latest
 	@rm -f keda.tar sbom-*.spdx.json
 	@echo "✓ minimal-keda built (Wolfi package)"
+
+#------------------------------------------------------------------------------
+# HARBOR PORTAL IMAGE (Wolfi pre-built package)
+#------------------------------------------------------------------------------
+harbor-portal:
+	@echo "Assembling minimal-harbor-portal image with apko..."
+	apko build images/harbor-portal/apko/harbor-portal.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-harbor-portal:$(VERSION) \
+		harbor-portal.tar \
+		--arch x86_64
+	docker load < harbor-portal.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-harbor-portal:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-harbor-portal:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-harbor-portal:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-harbor-portal:latest
+	@rm -f harbor-portal.tar sbom-*.spdx.json
+	@echo "✓ minimal-harbor-portal built (Wolfi package)"
 
 #------------------------------------------------------------------------------
 # SQLITE IMAGE (Wolfi pre-built package, shell-less)
@@ -3514,7 +3533,7 @@ scan-%:
 		$(REGISTRY)/$(OWNER)/minimal-$*:latest
 	@echo "✓ minimal-$*: scan passed"
 
-scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks scan-cmctl scan-argo-cd scan-argo-cd-repo-server scan-karpenter scan-keda
+scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks scan-cmctl scan-argo-cd scan-argo-cd-repo-server scan-karpenter scan-keda scan-harbor-portal
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -3659,6 +3678,12 @@ scan-keda:
 	trivy image --exit-code 1 --severity CRITICAL,HIGH \
 		$(REGISTRY)/$(OWNER)/minimal-keda:latest
 	@echo "✓ minimal-keda: scan passed"
+
+scan-harbor-portal:
+	@echo "Scanning minimal-harbor-portal..."
+	trivy image --exit-code 1 --severity CRITICAL,HIGH \
+		$(REGISTRY)/$(OWNER)/minimal-harbor-portal:latest
+	@echo "✓ minimal-harbor-portal: scan passed"
 
 scan-sqlite:
 	@echo "Scanning minimal-sqlite..."
@@ -3902,7 +3927,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev test-cmctl test-cmctl-dev test-argo-cd test-argo-cd-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev
+test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev test-cmctl test-cmctl-dev test-argo-cd test-argo-cd-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev test-harbor-portal test-harbor-portal-dev
 
 $(eval $(call DEV_TEST_RULE,python))
 $(eval $(call DEV_TEST_RULE,node-slim))
@@ -3965,6 +3990,7 @@ $(eval $(call DEV_TEST_RULE,argo-cd))
 $(eval $(call DEV_TEST_RULE,argo-cd-repo-server))
 $(eval $(call DEV_TEST_RULE,karpenter))
 $(eval $(call DEV_TEST_RULE,keda))
+$(eval $(call DEV_TEST_RULE,harbor-portal))
 $(eval $(call DEV_TEST_RULE,kvrocks))
 $(eval $(call DEV_TEST_RULE,patroni))
 $(eval $(call DEV_TEST_RULE,vector))
@@ -4716,6 +4742,12 @@ test-keda:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-keda:latest" && \
 		images/keda/test.sh
 	@echo "✓ keda tests passed"
+
+test-harbor-portal:
+	@echo "Testing harbor-portal image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-harbor-portal:latest" && \
+		images/harbor-portal/test.sh
+	@echo "✓ harbor-portal tests passed"
 
 test-unbound:
 	@echo "Testing unbound image..."

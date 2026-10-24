@@ -434,6 +434,18 @@
       "description": "HAProxy TCP and HTTP load balancer for high-traffic sites. Compiled from upstream source, shell-less, cosign-signed and rebuilt daily against CVEs."
     },
     {
+      "name": "harbor-portal",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "harbor-2.14-portal",
+      "upstream_url": "https://goharbor.io",
+      "summary": "Harbor's portal UI and nginx reverse proxy, built on Wolfi.",
+      "description": "Harbor portal: the static UI and nginx reverse proxy fronting the Harbor container registry. Built on Wolfi, shell-less and rebuilt daily against CVE fixes."
+    },
+    {
       "name": "headscale",
       "category": "Infrastructure",
       "variants": [

@@ -156,7 +156,8 @@ jobs:
             {"name":"argo-cd","grep":"argo-cd-3.4","variants":["prod","dev"]},
             {"name":"argo-cd-repo-server","grep":"argo-cd-3.4-repo-server","variants":["prod","dev"]},
             {"name":"karpenter","grep":"karpenter-1.12","variants":["prod","dev"]},
-            {"name":"keda","grep":"keda-2.19","variants":["prod","dev"]}
+            {"name":"keda","grep":"keda-2.19","variants":["prod","dev"]},
+            {"name":"harbor-portal","grep":"harbor-2.14-portal","variants":["prod","dev"]}
           ]'
 
           # Determine if full rebuild is needed
