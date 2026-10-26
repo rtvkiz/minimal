@@ -12,7 +12,7 @@ package:
   # bare, as cpe:2.3:a:pulsar:pulsar:*, so none of them matched, and the Wolfi
   # secdb missed it too.
   name: pulsar
-  version: 5.0.0
+  version: 5.0.1
   epoch: 0
   description: "Minimal Apache Pulsar messaging/streaming server with custom JRE (jlink)"
   copyright:
@@ -30,7 +30,7 @@ package:
 
 vars:
   # SHA512 of apache-pulsar-{version}-bin.tar.gz - updated by update-versions.yml
-  sha512: c7fc789d05103e8fc4c95545ae6cd78cd6e24cbb016a65edf3f9d3bfd2a6a1cf673dbd4eb1f0c02271eecb5ccbb297e3ac3bb44ad47f31755614870d1ffecce5
+  sha512: 97baef9c5d04d906b1a5fb7b9a8905fd8f9db5e639c400bcedf0e5092dcde56d5b036bef4d9213fbe52fcc0030708689db1d7c8bffe13e4781d5659ca2637f27
 
 environment:
   contents:
