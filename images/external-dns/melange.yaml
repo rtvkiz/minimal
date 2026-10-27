@@ -59,7 +59,8 @@ pipeline:
       tar xzf /home/build/external-dns.tar.gz -C /home/build/external-dns-${{package.version}} --strip-components=1
       rm /home/build/external-dns.tar.gz
 
-  # Version is reported via pkg/apis/externaldns.Version (see upstream Makefile).
+  # Version is reported via pkg/version.Version (see upstream Makefile; it
+  # moved from pkg/apis/externaldns.Version in 0.24.0).
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off
@@ -192,7 +193,7 @@ pipeline:
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w -buildid= \
-          -X sigs.k8s.io/external-dns/pkg/apis/externaldns.Version=${{package.version}}" \
+          -X sigs.k8s.io/external-dns/pkg/version.Version=${{package.version}}" \
         -o /home/build/external-dns-bin \
         .
 
