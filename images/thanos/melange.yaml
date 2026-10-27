@@ -11,7 +11,7 @@ package:
   # bare, as cpe:2.3:a:thanos:thanos:*, so none of them matched, and the Wolfi
   # secdb missed it too.
   name: thanos
-  version: 0.42.4
+  version: 0.42.5
   epoch: 0
   description: "Minimal Thanos (highly-available Prometheus long-term storage) built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of thanos source tarball - updated by update-versions.yml workflow
-  sha256: 0f078dcb6d47bde6b3de0e962355d977f6fc017975d882531c4bd70f81f61fae
+  sha256: 61a91cccc4fb400603ac729f7d9116f797f252eec7613eefa935ac6e8f976609
 
 environment:
   contents:
