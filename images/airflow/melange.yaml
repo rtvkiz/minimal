@@ -77,7 +77,19 @@ pipeline:
   # patch-python-deps: auto-generated — do not edit manually
   - runs: |
       cd /home/build
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "certifi==2026.10.19"
       /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "mako==1.4.2"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-api==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-exporter-otlp-common==0.66b1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-exporter-otlp-proto-common==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-exporter-otlp-proto-grpc==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-exporter-otlp-proto-http==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-exporter-otlp==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-proto==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-sdk==1.45.1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "opentelemetry-semantic-conventions==0.66b1"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "pyjwt==2.15.0"
+      /opt/airflow/venv/bin/pip install --no-cache-dir --no-deps "urllib3==2.8.0"
   # end-patch-python-deps
   - runs: |
       # Trim what a running scheduler/API server never reads. Test trees and
