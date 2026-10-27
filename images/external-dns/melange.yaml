@@ -12,7 +12,7 @@ package:
   # this product bare, as cpe:2.3:a:external-dns:external-dns:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: external-dns
-  version: 0.23.0
+  version: 0.24.0
   epoch: 0
   description: "Minimal ExternalDNS Kubernetes DNS controller built from source"
   copyright:
@@ -30,7 +30,7 @@ package:
 
 vars:
   # SHA256 of external-dns source tarball - updated by update-versions.yml
-  sha256: f9e61848ab12b9bfbd19e64a8a4c01085534f1ba82b90c46276ff173909dd3d5
+  sha256: a8573a80b41c1b26244ddaee6b4107862dee5367bfd4b97400356eb146002f8c
 
 environment:
   contents:
@@ -59,7 +59,8 @@ pipeline:
       tar xzf /home/build/external-dns.tar.gz -C /home/build/external-dns-${{package.version}} --strip-components=1
       rm /home/build/external-dns.tar.gz
 
-  # Version is reported via pkg/apis/externaldns.Version (see upstream Makefile).
+  # Version is reported via pkg/version.Version (see upstream Makefile; it
+  # moved from pkg/apis/externaldns.Version in 0.24.0).
   # patch-go-deps: auto-generated — do not edit manually
   - runs: |
       export GOWORK=off
@@ -192,7 +193,7 @@ pipeline:
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w -buildid= \
-          -X sigs.k8s.io/external-dns/pkg/apis/externaldns.Version=${{package.version}}" \
+          -X sigs.k8s.io/external-dns/pkg/version.Version=${{package.version}}" \
         -o /home/build/external-dns-bin \
         .
 

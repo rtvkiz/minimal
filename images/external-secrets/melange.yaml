@@ -8,14 +8,14 @@ package:
   # for the image. See docs/onboarding.md "Package naming and scanner
   # visibility" (haproxy-minimal: 0 findings vs haproxy: 14, same version).
   name: external-secrets
-  version: 2.13.0
+  version: 2.14.0
   epoch: 0
   description: "External Secrets Operator built from source via melange."
   copyright:
     - license: Apache-2.0
 
 vars:
-  sha256: df417a72c63b496bec5b48556e5f9d5dbfb83a52bd18adc14316ea03e020820c
+  sha256: b56ec63c6991a4ed17741f68058dab857eeff1529c992947f87459afceb06aa6
 
 environment:
   contents:
