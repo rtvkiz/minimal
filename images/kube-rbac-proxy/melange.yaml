@@ -43,7 +43,7 @@ pipeline:
   - runs: |
       mkdir -p /home/build/kube-rbac-proxy-${{package.version}}
       curl -fsSL --retry 8 --retry-all-errors \
-        "https://github.com/brancz/kube-rbac-proxy/archive/refs/tags/v${{package.version}}.tar.gz" \
+        "https://github.com/kube-rbac-proxy/kube-rbac-proxy/archive/refs/tags/v${{package.version}}.tar.gz" \
         -o /home/build/kube-rbac-proxy.tar.gz
       echo "${{vars.sha256}}  /home/build/kube-rbac-proxy.tar.gz" | sha256sum -c -
       tar xzf /home/build/kube-rbac-proxy.tar.gz -C /home/build/kube-rbac-proxy-${{package.version}} --strip-components=1

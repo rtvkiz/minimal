@@ -561,12 +561,14 @@
     notes: "https://github.com/prometheus-operator/prometheus-operator/releases/tag/v{version}"
 - name: kube-rbac-proxy
   cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
+  # canonical repo is kube-rbac-proxy/kube-rbac-proxy (brancz/ 301-redirects;
+  # the resolver's raw curl won't follow it). The Go module path stays brancz.
   files: [images/kube-rbac-proxy/melange.yaml]
-  source: { type: github-releases-latest, repo: brancz/kube-rbac-proxy, strip-v: true }
-  tarball: { url: "https://github.com/brancz/kube-rbac-proxy/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  source: { type: github-releases-latest, repo: kube-rbac-proxy/kube-rbac-proxy, strip-v: true }
+  tarball: { url: "https://github.com/kube-rbac-proxy/kube-rbac-proxy/archive/refs/tags/v{version}.tar.gz", field: sha256 }
   links:
-    releases: "https://github.com/brancz/kube-rbac-proxy/releases"
-    notes: "https://github.com/brancz/kube-rbac-proxy/releases/tag/v{version}"
+    releases: "https://github.com/kube-rbac-proxy/kube-rbac-proxy/releases"
+    notes: "https://github.com/kube-rbac-proxy/kube-rbac-proxy/releases/tag/v{version}"
 - name: cadvisor
   cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
   files: [images/cadvisor/melange.yaml]

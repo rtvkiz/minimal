@@ -681,7 +681,7 @@
         "dev"
       ],
       "primary_package": "kube-rbac-proxy",
-      "upstream_url": "https://github.com/brancz/kube-rbac-proxy",
+      "upstream_url": "https://github.com/kube-rbac-proxy/kube-rbac-proxy",
       "summary": "Shell-less kube-rbac-proxy auth sidecar, built from source via melange.",
       "description": "kube-rbac-proxy: sidecar that guards a metrics or API endpoint with Kubernetes TokenReview and SubjectAccessReview. Shell-less, non-root, signed, SBOM-attested."
     },
