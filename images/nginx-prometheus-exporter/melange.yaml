@@ -1,0 +1,69 @@
+# Melange build configuration for minimal nginx-prometheus-exporter
+# Scrapes NGINX stub_status (or the NGINX Plus API) and exposes it as Prometheus
+# metrics on :9113.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `nginx-prometheus-exporter` package stopped receiving
+# builds in June 2026 (recipe removed from wolfi-dev/os), so it is frozen several
+# releases behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `nginx-prometheus-exporter-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: nginx-prometheus-exporter
+  version: 1.5.3
+  epoch: 0
+  description: "Minimal NGINX Prometheus Exporter built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) `nginx-prometheus-exporter` package; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 25031b1193b23994e14950ab2fbdff33f96d6fda9305c4dd5963bc49c94d7a38
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/nginx-prometheus-exporter-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/nginx/nginx-prometheus-exporter/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/nginx-prometheus-exporter.tar.gz
+      echo "${{vars.sha256}}  /home/build/nginx-prometheus-exporter.tar.gz" | sha256sum -c -
+      tar xzf /home/build/nginx-prometheus-exporter.tar.gz -C /home/build/nginx-prometheus-exporter-${{package.version}} --strip-components=1
+      rm /home/build/nginx-prometheus-exporter.tar.gz
+
+  - runs: |
+      cd /home/build/nginx-prometheus-exporter-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/prometheus/common/version.Version=${{package.version}}" \
+        -o /home/build/nginx-prometheus-exporter-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/nginx-prometheus-exporter-bin "${{targets.destdir}}/usr/bin/nginx-prometheus-exporter"
+      chmod 0755 "${{targets.destdir}}/usr/bin/nginx-prometheus-exporter"
+
+  - runs: |
+      echo "Verifying nginx-prometheus-exporter binary and injected version..."
+      "${{targets.destdir}}/usr/bin/nginx-prometheus-exporter" --version 2>&1 | grep -q "version ${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }

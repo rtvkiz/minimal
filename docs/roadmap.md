@@ -317,6 +317,42 @@ were pulled from this wave after inspection showed they need real design work
 (see the Tier W3 entries above), not a quick apko-only crank — don't onboard
 either from this table's original notes without re-reading the W3 entry first.
 
+## Wave 4 — the road to 150 (2026-10-28)
+
+**Finding that reshaped this wave: much of public Wolfi is frozen.** A large set
+of packages stopped receiving builds around 2026-06-03..05, and their recipes
+were removed from `wolfi-dev/os` in one bulk commit (`bfd2fb34`, 2026-06-11).
+Every candidate below still has a Wolfi package, but each one is 1-5 minors
+behind upstream with a last build in early June — while actively maintained
+packages (`nginx-mainline`, `bun`, `openjdk-21`, `sqlite`) still rebuild weekly.
+An apko-only image on a frozen package passes `check-autoupdate`
+(`wolfi-rolling`) yet never receives another update or CVE fix, so **all ten
+are source-built** (meilisearch precedent). Before any future apko-only
+onboarding, check the package's `t:` build timestamp in the live APKINDEX and
+compare its version with upstream's latest release.
+
+| Batch | Image | Upstream | Version | Category |
+|---|---|---|---|---|
+| 150a | prometheus-operator | prometheus-operator/prometheus-operator | 0.94.2 | K8s, CI & IaC |
+| 150a | kube-rbac-proxy | brancz/kube-rbac-proxy | 0.23.1 | K8s, CI & IaC |
+| 150a | cadvisor | google/cadvisor | 0.60.6 | Observability |
+| 150a | nginx-prometheus-exporter | nginx/nginx-prometheus-exporter | 1.5.3 | Observability |
+| 150a | memcached-exporter | prometheus/memcached_exporter | 0.18.0 | Observability |
+| 150b | sealed-secrets (controller) | bitnami/sealed-secrets | 0.41.2 | K8s, CI & IaC |
+| 150b | cloudnative-pg | cloudnative-pg/cloudnative-pg | 1.30.1 | Databases |
+| 150b | argo-rollouts (controller) | argoproj/argo-rollouts | 1.10.1 | K8s, CI & IaC |
+| 150b | trust-manager | cert-manager/trust-manager | 0.26.0 | K8s, CI & IaC |
+| 150b | chartmuseum | helm/chartmuseum | 0.16.6 | Infrastructure |
+
+All Apache-2.0, none free on `cgr.dev/chainguard`. Skipped: `atlantis` (Wolfi
+package depends on BUSL `terraform`), the flux controllers (kustomize-controller
+needs busybox + git + gnupg at runtime — do the four together as their own set),
+cert-manager core (multi-image split, see Deferred).
+
+**Existing images on frozen Wolfi packages — migrate to source builds next:**
+harbor-portal (`harbor-2.14-portal`, last built 2026-01-21), keda, argo-cd,
+argo-cd-repo-server, karpenter, kong, vector.
+
 ## Execution model
 
 - **One PR per tier group (~6–8 images).** Each image: 10 registration points

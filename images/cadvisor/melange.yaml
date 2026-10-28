@@ -1,0 +1,70 @@
+# Melange build configuration for minimal cadvisor
+# Container resource-usage and performance analyser; serves a UI, a REST API and
+# Prometheus metrics on :8080. The build module is cmd/ (github.com/google/cadvisor/cmd,
+# which replace-directs the root and lib/ modules to the local tree).
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `cadvisor` package stopped receiving
+# builds in June 2026 (recipe removed from wolfi-dev/os), so it is frozen several
+# releases behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `cadvisor-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: cadvisor
+  version: 0.60.6
+  epoch: 0
+  description: "Minimal cAdvisor built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) `cadvisor` package; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: de7a92116fcad156fd5792da486b164224c3989e2f71041612a20c54cef4e2f7
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/cadvisor-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/google/cadvisor/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/cadvisor.tar.gz
+      echo "${{vars.sha256}}  /home/build/cadvisor.tar.gz" | sha256sum -c -
+      tar xzf /home/build/cadvisor.tar.gz -C /home/build/cadvisor-${{package.version}} --strip-components=1
+      rm /home/build/cadvisor.tar.gz
+
+  - runs: |
+      cd /home/build/cadvisor-${{package.version}}/cmd
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build -tags netgo \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/google/cadvisor/lib/version.Version=v${{package.version}}" \
+        -o /home/build/cadvisor-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/cadvisor-bin "${{targets.destdir}}/usr/bin/cadvisor"
+      chmod 0755 "${{targets.destdir}}/usr/bin/cadvisor"
+
+  - runs: |
+      echo "Verifying cadvisor binary and injected version..."
+      "${{targets.destdir}}/usr/bin/cadvisor" --version 2>&1 | grep -q "v${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }

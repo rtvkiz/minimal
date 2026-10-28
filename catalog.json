@@ -662,6 +662,66 @@
       "description": "cmctl is the cert-manager CLI: approve CertificateRequests, renew certs, check issuer health. Shell-less Go binary, signed and SBOM-attested, rebuilt daily."
     },
     {
+      "name": "prometheus-operator",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "prometheus-operator",
+      "upstream_url": "https://prometheus-operator.dev",
+      "summary": "Shell-less Prometheus Operator, built from source via melange.",
+      "description": "Prometheus Operator managing Prometheus, Alertmanager and ServiceMonitor CRDs on Kubernetes. Shell-less, non-root, signed, SBOM-attested, rebuilt every 6h."
+    },
+    {
+      "name": "kube-rbac-proxy",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "kube-rbac-proxy",
+      "upstream_url": "https://github.com/brancz/kube-rbac-proxy",
+      "summary": "Shell-less kube-rbac-proxy auth sidecar, built from source via melange.",
+      "description": "kube-rbac-proxy: sidecar that guards a metrics or API endpoint with Kubernetes TokenReview and SubjectAccessReview. Shell-less, non-root, signed, SBOM-attested."
+    },
+    {
+      "name": "cadvisor",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "cadvisor",
+      "upstream_url": "https://github.com/google/cadvisor",
+      "summary": "Shell-less cAdvisor container metrics daemon, built from source via melange.",
+      "description": "cAdvisor (Container Advisor) exporting per-container CPU, memory, filesystem and network usage as Prometheus metrics. Shell-less, non-root, signed and attested."
+    },
+    {
+      "name": "nginx-prometheus-exporter",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "nginx-prometheus-exporter",
+      "upstream_url": "https://github.com/nginx/nginx-prometheus-exporter",
+      "summary": "Shell-less NGINX Prometheus exporter, built from source via melange.",
+      "description": "NGINX Prometheus exporter turning stub_status or NGINX Plus API stats into Prometheus metrics on :9113. Shell-less, non-root, signed and SBOM-attested."
+    },
+    {
+      "name": "memcached-exporter",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "memcached-exporter",
+      "upstream_url": "https://github.com/prometheus/memcached_exporter",
+      "summary": "Shell-less Memcached Prometheus exporter, built from source via melange.",
+      "description": "Prometheus memcached_exporter publishing Memcached hit ratios, evictions, connections and slab stats on :9150. Shell-less, non-root, signed and SBOM-attested."
+    },
+    {
       "name": "timescaledb",
       "category": "Databases",
       "variants": [

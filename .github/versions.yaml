@@ -551,6 +551,46 @@
   links:
     releases: "https://github.com/cert-manager/cmctl/releases"
     notes: "https://github.com/cert-manager/cmctl/releases/tag/v{version}"
+- name: prometheus-operator
+  cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
+  files: [images/prometheus-operator/melange.yaml]
+  source: { type: github-releases-latest, repo: prometheus-operator/prometheus-operator, strip-v: true }
+  tarball: { url: "https://github.com/prometheus-operator/prometheus-operator/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/prometheus-operator/prometheus-operator/releases"
+    notes: "https://github.com/prometheus-operator/prometheus-operator/releases/tag/v{version}"
+- name: kube-rbac-proxy
+  cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
+  files: [images/kube-rbac-proxy/melange.yaml]
+  source: { type: github-releases-latest, repo: brancz/kube-rbac-proxy, strip-v: true }
+  tarball: { url: "https://github.com/brancz/kube-rbac-proxy/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/brancz/kube-rbac-proxy/releases"
+    notes: "https://github.com/brancz/kube-rbac-proxy/releases/tag/v{version}"
+- name: cadvisor
+  cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
+  files: [images/cadvisor/melange.yaml]
+  source: { type: github-releases-latest, repo: google/cadvisor, strip-v: true }
+  tarball: { url: "https://github.com/google/cadvisor/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/google/cadvisor/releases"
+    notes: "https://github.com/google/cadvisor/releases/tag/v{version}"
+- name: nginx-prometheus-exporter
+  cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
+  files: [images/nginx-prometheus-exporter/melange.yaml]
+  source: { type: github-releases-latest, repo: nginx/nginx-prometheus-exporter, strip-v: true }
+  tarball: { url: "https://github.com/nginx/nginx-prometheus-exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/nginx/nginx-prometheus-exporter/releases"
+    notes: "https://github.com/nginx/nginx-prometheus-exporter/releases/tag/v{version}"
+- name: memcached-exporter
+  cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
+  files: [images/memcached-exporter/melange.yaml]
+  source: { type: github-releases-latest, repo: prometheus/memcached_exporter, strip-v: true }
+  tarball: { url: "https://github.com/prometheus/memcached_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/prometheus/memcached_exporter/releases"
+    notes: "https://github.com/prometheus/memcached_exporter/releases/tag/v{version}"
 
 - name: timescaledb
   cron-enabled: true   # validated via `gh workflow run update-versions.yml -f only=timescaledb` (2026-10-15)

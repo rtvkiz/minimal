@@ -1,0 +1,70 @@
+# Melange build configuration for minimal kube-rbac-proxy
+# HTTP proxy that authorizes requests against the Kubernetes API (TokenReview +
+# SubjectAccessReview) before forwarding them upstream - the standard metrics guard.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `kube-rbac-proxy` package stopped receiving
+# builds in June 2026 (recipe removed from wolfi-dev/os), so it is frozen several
+# releases behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `kube-rbac-proxy-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: kube-rbac-proxy
+  version: 0.23.1
+  epoch: 0
+  description: "Minimal kube-rbac-proxy built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) `kube-rbac-proxy` package; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: a698ee2e1ec3ba0671a5c6ebf1b24fe0e0fbe0f4c6ef5206449f296ab30ac25e
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/kube-rbac-proxy-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/brancz/kube-rbac-proxy/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/kube-rbac-proxy.tar.gz
+      echo "${{vars.sha256}}  /home/build/kube-rbac-proxy.tar.gz" | sha256sum -c -
+      tar xzf /home/build/kube-rbac-proxy.tar.gz -C /home/build/kube-rbac-proxy-${{package.version}} --strip-components=1
+      rm /home/build/kube-rbac-proxy.tar.gz
+
+  - runs: |
+      cd /home/build/kube-rbac-proxy-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X k8s.io/component-base/version.gitVersion=v${{package.version}} \
+          -X k8s.io/component-base/version/verflag.programName=kube-rbac-proxy" \
+        -o /home/build/kube-rbac-proxy-bin \
+        ./cmd/kube-rbac-proxy
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/kube-rbac-proxy-bin "${{targets.destdir}}/usr/bin/kube-rbac-proxy"
+      chmod 0755 "${{targets.destdir}}/usr/bin/kube-rbac-proxy"
+
+  - runs: |
+      echo "Verifying kube-rbac-proxy binary and injected version..."
+      "${{targets.destdir}}/usr/bin/kube-rbac-proxy" --version 2>&1 | grep -q "v${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }

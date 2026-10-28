@@ -1,0 +1,69 @@
+# Melange build configuration for minimal prometheus-operator
+# Kubernetes operator for Prometheus/Alertmanager/ServiceMonitor CRDs. Upstream
+# image ships the binary as /bin/operator; ours is /usr/bin/operator (same name).
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `prometheus-operator` package stopped receiving
+# builds in June 2026 (recipe removed from wolfi-dev/os), so it is frozen several
+# releases behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `prometheus-operator-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: prometheus-operator
+  version: 0.94.2
+  epoch: 0
+  description: "Minimal Prometheus Operator built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) `prometheus-operator` package; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 129977683b332a4acd6c641944dc49649625817c2a6c89b9cf4f6536d45af826
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/prometheus-operator-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/prometheus-operator/prometheus-operator/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/prometheus-operator.tar.gz
+      echo "${{vars.sha256}}  /home/build/prometheus-operator.tar.gz" | sha256sum -c -
+      tar xzf /home/build/prometheus-operator.tar.gz -C /home/build/prometheus-operator-${{package.version}} --strip-components=1
+      rm /home/build/prometheus-operator.tar.gz
+
+  - runs: |
+      cd /home/build/prometheus-operator-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/prometheus/common/version.Version=${{package.version}}" \
+        -o /home/build/operator-bin \
+        ./cmd/operator
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/operator-bin "${{targets.destdir}}/usr/bin/operator"
+      chmod 0755 "${{targets.destdir}}/usr/bin/operator"
+
+  - runs: |
+      echo "Verifying prometheus-operator binary and injected version..."
+      "${{targets.destdir}}/usr/bin/operator" --version 2>&1 | grep -q "version ${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }
