@@ -5,7 +5,7 @@ package:
   # Named `cmctl` (not `cmctl-minimal`) so vulnerability scanners can identify
   # it — see docs/onboarding.md "Package naming and scanner visibility".
   name: cmctl
-  version: 2.6.1
+  version: 2.6.2
   epoch: 0
   description: "Minimal cmctl cert-manager CLI built from source"
   copyright:
@@ -19,7 +19,7 @@ package:
 
 vars:
   # SHA256 of cmctl source tarball - updated by update-versions.yml workflow
-  sha256: 83226abe4516e4e39953dee0d341b26e4c6f5a7f2f62ea07074bd2f8dd55c664
+  sha256: 5dd1bc9a68e0d3a76776746b4c20b60e44516176b97921dd5d8e71c304726182
 
 environment:
   contents:
