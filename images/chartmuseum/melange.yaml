@@ -1,0 +1,70 @@
+# Melange build configuration for minimal chartmuseum
+# Helm chart repository server on :8080. Defaults to local storage under /charts
+# (STORAGE=local, STORAGE_LOCAL_ROOTDIR=/charts, owned by nonroot); point it at
+# S3/GCS/Azure with the usual STORAGE_* variables.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `chartmuseum` package stopped receiving
+# builds in June 2026 (recipe removed from wolfi-dev/os), so it is frozen several
+# releases behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `chartmuseum-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: chartmuseum
+  version: 0.16.6
+  epoch: 0
+  description: "Minimal ChartMuseum built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) `chartmuseum` package; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 76aefb093110a27bfb502be357fdbe8a7ce4922e6d10b7f2991303b1421d48fe
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/chartmuseum-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/helm/chartmuseum/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/chartmuseum.tar.gz
+      echo "${{vars.sha256}}  /home/build/chartmuseum.tar.gz" | sha256sum -c -
+      tar xzf /home/build/chartmuseum.tar.gz -C /home/build/chartmuseum-${{package.version}} --strip-components=1
+      rm /home/build/chartmuseum.tar.gz
+
+  - runs: |
+      cd /home/build/chartmuseum-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X main.Version=${{package.version}}" \
+        -o /home/build/chartmuseum-bin \
+        ./cmd/chartmuseum
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/chartmuseum-bin "${{targets.destdir}}/usr/bin/chartmuseum"
+      chmod 0755 "${{targets.destdir}}/usr/bin/chartmuseum"
+
+  - runs: |
+      echo "Verifying chartmuseum binary and injected version..."
+      "${{targets.destdir}}/usr/bin/chartmuseum" --version 2>&1 | grep -q "${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }

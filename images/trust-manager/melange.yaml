@@ -1,0 +1,70 @@
+# Melange build configuration for minimal trust-manager
+# cert-manager's trust-bundle distributor (Bundle CRD -> ConfigMaps/Secrets).
+# Upstream has no --version flag, so the injected version is checked in the binary
+# during the melange build instead.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `trust-manager` package stopped receiving
+# builds in June 2026 (recipe removed from wolfi-dev/os), so it is frozen several
+# releases behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `trust-manager-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: trust-manager
+  version: 0.26.0
+  epoch: 0
+  description: "Minimal trust-manager built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) `trust-manager` package; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 8d90455465928ead3f4360faba0d674a98863a4ee8bc2fe61701766ff9d5cb33
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/trust-manager-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/cert-manager/trust-manager/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/trust-manager.tar.gz
+      echo "${{vars.sha256}}  /home/build/trust-manager.tar.gz" | sha256sum -c -
+      tar xzf /home/build/trust-manager.tar.gz -C /home/build/trust-manager-${{package.version}} --strip-components=1
+      rm /home/build/trust-manager.tar.gz
+
+  - runs: |
+      cd /home/build/trust-manager-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/cert-manager/trust-manager/internal/version.AppVersion=v${{package.version}}" \
+        -o /home/build/trust-manager-bin \
+        ./cmd/trust-manager
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/trust-manager-bin "${{targets.destdir}}/usr/bin/trust-manager"
+      chmod 0755 "${{targets.destdir}}/usr/bin/trust-manager"
+
+  - runs: |
+      echo "Verifying trust-manager binary and injected version..."
+      grep -q "v${{package.version}}" "${{targets.destdir}}/usr/bin/trust-manager" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }

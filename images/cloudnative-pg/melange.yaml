@@ -1,0 +1,81 @@
+# Melange build configuration for minimal cloudnative-pg
+# Kubernetes operator for PostgreSQL. Image layout mirrors upstream exactly:
+# /operator/manager_<goarch> for BOTH amd64 and arm64, plus /manager -> the native one,
+# work-dir /. The operator discovers instance-manager binaries via the RELATIVE glob
+# operator/manager_* and injects them into Postgres pods, so mixed-arch clusters need
+# both binaries present (upstream's Dockerfile copies dist/manager/* the same way).
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `cloudnative-pg` package stopped receiving
+# builds in June 2026 (recipe removed from wolfi-dev/os), so it is frozen several
+# releases behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `cloudnative-pg-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: cloudnative-pg
+  version: 1.30.1
+  epoch: 0
+  description: "Minimal CloudNativePG operator built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) `cloudnative-pg` package; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: a7a814f2c5a67412de95061190772f6f297727c2a6178b0f54fbf766b8d56a59
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/cloudnative-pg-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/cloudnative-pg/cloudnative-pg/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/cloudnative-pg.tar.gz
+      echo "${{vars.sha256}}  /home/build/cloudnative-pg.tar.gz" | sha256sum -c -
+      tar xzf /home/build/cloudnative-pg.tar.gz -C /home/build/cloudnative-pg-${{package.version}} --strip-components=1
+      rm /home/build/cloudnative-pg.tar.gz
+
+  - runs: |
+      cd /home/build/cloudnative-pg-${{package.version}}
+      # Build the native binary AND the other arch (pure Go, CGO off, so a
+      # cross-compile is just GOARCH): the operator serves every
+      # operator/manager_<goarch> it finds to Postgres pods of that arch.
+      for arch in amd64 arm64; do
+        GOARCH=$arch GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/cloudnative-pg/cloudnative-pg/pkg/versions.buildVersion=${{package.version}}" \
+          -o /home/build/manager_$arch \
+          ./cmd/manager
+      done
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/operator"
+      for arch in amd64 arm64; do
+        cp /home/build/manager_$arch "${{targets.destdir}}/operator/manager_$arch"
+        chmod 0755 "${{targets.destdir}}/operator/manager_$arch"
+      done
+      # Relative symlink: absolute ones dangle during the melange verify step.
+      ln -sf operator/manager_${{build.goarch}} "${{targets.destdir}}/manager"
+
+  - runs: |
+      echo "Verifying cloudnative-pg binary and injected version..."
+      "${{targets.destdir}}/operator/manager_${{build.goarch}}" version 2>&1 | grep -q "Version:${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }

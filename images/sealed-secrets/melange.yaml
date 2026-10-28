@@ -1,0 +1,70 @@
+# Melange build configuration for minimal sealed-secrets
+# The in-cluster controller half of Sealed Secrets (our kubeseal image is the CLI
+# half, built from the same repo). Binary name stays `controller` like upstream's
+# image, so the Helm chart's `command: [controller]` resolves via PATH.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `sealed-secrets` package stopped receiving
+# builds in June 2026 (recipe removed from wolfi-dev/os), so it is frozen several
+# releases behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `sealed-secrets-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: sealed-secrets
+  version: 0.41.2
+  epoch: 0
+  description: "Minimal Sealed Secrets controller built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) `sealed-secrets` package; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: bed6baabc691745a851a89b58e9c3cbeb1981e3ca32d596826143590e9862caa
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/sealed-secrets-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/bitnami/sealed-secrets/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/sealed-secrets.tar.gz
+      echo "${{vars.sha256}}  /home/build/sealed-secrets.tar.gz" | sha256sum -c -
+      tar xzf /home/build/sealed-secrets.tar.gz -C /home/build/sealed-secrets-${{package.version}} --strip-components=1
+      rm /home/build/sealed-secrets.tar.gz
+
+  - runs: |
+      cd /home/build/sealed-secrets-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X main.VERSION=${{package.version}}" \
+        -o /home/build/controller-bin \
+        ./cmd/controller
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/controller-bin "${{targets.destdir}}/usr/bin/controller"
+      chmod 0755 "${{targets.destdir}}/usr/bin/controller"
+
+  - runs: |
+      echo "Verifying sealed-secrets binary and injected version..."
+      "${{targets.destdir}}/usr/bin/controller" --version 2>&1 | grep -q "${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }

@@ -1,0 +1,71 @@
+# Melange build configuration for minimal argo-rollouts
+# Progressive-delivery controller (blue-green / canary). Only the controller is
+# built: the React dashboard belongs to the kubectl plugin, not to rollouts-controller,
+# so there is no frontend build in the sandbox.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `argo-rollouts` package stopped receiving
+# builds in June 2026 (recipe removed from wolfi-dev/os), so it is frozen several
+# releases behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `argo-rollouts-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: argo-rollouts
+  version: 1.10.1
+  epoch: 0
+  description: "Minimal Argo Rollouts controller built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) `argo-rollouts` package; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 574efc2b612f19f281a24b81cc06771f336cac2be2fb07b5e2b55b438c96cc7d
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/argo-rollouts-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/argoproj/argo-rollouts/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/argo-rollouts.tar.gz
+      echo "${{vars.sha256}}  /home/build/argo-rollouts.tar.gz" | sha256sum -c -
+      tar xzf /home/build/argo-rollouts.tar.gz -C /home/build/argo-rollouts-${{package.version}} --strip-components=1
+      rm /home/build/argo-rollouts.tar.gz
+
+  - runs: |
+      cd /home/build/argo-rollouts-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/argoproj/argo-rollouts/utils/version.version=${{package.version}} \
+          -X github.com/argoproj/argo-rollouts/utils/version.gitTreeState=clean" \
+        -o /home/build/rollouts-controller-bin \
+        ./cmd/rollouts-controller
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/rollouts-controller-bin "${{targets.destdir}}/usr/bin/rollouts-controller"
+      chmod 0755 "${{targets.destdir}}/usr/bin/rollouts-controller"
+
+  - runs: |
+      echo "Verifying argo-rollouts binary and injected version..."
+      "${{targets.destdir}}/usr/bin/rollouts-controller" --version 2>&1 | grep -q "v${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }

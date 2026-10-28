@@ -1,0 +1,53 @@
+# Minimal argo-rollouts image - built from source via melange
+# Progressive-delivery controller (blue-green / canary). Only the controller is
+# built: the React dashboard belongs to the kubectl plugin, not to rollouts-controller,
+# so there is no frontend build in the sandbox.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - argo-rollouts
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/rollouts-controller
+
+work-dir: /tmp
+
+environment:
+  PATH: /usr/bin:/bin
+  HOME: /tmp
+
+paths:
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-argo-rollouts"
+  org.opencontainers.image.description: "Hardened shell-less Argo Rollouts controller built from source via melange with CVE patches on every rebuild"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/argo-rollouts"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

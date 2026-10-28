@@ -662,6 +662,66 @@
       "description": "cmctl is the cert-manager CLI: approve CertificateRequests, renew certs, check issuer health. Shell-less Go binary, signed and SBOM-attested, rebuilt daily."
     },
     {
+      "name": "sealed-secrets",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "sealed-secrets",
+      "upstream_url": "https://github.com/bitnami/sealed-secrets",
+      "summary": "Shell-less Sealed Secrets controller, built from source via melange.",
+      "description": "Sealed Secrets controller decrypting SealedSecret resources into Kubernetes Secrets in-cluster; server half of our kubeseal image. Shell-less, signed, non-root."
+    },
+    {
+      "name": "cloudnative-pg",
+      "category": "Databases",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "cloudnative-pg",
+      "upstream_url": "https://cloudnative-pg.io",
+      "summary": "Shell-less CloudNativePG Postgres operator, built from source via melange.",
+      "description": "CloudNativePG operator running highly available PostgreSQL clusters on Kubernetes with failover, backups and rolling updates. Shell-less, non-root, signed."
+    },
+    {
+      "name": "argo-rollouts",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "argo-rollouts",
+      "upstream_url": "https://argoproj.github.io/rollouts/",
+      "summary": "Shell-less Argo Rollouts controller, built from source via melange.",
+      "description": "Argo Rollouts controller adding blue-green and canary deployments with automated analysis and promotion on Kubernetes. Shell-less, non-root and signed."
+    },
+    {
+      "name": "trust-manager",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "trust-manager",
+      "upstream_url": "https://cert-manager.io/docs/trust/trust-manager/",
+      "summary": "Shell-less cert-manager trust-manager, built from source via melange.",
+      "description": "trust-manager from the cert-manager project, distributing CA trust bundles to ConfigMaps and Secrets across namespaces. Shell-less, non-root and signed."
+    },
+    {
+      "name": "chartmuseum",
+      "category": "Infrastructure",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "chartmuseum",
+      "upstream_url": "https://chartmuseum.com",
+      "summary": "Shell-less ChartMuseum Helm chart repository, built from source via melange.",
+      "description": "ChartMuseum: Helm chart repository server with local, S3, GCS and Azure storage backends and an upload API. Shell-less, non-root, signed and SBOM-attested."
+    },
+    {
       "name": "prometheus-operator",
       "category": "Kubernetes, CI & IaC",
       "variants": [

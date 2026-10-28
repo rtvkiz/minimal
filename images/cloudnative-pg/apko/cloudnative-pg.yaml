@@ -1,0 +1,55 @@
+# Minimal cloudnative-pg image - built from source via melange
+# Kubernetes operator for PostgreSQL. Image layout mirrors upstream exactly:
+# /operator/manager_<goarch> for BOTH amd64 and arm64, plus /manager -> the native one,
+# work-dir /. The operator discovers instance-manager binaries via the RELATIVE glob
+# operator/manager_* and injects them into Postgres pods, so mixed-arch clusters need
+# both binaries present (upstream's Dockerfile copies dist/manager/* the same way).
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - cloudnative-pg
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /manager
+
+work-dir: /
+
+environment:
+  PATH: /usr/bin:/bin
+  HOME: /tmp
+
+paths:
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-cloudnative-pg"
+  org.opencontainers.image.description: "Hardened shell-less CloudNativePG operator built from source via melange with CVE patches on every rebuild"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/cloudnative-pg"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

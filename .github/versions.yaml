@@ -551,6 +551,46 @@
   links:
     releases: "https://github.com/cert-manager/cmctl/releases"
     notes: "https://github.com/cert-manager/cmctl/releases/tag/v{version}"
+- name: sealed-secrets
+  cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
+  files: [images/sealed-secrets/melange.yaml]
+  source: { type: github-releases-latest, repo: bitnami/sealed-secrets, strip-v: true }
+  tarball: { url: "https://github.com/bitnami/sealed-secrets/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/bitnami/sealed-secrets/releases"
+    notes: "https://github.com/bitnami/sealed-secrets/releases/tag/v{version}"
+- name: cloudnative-pg
+  cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
+  files: [images/cloudnative-pg/melange.yaml]
+  source: { type: github-releases-latest, repo: cloudnative-pg/cloudnative-pg, strip-v: true }
+  tarball: { url: "https://github.com/cloudnative-pg/cloudnative-pg/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/cloudnative-pg/cloudnative-pg/releases"
+    notes: "https://github.com/cloudnative-pg/cloudnative-pg/releases/tag/v{version}"
+- name: argo-rollouts
+  cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
+  files: [images/argo-rollouts/melange.yaml]
+  source: { type: github-releases-latest, repo: argoproj/argo-rollouts, strip-v: true }
+  tarball: { url: "https://github.com/argoproj/argo-rollouts/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/argoproj/argo-rollouts/releases"
+    notes: "https://github.com/argoproj/argo-rollouts/releases/tag/v{version}"
+- name: trust-manager
+  cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
+  files: [images/trust-manager/melange.yaml]
+  source: { type: github-releases-latest, repo: cert-manager/trust-manager, strip-v: true }
+  tarball: { url: "https://github.com/cert-manager/trust-manager/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/cert-manager/trust-manager/releases"
+    notes: "https://github.com/cert-manager/trust-manager/releases/tag/v{version}"
+- name: chartmuseum
+  cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
+  files: [images/chartmuseum/melange.yaml]
+  source: { type: github-releases-latest, repo: helm/chartmuseum, strip-v: true }
+  tarball: { url: "https://github.com/helm/chartmuseum/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/helm/chartmuseum/releases"
+    notes: "https://github.com/helm/chartmuseum/releases/tag/v{version}"
 - name: prometheus-operator
   cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
   files: [images/prometheus-operator/melange.yaml]
