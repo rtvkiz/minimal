@@ -11,7 +11,7 @@ package:
   # this product bare, as cpe:2.3:a:alertmanager:alertmanager:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: alertmanager
-  version: 0.34.1
+  version: 0.34.2
   epoch: 0
   description: "Minimal Alertmanager built from source"
   copyright:
@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 of source tarball — updated by .github/versions.yaml row + update-versions workflow
-  sha256: 2f6bce4f4b2b28aec4e58fad1341f47cde9c30adb556399472a8831942057941
+  sha256: 33ec4dffd171e4d4434e81f005ef2fba9e624697505333abd22a1fddb74409e6
 
 environment:
   contents:
