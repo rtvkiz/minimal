@@ -446,7 +446,11 @@ for i in $(seq 0 $((image_count - 1))); do
         c="${c:--}"
         # Key on artifact AND classifier: netty-codec-native-quic and its
         # -linux-x86_64 variant are different files, not duplicates of each other.
-        k="${a}@${c}"
+        # Group path too: jackson-core ships as both tools/jackson/core (3.x)
+        # and com/fasterxml/jackson/core (2.x) in opensearch; keyed on the
+        # artifact alone, one silently replaced the other and the 2.x swap
+        # was dropped (#1019).
+        k="${a}@${g}@${c}"
         cur="${BEST[$k]:-}"
         if [ -z "$cur" ]; then BEST[$k]="${a}|${g}|${i}|${f}|${h}|${c}"; continue; fi
         cur_f=$(printf '%s' "$cur" | cut -d'|' -f4)
@@ -532,17 +536,19 @@ for i in $(seq 0 $((image_count - 1))); do
       printf '        [ -n "$_v" ] || _v=$(unzip -p "$1" META-INF/MANIFEST.MF 2>/dev/null | sed -n "s/^Implementation-Version: //p" | head -1 | tr -d "\\r")\n'
       printf '        printf "%%s" "$_v"\n'
       printf '      }\n'
-      printf '      _vge() {  # is $1 >= $2 ?\n'
-      printf '        [ -n "$1" ] || return 1\n'
-      printf '        awk -v a="$1" -v b="$2" \x27BEGIN{\n'
-      printf '          na=split(a,A,/[._-]/); nb=split(b,B,/[._-]/); n=(na>nb?na:nb);\n'
-      printf '          for(i=1;i<=n;i++){\n'
-      printf '            if(A[i]~/^[0-9]+$/ && B[i]~/^[0-9]+$/){\n'
-      printf '              if(A[i]+0!=B[i]+0) exit !((A[i]+0)>(B[i]+0));\n'
-      printf '            } else if(A[i]!=B[i]) exit !(A[i]>B[i]); }\n'
-      printf '          exit 0}\x27\n'
-      printf '      }\n'
     fi
+    # Emitted for both strategies: keep-filename's version guard uses it, and so
+    # does the rename straggler guard below (_bj_older).
+    printf '      _vge() {  # is $1 >= $2 ?\n'
+    printf '        [ -n "$1" ] || return 1\n'
+    printf '        awk -v a="$1" -v b="$2" \x27BEGIN{\n'
+    printf '          na=split(a,A,/[._-]/); nb=split(b,B,/[._-]/); n=(na>nb?na:nb);\n'
+    printf '          for(i=1;i<=n;i++){\n'
+    printf '            if(A[i]~/^[0-9]+$/ && B[i]~/^[0-9]+$/){\n'
+    printf '              if(A[i]+0!=B[i]+0) exit !((A[i]+0)>(B[i]+0));\n'
+    printf '            } else if(A[i]!=B[i]) exit !(A[i]>B[i]); }\n'
+    printf '          exit 0}\x27\n'
+    printf '      }\n'
     printf '      _swap() {  # $1=artifact $2=group-path $3=oldver $4=newver $5=sha256 $6=mode $7=classifier|-\n'
     printf '        # $7 is a per-platform classifier (linux-x86_64, ...) or "-" for the plain\n'
     printf '        # jar. Native artifacts ship one jar per platform and the plain match skips\n'
@@ -598,7 +604,18 @@ for i in $(seq 0 $((image_count - 1))); do
     # major.minor of the OLD version, and nearly every fix is a patch-level bump
     # inside that same series (5.4 -> 5.4.3, 2.25.4 -> 2.25.5), so without it the
     # guard matches the jars _swap just wrote and fails every build.
+    # A sticky swap outlives the upstream release that needed it: once upstream
+    # ships a jar NEWER than our fix (opensearch 3.9.0 bundles netty 4.2.18 while
+    # the retained swap targets 4.2.17), an exact `! -name "*-$fixv.jar"` guard
+    # calls that newer jar a straggler and fails the build. _bj_older filters
+    # the find hits down to jars whose in-series version is actually < $fixv.
     if [ "$strategy" != "keep-filename" ]; then
+      printf '      _bj_older() {  # $1=series ERE $2=fixv; pass through jars older than $2\n'
+      printf '        while IFS= read -r _f; do\n'
+      printf '          _v=$(basename "$_f" .jar | grep -oE -- "-$1([.][0-9A-Za-z]+)*" | head -1); _v=${_v#-}\n'
+      printf '          _vge "$_v" "$2" || printf "%%s\\n" "$_f"\n'
+      printf '        done\n'
+      printf '      }\n'
       printf '      _strag=/tmp/_bj_stragglers; : > "$_strag"\n'
       declare -A guarded=()
       while IFS='|' read -r artifact gpath inst fixv sha cls; do
@@ -627,14 +644,16 @@ for i in $(seq 0 $((image_count - 1))); do
         # 2.22.2, and 2.22 is not a version annotations ever publishes) — the
         # sibling is already living in the target's minor line, so excluding
         # that one exact, already-verified file cannot desync the classpath.
+        # sort -u: the prior-guard read-back re-adds every exclusion each cycle,
+        # so without it the same `! -name` clause piled up once per run.
         _excl=""
         while IFS='|' read -r _gsib _gver; do
           [ -n "$_gsib" ] || continue
           case "$_gsib" in "$pfx"*) ;; *) continue ;; esac
           _excl="${_excl} ! -name \"${_gsib}-${_gver}.jar\""
-        done <<< "$GUARD_SAFE"
-        printf '      find "${{targets.destdir}}/%s" \\( -name "%s*-%s.*.jar" -o -name "%s*-%s.jar" \\) ! -name "*-%s.jar" ! -name "*-%s-*.jar"%s >> "$_strag" 2>/dev/null || true\n' \
-          "$jar_root" "$pfx" "$series" "$pfx" "$series" "$fixv" "$fixv" "$_excl"
+        done <<< "$(printf '%s' "$GUARD_SAFE" | sort -u)"
+        printf '      find "${{targets.destdir}}/%s" \\( -name "%s*-%s.*.jar" -o -name "%s*-%s.jar" \\) ! -name "*-%s.jar" ! -name "*-%s-*.jar"%s 2>/dev/null | _bj_older "%s" "%s" >> "$_strag" || true\n' \
+          "$jar_root" "$pfx" "$series" "$pfx" "$series" "$fixv" "$fixv" "$_excl" "${series//./[.]}" "$fixv"
       done <<< "$SWAPS"
       unset guarded
       printf '      if [ -s "$_strag" ]; then\n'
