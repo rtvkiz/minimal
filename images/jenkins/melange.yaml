@@ -12,7 +12,7 @@ package:
   # bare, as cpe:2.3:a:jenkins:jenkins:*, so none of them matched, and the
   # Wolfi secdb missed it too.
   name: jenkins
-  version: 2.580.1
+  version: 2.580.2
   epoch: 0
   description: "Minimal Jenkins with custom JRE (jlink)"
   copyright:
@@ -30,7 +30,7 @@ package:
 
 vars:
   # SHA256 checksum of jenkins.war - updated by update-versions.yml workflow
-  sha256: 393bf2476352dd726519fd1f92ce66eac7d23c0936e6967420b717060c4c40d0
+  sha256: d98032d2401c540a35613a82ed358921fcf3166d5e6eaaaf60a7941845be3251
 
 environment:
   contents:
