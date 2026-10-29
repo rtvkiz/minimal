@@ -12,7 +12,7 @@ package:
   # indexes this product bare, as cpe:2.3:a:metrics-server:metrics-server:*, so
   # none of them matched, and the Wolfi secdb missed it too.
   name: metrics-server
-  version: 0.9.0
+  version: 0.9.1
   epoch: 0
   description: "Minimal Kubernetes metrics-server built from source"
   copyright:
@@ -30,7 +30,7 @@ package:
 
 vars:
   # SHA256 of metrics-server source tarball - updated by update-versions.yml
-  sha256: a7dec9bb2f58a32ec2ce4e25a838aca18978546f28d58c4bc5c3f62c8c3dfcfa
+  sha256: c4794210ff5903e5335b07315ae6e662b7568a33397b776f9c9f753b5a641569
 
 environment:
   contents:
