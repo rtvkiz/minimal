@@ -18,7 +18,7 @@ docker run --rm --entrypoint /bin/sh "$IMAGE" \
 
 echo "Testing 'solr version' (offline, exercises the JRE + launcher)..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" \
-  -c "/opt/solr/bin/solr version" | grep -E '10\.0'
+  -c "/opt/solr/bin/solr version" | grep -E 'version: 10\.[0-9]+\.[0-9]+'
 
 echo "Testing bundled solr.xml + _default configset present..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" \
