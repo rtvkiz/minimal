@@ -11,7 +11,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:solr:solr:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: solr
-  version: 10.0.0
+  version: 10.1.0
   epoch: 0
   description: "Minimal Apache Solr search server with custom JRE (jlink)"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA512 of solr-{version}.tgz - updated by update-versions.yml
-  sha512: 825ab4e92a839802d9f5d570600b622881ddfe4f700cab569afb7d8220590a59d11088f4e10d4dcf9395073c35d73a420cc275a9ed7b18e2f84178bfcb49ae82
+  sha512: 1e0cac2a3f5d415fbf67fdb5efe62944fbf88f009aaa41113862e63dc1e9264d3ad5bdf532eb185b18687ca93becc807600ceec957c5a890c3026c0ba8d951d8
 
 environment:
   contents:
