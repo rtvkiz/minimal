@@ -12,11 +12,15 @@ echo "$out" | grep -qiE 'ui-server|temporal|usage|config' \
 # via //go:embed. A UI server with no UI would still start and still pass a
 # version check, so assert the assets are actually in there.
 echo "Testing the embedded web UI assets are present in the binary..."
-docker run --rm --entrypoint /usr/bin/temporal-ui-server "$IMAGE" --version >/dev/null 2>&1 || true
-size=$(docker image inspect "$IMAGE" --format '{{.Size}}')
+# Measure the binary itself, not `docker image inspect .Size`: with the
+# containerd image store (Docker 29 runners) that reports the COMPRESSED size,
+# ~10.7MB for a 26.5MB binary, and failed a build whose bundle was intact.
+cid=$(docker create "$IMAGE")
+size=$(docker cp "$cid:/usr/bin/temporal-ui-server" - | tar -xOf - | wc -c)
+docker rm -f "$cid" >/dev/null
 [ "$size" -gt 20000000 ] \
-  || { echo "FAIL: image is only $size bytes — embedded UI assets likely missing"; exit 1; }
-echo "image size ${size} bytes (UI bundle embedded)"
+  || { echo "FAIL: binary is only $size bytes — embedded UI assets likely missing"; exit 1; }
+echo "binary size ${size} bytes (UI bundle embedded)"
 
 echo "Testing it fails cleanly with no config..."
 out=$(docker run --rm "$IMAGE" 2>&1 | head -20 || true)
