@@ -178,6 +178,16 @@ pipeline:
         done
         echo "bundled-jar: all Maven mirrors refused $1" >&2; return 1
       }
+      _vge() {  # is $1 >= $2 ?
+        [ -n "$1" ] || return 1
+        awk -v a="$1" -v b="$2" 'BEGIN{
+          na=split(a,A,/[._-]/); nb=split(b,B,/[._-]/); n=(na>nb?na:nb);
+          for(i=1;i<=n;i++){
+            if(A[i]~/^[0-9]+$/ && B[i]~/^[0-9]+$/){
+              if(A[i]+0!=B[i]+0) exit !((A[i]+0)>(B[i]+0));
+            } else if(A[i]!=B[i]) exit !(A[i]>B[i]); }
+          exit 0}'
+      }
       _swap() {  # $1=artifact $2=group-path $3=oldver $4=newver $5=sha256 $6=mode $7=classifier|-
         # $7 is a per-platform classifier (linux-x86_64, ...) or "-" for the plain
         # jar. Native artifacts ship one jar per platform and the plain match skips
@@ -244,11 +254,17 @@ pipeline:
       _swap jetty-websocket-core-server org/eclipse/jetty/websocket 12.1.8 12.1.10 ca9e5cdecde06d21d0637f7b0c15e40b90463290fa8c75d2c66b4bad6910608d rename -
       _swap jetty-xml org/eclipse/jetty 12.1.8 12.1.10 d4660c9fa82eabfa9e5996eff5b36ae22e5e14430c3dcc485920aef889149a89 rename -
       _swap mina-core org/apache/mina 2.2.7 2.2.8 07a62c5b2fae3a61da693f7a5c6d6711a7ea09f318972d3e76ae8a5f032329f3 rename -
+      _bj_older() {  # $1=series ERE $2=fixv; pass through jars older than $2
+        while IFS= read -r _f; do
+          _v=$(basename "$_f" .jar | grep -oE -- "-$1([.][0-9A-Za-z]+)*" | head -1); _v=${_v#-}
+          _vge "$_v" "$2" || printf "%s\n" "$_f"
+        done
+      }
       _strag=/tmp/_bj_stragglers; : > "$_strag"
-      find "${{targets.destdir}}/usr/share/jenkins" \( -name "bcprov*-1.84.*.jar" -o -name "bcprov*-1.84.jar" \) ! -name "*-1.85.jar" ! -name "*-1.85-*.jar" >> "$_strag" 2>/dev/null || true
-      find "${{targets.destdir}}/usr/share/jenkins" \( -name "jackson*-3.1.*.jar" -o -name "jackson*-3.1.jar" \) ! -name "*-3.1.4.jar" ! -name "*-3.1.4-*.jar" >> "$_strag" 2>/dev/null || true
-      find "${{targets.destdir}}/usr/share/jenkins" \( -name "jetty*-12.1.*.jar" -o -name "jetty*-12.1.jar" \) ! -name "*-12.1.10.jar" ! -name "*-12.1.10-*.jar" >> "$_strag" 2>/dev/null || true
-      find "${{targets.destdir}}/usr/share/jenkins" \( -name "mina*-2.2.*.jar" -o -name "mina*-2.2.jar" \) ! -name "*-2.2.8.jar" ! -name "*-2.2.8-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/usr/share/jenkins" \( -name "bcprov*-1.84.*.jar" -o -name "bcprov*-1.84.jar" \) ! -name "*-1.85.jar" ! -name "*-1.85-*.jar" 2>/dev/null | _bj_older "1[.]84" "1.85" >> "$_strag" || true
+      find "${{targets.destdir}}/usr/share/jenkins" \( -name "jackson*-3.1.*.jar" -o -name "jackson*-3.1.jar" \) ! -name "*-3.1.4.jar" ! -name "*-3.1.4-*.jar" 2>/dev/null | _bj_older "3[.]1" "3.1.4" >> "$_strag" || true
+      find "${{targets.destdir}}/usr/share/jenkins" \( -name "jetty*-12.1.*.jar" -o -name "jetty*-12.1.jar" \) ! -name "*-12.1.10.jar" ! -name "*-12.1.10-*.jar" 2>/dev/null | _bj_older "12[.]1" "12.1.10" >> "$_strag" || true
+      find "${{targets.destdir}}/usr/share/jenkins" \( -name "mina*-2.2.*.jar" -o -name "mina*-2.2.jar" \) ! -name "*-2.2.8.jar" ! -name "*-2.2.8-*.jar" 2>/dev/null | _bj_older "2[.]2" "2.2.8" >> "$_strag" || true
       if [ -s "$_strag" ]; then
         echo "patch-bundled-jars: jars left on a superseded version:" >&2
         sort -u "$_strag" >&2
