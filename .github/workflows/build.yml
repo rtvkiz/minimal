@@ -463,13 +463,7 @@ jobs:
       max-parallel: 20
 
     runs-on: ${{ matrix.runner }}
-    # 240, not 90: the heaviest source builds (vector's ~1300-crate Rust
-    # release build, kong's Bazel/OpenResty build) do not finish on a 4-core
-    # runner in 90. A per-image timeout-minutes taken from the matrix made
-    # GitHub silently drop the whole matrix job (no jobs created, no
-    # annotation - PR #1039), so the limit is static. Normal builds are
-    # unaffected; every network step already carries its own --max-time.
-    timeout-minutes: 240
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
