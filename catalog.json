@@ -1675,8 +1675,8 @@
       ],
       "primary_package": "vector",
       "upstream_url": "https://vector.dev",
-      "summary": "Shell-less Vector observability data pipeline built on Wolfi.",
-      "description": "Vector high-performance observability pipeline for logs, metrics and traces. Shell-less Wolfi build, signed and SBOM-attested, rebuilt daily."
+      "summary": "Shell-less Vector observability data pipeline, built from source via melange.",
+      "description": "Vector high-performance observability pipeline for logs, metrics and traces. Built from source, shell-less, signed and SBOM-attested, rebuilt daily."
     },
     {
       "name": "velero",
