@@ -44,9 +44,9 @@
         "prod",
         "dev"
       ],
-      "primary_package": "argo-cd-3.4",
+      "primary_package": "argo-cd",
       "upstream_url": "https://argo-cd.readthedocs.io",
-      "summary": "Argo CD GitOps controller for Kubernetes, built on Wolfi.",
+      "summary": "Argo CD GitOps controller for Kubernetes with its web UI, built from source via melange.",
       "description": "Argo CD declarative GitOps continuous delivery for Kubernetes: the server, controller and notifications binary. Signed, SBOM-attested, rebuilt daily."
     },
     {
@@ -56,9 +56,9 @@
         "prod",
         "dev"
       ],
-      "primary_package": "argo-cd-3.4-repo-server",
+      "primary_package": "argo-cd-repo-server",
       "upstream_url": "https://argo-cd.readthedocs.io",
-      "summary": "Argo CD repo-server with bundled git, Helm and Kustomize, built on Wolfi.",
+      "summary": "Argo CD repo-server with bundled git, Helm 4 and Kustomize, built from source via melange.",
       "description": "Argo CD repo-server rendering manifests from git with bundled Helm and Kustomize. Shell-less despite the tooling, signed, rebuilt daily against CVE fixes."
     },
     {
@@ -68,10 +68,10 @@
         "prod",
         "dev"
       ],
-      "primary_package": "karpenter-1.12",
+      "primary_package": "karpenter",
       "upstream_url": "https://karpenter.sh",
-      "summary": "Karpenter Kubernetes node autoscaler controller (AWS provider), built on Wolfi.",
-      "description": "Karpenter Kubernetes node autoscaler controller (AWS provider), built on Wolfi. Shell-less, signed and SBOM-attested, rebuilt daily against CVE fixes."
+      "summary": "Shell-less Karpenter node autoscaler (AWS provider), built from source via melange.",
+      "description": "Karpenter controller provisioning right-sized Kubernetes nodes on AWS from pending pod demand. Built from source, shell-less, non-root and signed daily."
     },
     {
       "name": "keda",
@@ -80,10 +80,10 @@
         "prod",
         "dev"
       ],
-      "primary_package": "keda-2.19",
+      "primary_package": "keda",
       "upstream_url": "https://keda.sh",
-      "summary": "KEDA Kubernetes event-driven autoscaler operator, built on Wolfi.",
-      "description": "KEDA Kubernetes event-driven autoscaler operator, scaling workloads on external metrics. Built on Wolfi, shell-less, signed, rebuilt daily against CVE fixes."
+      "summary": "Shell-less KEDA event-driven autoscaler operator, built from source via melange.",
+      "description": "KEDA operator scaling Kubernetes workloads on external event metrics from queues, streams and databases. Built from source, shell-less, non-root, signed."
     },
     {
       "name": "blackbox-exporter",
@@ -440,10 +440,10 @@
         "prod",
         "dev"
       ],
-      "primary_package": "harbor-2.14-portal",
+      "primary_package": "harbor-portal",
       "upstream_url": "https://goharbor.io",
-      "summary": "Harbor's portal UI and nginx reverse proxy, built on Wolfi.",
-      "description": "Harbor portal: the static UI and nginx reverse proxy fronting the Harbor container registry. Built on Wolfi, shell-less and rebuilt daily against CVE fixes."
+      "summary": "Harbor's portal UI and nginx reverse proxy, built from source via melange.",
+      "description": "Harbor portal: the Angular UI and nginx reverse proxy fronting the Harbor container registry. Built from source, shell-less and rebuilt daily on CVE fixes."
     },
     {
       "name": "headscale",
@@ -1675,8 +1675,8 @@
       ],
       "primary_package": "vector",
       "upstream_url": "https://vector.dev",
-      "summary": "Shell-less Vector observability data pipeline built on Wolfi.",
-      "description": "Vector high-performance observability pipeline for logs, metrics and traces. Shell-less Wolfi build, signed and SBOM-attested, rebuilt daily."
+      "summary": "Shell-less Vector observability data pipeline, built from source via melange.",
+      "description": "Vector high-performance observability pipeline for logs, metrics and traces. Built from source, shell-less, signed and SBOM-attested, rebuilt daily."
     },
     {
       "name": "velero",
@@ -1808,7 +1808,7 @@
       "primary_package": "kong",
       "upstream_url": "https://konghq.com",
       "summary": "Kong API Gateway built on Nginx and OpenResty.",
-      "description": "Kong API Gateway built on Nginx and OpenResty. DB-less by default, signed and SBOM-attested, rebuilt daily against upstream CVE fixes from Wolfi."
+      "description": "Kong API Gateway built on Nginx and OpenResty, compiled from source against maintained OpenSSL. DB-less by default, signed, SBOM-attested, rebuilt daily."
     },
     {
       "name": "couchdb",

@@ -177,6 +177,10 @@ jobs:
             [sealed-secrets]="/home/build/sealed-secrets-${D}{{package.version}}"
             [cloudnative-pg]="/home/build/cloudnative-pg-${D}{{package.version}}"
             [argo-rollouts]="/home/build/argo-rollouts-${D}{{package.version}}"
+            [keda]="/home/build/keda-${D}{{package.version}}"
+            [karpenter]="/home/build/karpenter-${D}{{package.version}}"
+            [argo-cd]="/home/build/argo-cd-${D}{{package.version}}"
+            [argo-cd-repo-server]="/home/build/argo-cd-repo-server-${D}{{package.version}}"
             [trust-manager]="/home/build/trust-manager-${D}{{package.version}}"
             [chartmuseum]="/home/build/chartmuseum-${D}{{package.version}}"
             [prometheus-operator]="/home/build/prometheus-operator-${D}{{package.version}}"
@@ -278,6 +282,10 @@ jobs:
             [sealed-secrets]="github.com/bitnami/sealed-secrets"
             [cloudnative-pg]="github.com/cloudnative-pg/cloudnative-pg"
             [argo-rollouts]="github.com/argoproj/argo-rollouts"
+            [keda]="github.com/kedacore/keda/v2"
+            [karpenter]="github.com/aws/karpenter-provider-aws"
+            [argo-cd]="github.com/argoproj/argo-cd/v3"
+            [argo-cd-repo-server]="github.com/argoproj/argo-cd/v3"
             [trust-manager]="github.com/cert-manager/trust-manager"
             [chartmuseum]="helm.sh/chartmuseum"
             [prometheus-operator]="github.com/prometheus-operator/prometheus-operator"
@@ -378,6 +386,10 @@ jobs:
             [sealed-secrets]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [cloudnative-pg]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [argo-rollouts]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [keda]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [karpenter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [argo-cd]='GOTOOLCHAIN=local CGO_ENABLED=0 GODEBUG='
+            [argo-cd-repo-server]='GOTOOLCHAIN=local CGO_ENABLED=0 GODEBUG='
             [trust-manager]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [chartmuseum]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [prometheus-operator]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

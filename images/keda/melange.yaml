@@ -1,0 +1,74 @@
+# Melange build configuration for minimal keda
+# KEDA operator (Kubernetes event-driven autoscaler). Only the operator is
+# built: keda-adapter (metrics apiserver) and keda-admission-webhooks are
+# separate optional deployments in the KEDA chart, not part of this image.
+# Pure Go from source, CGO off (static, shell-less) - matches upstream's own
+# Makefile default (CGO ?= 0). Generated code (deepcopy, protobuf) is committed
+# upstream, so no controller-gen/protoc step is needed. License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `keda-2.19` package stopped
+# receiving builds in May 2026 (recipe removed from wolfi-dev/os), so it was
+# frozen at 2.19.0 while upstream moved on to 2.21.
+
+package:
+  # Named exactly what upstream calls it, not `keda-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: keda
+  version: 2.21.0
+  epoch: 0
+  description: "Minimal KEDA operator built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships frozen keda-X.Y packages that provide `keda`; apko picks
+    # the highest version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 37c98bc1d0567c9041c1cc135b0f64144f625b74fc8b180f94704eb881cc7482
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/keda-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/kedacore/keda/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/keda.tar.gz
+      echo "${{vars.sha256}}  /home/build/keda.tar.gz" | sha256sum -c -
+      tar xzf /home/build/keda.tar.gz -C /home/build/keda-${{package.version}} --strip-components=1
+      rm /home/build/keda.tar.gz
+
+  - runs: |
+      cd /home/build/keda-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/kedacore/keda/v2/version.Version=${{package.version}}" \
+        -o /home/build/keda-bin \
+        ./cmd/operator
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/keda-bin "${{targets.destdir}}/usr/bin/keda"
+      chmod 0755 "${{targets.destdir}}/usr/bin/keda"
+
+  - runs: |
+      echo "Verifying keda binary and injected version..."
+      "${{targets.destdir}}/usr/bin/keda" --help >/dev/null 2>&1 \
+        || { echo "FAIL: keda --help did not exit 0"; exit 1; }
+      go version -m "${{targets.destdir}}/usr/bin/keda" | grep -q "version.Version=${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not in build info - ldflag wrong?"; exit 1; }

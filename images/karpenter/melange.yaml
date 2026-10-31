@@ -1,0 +1,73 @@
+# Melange build configuration for minimal karpenter
+# Karpenter node autoscaler, AWS provider (aws/karpenter-provider-aws) - the
+# same upstream Wolfi's karpenter-X.Y packages were built from. Only the
+# controller is built. Pure Go from source, CGO off (static, shell-less).
+# License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `karpenter-1.12` package stopped
+# receiving builds in June 2026 (recipe removed from wolfi-dev/os), so it was
+# frozen at 1.12.1 while upstream moved on to 1.15.
+
+package:
+  # Named exactly what upstream calls it, not `karpenter-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: karpenter
+  version: 1.15.1
+  epoch: 0
+  description: "Minimal Karpenter controller (AWS provider) built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships frozen karpenter-X.Y packages that provide `karpenter`;
+    # apko picks the highest version across ALL repositories unless
+    # provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 4e84a4e5049314d2ccb2c9c7b8add96ef30d1d64ddf3c2218f738f0b0447f129
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/karpenter-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/aws/karpenter-provider-aws/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/karpenter.tar.gz
+      echo "${{vars.sha256}}  /home/build/karpenter.tar.gz" | sha256sum -c -
+      tar xzf /home/build/karpenter.tar.gz -C /home/build/karpenter-${{package.version}} --strip-components=1
+      rm /home/build/karpenter.tar.gz
+
+  - runs: |
+      cd /home/build/karpenter-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X sigs.k8s.io/karpenter/pkg/operator.Version=${{package.version}}" \
+        -o /home/build/karpenter-bin \
+        ./cmd/controller
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/karpenter-bin "${{targets.destdir}}/usr/bin/controller"
+      chmod 0755 "${{targets.destdir}}/usr/bin/controller"
+
+  - runs: |
+      echo "Verifying karpenter binary and injected version..."
+      "${{targets.destdir}}/usr/bin/controller" --help >/dev/null 2>&1 \
+        || { echo "FAIL: controller --help did not exit 0"; exit 1; }
+      go version -m "${{targets.destdir}}/usr/bin/controller" | grep -q "operator.Version=${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not in build info - ldflag wrong?"; exit 1; }

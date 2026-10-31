@@ -1,18 +1,22 @@
-# Minimal Kong image - using Wolfi's pre-built package
-# CVE patching via the daily rebuild (Wolfi rolling package)
+# Minimal Kong image - built from source via melange
+# Kong Gateway OSS (upstream Bazel build), linked against Wolfi's maintained
+# OpenSSL. Source-built since 2026-10-31: Wolfi's kong package stopped
+# receiving builds in June 2026 and was frozen at 3.9.2.
 # Carries busybox only (never bash) for kong start's internal `ulimit -n`
 # shell-out — see the exception note below, same shape as the postgres family.
 
 contents:
   repositories:
     - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
   packages:
     # Base filesystem
     - wolfi-baselayout
 
-    # Kong from Wolfi (CVE-patched). Not kong-entrypoint: it depends on bash,
+    # Kong, built from source (melange.yaml) against Wolfi OpenSSL. Not kong-entrypoint: it depends on bash,
     # and its only job is translating KONG_* env vars into kong.conf, which
     # `kong start --<key> <value>` CLI overrides already do without a shell.
     - kong
@@ -57,7 +61,7 @@ work-dir: /usr/local/kong
 
 environment:
   PATH: /usr/local/bin:/usr/bin:/bin
-  # The Wolfi kong package ships OpenResty's bundled LuaJIT at a non-default
+  # The kong package ships OpenResty's bundled LuaJIT at a non-default
   # loader path (not the system libdir), and does not declare it as a `so:`
   # dependency — without this, `openresty -V` itself fails with "cannot open
   # shared object file: libluajit-5.1.so.2" and every `kong` invocation dies.
@@ -80,7 +84,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-kong"
-  org.opencontainers.image.description: "Hardened shell-less Kong API Gateway built on Wolfi with CVE patches on every rebuild"
+  org.opencontainers.image.description: "Hardened shell-less Kong API Gateway built from source via melange with CVE patches on every rebuild"
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kong"
   org.opencontainers.image.licenses: "Apache-2.0"

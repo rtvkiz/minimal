@@ -1,17 +1,22 @@
-# Minimal Vector image - using Wolfi's pre-built package
-# Shell-less/distroless for security
-# CVE patching via the daily rebuild (Wolfi rolling package)
+# Minimal Vector image - built from source via melange
+# Vector observability data pipeline (Rust), upstream default feature set,
+# linked against Wolfi's maintained OpenSSL. Shell-less/distroless.
+#
+# Source-built since 2026-10-31: Wolfi's vector package stopped receiving
+# builds in June 2026 and was frozen at 0.56.0.
 
 contents:
   repositories:
     - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
   packages:
     # Base filesystem
     - wolfi-baselayout
 
-    # Vector from Wolfi (CVE-patched)
+    # Vector, built from source (melange.yaml)
     - vector
 
     # Core system libraries
@@ -63,7 +68,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-vector"
-  org.opencontainers.image.description: "Hardened shell-less Vector observability data pipeline built on Wolfi with CVE patches on every rebuild"
+  org.opencontainers.image.description: "Hardened shell-less Vector observability data pipeline built from source via melange with CVE patches on every rebuild"
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/vector"
   org.opencontainers.image.licenses: "MPL-2.0"
