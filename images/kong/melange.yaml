@@ -66,7 +66,12 @@ environment:
       - luajit-dev
       - openjdk-21
       - openjdk-21-default-jvm
-      - openssl-dev
+      # <4: the nginx 1.25.3 inside OpenResty 1.25.3.2 does not build against
+      # OpenSSL 4.0, which made ASN1_INTEGER and friends opaque
+      # (ngx_event_openssl_stapling.c: incomplete typedef). openssl-4.0-dev
+      # also provides `openssl-dev` at a higher version, so without the
+      # bound apk resolves to it. Runtime then links libssl.so.3 (3.6 line).
+      - openssl-dev<4
       - patch
       - pcre2-dev
       - perl
