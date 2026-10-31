@@ -54,6 +54,9 @@ environment:
       # predates 24, so build on the 22 LTS line.
       - nodejs-22
       - npm
+      # node-gyp needs Python to compile native addons with no prebuilt for
+      # the arch (@parcel/watcher on aarch64). Build-time only.
+      - python-3.14
       # Only for its stock /etc/nginx tree (mime.types, fastcgi/scgi/uwsgi
       # params), which the nginx-config subpackage ships under harbor's
       # nginx.conf.
