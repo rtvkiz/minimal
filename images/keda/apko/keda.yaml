@@ -1,33 +1,24 @@
-# Minimal keda image - using Wolfi's pre-built package
-# CVE patching via the daily rebuild (Wolfi versioned package)
+# Minimal keda image - built from source via melange
+# KEDA operator (Kubernetes event-driven autoscaler), /usr/bin/keda. Static
+# CGO-off Go binary. tzdata is carried because the cron scaler resolves IANA
+# time zones at runtime (Wolfi's package declared it as a runtime dep too).
 #
-# keda-2.19 is the KEDA operator: a Kubernetes-based Event Driven Autoscaling
-# controller, installed as /usr/bin/keda. Dynamically linked (D: so:libc.so.6,
-# so:ld-linux-x86-64.so.2, tzdata in the APKINDEX), unlike karpenter's fully
-# static binary - apko resolves those from the Wolfi repo automatically.
-#
-# Wolfi also packages keda-2.19-metrics-apiserver (the metrics adapter) and
-# keda-2.19-admission-webhooks separately. Those are optional companion
-# deployments in the KEDA helm chart, not required for the operator to run;
-# shipping them as their own images is a follow-up, not part of this one.
-#
-# Package name is pinned to the versioned "keda-2.19" (not a bare "keda"
-# provide) because multiple keda-X.Y packages can coexist in Wolfi's index -
-# same ambiguity as argo-cd/couchdb/kong/karpenter. A MAJOR-line bump
-# (2.19 -> 2.20) needs a manual apko package name + build.yml grep edit,
-# same as those.
+# Source-built since 2026-10-31: Wolfi's keda-2.19 stopped receiving builds in
+# May 2026 and was frozen at 2.19.0. keda-adapter (metrics apiserver) and
+# keda-admission-webhooks are separate optional deployments, not in this image.
 
 contents:
   repositories:
     - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
   packages:
     # Base filesystem
     - wolfi-baselayout
-
-    # KEDA operator from Wolfi (CVE-patched)
-    - keda-2.19
+    - keda
+    - tzdata
 
     # Certificates (Kubernetes API is TLS)
     - ca-certificates-bundle
@@ -60,7 +51,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-keda"
-  org.opencontainers.image.description: "Hardened shell-less KEDA Kubernetes event-driven autoscaler operator built on Wolfi with CVE patches on every rebuild"
+  org.opencontainers.image.description: "Hardened shell-less KEDA Kubernetes event-driven autoscaler operator built from source via melange with CVE patches on every rebuild"
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/keda"
   org.opencontainers.image.licenses: "Apache-2.0"

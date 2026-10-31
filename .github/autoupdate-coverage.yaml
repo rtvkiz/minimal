@@ -26,13 +26,6 @@ wolfi-versioned:
                         # neo4j today - update-wolfi-packages.yml has no explicit block
                         # for any of these, so a MAJOR-line bump (3.4 -> 3.5) needs a
                         # manual apko package name + build.yml grep edit, same as those
-  - karpenter           # karpenter-1.12; same major-line gap as argo-cd/couchdb/kong -
-                        # multiple karpenter-X.Y packages coexist in Wolfi's index, all
-                        # providing the bare "karpenter" name, so the apko package is
-                        # pinned to the exact versioned name to avoid ambiguity
-  - keda                # keda-2.19; same major-line gap as karpenter/argo-cd/couchdb/
-                        # kong - multiple keda-X.Y packages coexist in Wolfi's index,
-                        # so the apko package is pinned to the exact versioned name
   - harbor-portal       # harbor-2.14-portal; same major-line gap as keda/karpenter/
                         # argo-cd/couchdb/kong - harbor-2.14-* packages coexist
                         # alongside future harbor-2.1X-* lines in Wolfi's index

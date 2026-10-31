@@ -575,6 +575,22 @@
   links:
     releases: "https://github.com/argoproj/argo-rollouts/releases"
     notes: "https://github.com/argoproj/argo-rollouts/releases/tag/v{version}"
+- name: keda
+  cron-enabled: true   # frozen-wolfi migration 2026-10-31 (dispatch-validated on the migration branch)
+  files: [images/keda/melange.yaml]
+  source: { type: github-releases-latest, repo: kedacore/keda, strip-v: true }
+  tarball: { url: "https://github.com/kedacore/keda/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/kedacore/keda/releases"
+    notes: "https://github.com/kedacore/keda/releases/tag/v{version}"
+- name: karpenter
+  cron-enabled: true   # frozen-wolfi migration 2026-10-31 (dispatch-validated on the migration branch)
+  files: [images/karpenter/melange.yaml]
+  source: { type: github-releases-latest, repo: aws/karpenter-provider-aws, strip-v: true }
+  tarball: { url: "https://github.com/aws/karpenter-provider-aws/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/aws/karpenter-provider-aws/releases"
+    notes: "https://github.com/aws/karpenter-provider-aws/releases/tag/v{version}"
 - name: trust-manager
   cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
   files: [images/trust-manager/melange.yaml]
