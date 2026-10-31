@@ -177,6 +177,8 @@ jobs:
             [sealed-secrets]="/home/build/sealed-secrets-${D}{{package.version}}"
             [cloudnative-pg]="/home/build/cloudnative-pg-${D}{{package.version}}"
             [argo-rollouts]="/home/build/argo-rollouts-${D}{{package.version}}"
+            [keda]="/home/build/keda-${D}{{package.version}}"
+            [karpenter]="/home/build/karpenter-${D}{{package.version}}"
             [trust-manager]="/home/build/trust-manager-${D}{{package.version}}"
             [chartmuseum]="/home/build/chartmuseum-${D}{{package.version}}"
             [prometheus-operator]="/home/build/prometheus-operator-${D}{{package.version}}"
@@ -278,6 +280,8 @@ jobs:
             [sealed-secrets]="github.com/bitnami/sealed-secrets"
             [cloudnative-pg]="github.com/cloudnative-pg/cloudnative-pg"
             [argo-rollouts]="github.com/argoproj/argo-rollouts"
+            [keda]="github.com/kedacore/keda/v2"
+            [karpenter]="github.com/aws/karpenter-provider-aws"
             [trust-manager]="github.com/cert-manager/trust-manager"
             [chartmuseum]="helm.sh/chartmuseum"
             [prometheus-operator]="github.com/prometheus-operator/prometheus-operator"
@@ -378,6 +382,8 @@ jobs:
             [sealed-secrets]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [cloudnative-pg]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [argo-rollouts]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [keda]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [karpenter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [trust-manager]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [chartmuseum]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [prometheus-operator]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

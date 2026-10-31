@@ -132,6 +132,8 @@ CMCTL_VERSION ?= $(call melange_version,images/cmctl/melange.yaml)
 SEALED_SECRETS_VERSION ?= $(call melange_version,images/sealed-secrets/melange.yaml)
 CLOUDNATIVE_PG_VERSION ?= $(call melange_version,images/cloudnative-pg/melange.yaml)
 ARGO_ROLLOUTS_VERSION ?= $(call melange_version,images/argo-rollouts/melange.yaml)
+KEDA_VERSION ?= $(call melange_version,images/keda/melange.yaml)
+KARPENTER_VERSION ?= $(call melange_version,images/karpenter/melange.yaml)
 TRUST_MANAGER_VERSION ?= $(call melange_version,images/trust-manager/melange.yaml)
 CHARTMUSEUM_VERSION ?= $(call melange_version,images/chartmuseum/melange.yaml)
 PROMETHEUS_OPERATOR_VERSION ?= $(call melange_version,images/prometheus-operator/melange.yaml)
@@ -400,8 +402,8 @@ $(eval $(call DEV_IMAGE_RULE,kong))
 $(eval $(call DEV_IMAGE_RULE,couchdb))
 $(eval $(call DEV_IMAGE_RULE,argo-cd))
 $(eval $(call DEV_IMAGE_RULE,argo-cd-repo-server))
-$(eval $(call DEV_IMAGE_RULE,karpenter))
-$(eval $(call DEV_IMAGE_RULE,keda))
+$(eval $(call DEV_IMAGE_RULE,karpenter,karpenter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,keda,keda-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,harbor-portal))
 $(eval $(call DEV_IMAGE_RULE,patroni))
 $(eval $(call DEV_IMAGE_RULE,vector))
@@ -1426,38 +1428,56 @@ argo-cd-repo-server:
 	@echo "✓ minimal-argo-cd-repo-server built (Wolfi package)"
 
 #------------------------------------------------------------------------------
-# KARPENTER IMAGE (Wolfi pre-built package; Kubernetes node autoscaler)
+# KARPENTER IMAGE (source build via melange; Kubernetes node autoscaler)
 #------------------------------------------------------------------------------
-karpenter:
+karpenter-melange: keygen
+	@echo "Building karpenter $(KARPENTER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/karpenter/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ karpenter package built from source"
+
+karpenter: karpenter-melange
 	@echo "Assembling minimal-karpenter image with apko..."
 	apko build images/karpenter/apko/karpenter.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-karpenter:$(VERSION) \
 		karpenter.tar \
-		--arch x86_64
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
 	docker load < karpenter.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-karpenter:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-karpenter:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-karpenter:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-karpenter:latest
 	@rm -f karpenter.tar sbom-*.spdx.json
-	@echo "✓ minimal-karpenter built (Wolfi package)"
+	@echo "✓ minimal-karpenter built (source build)"
 
 #------------------------------------------------------------------------------
-# KEDA IMAGE (Wolfi pre-built package; Kubernetes event-driven autoscaler)
+# KEDA IMAGE (source build via melange; Kubernetes event-driven autoscaler)
 #------------------------------------------------------------------------------
-keda:
+keda-melange: keygen
+	@echo "Building keda $(KEDA_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/keda/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ keda package built from source"
+
+keda: keda-melange
 	@echo "Assembling minimal-keda image with apko..."
 	apko build images/keda/apko/keda.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-keda:$(VERSION) \
 		keda.tar \
-		--arch x86_64
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
 	docker load < keda.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-keda:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-keda:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-keda:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-keda:latest
 	@rm -f keda.tar sbom-*.spdx.json
-	@echo "✓ minimal-keda built (Wolfi package)"
+	@echo "✓ minimal-keda built (source build)"
 
 #------------------------------------------------------------------------------
 # HARBOR PORTAL IMAGE (Wolfi pre-built package)

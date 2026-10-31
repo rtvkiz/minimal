@@ -1,29 +1,21 @@
-# Minimal karpenter image - using Wolfi's pre-built package
-# CVE patching via the daily rebuild (Wolfi versioned package)
+# Minimal karpenter image - built from source via melange
+# Karpenter node autoscaler controller (AWS provider), /usr/bin/controller.
+# Static CGO-off Go binary.
 #
-# karpenter-1.12 is the AWS-provider build of the Kubernetes node autoscaler
-# controller: a single static Go binary (no D: deps in the APKINDEX entry),
-# installed as /usr/bin/controller. It runs in-cluster against the Kubernetes
-# API and the AWS API, reading its configuration from env vars and the mounted
-# service-account token - no flags are baked in here.
-#
-# Package name is pinned to the versioned "karpenter-1.12" (not the bare
-# "karpenter" provide) because multiple karpenter-X.Y packages coexist in
-# Wolfi's index, each providing the unversioned name - same ambiguity argo-cd
-# and couchdb hit. A MAJOR-line bump (1.12 -> 1.13) needs a manual apko
-# package name + build.yml grep edit, same as those.
+# Source-built since 2026-10-31: Wolfi's karpenter-1.12 stopped receiving
+# builds in June 2026 and was frozen at 1.12.1.
 
 contents:
   repositories:
     - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
   packages:
     # Base filesystem
     - wolfi-baselayout
-
-    # Karpenter (AWS provider) from Wolfi (CVE-patched)
-    - karpenter-1.12
+    - karpenter
 
     # Certificates (Kubernetes API + AWS API are both TLS)
     - ca-certificates-bundle
@@ -56,7 +48,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-karpenter"
-  org.opencontainers.image.description: "Hardened shell-less Karpenter Kubernetes node autoscaler built on Wolfi with CVE patches on every rebuild"
+  org.opencontainers.image.description: "Hardened shell-less Karpenter Kubernetes node autoscaler built from source via melange with CVE patches on every rebuild"
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/karpenter"
   org.opencontainers.image.licenses: "Apache-2.0"

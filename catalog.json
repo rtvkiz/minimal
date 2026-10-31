@@ -68,10 +68,10 @@
         "prod",
         "dev"
       ],
-      "primary_package": "karpenter-1.12",
+      "primary_package": "karpenter",
       "upstream_url": "https://karpenter.sh",
-      "summary": "Karpenter Kubernetes node autoscaler controller (AWS provider), built on Wolfi.",
-      "description": "Karpenter Kubernetes node autoscaler controller (AWS provider), built on Wolfi. Shell-less, signed and SBOM-attested, rebuilt daily against CVE fixes."
+      "summary": "Shell-less Karpenter node autoscaler (AWS provider), built from source via melange.",
+      "description": "Karpenter controller provisioning right-sized Kubernetes nodes on AWS from pending pod demand. Built from source, shell-less, non-root and signed daily."
     },
     {
       "name": "keda",
@@ -80,10 +80,10 @@
         "prod",
         "dev"
       ],
-      "primary_package": "keda-2.19",
+      "primary_package": "keda",
       "upstream_url": "https://keda.sh",
-      "summary": "KEDA Kubernetes event-driven autoscaler operator, built on Wolfi.",
-      "description": "KEDA Kubernetes event-driven autoscaler operator, scaling workloads on external metrics. Built on Wolfi, shell-less, signed, rebuilt daily against CVE fixes."
+      "summary": "Shell-less KEDA event-driven autoscaler operator, built from source via melange.",
+      "description": "KEDA operator scaling Kubernetes workloads on external event metrics from queues, streams and databases. Built from source, shell-less, non-root, signed."
     },
     {
       "name": "blackbox-exporter",

@@ -5,11 +5,14 @@
 contents:
   repositories:
     - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
   packages:
     - wolfi-baselayout
-    - keda-2.19
+    - keda
+    - tzdata
     - ca-certificates-bundle
 
     # --- Dev variant minimum (CONVENTIONS.md) ---
