@@ -1808,7 +1808,7 @@
       "primary_package": "kong",
       "upstream_url": "https://konghq.com",
       "summary": "Kong API Gateway built on Nginx and OpenResty.",
-      "description": "Kong API Gateway built on Nginx and OpenResty. DB-less by default, signed and SBOM-attested, rebuilt daily against upstream CVE fixes from Wolfi."
+      "description": "Kong API Gateway built on Nginx and OpenResty, compiled from source against maintained OpenSSL. DB-less by default, signed, SBOM-attested, rebuilt daily."
     },
     {
       "name": "couchdb",

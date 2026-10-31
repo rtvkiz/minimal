@@ -150,7 +150,8 @@ jobs:
             {"name":"karpenter","variants":["prod","dev"]},
             {"name":"argo-cd","variants":["prod","dev"]},
             {"name":"argo-cd-repo-server","variants":["prod","dev"]},
-            {"name":"harbor-portal","variants":["prod","dev"]}
+            {"name":"harbor-portal","variants":["prod","dev"]},
+            {"name":"kong","variants":["prod","dev"]}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},
@@ -166,7 +167,6 @@ jobs:
             {"name":"dnsmasq","grep":"dnsmasq","variants":["prod","dev"]},
             {"name":"vector","grep":"vector","variants":["prod","dev"]},
             {"name":"patroni","grep":"patroni","variants":["prod","dev"]},
-            {"name":"kong","grep":"kong","variants":["prod","dev"]},
             {"name":"couchdb","grep":"couchdb-3.3","variants":["prod","dev"]}
           ]'
 

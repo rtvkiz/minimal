@@ -618,6 +618,14 @@
   links:
     releases: "https://github.com/goharbor/harbor/releases"
     notes: "https://github.com/goharbor/harbor/releases/tag/v{version}"
+- name: kong
+  cron-enabled: true   # frozen-wolfi migration 2026-10-31 (dispatch-validated on the migration branch)
+  files: [images/kong/melange.yaml]
+  source: { type: github-releases-latest, repo: Kong/kong }
+  tarball: { url: "https://github.com/Kong/kong/archive/refs/tags/{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/Kong/kong/releases"
+    notes: "https://github.com/Kong/kong/blob/{version}/CHANGELOG.md"
 - name: trust-manager
   cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
   files: [images/trust-manager/melange.yaml]
