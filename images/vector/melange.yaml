@@ -49,6 +49,10 @@ environment:
       - ca-certificates-bundle
       - curl
       - build-base
+      # build.rs execs `git rev-parse` for version metadata and panics if the
+      # binary is missing (os error 2). Outside a repo it just gets empty
+      # output, which build.rs accepts - the tarball has no .git.
+      - git
       - rust-1.99
       - clang-21
       - cmake
