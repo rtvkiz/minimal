@@ -349,9 +349,30 @@ package depends on BUSL `terraform`), the flux controllers (kustomize-controller
 needs busybox + git + gnupg at runtime — do the four together as their own set),
 cert-manager core (multi-image split, see Deferred).
 
-**Existing images on frozen Wolfi packages — migrate to source builds next:**
-harbor-portal (`harbor-2.14-portal`, last built 2026-01-21), keda, argo-cd,
-argo-cd-repo-server, karpenter, kong, vector.
+**Existing images on frozen Wolfi packages — migrated to source builds
+(2026-10-31, #1037–#1040):**
+
+| Image | Frozen Wolfi | Source-built | PR | Build notes |
+|---|---|---|---|---|
+| keda | 2.19.0 | 2.21.0 | #1037 | Go, CGO off; generated code is committed upstream |
+| karpenter | 1.12.1 | 1.15.1 | #1037 | Go, `aws/karpenter-provider-aws ./cmd/controller` |
+| argo-cd | 3.4.3 | 3.5.6 | #1038 | web UI built with pnpm + webpack and `go:embed`'ed; melange fails if it is not embedded |
+| argo-cd-repo-server | 3.4.3 | 3.5.6 | #1038 | same binary without the UI; toolchain from maintained Wolfi (`helm-4`, not the frozen `helm-3`) |
+| harbor-portal | 2.14.2 | 2.14.6 | #1038 | Angular via `npm install` (npm 12 rejects upstream's lockfile for `npm ci`); `python-3.11` for node-gyp on aarch64 |
+| kong | 3.9.2 | 3.9.4 | #1040 | upstream Bazel build; Wolfi's OpenSSL patch inlined; Bazel output root under `/tmp` (melange cannot scan its root-owned server dir) |
+| vector | 0.56.0 | 0.61.0 | #1039 | Rust, default features, system OpenSSL, thin LTO / 16 CGU to fit a 4-core runner; needs `git` for `build.rs` |
+
+Two lessons from this batch that apply to every future source build:
+- **`openssl-dev` resolves to OpenSSL 4.0** — `openssl-4.0-dev` provides
+  `openssl-dev` at a higher version than the real 3.6 package. C code written
+  for OpenSSL 3 (nginx 1.25 in OpenResty, curl 8.17) fails on the now-opaque
+  ASN1 types. kong and vector pin `openssl-dev<4`. 18 other images still ask
+  for bare `openssl-dev`; at least haproxy and ruby build fine against 4.0, the
+  rest are unverified until they next rebuild.
+- **Any `build.yml` job-logic change triggers a full rebuild**, and the full
+  melange matrix (2 arches × 135+ images) is over GitHub's 256-job matrix limit,
+  so the job is silently never created. Keep image PRs' `build.yml` diffs to the
+  image lists only.
 
 ## Execution model
 
