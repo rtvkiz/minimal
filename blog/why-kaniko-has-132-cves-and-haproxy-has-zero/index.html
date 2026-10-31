@@ -1,0 +1,69 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Why kaniko has 132 CVEs and haproxy has zero, in the same catalog — Minimal Containers</title><meta name="description" content="43% of our images scan clean. One of the rest has 132 unique CVEs. Both numbers are honest; the gap is about what the scanner can see, not how carefully either image was built."><link rel="canonical" href="https://minimalcontainers.com/blog/why-kaniko-has-132-cves-and-haproxy-has-zero/"><meta property="og:title" content="Why kaniko has 132 CVEs and haproxy has zero, in the same catalog — Minimal Containers"><meta property="og:description" content="43% of our images scan clean. One of the rest has 132 unique CVEs. Both numbers are honest; the gap is about what the scanner can see, not how carefully either image was built."><meta property="og:type" content="article"><meta property="og:url" content="https://minimalcontainers.com/blog/why-kaniko-has-132-cves-and-haproxy-has-zero/"><meta property="og:site_name" content="Minimal Containers"><meta property="og:image" content="https://minimalcontainers.com/og.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Why kaniko has 132 CVEs and haproxy has zero, in the same catalog — Minimal Containers"><meta name="twitter:description" content="43% of our images scan clean. One of the rest has 132 unique CVEs. Both numbers are honest; the gap is about what the scanner can see, not how carefully either image was built."><meta name="twitter:image" content="https://minimalcontainers.com/og.png"><meta property="article:published_time" content="2026-10-21"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Why kaniko has 132 CVEs and haproxy has zero, in the same catalog","description":"43% of our images scan clean. One of the rest has 132 unique CVEs. Both numbers are honest; the gap is about what the scanner can see, not how carefully either image was built.","datePublished":"2026-10-21","dateModified":"2026-10-21","url":"https://minimalcontainers.com/blog/why-kaniko-has-132-cves-and-haproxy-has-zero","author":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"},"publisher":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://minimalcontainers.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://minimalcontainers.com/blog/"},{"@type":"ListItem","position":3,"name":"Why kaniko has 132 CVEs and haproxy has zero, in the same catalog — Minimal Containers","item":"https://minimalcontainers.com/blog/why-kaniko-has-132-cves-and-haproxy-has-zero/"}]}</script><link rel="icon" type="image/svg+xml" href="/icon.svg"><!-- GoatCounter: cookieless, no personal data, no consent banner needed.
+       Dashboard is private by default (goatcounter settings.go defaults
+       `Public` to "private"), so the numbers are not publicly visible.
+       Loaded async so it never blocks render, and the site works fine when
+       ad blockers drop it — expect undercounting on a technical audience. --><script data-goatcounter="https://minimal.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script><link rel="stylesheet" href="/_astro/Layout.B6xdBa_-.css"></head><body><header class="site-header"><div class="container"><a href="/" class="brand"><img src="/icon.svg" alt="" class="logo" width="26" height="26"><span class="brand-name">minimal</span></a><nav class="nav"><a href="/images/">Images</a><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="/blog/">Blog</a><a href="/about/">Verify</a><a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a></nav></div></header><main><section><div class="container-narrow"><p style="margin:0 0 6px"><a href="/blog/" class="small muted">← Blog</a></p><h1 class="section-title">Why kaniko has 132 CVEs and haproxy has zero, in the same catalog</h1><p class="small muted"><time datetime="2026-10-21">21 October 2026</time></p><article class="prose" style="margin-top:28px"><p>As of the scan behind our published comparison data, 58 of our 135 scanned
+images report zero unique CVEs. One image, kaniko, reports 132: 8 critical,
+26 high. Same catalog, same build pipeline, same daily-rebuild policy. The
+gap is real, and it is not the story you’d expect from a “zero CVEs” badge.</p>
+<h2 id="whats-actually-inside-each-image">What’s actually inside each image</h2>
+<p>haproxy, redis-slim, nginx, postgres-slim, unbound: all zero. All of them
+are C binaries built from source, and the image contains three or four apk
+packages total, something like <code>haproxy</code>, <code>wolfi-baselayout</code>,
+<code>ca-certificates-bundle</code>. That’s the entire inventory Syft can produce for
+them, because apk packages are the only unit it knows how to catalog in a
+C image.</p>
+<p>kaniko is also built from source, also a handful of apk packages: <code>kaniko</code>,
+<code>wolfi-baselayout</code>, <code>ca-certificates-bundle</code>. Running Syft against it
+directly tells a different story:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>$ syft ghcr.io/rtvkiz/minimal-kaniko:latest -o json | jq '.artifacts | group_by(.type) | map({type: .[0].type, count: length})'</span></span>
+<span class="line"><span>[</span></span>
+<span class="line"><span>  { "type": "apk", "count": 3 },</span></span>
+<span class="line"><span>  { "type": "go-module", "count": 175 }</span></span>
+<span class="line"><span>]</span></span></code></pre>
+<p>175 Go modules, found and named individually, each one checked against
+vulnerability data on its own version. kaniko statically links most of a
+container-building toolchain: image layer handling, registry clients,
+credential helpers, the libraries that make “build an OCI image with no
+Docker daemon” possible. All of that compiles into one static binary, and
+all of it was always there. The scanner just couldn’t see it in a C image.</p>
+<h2 id="this-is-the-mirror-image-of-a-bug-we-wrote-about-before">This is the mirror image of a bug we wrote about before</h2>
+<p>We’ve covered the other direction: a C or C++ image can go completely
+invisible to a scanner if its apk package is named something the advisory
+feeds don’t recognize, something like <code>haproxy-minimal</code> instead of
+<code>haproxy</code>. That’s a false zero, a scan that found nothing because it was
+never looking at the right name.</p>
+<p>kaniko’s 132 is the opposite failure mode, and it isn’t a failure at all.
+Go’s toolchain embeds a full build manifest (module path, every dependency,
+every version) directly into the binary. Syft reads that manifest. So a Go
+image gets audited at a depth no C image can match with apk alone, and if
+any of those 175 modules has an old transitive dependency with a known CVE,
+it shows up by name, with a version, with a fix available. That’s the
+scanner doing its job well, not badly.</p>
+<h2 id="so-which-image-is-actually-safer">So which image is actually safer</h2>
+<p>Possibly haproxy, but you can’t tell that from these two numbers, and that’s
+the point. haproxy’s zero reflects three packages, fully resolved, nothing
+unaccounted for. kaniko’s 132 reflects 178 artifacts, fully resolved,
+nothing unaccounted for either. Neither number says “unscanned.” Both say
+“here is everything we found, named and versioned.” The honest comparison
+isn’t 0 versus 132, it’s: does each finding have a fix version available,
+and is it worth shipping before that fix lands.</p>
+<p>For kaniko specifically: most of the 132 trace back to a handful of vendored
+libraries whose own upstream hasn’t cut a patched release yet for the
+version kaniko’s build currently pins. We rebuild kaniko daily against
+upstream HEAD, so the number moves as those libraries patch; it is not a
+number we are sitting on.</p>
+<h2 id="what-to-actually-check-before-trusting-either-number">What to actually check before trusting either number</h2>
+<p>Don’t stop at the top-line count on any hardened image, ours or a
+competitor’s. Ask what the scanner could see:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>syft &lt;image&gt; -o json | jq '.artifacts | group_by(.type) | map({type: .[0].type, count: length})'</span></span></code></pre>
+<p>If that comes back with one artifact type and a handful of packages for
+something that is obviously a large piece of software, the zero you’re
+looking at is a coverage gap, not a security result. If it comes back with
+hundreds of granular modules and a nonzero CVE count, that is usually the
+more thoroughly audited image, even though the number on the page looks
+worse. The <a href="/images/">image directory</a> lists the package and module count
+for every image we publish, and the <a href="/compare/">raw comparison data</a> has the
+per-image breakdown behind every total in this post, kaniko included. We
+don’t trim that row to make the catalog average look better.</p>
+</article></div></section></main><footer class="site-footer"><div class="container"><div>Minimal Containers · MIT-licensed · built from<a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with<a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.</div><div>Updated 2026-10-31 19:43 UTC · <a href="https://github.com/rtvkiz/minimal/actions/runs/41235441631" rel="noopener">9d499c9</a>· &copy; 2026</div></div></footer><script type="module">document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-copy]`);if(!t)return;let n=t.getAttribute(`data-copy`)||``;navigator.clipboard.writeText(n).then(()=>{let e=t.textContent;t.textContent=`Copied`,setTimeout(()=>{t.textContent=e},1400)}).catch(()=>{t.textContent=`Failed`})});</script></body></html>
