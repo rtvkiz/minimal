@@ -876,7 +876,13 @@
 - name: haproxy
   cron-enabled: true   # wave 4
   files: [images/haproxy/melange.yaml]
-  source: { type: github-tags, repo: haproxy/haproxy, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$', strip-prefix: 'v' }
+  # NOT github-tags: haproxy/haproxy is the development tree and only ever gets
+  # the vX.Y.0 tag of each release; every stable patch release (3.4.1..3.4.7)
+  # is cut in a per-branch repo on git.haproxy.org that GitHub never mirrors.
+  # Tracking GitHub tags froze this image at 3.4.0 for seven patch releases.
+  # The homepage lists the newest tarball of every branch; the strict X.Y.Z
+  # pattern drops the -devN links, so this latest-tracks across stable minors.
+  source: { type: scrape, urls: ["https://www.haproxy.org/"], pattern: 'haproxy-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz' }
   tarball: { url: "https://www.haproxy.org/download/{minor}/src/haproxy-{version}.tar.gz", field: sha256 }
   links:
     releases: "https://www.haproxy.org/#down"
