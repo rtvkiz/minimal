@@ -1,32 +1,37 @@
-# Minimal Harbor portal image - using Wolfi's pre-built package
-# CVE patching via the daily rebuild (Wolfi versioned package)
-#
+# Minimal Harbor portal image - built from source via melange
 # Harbor's portal is a static Angular UI served by nginx, which also reverse
-# proxies /api, /c and /chartrepo to harbor-core. The nginx.conf shipped by
-# harbor-2.14-portal-nginx-config already listens on 8080 (not 80), writes
-# its pid and temp dirs under /tmp, and hardcodes the proxy target as
-# https://example.com - that placeholder MUST be overridden (mount your own
-# nginx.conf at /etc/nginx/nginx.conf) to point at a real harbor-core before
-# this image does anything useful standalone; same "bring your own config"
-# shape as couchdb's local.ini.
+# proxies /api, /c and /chartrepo to harbor-core. The UI is built from
+# goharbor/harbor src/portal (npm + Angular CLI) in melange.yaml; nothing from
+# the Node toolchain ships. harbor-portal-nginx-config carries upstream's
+# nginx.conf.example: it listens on 8080 (not 80), writes its pid and temp
+# dirs under /tmp, and hardcodes the proxy target as https://example.com -
+# that placeholder MUST be overridden (mount your own nginx.conf at
+# /etc/nginx/nginx.conf) to point at a real harbor-core before this image
+# does anything useful standalone; same "bring your own config" shape as
+# couchdb's local.ini.
 #
-# nginx-mainline itself depends on the virtual "nginx-config", which
-# harbor-2.14-portal-nginx-config also provides - listing it explicitly
-# keeps the dependency resolver from reaching for nginx-mainline-config
-# instead, which would collide on /etc/nginx/nginx.conf.
+# nginx-mainline depends on the virtual "nginx-config", which
+# harbor-portal-nginx-config provides - listing it explicitly keeps the
+# resolver from reaching for nginx-mainline-config instead, which would
+# collide on /etc/nginx/nginx.conf.
+#
+# Source-built since 2026-10-31: Wolfi's harbor-2.14-portal last built
+# 2026-01-21 and was frozen at 2.14.2.
 
 contents:
   repositories:
     - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
   packages:
     # Base filesystem
     - wolfi-baselayout
 
-    # Harbor's portal UI + nginx config from Wolfi (CVE-patched)
-    - harbor-2.14-portal
-    - harbor-2.14-portal-nginx-config
+    # Harbor's portal UI + nginx config
+    - harbor-portal
+    - harbor-portal-nginx-config
     - nginx-mainline
 
     # Certificates (nginx.conf proxies to an HTTPS core by default)
@@ -64,7 +69,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-harbor-portal"
-  org.opencontainers.image.description: "Hardened shell-less Harbor portal (UI + nginx reverse proxy) built on Wolfi with daily CVE patches"
+  org.opencontainers.image.description: "Hardened shell-less Harbor portal (UI + nginx reverse proxy) built from source via melange with daily CVE patches"
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/harbor-portal"
   org.opencontainers.image.licenses: "Apache-2.0"

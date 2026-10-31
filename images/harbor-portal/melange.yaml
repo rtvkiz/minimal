@@ -1,0 +1,113 @@
+# Melange build configuration for minimal harbor-portal
+# Harbor's portal: the Angular web UI plus the embedded Swagger UI, served as
+# static files by nginx, which also reverse-proxies /api, /c, /chartrepo to
+# harbor-core. Built from goharbor/harbor src/portal with npm + the Angular
+# CLI, the same steps as upstream's src/portal/docker-build/Dockerfile.
+# Nothing from the Node toolchain reaches the image - only dist/ output.
+# License: Apache-2.0.
+#
+# Two packages, mirroring the split the image had on Wolfi:
+#   harbor-portal              /usr/share/nginx/html (UI + swagger.json + Swagger UI)
+#   harbor-portal-nginx-config /etc/nginx (upstream nginx.conf.example: listen 8080,
+#                              pid + temp paths under /tmp) - provides the virtual
+#                              `nginx-config` nginx-mainline depends on, so the
+#                              resolver does not reach for nginx-mainline-config.
+#
+# Source-built rather than apko-only: Wolfi's `harbor-2.14-portal` package last
+# built 2026-01-21 (recipe removed from wolfi-dev/os), frozen at 2.14.2.
+
+package:
+  # Named exactly what upstream calls the component, not
+  # `harbor-portal-minimal` — see docs/onboarding.md "Package naming and
+  # scanner visibility".
+  name: harbor-portal
+  version: 2.14.6
+  epoch: 0
+  description: "Minimal Harbor portal (Angular UI + Swagger UI static assets) built from source"
+  copyright:
+    - license: Apache-2.0
+  resources:
+    memory: 8Gi
+  dependencies:
+    # Wolfi still ships frozen harbor-X.Y-portal packages that provide
+    # `harbor-portal`; apko picks the highest version across ALL repositories
+    # unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 4f0d14f70e44ace9b97faa82a912108310c5f06a724b7ddafded809817f18446
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - git
+      # Build-time only. The portal is Angular 16, whose supported Node range
+      # predates 24, so build on the 22 LTS line.
+      - nodejs-22
+      - npm
+      # Only for its stock /etc/nginx tree (mime.types, fastcgi/scgi/uwsgi
+      # params), which the nginx-config subpackage ships under harbor's
+      # nginx.conf.
+      - nginx-mainline
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/harbor-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/goharbor/harbor/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/harbor.tar.gz
+      echo "${{vars.sha256}}  /home/build/harbor.tar.gz" | sha256sum -c -
+      tar xzf /home/build/harbor.tar.gz -C /home/build/harbor-${{package.version}} --strip-components=1
+      rm /home/build/harbor.tar.gz
+
+  - runs: |
+      cd /home/build/harbor-${{package.version}}
+      cp api/v2.0/swagger.yaml src/portal/swagger.yaml
+      cd src/portal
+      # postinstall converts swagger.yaml and generates the API client
+      # (ng-swagger-gen), so it must run - no --ignore-scripts.
+      npm ci --no-audit --no-fund
+      npm run generate-build-timestamp
+      node --max_old_space_size=4096 node_modules/@angular/cli/bin/ng build --configuration production
+      # swagger.json for the embedded API explorer (upstream does this in python).
+      node -e "const y=require('js-yaml'),fs=require('fs');fs.writeFileSync('dist/swagger.json',JSON.stringify(y.load(fs.readFileSync('swagger.yaml','utf8'))))"
+      cp ../../LICENSE dist/
+      cd app-swagger-ui
+      npm ci --no-audit --no-fund
+      npm run build
+
+  - runs: |
+      P=/home/build/harbor-${{package.version}}/src/portal
+      mkdir -p "${{targets.destdir}}/usr/share/nginx/html"
+      cp -rf "$P"/dist/* "${{targets.destdir}}/usr/share/nginx/html/"
+      cp -rf "$P"/app-swagger-ui/dist/* "${{targets.destdir}}/usr/share/nginx/html/"
+
+  - runs: |
+      H="${{targets.destdir}}/usr/share/nginx/html"
+      echo "Verifying portal assets..."
+      grep -qi '<title>Harbor</title>' "$H/index.html" || { echo "FAIL: index.html missing Harbor title"; exit 1; }
+      [ -s "$H/swagger.json" ] || { echo "FAIL: swagger.json missing"; exit 1; }
+      grep -q "\"version\"" "$H/swagger.json" || { echo "FAIL: swagger.json is not the API spec"; exit 1; }
+
+subpackages:
+  - name: harbor-portal-nginx-config
+    description: "nginx config for the Harbor portal (upstream nginx.conf.example)"
+    dependencies:
+      provider-priority: 100
+      provides:
+        - nginx-config=0.${{package.full-version}}
+    pipeline:
+      - runs: |
+          mkdir -p "${{targets.subpkgdir}}/etc/nginx"
+          cp -rf /etc/nginx/* "${{targets.subpkgdir}}/etc/nginx/"
+          cp /home/build/harbor-${{package.version}}/src/portal/docker-build/nginx.conf.example \
+            "${{targets.subpkgdir}}/etc/nginx/nginx.conf"

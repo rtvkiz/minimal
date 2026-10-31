@@ -1,0 +1,95 @@
+# Melange build configuration for minimal argo-cd-repo-server
+# The same upstream `argocd` multi-command binary as images/argo-cd, built
+# WITHOUT the web UI: repo-server only renders manifests (git/helm/kustomize)
+# and never serves ui/dist/app, so the upstream .gitkeep placeholder is
+# enough for the go:embed and the whole pnpm/webpack stage is skipped.
+# Installed under /usr/local/bin with the upstream per-component symlinks,
+# matching the layout the image had on Wolfi's argo-cd-X.Y-compat package.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `argo-cd-3.4-repo-server`
+# package stopped receiving builds in June 2026 (recipe removed from
+# wolfi-dev/os), so it was frozen at 3.4.3. The rendering toolchain it
+# carries (git, helm-4, kustomize, gnupg, openssh) is still maintained in
+# Wolfi and comes from there - see apko/argo-cd-repo-server.yaml.
+#
+# Kept at the same version as images/argo-cd: both rows in versions.yaml track
+# argoproj/argo-cd, so every release bumps the pair together.
+
+package:
+  # Named exactly what upstream calls the component, not
+  # `argo-cd-repo-server-minimal` — see docs/onboarding.md "Package naming
+  # and scanner visibility".
+  name: argo-cd-repo-server
+  version: 3.5.6
+  epoch: 0
+  description: "Minimal Argo CD repo-server (argocd binary, no web UI) built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships frozen argo-cd-X.Y-repo-server packages that provide
+    # `argo-cd-repo-server`; apko picks the highest version across ALL
+    # repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 6a0af11b2bce7f72719b8669617d5ef1f2ae9389f95f7c13bb8720d336a9f513
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/argo-cd-repo-server-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/argoproj/argo-cd/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/argo-cd.tar.gz
+      echo "${{vars.sha256}}  /home/build/argo-cd.tar.gz" | sha256sum -c -
+      tar xzf /home/build/argo-cd.tar.gz -C /home/build/argo-cd-repo-server-${{package.version}} --strip-components=1
+      rm /home/build/argo-cd.tar.gz
+
+  - runs: |
+      cd /home/build/argo-cd-repo-server-${{package.version}}
+      KUBECTL_VERSION=$(go list -m k8s.io/client-go | awk '{print $NF}')
+      GOTOOLCHAIN=local CGO_ENABLED=0 GODEBUG="tarinsecurepath=0,zipinsecurepath=0" go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/argoproj/argo-cd/v3/common.version=${{package.version}} \
+          -X github.com/argoproj/argo-cd/v3/common.gitTreeState=clean \
+          -X github.com/argoproj/argo-cd/v3/common.kubectlVersion=${KUBECTL_VERSION}" \
+        -o /home/build/argocd-bin \
+        ./cmd
+
+  - runs: |
+      SRC=/home/build/argo-cd-repo-server-${{package.version}}
+      mkdir -p "${{targets.destdir}}/usr/local/bin" "${{targets.destdir}}/usr/bin"
+      cp /home/build/argocd-bin "${{targets.destdir}}/usr/local/bin/argocd"
+      chmod 0755 "${{targets.destdir}}/usr/local/bin/argocd"
+      # Upstream's argv[0]-selected component names (Dockerfile ln -s set).
+      for c in server repo-server cmp-server application-controller dex notifications \
+               applicationset-controller k8s-auth commit-server; do
+        ln -sf argocd "${{targets.destdir}}/usr/local/bin/argocd-${c}"
+      done
+      # Upstream ships these next to gpg/git; carried for layout parity with
+      # the previous (Wolfi) image. They are /bin/sh scripts, and this image
+      # has no shell, so GPG commit verification stays unavailable exactly as
+      # before - argocd only invokes them when signature verification is on.
+      install -m 0755 "$SRC/hack/gpg-wrapper.sh" "${{targets.destdir}}/usr/bin/gpg-wrapper.sh"
+      install -m 0755 "$SRC/hack/git-verify-wrapper.sh" "${{targets.destdir}}/usr/bin/git-verify-wrapper.sh"
+
+  - runs: |
+      echo "Verifying argocd binary and injected version..."
+      "${{targets.destdir}}/usr/local/bin/argocd" version --client --short 2>&1 | grep -q "v${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }

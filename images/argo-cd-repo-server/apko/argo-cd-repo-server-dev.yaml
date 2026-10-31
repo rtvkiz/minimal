@@ -5,11 +5,31 @@
 contents:
   repositories:
     - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
   packages:
     - wolfi-baselayout
-    - argo-cd-3.4-repo-server
+    - argo-cd-repo-server
+
+    # Manifest-rendering toolchain argocd execs directly (never via a shell).
+    # All still maintained in Wolfi - unlike the frozen argo-cd-3.4-repo-server
+    # that used to pull them in. helm-4, not helm~3: argo-cd 3.5 is built and
+    # tested against Helm 4 (hack/tool-versions.sh helm4_version).
+    - git
+    - git-lfs
+    - gnupg
+    - gpg
+    - gpg-agent
+    - helm-4
+    - kustomize
+    # Client side of openssh only (git over ssh + known_hosts handling);
+    # the previous image also carried sshd via the openssh meta-package.
+    - openssh-client
+    - openssh-keyscan
+    - openssh-keygen
+    - tzdata
     - ca-certificates-bundle
 
     # --- Dev variant minimum (CONVENTIONS.md) ---

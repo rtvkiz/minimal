@@ -1,26 +1,25 @@
-# Minimal Argo CD image - using Wolfi's pre-built package
-# CVE patching via the 6-hourly rebuild (Wolfi versioned package)
-# argo-cd-3.4 is a pure static Go binary with no dependency on a shell or
-# any other Wolfi package (no D: line in the APKINDEX entry) - unlike the
-# argo-cd-repo-server sibling image, this one is genuinely shell-less.
+# Minimal Argo CD image - built from source via melange
+# The `argocd` multi-command binary with the web UI embedded (pnpm + webpack
+# build in melange.yaml). The same binary serves as the API server, the
+# application controller, the applicationset controller, the notifications
+# controller and the dex-proxy, selected by the first positional argument (or
+# argv[0] via the /usr/bin/argocd-<component> symlinks). Static, shell-less.
 #
-# This is the `argocd` multi-command binary: the same binary serves as the
-# API server, the application controller, the applicationset controller,
-# the notifications controller and the dex-proxy, selected by the first
-# positional argument at startup. The entrypoint below runs the API server;
-# override `command`/`args` at deploy time to run the other components.
+# Source-built since 2026-10-31: Wolfi's argo-cd-3.4 stopped receiving builds
+# in June 2026 and was frozen at 3.4.3.
 
 contents:
   repositories:
     - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
   packages:
     # Base filesystem
     - wolfi-baselayout
 
-    # Argo CD from Wolfi (CVE-patched)
-    - argo-cd-3.4
+    - argo-cd
 
     # Certificates (upstream Git/OIDC connections)
     - ca-certificates-bundle
@@ -63,7 +62,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-argo-cd"
-  org.opencontainers.image.description: "Hardened shell-less Argo CD built on Wolfi with CVE patches on every rebuild"
+  org.opencontainers.image.description: "Hardened shell-less Argo CD built from source via melange with CVE patches on every rebuild"
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/argo-cd"
   org.opencontainers.image.licenses: "Apache-2.0"

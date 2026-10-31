@@ -591,6 +591,33 @@
   links:
     releases: "https://github.com/aws/karpenter-provider-aws/releases"
     notes: "https://github.com/aws/karpenter-provider-aws/releases/tag/v{version}"
+# argo-cd and argo-cd-repo-server build the same upstream binary (with and
+# without the web UI) and must move in lockstep: both rows track the same
+# release, so each upstream release opens one bump PR per image.
+- name: argo-cd
+  cron-enabled: true   # frozen-wolfi migration 2026-10-31 (dispatch-validated on the migration branch)
+  files: [images/argo-cd/melange.yaml]
+  source: { type: github-releases-latest, repo: argoproj/argo-cd, strip-v: true }
+  tarball: { url: "https://github.com/argoproj/argo-cd/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/argoproj/argo-cd/releases"
+    notes: "https://github.com/argoproj/argo-cd/releases/tag/v{version}"
+- name: argo-cd-repo-server
+  cron-enabled: true   # frozen-wolfi migration 2026-10-31 (dispatch-validated on the migration branch)
+  files: [images/argo-cd-repo-server/melange.yaml]
+  source: { type: github-releases-latest, repo: argoproj/argo-cd, strip-v: true }
+  tarball: { url: "https://github.com/argoproj/argo-cd/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/argoproj/argo-cd/releases"
+    notes: "https://github.com/argoproj/argo-cd/releases/tag/v{version}"
+- name: harbor-portal
+  cron-enabled: true   # frozen-wolfi migration 2026-10-31 (dispatch-validated on the migration branch)
+  files: [images/harbor-portal/melange.yaml]
+  source: { type: github-releases-latest, repo: goharbor/harbor, strip-v: true }
+  tarball: { url: "https://github.com/goharbor/harbor/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/goharbor/harbor/releases"
+    notes: "https://github.com/goharbor/harbor/releases/tag/v{version}"
 - name: trust-manager
   cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
   files: [images/trust-manager/melange.yaml]

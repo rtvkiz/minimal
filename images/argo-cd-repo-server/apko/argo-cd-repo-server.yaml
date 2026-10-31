@@ -1,34 +1,46 @@
-# Minimal Argo CD repo-server image - using Wolfi's pre-built package
-# CVE patching via the 6-hourly rebuild (Wolfi versioned package)
+# Minimal Argo CD repo-server image - built from source via melange
+# The `argocd` binary (no web UI - repo-server never serves it) under
+# /usr/local/bin with upstream's per-component symlinks; the entrypoint execs
+# `argocd-repo-server` directly. Upstream's uid_entrypoint.sh (a shell script
+# that patches /etc/passwd for an arbitrary runtime UID) is not used: run-as
+# is fixed, so its whole job is unnecessary and the image stays shell-less.
 #
-# Carries busybox only (never bash). The Wolfi argo-cd-3.4-repo-server apk's
-# own packaged entrypoint is `uid_entrypoint.sh`, a shell script that fixes
-# up /etc/passwd for an arbitrary runtime UID before execing argocd - a
-# root-then-drop pattern this catalog does not use (same class of exception
-# the postgres family and kong/couchdb already carry, but here it is
-# avoided rather than inherited: the image sets a fixed nonroot UID/GID
-# itself, so that script's entire job is unnecessary, and the entrypoint
-# below execs `argocd repo-server` directly with no shell in the path).
+# git/helm/kustomize/gnupg/openssh are separate binaries argocd execs
+# directly, not through a shell, so carrying them keeps the image shell-less.
 #
-# repo-server's real runtime dependency is on git/helm/kustomize/gnupg/
-# openssh to actually render manifests - those come from Wolfi as apk deps
-# of argo-cd-3.4-repo-server, not from anything built here. They are
-# themselves separate binaries argocd execs directly (not through a shell),
-# so this image stays shell-less despite carrying that much tooling.
+# Source-built since 2026-10-31: Wolfi's argo-cd-3.4-repo-server stopped
+# receiving builds in June 2026 and was frozen at 3.4.3.
 
 contents:
   repositories:
     - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
   packages:
     # Base filesystem
     - wolfi-baselayout
 
-    # Argo CD repo-server from Wolfi (CVE-patched). Pulls in its own runtime
-    # deps (git, git-lfs, gnupg, gpg, gpg-agent, helm~3, kustomize, openssh,
-    # tzdata, argo-cd-3.4-compat) as apk dependencies automatically.
-    - argo-cd-3.4-repo-server
+    - argo-cd-repo-server
+
+    # Manifest-rendering toolchain argocd execs directly (never via a shell).
+    # All still maintained in Wolfi - unlike the frozen argo-cd-3.4-repo-server
+    # that used to pull them in. helm-4, not helm~3: argo-cd 3.5 is built and
+    # tested against Helm 4 (hack/tool-versions.sh helm4_version).
+    - git
+    - git-lfs
+    - gnupg
+    - gpg
+    - gpg-agent
+    - helm-4
+    - kustomize
+    # Client side of openssh only (git over ssh + known_hosts handling);
+    # the previous image also carried sshd via the openssh meta-package.
+    - openssh-client
+    - openssh-keyscan
+    - openssh-keygen
+    - tzdata
 
     # Certificates (upstream Git/Helm repo connections)
     - ca-certificates-bundle
@@ -43,12 +55,12 @@ accounts:
       gid: 65532
   run-as: 65532
 
-# Bypass the packaged uid_entrypoint.sh wrapper (it needs a shell and exists
-# only to patch /etc/passwd for an arbitrary UID - unnecessary here since
-# run-as is fixed). The repo-server apk only pulls in argo-cd-3.4-compat
-# (not the main argo-cd-3.4 package), which places the same multi-command
-# binary and its per-component symlinks under /usr/local/bin/ instead of
-# /usr/bin/ - argocd-repo-server is the upstream-standard invocation name.
+# Exec the binary directly, not upstream's uid_entrypoint.sh (it needs a shell
+# and exists only to patch /etc/passwd for an arbitrary UID - unnecessary here
+# since run-as is fixed). The argo-cd-repo-server package installs the
+# multi-command binary and its per-component symlinks under /usr/local/bin/,
+# the path upstream's manifests and helm chart hardcode - argocd-repo-server
+# is the upstream-standard invocation name.
 entrypoint:
   command: /usr/local/bin/argocd-repo-server
 
@@ -72,7 +84,7 @@ paths:
 
 annotations:
   org.opencontainers.image.title: "minimal-argo-cd-repo-server"
-  org.opencontainers.image.description: "Hardened shell-less Argo CD repo-server built on Wolfi with CVE patches on every rebuild"
+  org.opencontainers.image.description: "Hardened shell-less Argo CD repo-server built from source via melange with CVE patches on every rebuild"
   org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
   org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/argo-cd-repo-server"
   org.opencontainers.image.licenses: "Apache-2.0"

@@ -1,0 +1,103 @@
+# Melange build configuration for minimal argo-cd
+# Argo CD multi-command binary (`argocd`): API server, application controller,
+# applicationset controller, notifications controller, dex-proxy, selected by
+# argv[0] or the first positional argument. The React web UI is built from
+# source (pnpm + webpack, upstream's own Dockerfile recipe) and go:embed'ed
+# into the binary from ui/dist/app - without that step the API server serves
+# a blank page, because upstream only commits a .gitkeep placeholder there.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `argo-cd-3.4` package stopped
+# receiving builds in June 2026 (recipe removed from wolfi-dev/os), so it was
+# frozen at 3.4.3 while upstream moved on to the 3.5 line.
+
+package:
+  # Named exactly what upstream calls it, not `argo-cd-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: argo-cd
+  version: 3.5.6
+  epoch: 0
+  description: "Minimal Argo CD (multi-command binary with embedded web UI) built from source"
+  copyright:
+    - license: Apache-2.0
+  resources:
+    # webpack production build of the UI wants an 8 GB V8 heap (upstream's
+    # NODE_OPTIONS below); the Go link of the full multi-command binary is
+    # the other peak.
+    memory: 16Gi
+  dependencies:
+    # Wolfi still ships frozen argo-cd-X.Y packages that provide `argo-cd`;
+    # apko picks the highest version across ALL repositories unless
+    # provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 6a0af11b2bce7f72719b8669617d5ef1f2ae9389f95f7c13bb8720d336a9f513
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+      # Build-time only, nothing from these reaches the image. ui/.nvmrc pins
+      # Node 24; pnpm switches itself to the exact packageManager version in
+      # ui/package.json (pnpm 10 manage-package-manager-versions default).
+      - nodejs-24
+      - pnpm
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/argo-cd-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/argoproj/argo-cd/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/argo-cd.tar.gz
+      echo "${{vars.sha256}}  /home/build/argo-cd.tar.gz" | sha256sum -c -
+      tar xzf /home/build/argo-cd.tar.gz -C /home/build/argo-cd-${{package.version}} --strip-components=1
+      rm /home/build/argo-cd.tar.gz
+
+  # Web UI: same commands as the argocd-ui stage of upstream's Dockerfile.
+  - runs: |
+      cd /home/build/argo-cd-${{package.version}}/ui
+      pnpm install --frozen-lockfile
+      NODE_ENV='production' NODE_ONLINE_ENV='online' NODE_OPTIONS=--max_old_space_size=8192 pnpm build
+      [ -f dist/app/index.html ] || { echo "FAIL: UI build produced no dist/app/index.html"; exit 1; }
+
+  - runs: |
+      cd /home/build/argo-cd-${{package.version}}
+      KUBECTL_VERSION=$(go list -m k8s.io/client-go | awk '{print $NF}')
+      GOTOOLCHAIN=local CGO_ENABLED=0 GODEBUG="tarinsecurepath=0,zipinsecurepath=0" go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/argoproj/argo-cd/v3/common.version=${{package.version}} \
+          -X github.com/argoproj/argo-cd/v3/common.gitTreeState=clean \
+          -X github.com/argoproj/argo-cd/v3/common.kubectlVersion=${KUBECTL_VERSION}" \
+        -o /home/build/argocd-bin \
+        ./cmd
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/argocd-bin "${{targets.destdir}}/usr/bin/argocd"
+      chmod 0755 "${{targets.destdir}}/usr/bin/argocd"
+      # argv[0]-selected component names, as in upstream's image. Relative
+      # symlinks: absolute ones dangle in the destdir during melange verify.
+      for c in server repo-server cmp-server application-controller notifications \
+               applicationset-controller k8s-auth commit-server dex; do
+        ln -sf argocd "${{targets.destdir}}/usr/bin/argocd-${c}"
+      done
+
+  - runs: |
+      echo "Verifying argocd binary, injected version and embedded UI..."
+      "${{targets.destdir}}/usr/bin/argocd" version --client --short 2>&1 | grep -q "v${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }
+      # The UI bundle is embedded, so the binary carries its index.html title.
+      grep -aq '<title>Argo CD</title>' "${{targets.destdir}}/usr/bin/argocd" \
+        || { echo "FAIL: web UI not embedded in the argocd binary"; exit 1; }
