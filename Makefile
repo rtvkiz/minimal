@@ -137,6 +137,7 @@ KARPENTER_VERSION ?= $(call melange_version,images/karpenter/melange.yaml)
 ARGO_CD_VERSION ?= $(call melange_version,images/argo-cd/melange.yaml)
 ARGO_CD_REPO_SERVER_VERSION ?= $(call melange_version,images/argo-cd-repo-server/melange.yaml)
 HARBOR_PORTAL_VERSION ?= $(call melange_version,images/harbor-portal/melange.yaml)
+KONG_VERSION ?= $(call melange_version,images/kong/melange.yaml)
 TRUST_MANAGER_VERSION ?= $(call melange_version,images/trust-manager/melange.yaml)
 CHARTMUSEUM_VERSION ?= $(call melange_version,images/chartmuseum/melange.yaml)
 PROMETHEUS_OPERATOR_VERSION ?= $(call melange_version,images/prometheus-operator/melange.yaml)
@@ -401,7 +402,7 @@ $(eval $(call DEV_IMAGE_RULE,mosquitto,mosquitto-melange,--repository-append ./p
 $(eval $(call DEV_IMAGE_RULE,pgbouncer,pgbouncer-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,unbound,unbound-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,dnsmasq))
-$(eval $(call DEV_IMAGE_RULE,kong))
+$(eval $(call DEV_IMAGE_RULE,kong,kong-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,couchdb))
 $(eval $(call DEV_IMAGE_RULE,karpenter,karpenter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,keda,keda-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -1363,21 +1364,30 @@ dnsmasq:
 	@echo "✓ minimal-dnsmasq built (Wolfi package, shell-less)"
 
 #------------------------------------------------------------------------------
-# KONG IMAGE (Wolfi pre-built package)
+# KONG IMAGE (source build via melange; upstream Bazel build)
 #------------------------------------------------------------------------------
-kong:
+kong-melange: keygen
+	@echo "Building kong $(KONG_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/kong/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ kong package built from source"
+
+kong: kong-melange
 	@echo "Assembling minimal-kong image with apko..."
 	apko build images/kong/apko/kong.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-kong:$(VERSION) \
 		kong.tar \
-		--arch x86_64
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
 	docker load < kong.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-kong:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-kong:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-kong:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-kong:latest
 	@rm -f kong.tar sbom-*.spdx.json
-	@echo "✓ minimal-kong built (Wolfi package)"
+	@echo "✓ minimal-kong built (source build)"
 
 #------------------------------------------------------------------------------
 # COUCHDB IMAGE (Wolfi pre-built package)
