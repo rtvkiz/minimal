@@ -11,7 +11,7 @@ package:
   # them matched, and the Wolfi secdb missed it too.
   name: ruby
   version: 4.0.9
-  epoch: 0
+  epoch: 1
   description: "Minimal Ruby runtime built from source"
   copyright:
     - license: Ruby AND MIT
@@ -125,14 +125,14 @@ pipeline:
       # registry. With the stdlib copy gone, `require 'json'` will activate it.
       gem install --no-document --no-user-install \
         --install-dir "${GEMDIR}" \
-        json --version 2.19.5
+        json --version 2.19.9
 
       # Sanity: confirm the destdir files were actually placed/removed.
       # We don't `require` here because the destdir ruby binary has compiled-in
       # paths pointing at the system Ruby install (not the destdir), so a
       # require would test the wrong filesystem. The apko smoke test in
       # ruby/test.sh validates the published image end-to-end.
-      [ -d "${GEMDIR}/gems/json-2.19.5" ] || { echo "::error::json 2.19.5 not installed"; exit 1; }
+      [ -d "${GEMDIR}/gems/json-2.19.9" ] || { echo "::error::json 2.19.9 not installed"; exit 1; }
       [ ! -e "${STDLIB}/bundler.rb" ] || { echo "::error::bundler.rb still in stdlib"; exit 1; }
       [ ! -e "${STDLIB}/net/imap.rb" ] || { echo "::error::net/imap.rb still in stdlib"; exit 1; }
       [ ! -e "${STDLIB}/rexml" ] || { echo "::error::rexml/ still in stdlib"; exit 1; }
