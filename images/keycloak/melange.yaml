@@ -170,6 +170,7 @@ pipeline:
       _swap jackson-jakarta-rs-yaml-provider com/fasterxml/jackson/jakarta/rs 2.21.5 2.21.6 cc0c924b7b534d99bfe7038f6727dabb8b945eddb7832754b9e9b36ee43a0847 keep-filename -
       _swap jackson-module-jakarta-xmlbind-annotations com/fasterxml/jackson/module 2.21.5 2.21.6 9fe4f941ba14dfa49b6120a0f2c307b06bfd60bce797f9cfed72a2abca8befdf keep-filename -
       _swap jackson-module-parameter-names com/fasterxml/jackson/module 2.21.5 2.21.6 24f5c6f75fad85d7e2e3f600ef4832a839def8a2bf1e6f2fc5a0577cef54e01d keep-filename -
+      _swap mariadb-java-client org/mariadb/jdbc 3.5.10 3.5.11 42604178b9e57ec08ee0035079961516f086e455d0141f0b22c6eff29fb2fff4 keep-filename -
       _swap micrometer-commons io/micrometer 1.16.3 1.16.6 45aff76226830db257f4bc39a5bcff83d633e572fee9dc4e45cfa12af9a0a49a keep-filename -
       _swap micrometer-core io/micrometer 1.16.3 1.16.6 1957ef2deaffbc1fb98cebfd0f5b3109ecf19c994d7e5378598c20747ba8d68b keep-filename -
       _swap micrometer-observation io/micrometer 1.16.3 1.16.6 4c0826d5e7c8522a8e111470b4e77f77b0a10f520eb5502ddd143fdbcedb2340 keep-filename -
