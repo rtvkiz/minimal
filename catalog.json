@@ -44,9 +44,9 @@
         "prod",
         "dev"
       ],
-      "primary_package": "argo-cd-3.4",
+      "primary_package": "argo-cd",
       "upstream_url": "https://argo-cd.readthedocs.io",
-      "summary": "Argo CD GitOps controller for Kubernetes, built on Wolfi.",
+      "summary": "Argo CD GitOps controller for Kubernetes with its web UI, built from source via melange.",
       "description": "Argo CD declarative GitOps continuous delivery for Kubernetes: the server, controller and notifications binary. Signed, SBOM-attested, rebuilt daily."
     },
     {
@@ -56,9 +56,9 @@
         "prod",
         "dev"
       ],
-      "primary_package": "argo-cd-3.4-repo-server",
+      "primary_package": "argo-cd-repo-server",
       "upstream_url": "https://argo-cd.readthedocs.io",
-      "summary": "Argo CD repo-server with bundled git, Helm and Kustomize, built on Wolfi.",
+      "summary": "Argo CD repo-server with bundled git, Helm 4 and Kustomize, built from source via melange.",
       "description": "Argo CD repo-server rendering manifests from git with bundled Helm and Kustomize. Shell-less despite the tooling, signed, rebuilt daily against CVE fixes."
     },
     {
@@ -440,10 +440,10 @@
         "prod",
         "dev"
       ],
-      "primary_package": "harbor-2.14-portal",
+      "primary_package": "harbor-portal",
       "upstream_url": "https://goharbor.io",
-      "summary": "Harbor's portal UI and nginx reverse proxy, built on Wolfi.",
-      "description": "Harbor portal: the static UI and nginx reverse proxy fronting the Harbor container registry. Built on Wolfi, shell-less and rebuilt daily against CVE fixes."
+      "summary": "Harbor's portal UI and nginx reverse proxy, built from source via melange.",
+      "description": "Harbor portal: the Angular UI and nginx reverse proxy fronting the Harbor container registry. Built from source, shell-less and rebuilt daily on CVE fixes."
     },
     {
       "name": "headscale",

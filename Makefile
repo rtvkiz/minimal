@@ -134,6 +134,9 @@ CLOUDNATIVE_PG_VERSION ?= $(call melange_version,images/cloudnative-pg/melange.y
 ARGO_ROLLOUTS_VERSION ?= $(call melange_version,images/argo-rollouts/melange.yaml)
 KEDA_VERSION ?= $(call melange_version,images/keda/melange.yaml)
 KARPENTER_VERSION ?= $(call melange_version,images/karpenter/melange.yaml)
+ARGO_CD_VERSION ?= $(call melange_version,images/argo-cd/melange.yaml)
+ARGO_CD_REPO_SERVER_VERSION ?= $(call melange_version,images/argo-cd-repo-server/melange.yaml)
+HARBOR_PORTAL_VERSION ?= $(call melange_version,images/harbor-portal/melange.yaml)
 TRUST_MANAGER_VERSION ?= $(call melange_version,images/trust-manager/melange.yaml)
 CHARTMUSEUM_VERSION ?= $(call melange_version,images/chartmuseum/melange.yaml)
 PROMETHEUS_OPERATOR_VERSION ?= $(call melange_version,images/prometheus-operator/melange.yaml)
@@ -400,11 +403,11 @@ $(eval $(call DEV_IMAGE_RULE,unbound,unbound-melange,--repository-append ./packa
 $(eval $(call DEV_IMAGE_RULE,dnsmasq))
 $(eval $(call DEV_IMAGE_RULE,kong))
 $(eval $(call DEV_IMAGE_RULE,couchdb))
-$(eval $(call DEV_IMAGE_RULE,argo-cd))
-$(eval $(call DEV_IMAGE_RULE,argo-cd-repo-server))
 $(eval $(call DEV_IMAGE_RULE,karpenter,karpenter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,keda,keda-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
-$(eval $(call DEV_IMAGE_RULE,harbor-portal))
+$(eval $(call DEV_IMAGE_RULE,argo-cd,argo-cd-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,argo-cd-repo-server,argo-cd-repo-server-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,harbor-portal,harbor-portal-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,patroni))
 $(eval $(call DEV_IMAGE_RULE,vector))
 $(eval $(call DEV_IMAGE_RULE,keepalived,keepalived-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -1394,38 +1397,56 @@ couchdb:
 	@echo "✓ minimal-couchdb built (Wolfi package)"
 
 #------------------------------------------------------------------------------
-# ARGO CD IMAGE (Wolfi pre-built package, shell-less)
+# ARGO CD IMAGE (source build via melange; UI built with pnpm, shell-less)
 #------------------------------------------------------------------------------
-argo-cd:
+argo-cd-melange: keygen
+	@echo "Building argo-cd $(ARGO_CD_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/argo-cd/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ argo-cd package built from source"
+
+argo-cd: argo-cd-melange
 	@echo "Assembling minimal-argo-cd image with apko..."
 	apko build images/argo-cd/apko/argo-cd.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-argo-cd:$(VERSION) \
 		argo-cd.tar \
-		--arch x86_64
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
 	docker load < argo-cd.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-argo-cd:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-argo-cd:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-argo-cd:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-argo-cd:latest
 	@rm -f argo-cd.tar sbom-*.spdx.json
-	@echo "✓ minimal-argo-cd built (Wolfi package)"
+	@echo "✓ minimal-argo-cd built (source build)"
 
 #------------------------------------------------------------------------------
-# ARGO CD REPO-SERVER IMAGE (Wolfi pre-built package, shell-less)
+# ARGO CD REPO-SERVER IMAGE (source build via melange, shell-less)
 #------------------------------------------------------------------------------
-argo-cd-repo-server:
+argo-cd-repo-server-melange: keygen
+	@echo "Building argo-cd-repo-server $(ARGO_CD_REPO_SERVER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/argo-cd-repo-server/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ argo-cd-repo-server package built from source"
+
+argo-cd-repo-server: argo-cd-repo-server-melange
 	@echo "Assembling minimal-argo-cd-repo-server image with apko..."
 	apko build images/argo-cd-repo-server/apko/argo-cd-repo-server.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-argo-cd-repo-server:$(VERSION) \
 		argo-cd-repo-server.tar \
-		--arch x86_64
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
 	docker load < argo-cd-repo-server.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-argo-cd-repo-server:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-argo-cd-repo-server:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-argo-cd-repo-server:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-argo-cd-repo-server:latest
 	@rm -f argo-cd-repo-server.tar sbom-*.spdx.json
-	@echo "✓ minimal-argo-cd-repo-server built (Wolfi package)"
+	@echo "✓ minimal-argo-cd-repo-server built (source build)"
 
 #------------------------------------------------------------------------------
 # KARPENTER IMAGE (source build via melange; Kubernetes node autoscaler)
@@ -1480,21 +1501,30 @@ keda: keda-melange
 	@echo "✓ minimal-keda built (source build)"
 
 #------------------------------------------------------------------------------
-# HARBOR PORTAL IMAGE (Wolfi pre-built package)
+# HARBOR PORTAL IMAGE (source build via melange; Angular UI built with npm)
 #------------------------------------------------------------------------------
-harbor-portal:
+harbor-portal-melange: keygen
+	@echo "Building harbor-portal $(HARBOR_PORTAL_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/harbor-portal/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ harbor-portal package built from source"
+
+harbor-portal: harbor-portal-melange
 	@echo "Assembling minimal-harbor-portal image with apko..."
 	apko build images/harbor-portal/apko/harbor-portal.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-harbor-portal:$(VERSION) \
 		harbor-portal.tar \
-		--arch x86_64
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
 	docker load < harbor-portal.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-harbor-portal:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-harbor-portal:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-harbor-portal:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-harbor-portal:latest
 	@rm -f harbor-portal.tar sbom-*.spdx.json
-	@echo "✓ minimal-harbor-portal built (Wolfi package)"
+	@echo "✓ minimal-harbor-portal built (source build)"
 
 #------------------------------------------------------------------------------
 # SQLITE IMAGE (Wolfi pre-built package, shell-less)
