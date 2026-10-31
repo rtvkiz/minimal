@@ -232,7 +232,11 @@ pipeline:
       export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
       # .bazelrc already sets --spawn_strategy=local, so Bazel's own sandbox
       # (which would need namespaces inside melange's) is never used.
-      bazel build //build:kong --config release --verbose_failures
+      # --output_user_root keeps Bazel's output base (and its root-owned
+      # 0700 server dir) out of /home/build: melange scans the workspace as
+      # the unprivileged host user after the build and fails with
+      # "failed to store workspace xattrs: ... server: permission denied".
+      bazel --output_user_root=/tmp/bazel build //build:kong --config release --verbose_failures
 
   - runs: |
       cd /home/build/kong-${{package.version}}
@@ -250,8 +254,9 @@ pipeline:
       ln -sf ../openresty/luajit/bin/luajit "$D/usr/local/bin/luajit"
       ln -sf ../openresty/luajit/bin/luajit "$D/usr/local/bin/lua"
       ln -sf ../openresty/nginx/sbin/nginx "$D/usr/local/bin/nginx"
-      # Bazel's output base lives under $HOME; keep it out of the package scan.
-      bazel clean --expunge >/dev/null 2>&1 || true
+      # Stop the Bazel server; its output root is under /tmp, outside the
+      # workspace melange scans.
+      bazel --output_user_root=/tmp/bazel shutdown >/dev/null 2>&1 || true
 
   - runs: |
       D="${{targets.destdir}}"
