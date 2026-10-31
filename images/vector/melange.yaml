@@ -1,0 +1,108 @@
+# Melange build configuration for minimal vector
+# Vector observability data pipeline (Rust), built from source with upstream's
+# `default` feature set - the same feature set the Wolfi package shipped, so
+# every source/transform/sink the previous image had is still compiled in.
+# License: MPL-2.0.
+#
+# Two deliberate deviations from upstream's release profile:
+#   - OpenSSL is linked from Wolfi's system package instead of vendored
+#     openssl-src (as Wolfi's own recipe did), so OpenSSL CVE fixes land via
+#     the daily rebuild instead of waiting for the next vector release.
+#   - LTO thin + 16 codegen units instead of fat + 1: upstream's profile needs
+#     a 32-core/48 GB builder (Wolfi's resources block); on a 4-core CI runner
+#     it does not finish inside the job limit. Costs a few percent of peak
+#     throughput, not features.
+#
+# Source-built rather than apko-only: Wolfi's `vector` package stopped
+# receiving builds in June 2026 (recipe removed from wolfi-dev/os), so it was
+# frozen at 0.56.0.
+
+package:
+  # Named exactly what upstream calls it, not `vector-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: vector
+  version: 0.61.0
+  epoch: 0
+  description: "Minimal Vector observability data pipeline built from source"
+  copyright:
+    - license: MPL-2.0
+  resources:
+    memory: 16Gi
+  dependencies:
+    # Wolfi still ships a frozen `vector` package; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: e5a6ea7c9fb830eea61beb08556066990844cf8529a8d2aa1d274f868da883fc
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - bash
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      # build.rs execs `git rev-parse` for version metadata and panics if the
+      # binary is missing (os error 2). Outside a repo it just gets empty
+      # output, which build.rs accepts - the tarball has no .git.
+      - git
+      - rust-1.99
+      - clang-21
+      - cmake
+      - perl
+      - pkgconf
+      - protoc
+      - protobuf-dev
+      # <4: the curl 8.17 that curl-sys vendors (rdkafka's curl-static) does
+      # not build against OpenSSL 4.0's opaque ASN1 types. openssl-4.0-dev
+      # also provides `openssl-dev` at a higher version, so without the bound
+      # apk resolves to it. Runtime then links libssl.so.3 (3.6 line).
+      - openssl-dev<4
+      - zlib-dev
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/vector-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/vectordotdev/vector/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/vector.tar.gz
+      echo "${{vars.sha256}}  /home/build/vector.tar.gz" | sha256sum -c -
+      tar xzf /home/build/vector.tar.gz -C /home/build/vector-${{package.version}} --strip-components=1
+      rm /home/build/vector.tar.gz
+
+  - runs: |
+      cd /home/build/vector-${{package.version}}
+      # System OpenSSL instead of the vendored openssl-src build (see header).
+      sed -i -E 's|^openssl = \{ version = "([0-9.]+)", default-features = false, features = \["vendored"\] \}|openssl = { version = "\1", default-features = false }|' Cargo.toml
+      grep -q '^openssl = { version = "[0-9.]*", default-features = false }$' Cargo.toml \
+        || { echo "FAIL: could not unvendor openssl - Cargo.toml line changed upstream"; exit 1; }
+      export OPENSSL_NO_VENDOR=1
+      export PROTOC=/usr/bin/protoc
+      # lib.rs has #![deny(warnings)]; a newer toolchain than upstream's pin
+      # must not turn new lints into build failures.
+      export RUSTFLAGS="${RUSTFLAGS:-} --cap-lints=warn"
+      export CARGO_PROFILE_RELEASE_LTO=thin
+      export CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16
+      export CARGO_PROFILE_RELEASE_DEBUG=false
+      cargo build --release --locked --bin vector
+
+  - runs: |
+      cd /home/build/vector-${{package.version}}
+      install -Dm755 target/release/vector "${{targets.destdir}}/usr/bin/vector"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/vector"
+      mkdir -p "${{targets.destdir}}/etc/vector"
+      cp config/vector.yaml "${{targets.destdir}}/etc/vector/vector.yaml"
+      # melange's license scanner cannot chmod registry sources.
+      rm -rf /home/build/.cargo/registry
+
+  - runs: |
+      echo "Verifying vector binary and version..."
+      "${{targets.destdir}}/usr/bin/vector" --version | grep -q "^vector ${{package.version}}" \
+        || { echo "FAIL: vector --version did not report ${{package.version}}"; exit 1; }

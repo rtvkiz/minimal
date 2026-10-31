@@ -62,6 +62,7 @@
     - { name: qdrant, src-root: "/home/build/qdrant-<<PKG_VERSION>>", build-marker: "cargo build --release" }
     - { name: meilisearch, src-root: "/home/build/meilisearch-<<PKG_VERSION>>", build-marker: "cargo build --release --locked -p meilisearch -p meilitool" }
     - { name: vaultwarden, src-root: "/home/build/vaultwarden-<<PKG_VERSION>>", build-marker: "cargo build --release" }
+    - { name: vector, src-root: "/home/build/vector-<<PKG_VERSION>>", build-marker: "cargo build --release --locked --bin vector" }
 
 - name: python
   artifact-type: python

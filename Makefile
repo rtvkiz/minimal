@@ -138,6 +138,7 @@ ARGO_CD_VERSION ?= $(call melange_version,images/argo-cd/melange.yaml)
 ARGO_CD_REPO_SERVER_VERSION ?= $(call melange_version,images/argo-cd-repo-server/melange.yaml)
 HARBOR_PORTAL_VERSION ?= $(call melange_version,images/harbor-portal/melange.yaml)
 KONG_VERSION ?= $(call melange_version,images/kong/melange.yaml)
+VECTOR_VERSION ?= $(call melange_version,images/vector/melange.yaml)
 TRUST_MANAGER_VERSION ?= $(call melange_version,images/trust-manager/melange.yaml)
 CHARTMUSEUM_VERSION ?= $(call melange_version,images/chartmuseum/melange.yaml)
 PROMETHEUS_OPERATOR_VERSION ?= $(call melange_version,images/prometheus-operator/melange.yaml)
@@ -410,7 +411,7 @@ $(eval $(call DEV_IMAGE_RULE,argo-cd,argo-cd-melange,--repository-append ./packa
 $(eval $(call DEV_IMAGE_RULE,argo-cd-repo-server,argo-cd-repo-server-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,harbor-portal,harbor-portal-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,patroni))
-$(eval $(call DEV_IMAGE_RULE,vector))
+$(eval $(call DEV_IMAGE_RULE,vector,vector-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,keepalived,keepalived-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,metrics-server,metrics-server-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,external-dns,external-dns-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -1313,21 +1314,30 @@ bun:
 	@echo "✓ minimal-bun built (Wolfi package, shell-less)"
 
 #------------------------------------------------------------------------------
-# VECTOR IMAGE (Wolfi pre-built package, shell-less)
+# VECTOR IMAGE (source build via melange; Rust, shell-less)
 #------------------------------------------------------------------------------
-vector:
+vector-melange: keygen
+	@echo "Building vector $(VECTOR_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/vector/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ vector package built from source"
+
+vector: vector-melange
 	@echo "Assembling minimal-vector image with apko..."
 	apko build images/vector/apko/vector.yaml \
 		$(REGISTRY)/$(OWNER)/minimal-vector:$(VERSION) \
 		vector.tar \
-		--arch x86_64
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
 	docker load < vector.tar
 	docker tag $(REGISTRY)/$(OWNER)/minimal-vector:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-vector:$(VERSION)
 	docker tag $(REGISTRY)/$(OWNER)/minimal-vector:$(VERSION)-amd64 \
 		$(REGISTRY)/$(OWNER)/minimal-vector:latest
 	@rm -f vector.tar sbom-*.spdx.json
-	@echo "✓ minimal-vector built (Wolfi package, shell-less)"
+	@echo "✓ minimal-vector built (source build)"
 
 #------------------------------------------------------------------------------
 # PATRONI IMAGE (Wolfi pre-built package, shell-less)

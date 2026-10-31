@@ -626,6 +626,14 @@
   links:
     releases: "https://github.com/Kong/kong/releases"
     notes: "https://github.com/Kong/kong/blob/{version}/CHANGELOG.md"
+- name: vector
+  cron-enabled: true   # frozen-wolfi migration 2026-10-31 (dispatch-validated on the migration branch)
+  files: [images/vector/melange.yaml]
+  source: { type: github-releases-latest, repo: vectordotdev/vector, strip-v: true }
+  tarball: { url: "https://github.com/vectordotdev/vector/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/vectordotdev/vector/releases"
+    notes: "https://github.com/vectordotdev/vector/releases/tag/v{version}"
 - name: trust-manager
   cron-enabled: true   # batch-150 (dispatch-validated 2026-10-28 on the onboarding branch)
   files: [images/trust-manager/melange.yaml]
