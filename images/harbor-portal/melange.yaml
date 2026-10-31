@@ -73,16 +73,22 @@ pipeline:
       cd /home/build/harbor-${{package.version}}
       cp api/v2.0/swagger.yaml src/portal/swagger.yaml
       cd src/portal
-      # postinstall converts swagger.yaml and generates the API client
-      # (ng-swagger-gen), so it must run - no --ignore-scripts.
-      npm ci --no-audit --no-fund
+      # `npm install`, not `npm ci`: upstream's package-lock.json is not in
+      # sync for npm >= 12 (peer deps cytoscape/d3-selection missing), and
+      # upstream's own Dockerfile uses `npm install` too. postinstall converts
+      # swagger.yaml and generates the API client (ng-swagger-gen), so scripts
+      # must run; npm 12 gates dependency install scripts behind allowScripts,
+      # and pre-12 behaviour (what upstream builds with) is all scripts on.
+      # Build sandbox only - none of node_modules reaches the image.
+      NPM_OPTS="--no-audit --no-fund --dangerously-allow-all-scripts"
+      npm install $NPM_OPTS
       npm run generate-build-timestamp
       node --max_old_space_size=4096 node_modules/@angular/cli/bin/ng build --configuration production
       # swagger.json for the embedded API explorer (upstream does this in python).
       node -e "const y=require('js-yaml'),fs=require('fs');fs.writeFileSync('dist/swagger.json',JSON.stringify(y.load(fs.readFileSync('swagger.yaml','utf8'))))"
       cp ../../LICENSE dist/
       cd app-swagger-ui
-      npm ci --no-audit --no-fund
+      npm install $NPM_OPTS
       npm run build
 
   - runs: |
