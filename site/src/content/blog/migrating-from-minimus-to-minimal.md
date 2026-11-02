@@ -2,7 +2,13 @@
 title: "Migrating from Minimus to Minimal"
 description: "What actually breaks when you move a container image to Minimal: the missing shell, the non-root UID, and the tag you should not have pinned. With the commands to verify what you pulled."
 published: "2026-08-31"
+updated: "2026-11-02"
 ---
+
+> **Update, 2026-11-02:** Minimus ceased operations and turned off its registry
+> (`reg.mini.dev`) on 2026-10-22, after a maintenance-only period that began on
+> 2026-08-24. Images you already pulled keep running, but they no longer
+> receive updates or CVE fixes. Everything below still applies to moving them.
 
 Swapping one hardened base for another is mostly a find-and-replace. The
 interesting part is the small number of things that break afterward, and they
@@ -152,11 +158,12 @@ compliance program requires L3, that is a genuine reason not to migrate.
 grype ghcr.io/rtvkiz/minimal-python:latest
 ```
 
-The [full head-to-head data](/compare/minimus/) is published, raw CSV included,
-and it contains every version-matched image where Minimal comes off worse. The
-specific outliers change as both projects rebuild, so check the current table
-for anything on your critical path rather than relying on a point-in-time
-example.
+The last head-to-head scan against Minimus, from 2026-10-15 (a week before its
+registry went offline), stays published as a [raw CSV](/data/cve-comparison-2026-10-15.csv),
+including every version-matched image where Minimal came off worse. It is a
+historical record now - Minimus images stopped receiving updates on 2026-08-24 -
+so for current numbers see the [live comparisons](/compare/) against Chainguard
+and distroless, and scan your own critical path rather than relying on either.
 
 ## Rolling it out
 

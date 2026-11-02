@@ -88,6 +88,17 @@ const legacyImageRedirects = (() => {
   return out;
 })();
 
+// --- retired pages -----------------------------------------------------------
+// /compare/minimus was a live head-to-head scan page. Minimus ceased operations
+// and turned off reg.mini.dev on 2026-10-22, so there is nothing left to scan;
+// the URL is still linked and indexed for "Minimus alternative", so send it to
+// the migration guide rather than letting it 404.
+const retiredRedirects = {
+  '/compare/minimus': '/blog/migrating-from-minimus-to-minimal',
+};
+
+const siteRedirects = { ...legacyImageRedirects, ...retiredRedirects };
+
 const newest = (m) => {
   const v = [...m.values()].sort();
   return v.length ? v[v.length - 1] : undefined;
@@ -112,7 +123,7 @@ const lastmodFor = (pathname) => {
 export default defineConfig({
   site: 'https://minimalcontainers.com',
   trailingSlash: 'ignore',
-  redirects: legacyImageRedirects,
+  redirects: siteRedirects,
   build: {
     format: 'directory',
   },
@@ -122,7 +133,7 @@ export default defineConfig({
     sitemap({
       // A redirect stub is not a destination. Listing /images/redis-slim/ next to
       // /images/redis/ would ask Google to index both sides of a redirect.
-      filter: (page) => !Object.keys(legacyImageRedirects)
+      filter: (page) => !Object.keys(siteRedirects)
         .some((from) => new URL(page).pathname.replace(/\/$/, '') === from),
       serialize(item) {
         // Priority ordering, highest intent first: the comparison pages exist to
