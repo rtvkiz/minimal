@@ -8,7 +8,7 @@ package:
   # produces CPEs NVD/the Wolfi secdb don't index (see cosign/haproxy melange
   # comments for the measured impact).
   name: zot
-  version: 2.1.22
+  version: 2.1.23
   epoch: 0
   description: "Minimal zot OCI-native container registry built from source"
   copyright:
@@ -23,7 +23,7 @@ package:
 
 vars:
   # SHA256 of zot source tarball - updated by update-versions.yml workflow
-  sha256: 1e795f347c1025e0f513a0809a755cd927fd4cce663b142691f0cd1f96f82c12
+  sha256: f1a5b9f45459e398330da6bc0a161d18e8c11c6b767932a3ac96622cfe6a5e20
 
 environment:
   contents:
