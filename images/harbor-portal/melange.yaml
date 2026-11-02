@@ -52,7 +52,7 @@ environment:
       - git
       # Build-time only. The portal is Angular 16, whose supported Node range
       # predates 24, so build on the 22 LTS line.
-      - nodejs-22
+      - nodejs-26
       - npm
       # node-gyp needs Python to compile native addons with no prebuilt for
       # the arch (@parcel/watcher on aarch64). 3.11, not newer: the node-gyp

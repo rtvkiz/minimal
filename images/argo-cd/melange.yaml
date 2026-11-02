@@ -51,7 +51,7 @@ environment:
       # Build-time only, nothing from these reaches the image. ui/.nvmrc pins
       # Node 24; pnpm switches itself to the exact packageManager version in
       # ui/package.json (pnpm 10 manage-package-manager-versions default).
-      - nodejs-24
+      - nodejs-26
       - pnpm
 
 pipeline:
