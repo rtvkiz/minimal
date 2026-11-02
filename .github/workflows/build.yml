@@ -13,7 +13,7 @@ on:
     branches: [main]
   schedule:
     # Rebuild daily to keep images and vulnerability counts fresh. Matches
-    # Chainguard's own daily cadence - the prior 6-hourly
+    # Chainguard's and Minimus's own cadence (both daily) - the prior 6-hourly
     # schedule bought no real security benefit over daily (a few hours'
     # difference in patch latency essentially never matters) while costing
     # runner contention and automated PRs going stale mid-review as main
