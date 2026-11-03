@@ -1,7 +1,7 @@
 # Meilisearch community edition, built from the upstream Rust source.
 package:
   name: meilisearch
-  version: 1.56.0
+  version: 1.56.1
   epoch: 0
   description: "Fast, developer-friendly search engine built from source"
   copyright:
@@ -12,7 +12,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: a89d9d687d5c008d220fe01a35ab5071ef90f7911403079c85f2a57526d69641
+  sha256: 6af283d7205b9e8028cfb9a1552a28ac70d0a58e99f7312566652c7449c46b77
 
 environment:
   contents:
