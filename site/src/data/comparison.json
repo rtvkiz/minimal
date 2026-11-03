@@ -1,23 +1,39 @@
 {
-  "scanDate": "2026-10-15",
+  "scanDate": "2026-11-01",
   "scanner": "Grype 0.109.1",
   "dbSchema": "v6.1.10",
-  "dbBuilt": "2026-10-15T06:30:36Z",
-  "dbChecksum": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_2026-10-15T00:29:08Z_1792045836.tar.zst?checksum=sha256%3A2f1597f25b5089e966272b251eb4d1f9977e59d57029af1c8810deb6e5321aa2",
+  "dbBuilt": "2026-11-01T06:20:12Z",
+  "dbChecksum": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_2026-11-01T00:24:34Z_1793514012.tar.zst?checksum=sha256%3Ad0e1af9e6491440e1a671d0a0aafc32c5c7cb5cda787dcec3482799ef298f31c",
   "platform": "linux/amd64",
-  "csvPath": "/data/cve-comparison-2026-10-15.csv",
-  "pairsPath": "/data/cve-comparison-pairs-2026-10-15.csv",
+  "csvPath": "/data/cve-comparison-2026-11-01.csv",
+  "pairsPath": "/data/cve-comparison-pairs-2026-11-01.csv",
   "archivedRuns": [
     "2026-07-24",
     "2026-09-11",
     "2026-09-15",
     "2026-10-01",
-    "2026-10-15"
+    "2026-10-15",
+    "2026-11-01"
   ],
-  "csvRows": 540,
+  "csvRows": 600,
   "chainguard": {
     "rival": "chainguard",
     "pairs": [
+      {
+        "image": "node-slim",
+        "ours": 0,
+        "theirs": 2,
+        "delta": -2,
+        "oursCritical": 0,
+        "oursHigh": 0,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-node-slim:latest",
+        "theirsRef": "cgr.dev/chainguard/node:latest",
+        "oursVersion": "26.12.1",
+        "theirsVersion": "26.12.1",
+        "versionMatch": "exact"
+      },
       {
         "image": "haproxy",
         "ours": 0,
@@ -29,23 +45,8 @@
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-haproxy:latest",
         "theirsRef": "cgr.dev/chainguard/haproxy:latest",
-        "oursVersion": "3.4.0",
+        "oursVersion": "3.4.7",
         "theirsVersion": "3.4.7",
-        "versionMatch": "minor"
-      },
-      {
-        "image": "helm",
-        "ours": 1,
-        "theirs": 2,
-        "delta": -1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-helm:latest",
-        "theirsRef": "cgr.dev/chainguard/helm:latest",
-        "oursVersion": "4.3.0",
-        "theirsVersion": "4.3.0",
         "versionMatch": "exact"
       },
       {
@@ -59,8 +60,8 @@
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-redis-slim:latest",
         "theirsRef": "cgr.dev/chainguard/redis:latest",
-        "oursVersion": "8.10.2",
-        "theirsVersion": "8.10.2",
+        "oursVersion": "8.10.3",
+        "theirsVersion": "8.10.3",
         "versionMatch": "exact"
       },
       {
@@ -89,8 +90,8 @@
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-dotnet:latest",
         "theirsRef": "cgr.dev/chainguard/dotnet-runtime:latest",
-        "oursVersion": "10.0.113",
-        "theirsVersion": "10.0.113",
+        "oursVersion": "10.0.114",
+        "theirsVersion": "10.0.114",
         "versionMatch": "exact"
       },
       {
@@ -104,8 +105,8 @@
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-go:latest",
         "theirsRef": "cgr.dev/chainguard/go:latest",
-        "oursVersion": "1.27.2",
-        "theirsVersion": "1.27.2",
+        "oursVersion": "1.27.3",
+        "theirsVersion": "1.27.3",
         "versionMatch": "exact"
       },
       {
@@ -119,8 +120,23 @@
         "theirsHigh": 3,
         "oursRef": "ghcr.io/rtvkiz/minimal-grype:latest",
         "theirsRef": "cgr.dev/chainguard/grype:latest",
-        "oursVersion": "0.120.1",
-        "theirsVersion": "0.120.1",
+        "oursVersion": "0.121.0",
+        "theirsVersion": "0.121.0",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "helm",
+        "ours": 1,
+        "theirs": 1,
+        "delta": 0,
+        "oursCritical": 0,
+        "oursHigh": 0,
+        "theirsCritical": 0,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-helm:latest",
+        "theirsRef": "cgr.dev/chainguard/helm:latest",
+        "oursVersion": "4.3.1",
+        "theirsVersion": "4.3.1",
         "versionMatch": "exact"
       },
       {
@@ -134,8 +150,8 @@
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-kubectl:latest",
         "theirsRef": "cgr.dev/chainguard/kubectl:latest",
-        "oursVersion": "1.37.1",
-        "theirsVersion": "1.37.1",
+        "oursVersion": "1.37.2",
+        "theirsVersion": "1.37.2",
         "versionMatch": "exact"
       },
       {
@@ -149,23 +165,8 @@
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-nginx:latest",
         "theirsRef": "cgr.dev/chainguard/nginx:latest",
-        "oursVersion": "1.31.6",
-        "theirsVersion": "1.31.6",
-        "versionMatch": "exact"
-      },
-      {
-        "image": "node-slim",
-        "ours": 0,
-        "theirs": 0,
-        "delta": 0,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-node-slim:latest",
-        "theirsRef": "cgr.dev/chainguard/node:latest",
-        "oursVersion": "26.12.0",
-        "theirsVersion": "26.12.0",
+        "oursVersion": "1.31.8",
+        "theirsVersion": "1.31.8",
         "versionMatch": "exact"
       },
       {
@@ -179,8 +180,8 @@
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-php:latest",
         "theirsRef": "cgr.dev/chainguard/php:latest",
-        "oursVersion": "8.5.11",
-        "theirsVersion": "8.5.11",
+        "oursVersion": "8.5.12",
+        "theirsVersion": "8.5.12",
         "versionMatch": "exact"
       },
       {
@@ -200,6 +201,21 @@
       },
       {
         "image": "python",
+        "ours": 3,
+        "theirs": 3,
+        "delta": 0,
+        "oursCritical": 1,
+        "oursHigh": 0,
+        "theirsCritical": 1,
+        "theirsHigh": 0,
+        "oursRef": "ghcr.io/rtvkiz/minimal-python:latest",
+        "theirsRef": "cgr.dev/chainguard/python:latest",
+        "oursVersion": "3.15.1_git20261024",
+        "theirsVersion": "3.15.1_git20261024",
+        "versionMatch": "exact"
+      },
+      {
+        "image": "ruby",
         "ours": 0,
         "theirs": 0,
         "delta": 0,
@@ -207,10 +223,10 @@
         "oursHigh": 0,
         "theirsCritical": 0,
         "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-python:latest",
-        "theirsRef": "cgr.dev/chainguard/python:latest",
-        "oursVersion": "3.15.0_git20261010",
-        "theirsVersion": "3.15.0_git20261010",
+        "oursRef": "ghcr.io/rtvkiz/minimal-ruby:latest",
+        "theirsRef": "cgr.dev/chainguard/ruby:latest",
+        "oursVersion": "4.0.9",
+        "theirsVersion": "4.0.9",
         "versionMatch": "exact"
       },
       {
@@ -224,23 +240,8 @@
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-valkey:latest",
         "theirsRef": "cgr.dev/chainguard/valkey:latest",
-        "oursVersion": "9.1.2",
-        "theirsVersion": "9.1.2",
-        "versionMatch": "exact"
-      },
-      {
-        "image": "ruby",
-        "ours": 1,
-        "theirs": 0,
-        "delta": 1,
-        "oursCritical": 0,
-        "oursHigh": 0,
-        "theirsCritical": 0,
-        "theirsHigh": 0,
-        "oursRef": "ghcr.io/rtvkiz/minimal-ruby:latest",
-        "theirsRef": "cgr.dev/chainguard/ruby:latest",
-        "oursVersion": "4.0.7",
-        "theirsVersion": "4.0.7",
+        "oursVersion": "9.1.3",
+        "theirsVersion": "9.1.3",
         "versionMatch": "exact"
       },
       {
@@ -254,21 +255,21 @@
         "theirsHigh": 0,
         "oursRef": "ghcr.io/rtvkiz/minimal-cosign:latest",
         "theirsRef": "cgr.dev/chainguard/cosign:latest",
-        "oursVersion": "3.1.3",
-        "theirsVersion": "3.1.3",
+        "oursVersion": "3.1.4",
+        "theirsVersion": "3.1.4",
         "versionMatch": "exact"
       }
     ],
     "available": 20,
     "compared": 16,
     "lower": 3,
-    "tie": 11,
-    "higher": 2,
-    "oursTotal": 12,
-    "theirsTotal": 12,
+    "tie": 12,
+    "higher": 1,
+    "oursTotal": 14,
+    "theirsTotal": 16,
     "excludedMismatch": 2,
     "excludedUnknown": 2,
-    "rivalUnavailable": 115
+    "rivalUnavailable": 130
   },
   "distroless": {
     "rival": "distroless",
@@ -282,6 +283,6 @@
     "theirsTotal": 0,
     "excludedMismatch": 1,
     "excludedUnknown": 2,
-    "rivalUnavailable": 132
+    "rivalUnavailable": 147
   }
 }
