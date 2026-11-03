@@ -16,20 +16,6 @@
     "2026-11-01"
   ],
   "csvRows": 600,
-  "minimus": {
-    "rival": "minimus",
-    "pairs": [],
-    "available": 0,
-    "compared": 0,
-    "lower": 0,
-    "tie": 0,
-    "higher": 0,
-    "oursTotal": 0,
-    "theirsTotal": 0,
-    "excludedMismatch": 0,
-    "excludedUnknown": 0,
-    "rivalUnavailable": 150
-  },
   "chainguard": {
     "rival": "chainguard",
     "pairs": [
