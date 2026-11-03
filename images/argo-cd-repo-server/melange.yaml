@@ -21,7 +21,7 @@ package:
   # `argo-cd-repo-server-minimal` — see docs/onboarding.md "Package naming
   # and scanner visibility".
   name: argo-cd-repo-server
-  version: 3.5.6
+  version: 3.5.7
   epoch: 0
   description: "Minimal Argo CD repo-server (argocd binary, no web UI) built from source"
   copyright:
@@ -34,7 +34,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: 6a0af11b2bce7f72719b8669617d5ef1f2ae9389f95f7c13bb8720d336a9f513
+  sha256: 203e0e2a1f377acf6cf3a3bd5a906adf1312685438186df50b62db61ef145e0a
 
 environment:
   contents:
