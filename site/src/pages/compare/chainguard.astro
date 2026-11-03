@@ -16,7 +16,7 @@ const datasetSchema = {
   '@context': 'https://schema.org',
   '@type': 'Dataset',
   name: `Container image vulnerability comparison, ${data.scanDate}`,
-  description: `Grype scan results for Minimal, Minimus and publicly pullable Chainguard container images, scanned with ${data.scanner} against a single frozen vulnerability database on ${data.scanDate}.`,
+  description: `Grype scan results for Minimal, publicly pullable Chainguard and Google distroless container images, scanned with ${data.scanner} against a single frozen vulnerability database on ${data.scanDate}.`,
   url: new URL('/compare', Astro.site).href,
   license: 'https://spdx.org/licenses/MIT.html',
   isAccessibleForFree: true,
