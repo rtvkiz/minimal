@@ -7,7 +7,7 @@ package:
   # and nothing in the Wolfi secdb, and grype would report zero CVEs for the
   # image. See docs/onboarding.md "Package naming and scanner visibility".
   name: temporal-ui-server
-  version: 2.57.0
+  version: 2.58.0
   epoch: 0
   description: "Temporal Web UI server built from source"
   copyright:
@@ -20,7 +20,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: 77bdfaa18384a061edf28b4929bdb0686e497ca0838edc2a4b27caeed342b073
+  sha256: 8dce440aa9443a9c8e334c4385366fa9999a43e14284823a4c04d464ffe40c20
 
 environment:
   contents:
