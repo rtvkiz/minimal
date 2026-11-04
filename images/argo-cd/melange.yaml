@@ -49,7 +49,9 @@ environment:
       - go-1.27
       - git
       # Build-time only, nothing from these reaches the image. ui/.nvmrc pins
-      # Node 24; pnpm switches itself to the exact packageManager version in
+      # Node 24, but the build passes on 26 (toolchain bump #1050) and the
+      # toolchain-pin bot keeps it current. pnpm switches itself to the exact
+      # packageManager version in
       # ui/package.json (pnpm 10 manage-package-manager-versions default).
       - nodejs-26
       - pnpm

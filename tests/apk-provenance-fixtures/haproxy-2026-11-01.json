@@ -1,0 +1,36 @@
+{
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "CVE-2026-55204",
+        "severity": "High",
+        "namespace": "nvd:cpe",
+        "fix": {
+          "versions": [],
+          "state": "unknown"
+        }
+      },
+      "artifact": {
+        "name": "haproxy",
+        "version": "3.4.0-r0",
+        "type": "apk"
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-2026-55203",
+        "severity": "Critical",
+        "namespace": "nvd:cpe",
+        "fix": {
+          "versions": [],
+          "state": "unknown"
+        }
+      },
+      "artifact": {
+        "name": "haproxy",
+        "version": "3.4.0-r0",
+        "type": "apk"
+      }
+    }
+  ]
+}
