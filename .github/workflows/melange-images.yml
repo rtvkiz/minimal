@@ -1,0 +1,857 @@
+name: Build melange images (shard)
+
+# The melange half of build.yml, called once per shard.
+#
+# WHY THIS FILE EXISTS. GitHub refuses to create a matrix job that would expand
+# to more than 256 jobs, and does so silently: no jobs, no annotation, only the
+# summary check failing with "build-melange did not succeed". Both melange jobs
+# are one-entry-per-image-per-arch/variant, so the full rebuild crossed 256 when
+# the catalog reached 130 source-built images (#1013, 2026-10-28) and every
+# nightly run from then on built nothing. build.yml now splits the source-built
+# images into shards and calls this workflow once per shard; each image stays in
+# one shard for both jobs, so build-melange still waits on its own packages.
+# detect-changes fails loudly if any shard's matrix is ever over 256 again.
+#
+# Behaviour is otherwise unchanged: the two jobs below are build.yml's
+# melange-build and build-melange verbatim, with their matrices and run flags
+# taken from inputs instead of needs.detect-changes. `github.*` here is the
+# caller's context (event_name, sha, ...), and artifacts are run-scoped, so
+# uploads and downloads work exactly as they did inside build.yml.
+
+on:
+  workflow_call:
+    inputs:
+      melange-matrix:
+        type: string
+        required: true
+      build-melange-matrix:
+        type: string
+        required: true
+      has-melange:
+        type: string
+        required: true
+      has-build-melange:
+        type: string
+        required: true
+    secrets:
+      MELANGE_SIGNING_KEY:
+        required: false
+      MELANGE_SIGNING_KEY_PUB:
+        required: false
+
+permissions: {}
+
+# Workflow-level env is NOT inherited by a called workflow; this is build.yml's.
+env:
+  REGISTRY: ghcr.io
+  GRYPE_VERSION: v0.109.1
+  # Force cosign 2.6+ to write .sig/.att tags instead of OCI 1.1 referrers.
+  # ghcr.io accepts referrers but cosign stores them with empty artifactType
+  # and no annotations, so `cosign verify` and `cosign verify-attestation`
+  # silently find nothing. Legacy tag mode is interoperable across all
+  # registries and verifier versions.
+  COSIGN_REGISTRY_REFERRERS_MODE: legacy
+
+jobs:
+  melange-build:
+    if: inputs.has-melange == 'true'
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.melange-matrix) }}
+      max-parallel: 20
+
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Cache melange binary
+        id: melange-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/go/bin/melange
+          key: melange-0.41.1-${{ runner.arch }}
+
+      - name: Install melange
+        if: steps.melange-cache.outputs.cache-hit != 'true'
+        run: go install chainguard.dev/melange@v0.41.1
+
+      - name: Add Go bin to PATH
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      # For PRs: download ephemeral key from keygen job
+      - name: Download ephemeral signing key (PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: melange-ephemeral-key
+          path: .
+
+      # For push/schedule: use repository secret
+      - name: Setup signing key (protected branch)
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.MELANGE_SIGNING_KEY }}" > melange.rsa
+          echo "${{ secrets.MELANGE_SIGNING_KEY_PUB }}" > melange.rsa.pub
+          chmod 600 melange.rsa
+
+      - name: Pin latest Go from Wolfi
+        run: |
+          # Skip for non-Go images (kafka, jenkins, qdrant, etc.)
+          if ! grep -q '^\s*- go$' "${{ matrix.melange_config }}"; then
+            echo "No bare 'go' package in config — skipping"
+            exit 0
+          fi
+          # Resolve the latest go-1.XX package from Wolfi's APKINDEX
+          # This ensures builds always use the latest patched Go, preventing
+          # stale stdlib CVEs from Go's toolchain auto-download fetching .0 releases
+          ARCH=${{ matrix.arch }}
+          # --retry alone backs off from ~1s, so 5 attempts collapse into a ~30s
+          # burst — a blip any longer than that takes the job down (flux x86_64,
+          # main 2026-08-12, curl 22, while the same fetch succeeded on aarch64
+          # in that very run). --retry-delay spreads the attempts over ~2min
+          # instead; --max-time bounds a hung connection. -S so the HTTP status
+          # reaches the log: -s alone swallowed it and left only the exit code.
+          curl -sSfL --connect-timeout 10 --max-time 120 \
+            --retry 5 --retry-delay 15 --retry-all-errors \
+            "https://packages.wolfi.dev/os/${ARCH}/APKINDEX.tar.gz" -o /tmp/apkindex.tar.gz
+          tar xzf /tmp/apkindex.tar.gz -C /tmp APKINDEX
+          LATEST_GO=$(grep '^P:go-1\.' /tmp/APKINDEX \
+            | grep -vE '(doc|asm|covdata|cover|nm|objdump|test2json)' \
+            | sed 's/^P://' | sort -t. -k2 -n | tail -1)
+          rm -f /tmp/apkindex.tar.gz /tmp/APKINDEX
+          # An empty result would make the sed below rewrite `- go` to a bare
+          # `- `, producing invalid YAML that fails much later with an opaque
+          # melange error. The pipeline above cannot report this itself: it ends
+          # in `tail`, which exits 0 on empty input, so set -e never trips.
+          if [ -z "$LATEST_GO" ]; then
+            echo "::error::no go-1.* package found in Wolfi's ${ARCH} APKINDEX"
+            exit 1
+          fi
+          echo "Latest Go in Wolfi: $LATEST_GO"
+          sed -i "s/- go$/- ${LATEST_GO}/" "${{ matrix.melange_config }}"
+          echo "Go package in config:"
+          grep -E '^\s*- go' "${{ matrix.melange_config }}" || true
+
+      - name: Build package with melange
+        run: |
+          chmod 600 melange.rsa
+          melange build ${{ matrix.melange_config }} \
+            --arch ${{ matrix.arch }} \
+            --signing-key melange.rsa \
+            --out-dir ./packages \
+            --runner docker
+
+      - name: Upload packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: packages-${{ matrix.name }}-${{ matrix.arch }}
+          path: |
+            packages/
+            melange.rsa.pub
+          retention-days: 1
+
+  build-melange:
+    needs: [melange-build]
+    # Run even if some melange-build entries failed — individual images whose
+    # packages failed will error at artifact download, not cascade to others
+    if: always() && inputs.has-build-melange == 'true' && needs.melange-build.result != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
+      attestations: write
+
+    strategy:
+      max-parallel: 20
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.build-melange-matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Cache apko binary
+        id: apko-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/go/bin/apko
+          key: apko-1.1.6-${{ runner.arch }}
+
+      - name: Install apko
+        if: steps.apko-cache.outputs.cache-hit != 'true'
+        run: go install chainguard.dev/apko@v1.1.6
+
+      - name: Add Go bin to PATH
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      # cosign-installer curls the release binary from github.com with no
+      # --retry, so a single "Recv failure: Connection reset by peer" (curl 35)
+      # kills the job before any build work happens (rails, main 2026-08-11).
+      # It is a `uses:` step, so nick-fields/retry cannot wrap it — the retry
+      # has to be a repeat of the step itself.
+      - name: Setup cosign
+        id: setup-cosign
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+
+      - name: Setup cosign (retry)
+        if: github.event_name != 'pull_request' && steps.setup-cosign.outcome == 'failure'
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          timeout_minutes: 2
+          max_attempts: 3
+          command: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+      # RETRIED. actions/download-artifact classifies a 403 from the artifact
+      # service as "non-retryable" and gives up instantly, so a momentary
+      # ListArtifacts 403 failed the whole job while the packages it wanted were
+      # sitting there intact — that is how the 2026-09-21 22:00 scheduled
+      # rebuild lost stern(dev) and thanos(prod), which blocks the 6-hourly
+      # cycle for every image. The action's own retry logic cannot be reached
+      # here, so retry the step, following the cosign/provenance convention used
+      # elsewhere in this file. The last attempt is NOT continue-on-error, so a
+      # genuinely missing artifact still fails loudly.
+      - name: Download x86_64 packages
+        id: dl_x86
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: packages-${{ matrix.name }}-x86_64
+          path: ./packages-x86_64
+
+      - name: Back off before x86_64 download retry
+        if: steps.dl_x86.outcome == 'failure'
+        run: sleep 20
+
+      - name: Download x86_64 packages (retry)
+        if: steps.dl_x86.outcome == 'failure'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: packages-${{ matrix.name }}-x86_64
+          path: ./packages-x86_64
+
+      - name: Download aarch64 packages
+        id: dl_arm
+        if: contains(matrix.arches, 'aarch64')
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: packages-${{ matrix.name }}-aarch64
+          path: ./packages-aarch64
+
+      - name: Back off before aarch64 download retry
+        if: contains(matrix.arches, 'aarch64') && steps.dl_arm.outcome == 'failure'
+        run: sleep 20
+
+      - name: Download aarch64 packages (retry)
+        if: contains(matrix.arches, 'aarch64') && steps.dl_arm.outcome == 'failure'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: packages-${{ matrix.name }}-aarch64
+          path: ./packages-aarch64
+
+      - name: Merge packages
+        run: |
+          mkdir -p ./packages
+          # Copy x86_64 packages
+          cp -r ./packages-x86_64/packages/* ./packages/ 2>/dev/null || true
+          # Copy aarch64 packages (merge into same structure)
+          cp -r ./packages-aarch64/packages/* ./packages/ 2>/dev/null || true
+          # Use signing key from either (they're the same content, different builds)
+          cp ./packages-x86_64/melange.rsa.pub ./melange.rsa.pub
+
+          echo "Merged package structure:"
+          find ./packages -type f -name "*.apk" | head -20
+
+      # For push/schedule: overwrite with repository public key (for publishing)
+      - name: Setup signing key (protected branch)
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.MELANGE_SIGNING_KEY_PUB }}" > melange.rsa.pub
+
+      # packages.wolfi.dev intermittently answers APKINDEX.tar.gz with 403 under
+      # load, and apko has no internal retry for index fetches — a single 403
+      # failed opa-dev outright on the scheduled main build (2026-08-06). Every
+      # other network-touching step here is already wrapped; this one was the
+      # gap.
+      - name: Build image with apko
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          timeout_minutes: 20
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: |
+            apko build ${{ matrix.apko_config }} \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }} \
+              ${{ matrix.name }}${{ matrix.tag_suffix }}.tar \
+              --arch x86_64 \
+              --repository-append ./packages \
+              --keyring-append ./melange.rsa.pub
+            docker load < ${{ matrix.name }}${{ matrix.tag_suffix }}.tar
+            LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "minimal-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" | head -1)
+            docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}
+
+      - name: Report image size
+        run: |
+          echo "## ${{ matrix.name }}${{ matrix.tag_suffix }} Image Size" >> $GITHUB_STEP_SUMMARY
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
+            grep "minimal-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" >> $GITHUB_STEP_SUMMARY || true
+
+      # CVE scan: prod variants only. Dev variants intentionally ship a larger
+      # surface (shell, compilers, etc.) and are not tracked on the dashboard.
+      - name: Cache Grype binary
+        if: matrix.scan_for_cves
+        id: grype-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: /usr/local/bin/grype
+          key: grype-${{ env.GRYPE_VERSION }}-linux-amd64
+
+      - name: Install Grype
+        if: matrix.scan_for_cves && steps.grype-cache.outputs.cache-hit != 'true'
+        run: |
+          # Same retry-burst problem as the Wolfi APKINDEX fetch above: spread
+          # the attempts out and bound a hung connection.
+          curl -fL --connect-timeout 10 --max-time 300 \
+            --retry 5 --retry-delay 15 --retry-all-errors -o /tmp/grype.tar.gz \
+            "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
+          tar -tzf /tmp/grype.tar.gz > /dev/null
+          tar -xzf /tmp/grype.tar.gz -C /usr/local/bin grype
+          rm -f /tmp/grype.tar.gz
+
+      - name: Verify Grype
+        if: matrix.scan_for_cves
+        run: grype version
+
+      # Grype downloads its vulnerability DB on each scan. A connection reset
+      # or 502 from the DB CDN used to fail the entire scheduled rebuild
+      # (nginx scan, 2026-06-17: "connection reset by peer ... failed to load
+      # vulnerability db"; cosign had the same class of flake the day prior).
+      # Isolate the network fetch into a retried, best-effort `db update`
+      # backed by a date-keyed cache, then scan offline (auto-update off):
+      # a transient blip now retries, and a brief outage still scans from the
+      # cached DB, instead of taking down the run for every image.
+      - name: Grype DB cache key
+        if: matrix.scan_for_cves
+        id: grype-db-date
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Grype DB
+        if: matrix.scan_for_cves
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.cache/grype/db
+          key: grype-db-${{ env.GRYPE_VERSION }}-${{ steps.grype-db-date.outputs.date }}
+          restore-keys: |
+            grype-db-${{ env.GRYPE_VERSION }}-
+
+      - name: Update Grype DB (retried, best-effort)
+        if: matrix.scan_for_cves
+        continue-on-error: true
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 20
+          command: grype db update
+
+      - name: Scan image for vulnerabilities
+        if: matrix.scan_for_cves
+        env:
+          GRYPE_DB_AUTO_UPDATE: "false"
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
+          grype "$IMAGE" \
+            -o json=grype-${{ matrix.name }}.json \
+            -o sarif=grype-${{ matrix.name }}.sarif
+
+      - name: Emit image metadata sidecar
+        if: matrix.scan_for_cves
+        run: |
+          # Sidecar JSON consumed by tools/dashboard/build.sh — drives the
+          # Size, Built-ago, raw vs VEX-effective CVE columns, and digest
+          # on the published CVE dashboard.
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
+          SIZE_BYTES=$(docker image inspect "$IMAGE" --format '{{.Size}}' 2>/dev/null || echo 0)
+          DIGEST=$(docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}' 2>/dev/null | sed 's|.*@||')
+          BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          GRYPE_REPORT="grype-${{ matrix.name }}.json"
+          VEX_FILE="vex/${{ matrix.name }}.openvex.json"
+          [ -f "$VEX_FILE" ] || VEX_FILE=""
+
+          # Suppressed CVE IDs: statements where status is not_affected | fixed.
+          SUPPRESSED_JSON='[]'
+          STMT_COUNT=0
+          if [ -n "$VEX_FILE" ]; then
+            STMT_COUNT=$(jq '.statements | length' "$VEX_FILE")
+            SUPPRESSED_JSON=$(jq '[.statements[]
+              | select(.status == "not_affected" or .status == "fixed")
+              | .vulnerability.name] | unique' "$VEX_FILE")
+          fi
+
+          # Reconcile VEX against this fresh scan so suppressions can't silently
+          # rot into false information. drift.stale = a suppressed CVE that's no
+          # longer present; drift.now_fixable = a suppressed CVE that now has a
+          # newer upstream fix (should be patched, not hidden). Surfaced in the
+          # sidecar -> dashboard and warned in the job summary; non-blocking.
+          VEX_DRIFT='{"stale":[],"now_fixable":[]}'
+          if [ -n "$VEX_FILE" ] && [ -f "$GRYPE_REPORT" ]; then
+            VEX_DRIFT=$(bash tools/vex/reconcile.sh --json "$GRYPE_REPORT" "$VEX_FILE" || true)
+            [ -z "$VEX_DRIFT" ] && VEX_DRIFT='{"stale":[],"now_fixable":[]}'
+            NSTALE=$(jq '.stale | length' <<<"$VEX_DRIFT")
+            NFIX=$(jq '.now_fixable | length' <<<"$VEX_DRIFT")
+            if [ "$NSTALE" -gt 0 ] || [ "$NFIX" -gt 0 ]; then
+              echo "::warning title=VEX drift::${{ matrix.name }}: $NSTALE stale, $NFIX now-fixable VEX suppression(s) — see vex/${{ matrix.name }}.openvex.json"
+            fi
+          fi
+
+          # Severity counts — raw straight from grype, effective drops any
+          # match whose .vulnerability.id is in the suppressed set.
+          #
+          # `total` is the COUNT OF MATCHES, not the sum of the named buckets.
+          # Grype emits a severity outside critical/high/medium/low for some
+          # feeds — every Go advisory (GO-YYYY-NNNN) arrives as "Unknown"
+          # because the Go vuln DB assigns no CVSS score. Summing four buckets
+          # silently dropped those: helm reported 0 while carrying
+          # GO-2026-5932 in golang.org/x/crypto. Counting matches directly
+          # means a severity we do not enumerate can never vanish again.
+          counts() {
+            local report="$1" suppressed="$2"
+            jq --argjson sup "$suppressed" '
+              [ .matches[] | select((.vulnerability.id | IN($sup[])) | not) ] as $m
+              | def sev_count(level):
+                  [ $m[] | select(.vulnerability.severity | ascii_upcase == level) ] | length;
+                {
+                  critical:   sev_count("CRITICAL"),
+                  high:       sev_count("HIGH"),
+                  medium:     sev_count("MEDIUM"),
+                  low:        sev_count("LOW"),
+                  negligible: sev_count("NEGLIGIBLE"),
+                  unknown:    sev_count("UNKNOWN")
+                }
+                | . + {total: ($m | length)}
+            ' "$report"
+          }
+
+          if [ -f "$GRYPE_REPORT" ]; then
+            RAW_COUNTS=$(counts "$GRYPE_REPORT" '[]')
+            EFF_COUNTS=$(counts "$GRYPE_REPORT" "$SUPPRESSED_JSON")
+          else
+            RAW_COUNTS='{"critical":0,"high":0,"medium":0,"low":0,"negligible":0,"unknown":0,"total":0}'
+            EFF_COUNTS="$RAW_COUNTS"
+          fi
+
+          # Provenance split. Our images declare Wolfi provenance, so grype
+          # matches OUR OWN package names against Wolfi/Chainguard's advisory
+          # feed and compares our -r0 against their -rN rebuild counter. Those
+          # counters belong to different distros and are not comparable; on
+          # 2026-08-24 that produced 341 findings not present in any image.
+          # The script separates them on evidence and never hides a finding
+          # whose fix needs a newer upstream version. See the script header.
+          PROVENANCE='{}'
+          if [ -f "$GRYPE_REPORT" ]; then
+            # Never fail the build over a reporting step. If reconciliation
+            # breaks we fall back to an empty provenance block, which makes
+            # every consumer report the RAW counts — over-reporting, not
+            # under-reporting. Loud warning, safe direction.
+            if ! PROVENANCE=$(bash .github/scripts/reconcile-apk-provenance.sh "$GRYPE_REPORT" . ); then
+              echo "::warning title=Provenance::${{ matrix.name }}: reconciliation failed; falling back to raw counts"
+              PROVENANCE='{}'
+            fi
+
+            # needs_review = our own package, no corroboration in the contents,
+            # but the fix requires a newer UPSTREAM version. Either we are
+            # genuinely stale or the distro has forked the project. Never
+            # auto-excluded, so surface it where someone will see it.
+            NREVIEW=$(jq '.needs_review | length' <<<"$PROVENANCE")
+            if [ "${NREVIEW:-0}" -gt 0 ]; then
+              echo "::warning title=Provenance review::${{ matrix.name }}: $NREVIEW advisory(ies) claim a fix in a newer upstream version — we may be stale, or upstream may have been forked"
+            fi
+          fi
+
+          jq -n \
+            --arg name "${{ matrix.name }}" \
+            --argjson size "${SIZE_BYTES:-0}" \
+            --arg built_at "$BUILT_AT" \
+            --arg digest "$DIGEST" \
+            --arg image_ref "$IMAGE" \
+            --argjson raw "$RAW_COUNTS" \
+            --argjson effective "$EFF_COUNTS" \
+            --argjson suppressed "$SUPPRESSED_JSON" \
+            --argjson statements "$STMT_COUNT" \
+            --argjson drift "$VEX_DRIFT" \
+            --argjson provenance "$PROVENANCE" \
+            '{
+              name: $name,
+              size_bytes: $size,
+              built_at: $built_at,
+              digest: $digest,
+              image_ref: $image_ref,
+              raw: $raw,
+              effective: $effective,
+              vex: { statements: $statements, suppressed: $suppressed, drift: $drift },
+              provenance: $provenance
+            }' \
+            > meta-${{ matrix.name }}.json
+          cat meta-${{ matrix.name }}.json
+
+      - name: Generate vulnerability report
+        if: always() && matrix.scan_for_cves
+        run: |
+          REPORT="grype-${{ matrix.name }}.json"
+          if [ ! -f "$REPORT" ]; then
+            echo "## Security Scan: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
+            echo "Scan report not found." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          # Count vulnerabilities by severity (grype uses Title Case severity).
+          # TOTAL is the match count, not the sum of the named buckets — Go
+          # advisories (GO-YYYY-NNNN) carry no CVSS score and arrive as
+          # "Unknown", so summing four buckets under-reports them to zero.
+          CRITICAL=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "CRITICAL")] | length' "$REPORT")
+          HIGH=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "HIGH")] | length' "$REPORT")
+          MEDIUM=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "MEDIUM")] | length' "$REPORT")
+          LOW=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "LOW")] | length' "$REPORT")
+          NEGLIGIBLE=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "NEGLIGIBLE")] | length' "$REPORT")
+          UNKNOWN=$(jq '[.matches[] | select(.vulnerability.severity | ascii_upcase == "UNKNOWN")] | length' "$REPORT")
+          TOTAL=$(jq '.matches | length' "$REPORT")
+
+          # Header
+          echo "## Security Scan: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan date:** $(date -u +%Y-%m-%d) | **Image:** minimal-${{ matrix.name }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Summary table
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| CRITICAL | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| HIGH | $HIGH |" >> $GITHUB_STEP_SUMMARY
+          echo "| MEDIUM | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+          echo "| LOW | $LOW |" >> $GITHUB_STEP_SUMMARY
+          echo "| NEGLIGIBLE | $NEGLIGIBLE |" >> $GITHUB_STEP_SUMMARY
+          echo "| UNKNOWN | $UNKNOWN |" >> $GITHUB_STEP_SUMMARY
+          echo "| **TOTAL** | **$TOTAL** |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "No vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          # Detailed table for CRITICAL and HIGH
+          if [ "$((CRITICAL + HIGH))" -gt 0 ]; then
+            echo "### CRITICAL / HIGH Vulnerabilities" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Library | CVE | Severity | Installed | Fixed | Title |" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|-----|----------|-----------|-------|-------|" >> $GITHUB_STEP_SUMMARY
+            jq -r '
+              [.matches[] | select(.vulnerability.severity | ascii_upcase | (. == "CRITICAL" or . == "HIGH"))]
+              | sort_by(if .vulnerability.severity | ascii_upcase == "CRITICAL" then 0 else 1 end)
+              | .[]
+              | "| \(.artifact.name) | \(.vulnerability.id) | \(.vulnerability.severity | ascii_upcase) | \(.artifact.version) | \(.vulnerability.fix.versions[0] // "n/a") | \(.vulnerability.description // "n/a" | .[0:80]) |"
+            ' "$REPORT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No CRITICAL or HIGH vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Unscored advisories. These carry no CVSS severity (the Go vuln DB
+          # assigns none), so they never appear in the CRITICAL/HIGH table
+          # above. List them explicitly or they are reported as a bare count
+          # with no way to tell what they are.
+          if [ "$UNKNOWN" -gt 0 ]; then
+            echo "### Unscored advisories (no CVSS severity)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Library | Advisory | Installed | Fixed |" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|----------|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+            jq -r '
+              [.matches[] | select(.vulnerability.severity | ascii_upcase == "UNKNOWN")]
+              | sort_by(.artifact.name, .vulnerability.id)
+              | .[]
+              | "| \(.artifact.name) | \(.vulnerability.id) | \(.artifact.version) | \((.vulnerability.fix.versions // [])[0] // "none") |"
+            ' "$REPORT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload vulnerability report
+        if: always() && matrix.scan_for_cves
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vulnerability-report-${{ matrix.name }}
+          path: |
+            grype-${{ matrix.name }}.json
+            meta-${{ matrix.name }}.json
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Upload SARIF to Security tab
+        uses: github/codeql-action/upload-sarif@66b39da20ccc656acc90dd27ea30f5d458ec33ce # v3.28.19
+        if: always() && matrix.scan_for_cves && hashFiles(format('grype-{0}.sarif', matrix.name)) != ''
+        continue-on-error: true
+        with:
+          sarif_file: 'grype-${{ matrix.name }}.sarif'
+          category: 'grype-${{ matrix.name }}'
+
+      - name: Extract version from melange config
+        id: version
+        run: |
+          PKG_VERSION=$(awk '/^  version:/ {print $2}' "${{ matrix.melange_config }}")
+          PKG_EPOCH=$(awk '/^  epoch:/ {print $2}' "${{ matrix.melange_config }}")
+          if [ -z "$PKG_VERSION" ]; then
+            echo "::error::Failed to extract version from ${{ matrix.melange_config }}"
+            exit 1
+          fi
+          echo "tag=${PKG_VERSION}-r${PKG_EPOCH}" >> $GITHUB_OUTPUT
+          echo "Image version: ${PKG_VERSION}-r${PKG_EPOCH}"
+
+      - name: Test image
+        run: |
+          export IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}"
+          bash ./${{ matrix.test_script }}
+
+      - name: Publish image
+        if: github.event_name != 'pull_request'
+        id: publish
+        run: |
+          # Retry apko publish: ghcr.io intermittently returns BLOB_UNKNOWN
+          # when the index manifest references a blob the registry hasn't
+          # finished receiving yet. Three attempts with 15s backoff.
+          PUBLISH_OUT=apko-publish.out
+          # Immutable per-build dated tag (YYYYMMDD) so every rebuild is preserved
+          # as version history — the plain :<version> tag moves on same-version
+          # rebuilds. Daily granularity; retention is bounded by cleanup-packages.yml.
+          DATE_TAG=$(date -u +%Y%m%d)
+          # Rolling major/minor tags — see the matching comment in build-apko.
+          # shellcheck source=.github/scripts/version-ladder.sh
+          . ./.github/scripts/version-ladder.sh
+          IMAGE_REF="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}"
+          VER="${{ steps.version.outputs.tag }}"
+          SUF="${{ matrix.tag_suffix }}"
+
+          TAGS=(
+            "${IMAGE_REF}:${VER}${SUF}"
+            "${IMAGE_REF}:${VER}-${DATE_TAG}${SUF}"
+            "${IMAGE_REF}:${{ matrix.latest_tag }}"
+          )
+          for L in $(derive_version_ladder "$VER"); do
+            TAGS+=("${IMAGE_REF}:${L}${SUF}")
+          done
+          echo "Publishing tags: ${TAGS[*]}"
+
+          for attempt in 1 2 3; do
+            if apko publish ${{ matrix.apko_config }} \
+                "${TAGS[@]}" \
+                --arch ${{ matrix.arches }} \
+                --repository-append ./packages \
+                --keyring-append ./melange.rsa.pub \
+                --sbom-path . \
+                > "$PUBLISH_OUT" 2>&1; then
+              cat "$PUBLISH_OUT"
+              break
+            fi
+            echo "::warning::apko publish attempt $attempt/3 failed"
+            cat "$PUBLISH_OUT"
+            if [ $attempt -eq 3 ]; then
+              echo "::error::apko publish failed after 3 attempts"
+              exit 1
+            fi
+            sleep 15
+          done
+          DIGEST=$(grep -oE 'sha256:[a-f0-9]{64}' "$PUBLISH_OUT" | tail -1)
+          if [ -z "$DIGEST" ]; then
+            echo "::error::Failed to parse image digest from apko publish output"
+            cat "$PUBLISH_OUT"
+            exit 1
+          fi
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+          echo "image=${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}@${DIGEST}" >> $GITHUB_OUTPUT
+
+      - name: Sign image with cosign
+        if: github.event_name != 'pull_request'
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          # Same Sigstore flakiness as the SBOM attest step below.
+          retry_wait_seconds: 60
+          command: |
+            # Rekor 409 createLogEntryConflict == already recorded; see the
+            # matching comment in the build-apko job's sign step.
+            OUT=$(cosign sign --yes "${{ steps.publish.outputs.image }}" 2>&1); RC=$?
+            echo "$OUT"
+            if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q 'createLogEntryConflict'; then
+              echo "note: rekor already holds an equivalent entry — signature is recorded, treating as success"
+              RC=0
+            fi
+            exit "$RC"
+
+      - name: Attach SBOM attestation
+        if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          # Sigstore (fulcio/timestamp/rekor) resets connections under load;
+          # the default 10s gap burned all 3 attempts in ~30s and failed the
+          # whole scheduled build (conftest-dev, 2026-07-29). Back off properly.
+          retry_wait_seconds: 60
+          command: |
+            # Idempotent across attempts — see the matching comment in the
+            # build-apko job's attest step (deno, main 2026-08-06).
+            FAILED=0
+            for SBOM in sbom-x86_64.spdx.json sbom-aarch64.spdx.json sbom-index.spdx.json; do
+              [ -f "$SBOM" ] || continue
+              if [ -f ".attested-${SBOM}" ]; then
+                echo "skipping ${SBOM}: already attested in an earlier attempt"
+                continue
+              fi
+              OUT=$(cosign attest --yes --type spdxjson \
+                --predicate "$SBOM" \
+                "${{ steps.publish.outputs.image }}" 2>&1); RC=$?
+              echo "$OUT"
+              if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q 'createLogEntryConflict'; then
+                # Unlike `cosign sign`, a rekor 409 here does NOT imply the
+                # desired end state: cosign aborts at the tlog step *before*
+                # pushing the attestation to the registry. Blanket-treating it
+                # as success published a green build whose spdxjson attestation
+                # was absent from GHCR, and the verify step then burned all 5
+                # attempts on a condition no retry can fix (postgres-slim, main
+                # 2026-08-11). Probe the registry and only accept the conflict
+                # if the attestation is actually there; otherwise leave RC
+                # non-zero so the retry re-attests.
+                if cosign verify-attestation --type spdxjson \
+                     --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+                     --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+                     "${{ steps.publish.outputs.image }}" > /dev/null 2>&1; then
+                  echo "note: rekor conflict for ${SBOM}, attestation is present in the registry — treating as success"
+                  RC=0
+                else
+                  echo "::warning::rekor conflict for ${SBOM} but no spdxjson attestation in the registry — will retry"
+                fi
+              fi
+              if [ "$RC" -eq 0 ]; then
+                touch ".attested-${SBOM}"
+              else
+                echo "::warning::attestation for ${SBOM} failed (will retry)"
+                FAILED=1
+              fi
+            done
+            exit "$FAILED"
+
+      # This action talks to both GHCR and rekor, and fails intermittently on
+      # each: "OCIError: Error uploading artifact to container registry"
+      # (mariadb, velero) and "InternalError: error fetching tlog entry"
+      # (osv-scanner, kubeconform) — all on main, 2026-08-10. Every other
+      # sigstore step here is already wrapped in nick-fields/retry; this one
+      # was the last bare `uses:` and was the single largest source of red
+      # scheduled builds. Same repeat-the-step pattern as Setup cosign, with a
+      # backoff in between since the failures are load-related.
+      - name: Generate SLSA build provenance
+        id: slsa-provenance
+        if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
+        continue-on-error: true
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
+      - name: Back off before provenance retry
+        if: github.event_name != 'pull_request' && steps.slsa-provenance.outcome == 'failure'
+        run: |
+          # Jittered, not fixed. A large run fires 80+ attestations at once and
+          # trips the installation rate limit; a constant 60s meant every job
+          # then retried in the same instant against the same limit, so the
+          # retry was guaranteed to fail with it. This is the same burst bug as
+          # the curl --retry fix above. Spread over 1-6min instead.
+          sleep $(( (RANDOM % 300) + 60 ))
+
+      - name: Generate SLSA build provenance (retry)
+        id: slsa-retry
+        continue-on-error: true
+        if: github.event_name != 'pull_request' && steps.slsa-provenance.outcome == 'failure'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
+      - name: Back off before final provenance attempt
+        if: github.event_name != 'pull_request' && steps.slsa-retry.outcome == 'failure'
+        run: sleep $(( (RANDOM % 600) + 300 ))
+
+      - name: Generate SLSA build provenance (final)
+        if: github.event_name != 'pull_request' && steps.slsa-retry.outcome == 'failure'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
+      # Same propagation race as build-apko's verify step — see comment there.
+      - name: Verify attestations are discoverable
+        if: github.event_name != 'pull_request' && steps.publish.outputs.digest != ''
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 30
+          command: |
+            set -e
+            IMAGE="${{ steps.publish.outputs.image }}"
+            echo "Verifying cosign signature..."
+            cosign verify \
+              --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+              --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+              "$IMAGE" > /dev/null
+            echo "Verifying SBOM attestation..."
+            cosign verify-attestation --type spdxjson \
+              --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+              --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+              "$IMAGE" > /dev/null
+            echo "Verifying SLSA provenance..."
+            gh attestation verify "oci://$IMAGE" --owner ${{ github.repository_owner }} > /dev/null
+            echo "All attestations verified."
+
+      # See build-apko for rationale — stable per-image SBOM for the catalog site.
+      - name: Save SBOM sidecar for catalog site
+        if: always() && matrix.scan_for_cves && github.event_name != 'pull_request'
+        run: |
+          for S in sbom-x86_64.spdx.json sbom-aarch64.spdx.json sbom-index.spdx.json; do
+            if [ -f "$S" ]; then
+              cp "$S" "sbom-${{ matrix.name }}.spdx.json"
+              echo "Saved catalog SBOM from $S"
+              break
+            fi
+          done
+
+      - name: Upload SBOM sidecar for catalog site
+        if: always() && matrix.scan_for_cves && github.event_name != 'pull_request' && hashFiles(format('sbom-{0}.spdx.json', matrix.name)) != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: catalog-sbom-${{ matrix.name }}
+          path: sbom-${{ matrix.name }}.spdx.json
+          retention-days: 90
+          if-no-files-found: ignore
