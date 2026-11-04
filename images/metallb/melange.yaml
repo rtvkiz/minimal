@@ -8,7 +8,7 @@ package:
   # for the image. See docs/onboarding.md "Package naming and scanner
   # visibility" (haproxy-minimal: 0 findings vs haproxy: 14, same version).
   name: metallb
-  version: 0.16.1
+  version: 0.16.2
   epoch: 0
   description: "MetalLB bare-metal load balancer, controller and speaker."
   copyright:
@@ -23,7 +23,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: ed66950e5306ab8e383ed4d1ca943defb40b43d6f3a4461ee34f7cae3e285757
+  sha256: c61cce2272a8416f6eca558b6375646ccca98a83d8833e21359eaa03ed1676a3
 
 environment:
   contents:
