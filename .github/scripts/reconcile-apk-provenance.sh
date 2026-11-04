@@ -33,9 +33,12 @@
 #                    compiler — exactly what our from-source rebuild picks up.
 #                    Excluded from the headline count, still reported.
 #
-#   needs_review     our own package, no corroboration, but the fix requires a
-#                    genuinely NEWER UPSTREAM VERSION. That normally means we
-#                    are stale and the finding is real. NEVER auto-excluded.
+#   needs_review     our own package, no corroboration, but either the fix
+#                    requires a genuinely NEWER UPSTREAM VERSION, or the match
+#                    did not come from a distro feed at all (e.g. nvd:cpe, which
+#                    is keyed to upstream versions and has no -rN counter to
+#                    misread). Both normally mean we are stale and the finding
+#                    is real. NEVER auto-excluded.
 #                    This is the safety valve that stops this script becoming a
 #                    suppression mechanism.
 #
@@ -73,6 +76,17 @@ jq --argjson ours "$ours" '
         | if   $a.type != "apk"                then "substantiated"
           elif ($a.name | IN($ours[]) | not)   then "substantiated"
           elif ($v.id   | IN($lang[]))         then "substantiated"
+          # The -rN phantom only exists in a DISTRO feed, which keys fixes to
+          # the rebuild counter of that distro. A match from anywhere else (NVD
+          # CPE ranges above all) is keyed to the upstream version, so there is
+          # no counter to misread: our package really is in the affected range.
+          # For a C/C++ package that is the ONLY identity a scanner has, so
+          # excluding it hid real findings - haproxy 3.4.0 counted 0 while it
+          # carried CVE-2026-55203 (critical) + 55204 (high), fixed upstream in
+          # 3.4.x patch releases our auto-update could not see. Count it, and
+          # surface it as needs_review: in practice it means we are stale.
+          elif (($v.namespace // "") | test("^(wolfi|chainguard):distro:") | not)
+                                               then "needs_review"
           elif ($fix == "")                    then "unsubstantiated"
           elif (($a.version | upstream) == ($fix | upstream))
                                                then "unsubstantiated"
