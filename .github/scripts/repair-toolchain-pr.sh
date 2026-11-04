@@ -120,6 +120,10 @@ n_image_jobs=0
 n_classified=0
 while IFS=$'\t' read -r jid name; do
   [ -n "${jid:-}" ] || continue
+  # Since the melange jobs moved into the sharded reusable workflow
+  # (melange-images.yml), the API names them "melange-<n> / melange-build (...)".
+  # Strip that caller prefix so both the old and the new shape classify.
+  name=${name#melange-[0-9]* / }
   case "$name" in
     melange-build*|build-melange*) ;;
     *) continue ;;                     # summary/cleanup jobs carry no image
