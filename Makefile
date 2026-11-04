@@ -209,7 +209,7 @@ test-$(1)-dev:
 	@echo "✓ $(1) dev tests passed"
 endef
 
-.PHONY: all build scan clean help lint-workflows lint-versions check-autoupdate check-toolchain-pins check-curl-retries test-classifier test-versions-config
+.PHONY: all build scan clean help lint-workflows lint-versions check-autoupdate check-toolchain-pins check-curl-retries test-classifier test-versions-config test-apk-provenance
 .PHONY: zookeeper zookeeper-melange test-zookeeper
 .PHONY: tomcat tomcat-melange test-tomcat
 .PHONY: pgbouncer pgbouncer-melange pgbouncer-dev test-pgbouncer test-pgbouncer-dev
@@ -5527,6 +5527,11 @@ check-site-claims-online:
 
 test-classifier:
 	@./tests/test-classify-build-failure.sh
+
+# Regression fixtures for the apk-provenance reconciler that decides which
+# grype findings count toward every published CVE number.
+test-apk-provenance:
+	@./tests/test-reconcile-apk-provenance.sh
 
 #------------------------------------------------------------------------------
 # HELP

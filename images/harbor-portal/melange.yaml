@@ -50,8 +50,9 @@ environment:
       - curl
       - build-base
       - git
-      # Build-time only. The portal is Angular 16, whose supported Node range
-      # predates 24, so build on the 22 LTS line.
+      # Build-time only. Angular 16's documented Node range predates 26, but the
+      # production build passes on it (toolchain bump #1050, both arches); the
+      # version is kept current by the toolchain-pin bot.
       - nodejs-26
       - npm
       # node-gyp needs Python to compile native addons with no prebuilt for
