@@ -50,3 +50,9 @@ jobs:
       # backwards, so its fixtures are regression-tested on every change.
       - name: Test build-failure classifier
         run: make test-classifier
+
+      # The reconciler decides which grype findings count toward every published
+      # CVE number. It has failed both ways (439 phantom findings counted; real
+      # haproxy CVEs excluded), so each direction has a real-scan fixture.
+      - name: Test apk-provenance reconciler
+        run: make test-apk-provenance

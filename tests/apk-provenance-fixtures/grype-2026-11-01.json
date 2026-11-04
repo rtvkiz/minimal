@@ -1,0 +1,120 @@
+{
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "GO-2026-4887",
+        "severity": "High",
+        "namespace": "govulndb:language:go",
+        "fix": {
+          "versions": [],
+          "state": ""
+        }
+      },
+      "artifact": {
+        "name": "github.com/docker/docker",
+        "version": "v28.5.2+incompatible",
+        "type": "go-module"
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-2026-116587",
+        "severity": "High",
+        "namespace": "wolfi:distro:wolfi:rolling",
+        "fix": {
+          "versions": [
+            "0.121.0-r1"
+          ],
+          "state": "fixed"
+        }
+      },
+      "artifact": {
+        "name": "grype",
+        "version": "0.121.0-r0",
+        "type": "apk"
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "GHSA-pxq6-2prw-chj9",
+        "severity": "Medium",
+        "namespace": "github:language:go",
+        "fix": {
+          "versions": [],
+          "state": "not-fixed"
+        }
+      },
+      "artifact": {
+        "name": "github.com/docker/docker",
+        "version": "v28.5.2+incompatible",
+        "type": "go-module"
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "GHSA-x86f-5xw2-fm2r",
+        "severity": "High",
+        "namespace": "github:language:go",
+        "fix": {
+          "versions": [],
+          "state": "not-fixed"
+        }
+      },
+      "artifact": {
+        "name": "github.com/docker/docker",
+        "version": "v28.5.2+incompatible",
+        "type": "go-module"
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "GHSA-rg2x-37c3-w2rh",
+        "severity": "High",
+        "namespace": "github:language:go",
+        "fix": {
+          "versions": [],
+          "state": "not-fixed"
+        }
+      },
+      "artifact": {
+        "name": "github.com/docker/docker",
+        "version": "v28.5.2+incompatible",
+        "type": "go-module"
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "GHSA-vp62-88p7-qqf5",
+        "severity": "Medium",
+        "namespace": "github:language:go",
+        "fix": {
+          "versions": [],
+          "state": "not-fixed"
+        }
+      },
+      "artifact": {
+        "name": "github.com/docker/docker",
+        "version": "v28.5.2+incompatible",
+        "type": "go-module"
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "GHSA-mgcc-cww5-fp2q",
+        "severity": "Unknown",
+        "namespace": "wolfi:distro:wolfi:rolling",
+        "fix": {
+          "versions": [
+            "0.121.0-r1"
+          ],
+          "state": "fixed"
+        }
+      },
+      "artifact": {
+        "name": "grype",
+        "version": "0.121.0-r0",
+        "type": "apk"
+      }
+    }
+  ]
+}
