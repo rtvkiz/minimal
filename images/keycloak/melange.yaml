@@ -136,20 +136,34 @@ pipeline:
         # match, both load-bearing: [0-9] pins the start of the version segment,
         # or netty-codec matches netty-codec-http-*.jar and overwrites the http
         # codec with the plain codec jar (keycloak died with NoClassDefFoundError
-        # FullHttpResponse); the ! -name excludes classifier jars
+        # FullHttpResponse); the grep -v below drops classifier jars
         # (netty-transport-native-epoll-<v>-linux-x86_64.jar), whose content is
         # NOT what $1-$4.jar holds — overwriting them drops the bundled .so.
-        if [ "$6" = "keep-filename" ]; then
-          if [ -n "$_c" ]; then found=$(find "${{targets.destdir}}/opt/keycloak" -name "*$1-[0-9]*$_c.jar")
-          else found=$(find "${{targets.destdir}}/opt/keycloak" -name "*$1-[0-9]*.jar" ! -name "*$1-[0-9]*-*.jar"); fi
-        else
-          found=$(find "${{targets.destdir}}/opt/keycloak" -name "*$1-$3$_c.jar")
+        # The name before the artifact is anchored too: bare, <groupId>. (keycloak)
+        # or <groupId>- (pulsar). A free leading * let postgresql match
+        # io.quarkus.quarkus-jdbc-postgresql-3.40.1.jar; its 3.40.1 read as older
+        # than 42.7.12, so the Quarkus extension was overwritten with the JDBC
+        # driver and every --db=postgres build died (#1064).
+        _g=$(echo "$2" | tr / .)
+        if [ "$6" = "keep-filename" ]; then _v="[0-9]*"; else _v="$3"; fi
+        found=$(find "${{targets.destdir}}/opt/keycloak" -type f \( -name "$1-$_v$_c.jar" -o -name "$_g.$1-$_v$_c.jar" -o -name "$_g-$1-$_v$_c.jar" \))
+        if [ "$6" = "keep-filename" ] && [ -z "$_c" ]; then
+          found=$(printf "%s\n" $found | grep -v -- "$1-[0-9][^/]*-[^/]*[.]jar$" || true)
         fi
         [ -n "$found" ] || { echo "  $1 $3$_c not present (upstream may already ship >=$4)"; return 0; }
         _bj_fetch "$2/$1/$4/$1-$4$_c.jar" /tmp/_bj.jar
         echo "$5  /tmp/_bj.jar" | sha256sum -c -
         _stamp /tmp/_bj.jar "$2" "$1" "$4"
         for f in $found; do
+          # Identity guard, independent of the name match: a jar that declares its
+          # Maven coordinates (META-INF/maven/<group>/<artifact>/pom.properties)
+          # must declare OURS, or it is a different library that merely shares a
+          # name suffix and is left alone. Jars that ship no pom.properties fall
+          # back to the anchored name match above.
+          _ids=$(unzip -l "$f" 2>/dev/null | sed -n "s|.* META-INF/maven/\([^/]*\)/\([^/]*\)/pom[.]properties$|\1:\2|p")
+          if [ -n "$_ids" ] && ! printf "%s\n" $_ids | grep -qxF "$_g:$1"; then
+            echo "  skip $(basename "$f"): declares $(echo $_ids), not $_g:$1"; continue
+          fi
           if [ "$6" = "keep-filename" ]; then
             _have=$(_jarver "$f")
             if _vge "$_have" "$4"; then echo "  $1 already at $_have (>= $4), leaving it"; continue; fi
