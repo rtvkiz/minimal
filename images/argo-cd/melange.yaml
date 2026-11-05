@@ -15,7 +15,7 @@ package:
   # Named exactly what upstream calls it, not `argo-cd-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: argo-cd
-  version: 3.5.6
+  version: 3.6.1
   epoch: 0
   description: "Minimal Argo CD (multi-command binary with embedded web UI) built from source"
   copyright:
@@ -33,7 +33,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: 6a0af11b2bce7f72719b8669617d5ef1f2ae9389f95f7c13bb8720d336a9f513
+  sha256: b138d3f36e56ed759289fd4dde91d3c8dade05d3d66fb1ac1d4f841554e928ec
 
 environment:
   contents:
