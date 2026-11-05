@@ -12,7 +12,7 @@ package:
   # Named exactly what upstream calls it, not `argo-rollouts-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: argo-rollouts
-  version: 1.10.1
+  version: 1.10.2
   epoch: 0
   description: "Minimal Argo Rollouts controller built from source"
   copyright:
@@ -24,7 +24,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: 574efc2b612f19f281a24b81cc06771f336cac2be2fb07b5e2b55b438c96cc7d
+  sha256: c08c55824f45969ac738b57428e970501dfb76c068626f9b4096130c9a8629f1
 
 environment:
   contents:
