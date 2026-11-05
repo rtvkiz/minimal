@@ -74,16 +74,31 @@ jobs:
               --json number,isDraft --jq '.[] | select(.isDraft == false) | .number'
           )
 
+          # Right after a push to main EVERY PR can still read UNKNOWN even via
+          # `gh pr view` (2026-11-05: all 11 PRs UNKNOWN 10s after #1072 merged,
+          # so nothing was updated and the queue stalled until the throttled
+          # cron fired an hour later). Re-poll UNKNOWN PRs with backoff instead
+          # of treating them as "nothing to do".
           prs=()
-          for c in "${candidates[@]:-}"; do
-            [ -n "$c" ] || continue
-            info=$(gh pr view "$c" --repo "$REPO" \
-                     --json mergeStateStatus,autoMergeRequest \
-                     --jq '"\(.mergeStateStatus) \(.autoMergeRequest != null)"' 2>/dev/null) || {
-              echo "  PR #$c: could not read merge state, skipping"; continue; }
-            st=${info%% *}; am=${info##* }
-            echo "  PR #$c: mergeStateStatus=$st autoMerge=$am"
-            if [ "$st" = "BEHIND" ] && [ "$am" = "true" ]; then prs+=("$c"); fi
+          pending=("${candidates[@]:-}")
+          for attempt in 1 2 3 4 5 6; do
+            unknown=()
+            for c in "${pending[@]:-}"; do
+              [ -n "$c" ] || continue
+              info=$(gh pr view "$c" --repo "$REPO" \
+                       --json mergeStateStatus,autoMergeRequest \
+                       --jq '"\(.mergeStateStatus) \(.autoMergeRequest != null)"' 2>/dev/null) || {
+                echo "  PR #$c: could not read merge state, skipping"; continue; }
+              st=${info%% *}; am=${info##* }
+              echo "  PR #$c: mergeStateStatus=$st autoMerge=$am (attempt $attempt)"
+              [ "$am" = "true" ] || continue
+              if [ "$st" = "BEHIND" ]; then prs+=("$c")
+              elif [ "$st" = "UNKNOWN" ]; then unknown+=("$c"); fi
+            done
+            [ "${#unknown[@]}" -gt 0 ] || break
+            pending=("${unknown[@]}")
+            [ "$attempt" -lt 6 ] || { echo "::warning::Still UNKNOWN after retries: ${pending[*]}"; break; }
+            sleep $((attempt * 10))
           done
 
           if [ "${#prs[@]}" -eq 0 ]; then
