@@ -693,6 +693,77 @@
     releases: "https://github.com/prometheus/memcached_exporter/releases"
     notes: "https://github.com/prometheus/memcached_exporter/releases/tag/v{version}"
 
+- name: mysqld-exporter
+  cron-enabled: true   # batch-5a (dispatch-validated 2026-11-06 on the onboarding branch)
+  files: [images/mysqld-exporter/melange.yaml]
+  source: { type: github-releases-latest, repo: prometheus/mysqld_exporter, strip-v: true }
+  tarball: { url: "https://github.com/prometheus/mysqld_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/prometheus/mysqld_exporter/releases"
+    notes: "https://github.com/prometheus/mysqld_exporter/releases/tag/v{version}"
+
+- name: mongodb-exporter
+  cron-enabled: true   # batch-5a (dispatch-validated 2026-11-06 on the onboarding branch)
+  files: [images/mongodb-exporter/melange.yaml]
+  source: { type: github-releases-latest, repo: percona/mongodb_exporter, strip-v: true }
+  tarball: { url: "https://github.com/percona/mongodb_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/percona/mongodb_exporter/releases"
+    notes: "https://github.com/percona/mongodb_exporter/releases/tag/v{version}"
+
+- name: configmap-reload
+  cron-enabled: true   # batch-5a (dispatch-validated 2026-11-06 on the onboarding branch)
+  files: [images/configmap-reload/melange.yaml]
+  # Upstream is quiet (last release v0.15.0, 2025-04), so this loop is idle by
+  # design; the image still moves on every Go/base rebuild.
+  source: { type: github-releases-latest, repo: jimmidyson/configmap-reload, strip-v: true }
+  tarball: { url: "https://github.com/jimmidyson/configmap-reload/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/jimmidyson/configmap-reload/releases"
+    notes: "https://github.com/jimmidyson/configmap-reload/releases/tag/v{version}"
+
+- name: contour
+  cron-enabled: true   # batch-5a (dispatch-validated 2026-11-06 on the onboarding branch)
+  files: [images/contour/melange.yaml]
+  source: { type: github-releases-latest, repo: projectcontour/contour, strip-v: true, pin-major: 1 }
+  tarball: { url: "https://github.com/projectcontour/contour/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  major-issue: true
+  links:
+    releases: "https://github.com/projectcontour/contour/releases"
+    notes: "https://github.com/projectcontour/contour/releases/tag/v{version}"
+
+- name: cluster-autoscaler
+  cron-enabled: true   # batch-5a (dispatch-validated 2026-11-06 on the onboarding branch)
+  files: [images/cluster-autoscaler/melange.yaml]
+  # kubernetes/autoscaler is a monorepo (VPA, addon-resizer, charts). Neither
+  # github-* type works: releases/latest is often a chart or VPA release, and
+  # the first 100 tags (the tags API is unpaginated here) contain ZERO
+  # cluster-autoscaler-1.x tags, crowded out by vertical-pod-autoscaler-* and
+  # *-chart-* (checked 2026-11-06). So read the releases list as JSON, keep
+  # stable cluster-autoscaler-1.N.N, and sort numerically. Note: the json type
+  # fetches unauthenticated (60 req/h per runner IP); one request per run.
+  source:
+    type: json
+    url: "https://api.github.com/repos/kubernetes/autoscaler/releases?per_page=100"
+    jq: '[.[] | select(.prerelease == false and .draft == false) | .tag_name | select(test("^cluster-autoscaler-1\\.[0-9]+\\.[0-9]+$")) | sub("^cluster-autoscaler-"; "")] | sort_by(split(".") | map(tonumber)) | last'
+  tarball: { url: "https://github.com/kubernetes/autoscaler/archive/refs/tags/cluster-autoscaler-{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/kubernetes/autoscaler/releases"
+    notes: "https://github.com/kubernetes/autoscaler/releases/tag/cluster-autoscaler-{version}"
+
+- name: jmx-exporter
+  cron-enabled: true   # batch-5a (dispatch-validated 2026-11-06 on the onboarding branch)
+  files: [images/jmx-exporter/melange.yaml]
+  # Upstream tags are bare versions (1.7.0, no v). The release jars ARE the
+  # distribution, so both are checksummed (zipkin precedent).
+  source: { type: github-releases-latest, repo: prometheus/jmx_exporter }
+  tarballs:
+    - { url: "https://github.com/prometheus/jmx_exporter/releases/download/{version}/jmx_prometheus_standalone-{version}.jar", field: standalone-sha256, algo: sha256 }
+    - { url: "https://github.com/prometheus/jmx_exporter/releases/download/{version}/jmx_prometheus_javaagent-{version}.jar", field: javaagent-sha256, algo: sha256 }
+  links:
+    releases: "https://github.com/prometheus/jmx_exporter/releases"
+    notes: "https://github.com/prometheus/jmx_exporter/releases/tag/{version}"
+
 - name: timescaledb
   cron-enabled: true   # validated via `gh workflow run update-versions.yml -f only=timescaledb` (2026-10-15)
   files: [images/timescaledb/melange.yaml]

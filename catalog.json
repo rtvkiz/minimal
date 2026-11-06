@@ -1833,6 +1833,90 @@
       "upstream_url": "https://couchdb.apache.org",
       "summary": "Apache CouchDB document database, built on Wolfi.",
       "description": "Apache CouchDB document-oriented database with a native HTTP/JSON API and multi-master replication. Signed, SBOM-attested, rebuilt daily against CVE fixes."
+    },
+    {
+      "name": "mysqld-exporter",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "mysqld-exporter",
+      "upstream_url": "https://github.com/prometheus/mysqld_exporter",
+      "summary": "Shell-less Prometheus MySQL Server Exporter, built from source via melange.",
+      "description": "Prometheus MySQL Server Exporter for MySQL and MariaDB metrics. Shell-less static Go binary built from source, signed, SBOM-attested, rebuilt daily."
+    },
+    {
+      "name": "mongodb-exporter",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "mongodb-exporter",
+      "upstream_url": "https://github.com/percona/mongodb_exporter",
+      "summary": "Shell-less Percona MongoDB Exporter, built from source via melange.",
+      "description": "Percona MongoDB Exporter exposing replica-set, sharding and server metrics to Prometheus. Shell-less Go binary, signed and SBOM-attested, rebuilt daily."
+    },
+    {
+      "name": "configmap-reload",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "configmap-reload",
+      "upstream_url": "https://github.com/jimmidyson/configmap-reload",
+      "summary": "Shell-less configmap-reload sidecar, built from source via melange.",
+      "description": "configmap-reload sidecar that fires a webhook when a mounted ConfigMap or Secret changes. Shell-less static Go binary, non-root, signed, rebuilt daily."
+    },
+    {
+      "name": "contour",
+      "category": "Web Servers & Proxies",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "contour",
+      "upstream_url": "https://projectcontour.io/",
+      "summary": "Shell-less Contour ingress controller, built from source via melange.",
+      "description": "Contour, the CNCF Envoy-based Kubernetes ingress controller with HTTPProxy routing. Shell-less Go binary built from source, signed, rebuilt daily."
+    },
+    {
+      "name": "cluster-autoscaler",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "cluster-autoscaler",
+      "upstream_url": "https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler",
+      "summary": "Shell-less Kubernetes Cluster Autoscaler, built from source via melange.",
+      "description": "Kubernetes Cluster Autoscaler resizing node groups on AWS, GCP, Azure and more. Shell-less Go binary built from source, signed, rebuilt daily."
+    },
+    {
+      "name": "jmx-exporter",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "jmx-exporter",
+      "upstream_url": "https://github.com/prometheus/jmx_exporter",
+      "summary": "Shell-less Prometheus JMX Exporter (standalone + javaagent jars) on OpenJDK 25.",
+      "description": "Prometheus JMX Exporter turning Java MBeans into metrics, standalone server plus javaagent jar. Shell-less OpenJDK 25 JRE, signed, rebuilt daily."
+    },
+    {
+      "name": "openldap",
+      "category": "Infrastructure",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "openldap-2.7",
+      "upstream_url": "https://www.openldap.org/",
+      "summary": "Shell-less OpenLDAP slapd directory server built on Wolfi.",
+      "description": "OpenLDAP slapd directory server with MDB backend, common overlays and LDAP clients. Shell-less, non-root, fail-closed config, signed, rebuilt daily."
     }
   ]
 }

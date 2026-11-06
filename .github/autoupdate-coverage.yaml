@@ -22,6 +22,7 @@ wolfi-versioned:
                     # update-wolfi-packages.yml rewrites both in lockstep
   - couchdb         # couchdb-3.3
   - aws-cli         # aws-cli-2 (major-line PR is opened for review, not auto-merged)
+  - openldap        # openldap-2.7 (new 2.N line PR is opened for review, not auto-merged)
 
 # wolfi-rolling: apko references an *unversioned / rolling* Wolfi package
 # (e.g. apache2, nginx-mainline, sqlite, bun). Wolfi keeps that single package at

@@ -188,6 +188,11 @@ jobs:
             [cadvisor]="/home/build/cadvisor-${D}{{package.version}}/cmd"
             [nginx-prometheus-exporter]="/home/build/nginx-prometheus-exporter-${D}{{package.version}}"
             [memcached-exporter]="/home/build/memcached-exporter-${D}{{package.version}}"
+            [mysqld-exporter]="/home/build/mysqld-exporter-${D}{{package.version}}"
+            [mongodb-exporter]="/home/build/mongodb-exporter-${D}{{package.version}}"
+            [configmap-reload]="/home/build/configmap-reload-${D}{{package.version}}"
+            [contour]="/home/build/contour-${D}{{package.version}}"
+            [cluster-autoscaler]="/home/build/cluster-autoscaler-${D}{{package.version}}/cluster-autoscaler"
             [helmfile]="/home/build/helmfile-${D}{{package.version}}"
             [regctl]="/home/build/regctl-${D}{{package.version}}"
             [stern]="/home/build/stern-${D}{{package.version}}"
@@ -293,6 +298,11 @@ jobs:
             [cadvisor]="github.com/google/cadvisor/cmd"
             [nginx-prometheus-exporter]="github.com/nginx/nginx-prometheus-exporter"
             [memcached-exporter]="github.com/prometheus/memcached_exporter"
+            [mysqld-exporter]="github.com/prometheus/mysqld_exporter"
+            [mongodb-exporter]="github.com/percona/mongodb_exporter"
+            [configmap-reload]="github.com/jimmidyson/configmap-reload"
+            [contour]="github.com/projectcontour/contour"
+            [cluster-autoscaler]="k8s.io/autoscaler/cluster-autoscaler"
             [helmfile]="github.com/helmfile/helmfile"
             [regctl]="github.com/regclient/regclient"
             [stern]="github.com/stern/stern"
@@ -397,6 +407,11 @@ jobs:
             [cadvisor]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [nginx-prometheus-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [memcached-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [mysqld-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [mongodb-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [configmap-reload]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [contour]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [cluster-autoscaler]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [helmfile]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [regctl]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [stern]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
@@ -413,6 +428,9 @@ jobs:
             [trivy]='GOTOOLCHAIN=local CGO_ENABLED=0 GOEXPERIMENT=jsonv2 go build -mod=mod -o /dev/null ./cmd/trivy'
             [opentofu]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/tofu'
             [thanos]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -tags netgo,slicelabels -o /dev/null ./cmd/thanos'
+            # Every cloud provider's SDK is in one module graph (aws/azure/gcp/...),
+            # the tangled-graph shape test-and-keep exists for.
+            [cluster-autoscaler]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null .'
           )
           # Minimum dependency floor needed by a source compatibility backport
           # before independently probing the generated candidates. This is a
@@ -458,7 +476,7 @@ jobs:
           # candidate independently, so the unsatisfiable pin is dropped and the
           # other ~14 CVE fixes still land.
           SKIP_IMAGES=" "
-          TESTKEEP_IMAGES=" caddy trivy kaniko skopeo opentofu thanos "
+          TESTKEEP_IMAGES=" caddy trivy kaniko skopeo opentofu thanos cluster-autoscaler "
           for IMAGE in "${!MODROOTS[@]}"; do
             if [[ "$SKIP_IMAGES" == *" $IMAGE "* ]]; then
               echo "=== Skipping $IMAGE (excluded from auto transitive dep-patching; tracked via update-versions + base rebuild) ==="
