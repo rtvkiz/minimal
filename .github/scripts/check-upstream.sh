@@ -162,7 +162,18 @@ fetch_first_url() {
   local u body
   for u in "$@"; do
     # --max-time so a stalled URL fails fast and we fall through to the next one.
-    body=$(curl -fsSL --connect-timeout 20 --max-time 20 --retry 3 --retry-all-errors "$u" 2>/dev/null) || continue
+    # api.github.com gets the token: unauthenticated it is 60 req/h per IP, and
+    # shared runner IPs exhaust that (cluster-autoscaler's json row failed with
+    # "all json URLs failed" on its first dispatch, 2026-11-06). The token is
+    # sent ONLY to api.github.com — json/scrape rows also fetch third-party hosts
+    # (gitlab.com, release mirrors) that must never receive it.
+    case "$u" in
+      https://api.github.com/*)
+        body=$(curl -fsSL --connect-timeout 20 --max-time 20 --retry 3 --retry-all-errors \
+                 ${GH_TOKEN:+-H "Authorization: Bearer $GH_TOKEN"} "$u" 2>/dev/null) || continue ;;
+      *)
+        body=$(curl -fsSL --connect-timeout 20 --max-time 20 --retry 3 --retry-all-errors "$u" 2>/dev/null) || continue ;;
+    esac
     [ -n "$body" ] && { printf '%s' "$body"; return 0; }
   done
   return 1
