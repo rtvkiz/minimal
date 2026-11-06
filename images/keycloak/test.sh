@@ -96,7 +96,6 @@ docker run -d --name keycloak-pg-test --network "$NET" \
   -e KC_DB=postgres \
   -e KC_DB_URL=jdbc:postgresql://keycloak-pg:5432/postgres \
   -e KC_DB_USERNAME=keycloak \
-  -e KC_DB_PASSWORD=keycloak \
   -e KC_HEALTH_ENABLED=true \
   -e KC_HTTP_ENABLED=true \
   -e KC_HOSTNAME_STRICT=false \
