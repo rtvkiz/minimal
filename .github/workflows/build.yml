@@ -135,6 +135,12 @@ jobs:
             {"name":"cadvisor","variants":["prod","dev"]},
             {"name":"nginx-prometheus-exporter","variants":["prod","dev"]},
             {"name":"memcached-exporter","variants":["prod","dev"]},
+            {"name":"mysqld-exporter","variants":["prod","dev"]},
+            {"name":"mongodb-exporter","variants":["prod","dev"]},
+            {"name":"configmap-reload","variants":["prod","dev"]},
+            {"name":"contour","variants":["prod","dev"]},
+            {"name":"cluster-autoscaler","variants":["prod","dev"]},
+            {"name":"jmx-exporter","variants":["prod","dev"]},
             {"name":"timescaledb","variants":["prod","dev"]},
             {"name":"helmfile","variants":["prod","dev"]},
             {"name":"regctl","variants":["prod","dev"]},
@@ -173,7 +179,8 @@ jobs:
             {"name":"dnsmasq","grep":"dnsmasq","variants":["prod","dev"]},
             {"name":"patroni","grep":"patroni","variants":["prod","dev"]},
             {"name":"couchdb","grep":"couchdb-3.3","variants":["prod","dev"]},
-            {"name":"aws-cli","grep":"aws-cli-[0-9]","variants":["prod","dev"]}
+            {"name":"aws-cli","grep":"aws-cli-[0-9]","variants":["prod","dev"]},
+            {"name":"openldap","grep":"openldap-[0-9]","variants":["prod","dev"]}
           ]'
 
           # Determine if full rebuild is needed

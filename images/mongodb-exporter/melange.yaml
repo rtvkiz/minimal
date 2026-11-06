@@ -1,0 +1,64 @@
+# Melange build configuration for minimal mongodb-exporter
+# Exposes MongoDB server, replica-set and sharding metrics for Prometheus on :9216.
+# Percona's exporter, the one Bitnami shipped. The upstream binary keeps its
+# underscore name (mongodb_exporter); /mongodb_exporter is kept as a relative
+# symlink because upstream's image (and charts built on it) exec that path.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+
+package:
+  # Named exactly what upstream calls it, not `mongodb-exporter-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: mongodb-exporter
+  version: 0.54.0
+  epoch: 0
+  description: "Minimal Percona MongoDB Exporter built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 6d117ebdc7b0e4d7ae2db4d16735bd0a7afdddf48a6f9201997c4dbaa05f231c
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/mongodb-exporter-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/percona/mongodb_exporter/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/mongodb-exporter.tar.gz
+      echo "${{vars.sha256}}  /home/build/mongodb-exporter.tar.gz" | sha256sum -c -
+      tar xzf /home/build/mongodb-exporter.tar.gz -C /home/build/mongodb-exporter-${{package.version}} --strip-components=1
+      rm /home/build/mongodb-exporter.tar.gz
+
+  - runs: |
+      cd /home/build/mongodb-exporter-${{package.version}}
+      # Upstream .goreleaser.yml: -X main.version=v{{.Version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= -X main.version=v${{package.version}}" \
+        -o /home/build/mongodb_exporter-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/mongodb_exporter-bin "${{targets.destdir}}/usr/bin/mongodb_exporter"
+      chmod 0755 "${{targets.destdir}}/usr/bin/mongodb_exporter"
+      ln -s usr/bin/mongodb_exporter "${{targets.destdir}}/mongodb_exporter"
+
+  - runs: |
+      echo "Verifying mongodb-exporter binary and injected version..."
+      "${{targets.destdir}}/usr/bin/mongodb_exporter" --version 2>&1 | grep -q "${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }

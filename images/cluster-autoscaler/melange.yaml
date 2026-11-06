@@ -1,0 +1,76 @@
+# Melange build configuration for minimal cluster-autoscaler
+# Kubernetes Cluster Autoscaler (kubernetes/autoscaler, cluster-autoscaler/ module).
+# Upstream's image (distroless) puts the binary at /cluster-autoscaler and the
+# official Helm chart execs ./cluster-autoscaler from /, so that path is kept as a
+# relative symlink to /usr/bin/cluster-autoscaler.
+# Ships the latest release line only; Cluster Autoscaler versions track Kubernetes
+# minors, so pin the matching tag of this image to your cluster's minor.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+
+package:
+  # Named exactly what upstream calls it, not `cluster-autoscaler-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: cluster-autoscaler
+  version: 1.36.1
+  epoch: 0
+  description: "Minimal Kubernetes Cluster Autoscaler built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi ships a package of this name too; apko picks the highest version
+    # across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 63b599b0929b3e28aba26637be1c2e2cda747f808559816ba9312a5eac481cb9
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/cluster-autoscaler-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/kubernetes/autoscaler/archive/refs/tags/cluster-autoscaler-${{package.version}}.tar.gz" \
+        -o /home/build/cluster-autoscaler.tar.gz
+      echo "${{vars.sha256}}  /home/build/cluster-autoscaler.tar.gz" | sha256sum -c -
+      tar xzf /home/build/cluster-autoscaler.tar.gz -C /home/build/cluster-autoscaler-${{package.version}} --strip-components=1
+      rm /home/build/cluster-autoscaler.tar.gz
+
+  - runs: |
+      cd /home/build/cluster-autoscaler-${{package.version}}/cluster-autoscaler
+      # version/version.go hardcodes ClusterAutoscalerVersion per release; -X keeps
+      # it honest if a tag ever forgets the bump. All cloud providers are built in,
+      # same as upstream's image.
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X k8s.io/autoscaler/cluster-autoscaler/version.ClusterAutoscalerVersion=${{package.version}}" \
+        -o /home/build/cluster-autoscaler-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/cluster-autoscaler-bin "${{targets.destdir}}/usr/bin/cluster-autoscaler"
+      chmod 0755 "${{targets.destdir}}/usr/bin/cluster-autoscaler"
+      ln -s usr/bin/cluster-autoscaler "${{targets.destdir}}/cluster-autoscaler"
+
+  - runs: |
+      echo "Verifying cluster-autoscaler binary and version..."
+      # No --version flag: the version is logged at startup (-v=1) before it
+      # exits for lack of a cluster, which is the case in this sandbox.
+      out=$("${{targets.destdir}}/usr/bin/cluster-autoscaler" --cloud-provider=clusterapi -v=1 2>&1 || true)
+      echo "$out" | grep -q "Cluster Autoscaler ${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported"; echo "$out" | head -5; exit 1; }

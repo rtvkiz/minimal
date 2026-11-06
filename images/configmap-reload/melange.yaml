@@ -1,0 +1,72 @@
+# Melange build configuration for minimal configmap-reload
+# Watches mounted ConfigMap/Secret volumes and fires a reload webhook when
+# Kubernetes swaps the ..data symlink. Metrics on :9533. /configmap-reload is kept
+# as a relative symlink because upstream's image (and charts built on it) exec it.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `configmap-reload` package stopped
+# receiving builds in June 2026 (recipe removed from wolfi-dev/os). Upstream has
+# not released since v0.15.0 (2025-04), so a source build is what keeps the Go
+# toolchain and its CVE fixes current.
+
+package:
+  # Named exactly what upstream calls it, not `configmap-reload-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: configmap-reload
+  version: 0.15.0
+  epoch: 0
+  description: "Minimal configmap-reload built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi ships a package of this name too; apko picks the highest version
+    # across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: caf3c5650a7c9e0038b5b0049be4e67a840265bada3d3bbcad2bbf41d78dc9fe
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/configmap-reload-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/jimmidyson/configmap-reload/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/configmap-reload.tar.gz
+      echo "${{vars.sha256}}  /home/build/configmap-reload.tar.gz" | sha256sum -c -
+      tar xzf /home/build/configmap-reload.tar.gz -C /home/build/configmap-reload-${{package.version}} --strip-components=1
+      rm /home/build/configmap-reload.tar.gz
+
+  - runs: |
+      cd /home/build/configmap-reload-${{package.version}}
+      # Upstream injects no version string (no -X in its Makefile).
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid=" \
+        -o /home/build/configmap-reload-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/configmap-reload-bin "${{targets.destdir}}/usr/bin/configmap-reload"
+      chmod 0755 "${{targets.destdir}}/usr/bin/configmap-reload"
+      ln -s usr/bin/configmap-reload "${{targets.destdir}}/configmap-reload"
+
+  - runs: |
+      echo "Verifying configmap-reload binary runs..."
+      "${{targets.destdir}}/usr/bin/configmap-reload" --help 2>&1 | grep -q "volume-dir" \
+        || { echo "FAIL: configmap-reload --help did not list -volume-dir"; exit 1; }
