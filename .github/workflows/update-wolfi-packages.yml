@@ -165,6 +165,26 @@ jobs:
             echo "  -> Up to date"
           fi
 
+          # --- AWS CLI ---
+          # Anchor on the package-list entry, not the first match in the file,
+          # so a comment that names a version can never be read as the pin.
+          CURRENT_AWSCLI=$(grep -oP '^\s*-\s*\Kaws-cli-\d+\b' images/aws-cli/apko/aws-cli.yaml | head -1)
+          echo "Current AWS CLI package: $CURRENT_AWSCLI"
+
+          # aws-cli-N only (the trailing space excludes aws-cli-N-iamguarded-compat).
+          LATEST_AWSCLI=$(grep -E "^aws-cli-[0-9]+ " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t- -k3 -n | tail -1)
+          echo "Latest AWS CLI package: $LATEST_AWSCLI"
+
+          if [ -n "$LATEST_AWSCLI" ] && [ "$LATEST_AWSCLI" != "$CURRENT_AWSCLI" ]; then
+            echo "awscli_update=true" >> $GITHUB_OUTPUT
+            echo "awscli_current=$CURRENT_AWSCLI" >> $GITHUB_OUTPUT
+            echo "awscli_latest=$LATEST_AWSCLI" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_AWSCLI -> $LATEST_AWSCLI"
+          else
+            echo "  -> Up to date"
+          fi
+
           # Summary
           echo ""
           echo "=== Summary ==="
@@ -185,6 +205,9 @@ jobs:
           fi
           if [ -n "$LATEST_PG" ] && [ "$LATEST_PG" != "$CURRENT_PG" ]; then
             echo "PostgreSQL: $CURRENT_PG -> $LATEST_PG"
+          fi
+          if [ -n "$LATEST_AWSCLI" ] && [ "$LATEST_AWSCLI" != "$CURRENT_AWSCLI" ]; then
+            echo "AWS CLI: $CURRENT_AWSCLI -> $LATEST_AWSCLI"
           fi
 
       # --- Python PR ---
@@ -331,6 +354,40 @@ jobs:
           ---
           Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml).")
           gh pr merge "$PR_URL" --auto --squash --delete-branch
+          git checkout main
+          git checkout -- .
+
+      # --- AWS CLI PR ---
+      # Opened for review, NOT auto-merged. The other steps auto-merge because a
+      # runtime's new line is CI-testable; an AWS CLI major changes command and
+      # output behaviour that users' scripts depend on, which CI cannot judge.
+      - name: Create AWS CLI PR
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.check.outputs.awscli_update == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          OLD="${{ steps.check.outputs.awscli_current }}"
+          NEW="${{ steps.check.outputs.awscli_latest }}"
+          sed -i -E "s/\b${OLD}\b/${NEW}/g" images/aws-cli/apko/*.yaml
+          BRANCH="update-aws-cli-${NEW}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add images/aws-cli/apko/
+          git commit -m "chore(aws-cli): upgrade to ${NEW}"
+          git push --force -u origin "$BRANCH"
+          PR_URL=$(gh pr list --head "$BRANCH" --base main --state open --json url --jq '.[0].url // ""')
+          if [ -z "$PR_URL" ]; then
+            gh pr create \
+              --title "chore(aws-cli): upgrade to ${NEW}" \
+              --label dependencies \
+              --body "Upgrades the AWS CLI from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
+
+          **Needs review — not auto-merged.** A new AWS CLI major line can change commands, defaults and output formats that users' scripts rely on. Read the upstream changelog before merging.
+
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml)."
+          fi
           git checkout main
           git checkout -- .
 
