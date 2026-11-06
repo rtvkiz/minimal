@@ -11,7 +11,7 @@ package:
   # product bare, as cpe:2.3:a:opentofu:opentofu:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: opentofu
-  version: 1.13.8
+  version: 1.13.9
   epoch: 0
   description: "Minimal OpenTofu (Terraform-compatible IaC) built from source"
   copyright:
@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 of opentofu source tarball - updated by update-versions.yml workflow
-  sha256: cb84ca499fb73dbf368c734e0721370622cf7c061750321d33aa292b76e06366
+  sha256: acb73b84a4f32150f8a097841fe2c48a2e13d35656ddab4851f46a4d681cdde4
 
 environment:
   contents:
