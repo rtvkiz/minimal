@@ -14,7 +14,7 @@
 # for a given package.version rather than floating with PyPI.
 package:
   name: airflow
-  version: 3.3.2
+  version: 3.4.0
   epoch: 0
   description: "Apache Airflow workflow orchestration platform"
   copyright:
@@ -29,8 +29,8 @@ package:
       - python-3.12
 
 vars:
-  sha256: cdbe0dcd47ff2e9ab267fcc050bc6e4fa6e40fb86bf3671e05d9672206da59bb
-  constraints-sha256: 821effd0f491975682f2774fca3427d7bc2f59ca6de68dcb413ad2c8f890e58c
+  sha256: 831e2c96654720944ec2a73df285524cbee84403a1175b89aa341bb10d3be754
+  constraints-sha256: 3cecb4fe4a11d69bd772aef18434825bbed9b344703302ca0a55d50e30a33eda
   python: "3.12"
 
 environment:
