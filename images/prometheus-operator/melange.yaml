@@ -11,7 +11,7 @@ package:
   # Named exactly what upstream calls it, not `prometheus-operator-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: prometheus-operator
-  version: 0.94.2
+  version: 0.95.1
   epoch: 0
   description: "Minimal Prometheus Operator built from source"
   copyright:
@@ -23,7 +23,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: 129977683b332a4acd6c641944dc49649625817c2a6c89b9cf4f6536d45af826
+  sha256: 3dc8841e87c6fc9ce58324ad62d038cade19bd0abdf9fbdf2b10cda32abc5ba0
 
 environment:
   contents:
