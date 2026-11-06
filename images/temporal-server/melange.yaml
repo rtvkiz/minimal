@@ -7,7 +7,7 @@ package:
   # and nothing in the Wolfi secdb, and grype would report zero CVEs for the
   # image. See docs/onboarding.md "Package naming and scanner visibility".
   name: temporal-server
-  version: 1.32.1
+  version: 1.32.2
   epoch: 0
   description: "Temporal workflow engine server built from source"
   copyright:
@@ -20,12 +20,12 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: 9a1766efcdc2acf03165e0304549d00930e18ff4fbf2c5abe27732fe7c04f7ee
+  sha256: f56f8c4e2ea10e50cfddc8d66bbba54fcff4f157ae3dfcefc179acfc5de0315c
   # Secondary upstreams. Each is tracked by its own versions.yaml row
   # (temporal-cli / temporal-tctl) writing these fields, so none of them can
   # freeze silently — that is what check-autoupdate exists to prevent.
-  cli_version: 1.9.1
-  cli_sha256: d0310b8f4ef26b8a2240aa2e783c67c099406be01f34cf4edb3ae8aa2d86b7bb
+  cli_version: 1.10.0
+  cli_sha256: eb9d85a95da1c391b5b5dfcb4ce6c745a937bbe14155297a60c81c7610d9fa66
   tctl_version: 1.18.4
   tctl_sha256: 6d4f749754f816b9569459fe6a82c521349dc6dfb75e6419514bae80b4eb6c92
 
