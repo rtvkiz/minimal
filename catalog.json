@@ -62,6 +62,18 @@
       "description": "Argo CD repo-server rendering manifests from git with bundled Helm and Kustomize. Shell-less despite the tooling, signed, rebuilt daily against CVE fixes."
     },
     {
+      "name": "aws-cli",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "aws-cli-2",
+      "upstream_url": "https://aws.amazon.com/cli/",
+      "summary": "Shell-less AWS CLI v2 built on Wolfi.",
+      "description": "AWS CLI v2 command-line client for managing Amazon Web Services from scripts and CI. Shell-less, non-root, signed and SBOM-attested, rebuilt daily."
+    },
+    {
       "name": "karpenter",
       "category": "Kubernetes, CI & IaC",
       "variants": [
