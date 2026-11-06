@@ -1,0 +1,64 @@
+# Melange build configuration for minimal contour
+# Contour: the CNCF Envoy-based ingress controller (control plane). Serves xDS to
+# Envoy (use our envoy image as the data plane). Upstream's image puts the binary at
+# /bin/contour, which Wolfi's merged /usr already resolves to /usr/bin/contour.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+
+package:
+  # Named exactly what upstream calls it, not `contour-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: contour
+  version: 1.33.8
+  epoch: 0
+  description: "Minimal Contour ingress controller built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 2bc930ce1e42e021f962e18c8fac290f203e7621232b37397449963872b64ef8
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/contour-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/projectcontour/contour/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/contour.tar.gz
+      echo "${{vars.sha256}}  /home/build/contour.tar.gz" | sha256sum -c -
+      tar xzf /home/build/contour.tar.gz -C /home/build/contour-${{package.version}} --strip-components=1
+      rm /home/build/contour.tar.gz
+
+  - runs: |
+      cd /home/build/contour-${{package.version}}
+      # Upstream Makefile: GO_BUILD_VARS -> internal/build.{Version,Sha,Branch}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath -mod=readonly \
+        -ldflags="-s -w -buildid= \
+          -X github.com/projectcontour/contour/internal/build.Version=v${{package.version}} \
+          -X github.com/projectcontour/contour/internal/build.Branch=release" \
+        -o /home/build/contour-bin \
+        ./cmd/contour
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/contour-bin "${{targets.destdir}}/usr/bin/contour"
+      chmod 0755 "${{targets.destdir}}/usr/bin/contour"
+
+  - runs: |
+      echo "Verifying contour binary and injected version..."
+      "${{targets.destdir}}/usr/bin/contour" version 2>&1 | grep -q "v${{package.version}}" \
+        || { echo "FAIL: version v${{package.version}} not reported - ldflag wrong?"; exit 1; }

@@ -185,6 +185,25 @@ jobs:
             echo "  -> Up to date"
           fi
 
+          # --- OpenLDAP ---
+          # Same shape as the AWS CLI block: pin read from the package-list entry.
+          CURRENT_OPENLDAP=$(grep -oP '^\s*-\s*\Kopenldap-\d+\.\d+\b(?=\s*$)' images/openldap/apko/openldap.yaml | head -1)
+          echo "Current OpenLDAP package: $CURRENT_OPENLDAP"
+
+          # openldap-N.N only (the trailing space excludes -clients, -back-*, ...).
+          LATEST_OPENLDAP=$(grep -E "^openldap-[0-9]+\.[0-9]+ " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t- -k2 -V | tail -1)
+          echo "Latest OpenLDAP package: $LATEST_OPENLDAP"
+
+          if [ -n "$LATEST_OPENLDAP" ] && [ "$LATEST_OPENLDAP" != "$CURRENT_OPENLDAP" ]; then
+            echo "openldap_update=true" >> $GITHUB_OUTPUT
+            echo "openldap_current=$CURRENT_OPENLDAP" >> $GITHUB_OUTPUT
+            echo "openldap_latest=$LATEST_OPENLDAP" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_OPENLDAP -> $LATEST_OPENLDAP"
+          else
+            echo "  -> Up to date"
+          fi
+
           # Summary
           echo ""
           echo "=== Summary ==="
@@ -208,6 +227,9 @@ jobs:
           fi
           if [ -n "$LATEST_AWSCLI" ] && [ "$LATEST_AWSCLI" != "$CURRENT_AWSCLI" ]; then
             echo "AWS CLI: $CURRENT_AWSCLI -> $LATEST_AWSCLI"
+          fi
+          if [ -n "$LATEST_OPENLDAP" ] && [ "$LATEST_OPENLDAP" != "$CURRENT_OPENLDAP" ]; then
+            echo "OpenLDAP: $CURRENT_OPENLDAP -> $LATEST_OPENLDAP"
           fi
 
       # --- Python PR ---
@@ -384,6 +406,41 @@ jobs:
               --body "Upgrades the AWS CLI from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
 
           **Needs review — not auto-merged.** A new AWS CLI major line can change commands, defaults and output formats that users' scripts rely on. Read the upstream changelog before merging.
+
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml)."
+          fi
+          git checkout main
+          git checkout -- .
+
+      # --- OpenLDAP PR ---
+      # Opened for review, NOT auto-merged: a new OpenLDAP line can drop or rename
+      # backends/overlays and config directives that users' slapd configs name.
+      # Every openldap-2.N-* subpackage in the image moves with it (\b...- keeps
+      # openldap-2.7-back-mdb -> openldap-2.8-back-mdb in step).
+      - name: Create OpenLDAP PR
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.check.outputs.openldap_update == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          OLD="${{ steps.check.outputs.openldap_current }}"
+          NEW="${{ steps.check.outputs.openldap_latest }}"
+          sed -i -E "s/\b${OLD//./\\.}\b/${NEW}/g" images/openldap/apko/*.yaml
+          BRANCH="update-openldap-${NEW}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add images/openldap/apko/
+          git commit -m "chore(openldap): upgrade to ${NEW}"
+          git push --force -u origin "$BRANCH"
+          PR_URL=$(gh pr list --head "$BRANCH" --base main --state open --json url --jq '.[0].url // ""')
+          if [ -z "$PR_URL" ]; then
+            gh pr create \
+              --title "chore(openldap): upgrade to ${NEW}" \
+              --label dependencies \
+              --body "Upgrades OpenLDAP from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
+
+          **Needs review — not auto-merged.** A new OpenLDAP line can remove or rename backends, overlays and config directives that existing slapd configurations reference. Check the upstream CHANGES file and confirm every \`${NEW}-*\` subpackage the image lists exists before merging.
 
           ---
           Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml)."

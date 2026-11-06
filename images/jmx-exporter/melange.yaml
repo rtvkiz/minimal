@@ -1,0 +1,59 @@
+# Melange build configuration for minimal jmx-exporter
+# Prometheus JMX Exporter: scrapes JMX MBeans from a Java process and serves them as
+# Prometheus metrics. Ships BOTH upstream artifacts under stable, unversioned names:
+#   /opt/jmx_exporter/jmx_prometheus_standalone.jar  - the image's entrypoint (scrapes
+#                                                      a remote JVM over JMX/RMI)
+#   /opt/jmx_exporter/jmx_prometheus_javaagent.jar   - for `COPY --from=` into your own
+#                                                      JVM image (-javaagent:...)
+#
+# Binary repackage, zipkin precedent: upstream's release jars ARE the distribution
+# (fat jars built by Maven), so we pin and verify them rather than rebuild with
+# Maven. sha256s match upstream's published .sha256 files. License: Apache-2.0.
+
+package:
+  name: jmx-exporter
+  version: 1.7.0
+  epoch: 0
+  description: "Minimal Prometheus JMX Exporter (standalone + javaagent jars)"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # Updated by update-versions.yml (tarballs: list form, one digest per jar)
+  standalone-sha256: f62f518d3a396320e4604d6981b6c4f4bd8a4fa46e6200791cf501cb3c6ddd44
+  javaagent-sha256: 0ad843261c567d1924a017d542e14c40f2afff523d940c25ee000742fde4b3a9
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      base="https://github.com/prometheus/jmx_exporter/releases/download/${{package.version}}"
+      for a in standalone javaagent; do
+        curl -fsSL --retry 8 --retry-all-errors --max-time 300 \
+          "$base/jmx_prometheus_${a}-${{package.version}}.jar" -o "/home/build/jmx_prometheus_${a}.jar"
+      done
+      echo "${{vars.standalone-sha256}}  /home/build/jmx_prometheus_standalone.jar" | sha256sum -c -
+      echo "${{vars.javaagent-sha256}}  /home/build/jmx_prometheus_javaagent.jar" | sha256sum -c -
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/opt/jmx_exporter"
+      for a in standalone javaagent; do
+        install -m 0644 "/home/build/jmx_prometheus_${a}.jar" "${{targets.destdir}}/opt/jmx_exporter/jmx_prometheus_${a}.jar"
+      done
+
+  - runs: |
+      echo "Verifying both jars are the expected release..."
+      for a in standalone javaagent; do
+        mf=$(unzip -p "${{targets.destdir}}/opt/jmx_exporter/jmx_prometheus_${a}.jar" META-INF/MANIFEST.MF)
+        echo "$mf" | grep -q "Implementation-Version: ${{package.version}}" \
+          || { echo "FAIL: $a jar does not report ${{package.version}}"; echo "$mf"; exit 1; }
+      done
