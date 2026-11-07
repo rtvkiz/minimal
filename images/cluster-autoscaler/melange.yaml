@@ -11,7 +11,7 @@ package:
   # Named exactly what upstream calls it, not `cluster-autoscaler-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: cluster-autoscaler
-  version: 1.36.1
+  version: 1.37.0
   epoch: 0
   description: "Minimal Kubernetes Cluster Autoscaler built from source"
   copyright:
@@ -23,7 +23,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: 63b599b0929b3e28aba26637be1c2e2cda747f808559816ba9312a5eac481cb9
+  sha256: 590384787494a32d53f5c3c474da70cf81fe1e116276ef216b3c82936438aaba
 
 environment:
   contents:
