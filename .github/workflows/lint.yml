@@ -56,3 +56,8 @@ jobs:
       # haproxy CVEs excluded), so each direction has a real-scan fixture.
       - name: Test apk-provenance reconciler
         run: make test-apk-provenance
+
+      # Rolling-tag derivation fails silently: an unrecognised version shape
+      # yields no ladder and :3 / :3.14 just stop moving (python, Sep-Nov 2026).
+      - name: Test version-ladder derivation
+        run: make test-version-ladder

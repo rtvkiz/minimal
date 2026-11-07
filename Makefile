@@ -215,7 +215,7 @@ test-$(1)-dev:
 	@echo "✓ $(1) dev tests passed"
 endef
 
-.PHONY: all build scan clean help lint-workflows lint-versions check-autoupdate check-toolchain-pins check-curl-retries test-classifier test-versions-config test-apk-provenance
+.PHONY: all build scan clean help lint-workflows lint-versions check-autoupdate check-toolchain-pins check-curl-retries test-classifier test-versions-config test-apk-provenance test-version-ladder
 .PHONY: zookeeper zookeeper-melange test-zookeeper
 .PHONY: tomcat tomcat-melange test-tomcat
 .PHONY: pgbouncer pgbouncer-melange pgbouncer-dev test-pgbouncer test-pgbouncer-dev
@@ -5742,6 +5742,11 @@ lint-versions:
 
 test-versions-config:
 	@./tests/test-versions-config.sh
+
+# Rolling :<major>/:<major.minor> tag derivation. A wrong answer here is silent:
+# the tag just stops moving (python :3 froze for two months on _git versions).
+test-version-ladder:
+	@bash .github/scripts/version-ladder.sh --test
 
 # Assert every prod image (catalog.json) has exactly one live auto-update
 # mechanism (a cron-enabled versions.yaml row, or a declared Wolfi-package

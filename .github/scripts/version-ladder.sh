@@ -22,6 +22,17 @@ derive_version_ladder() {
   # images never do.
   base="${raw%-r[0-9]*}"
 
+  # Strip apk *post*-release suffixes (_git, _p, _svn, _cvs, _hg): they sort
+  # after the release they extend, so 3.15.2_git20261030 is 3.15.2 plus
+  # maintenance-branch fixes and belongs on the 3 / 3.15 line. Wolfi builds
+  # python-3.14/3.15 this way because CPython security fixes are not tagged;
+  # treating the suffix as a pre-release froze :3 and :3.14 for two months.
+  # Pre-release suffixes (_alpha, _beta, _pre, _rc) are left in place and
+  # rejected below.
+  case "$base" in
+    *_git[0-9]*|*_p[0-9]*|*_svn[0-9]*|*_cvs[0-9]*|*_hg[0-9]*) base="${base%_*}" ;;
+  esac
+
   # Only pure numeric dotted versions get a ladder. A pre-release or build
   # suffix (1.2.3-rc1, 1.2.3+meta) is skipped — a rolling tag pointing at a
   # pre-release would misrepresent the line.
@@ -85,6 +96,11 @@ if [ "${1:-}" = "--test" ]; then
   check "0.73.0"      "0.73"       # trivy
   check "1.2.3-rc1"   ""           # pre-release
   check "1.2.3+meta"  ""           # build metadata
+  check "3.15.2_git20261030-r0" "3 3.15"  # python, maintenance-branch snapshot
+  check "3.14.10_git20261104"   "3 3.14"  # post-release, no epoch
+  check "9.9_p2-r1"   "9 9.9"      # apk patch-level post-release
+  check "1.2.3_rc1-r0" ""          # apk pre-release stays skipped
+  check "1.2.3_beta2"  ""          # apk pre-release stays skipped
   check "7"           "7"          # single component
   check ""            ""           # empty
   [ "$fail" -eq 0 ] && echo "version-ladder: all cases passed"
