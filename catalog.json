@@ -23,7 +23,8 @@
       "primary_package": "airflow",
       "upstream_url": "https://airflow.apache.org",
       "summary": "Apache Airflow orchestration platform built from the ASF source distribution.",
-      "description": "Apache Airflow workflow orchestration platform, built from the official ASF source distribution, cosign-signed and SBOM-attested, rebuilt daily."
+      "description": "Apache Airflow workflow orchestration platform, built from the official ASF source distribution, cosign-signed and SBOM-attested, rebuilt daily.",
+      "seo_noun": "workflow orchestration"
     },
     {
       "name": "alertmanager",
@@ -47,7 +48,8 @@
       "primary_package": "argo-cd",
       "upstream_url": "https://argo-cd.readthedocs.io",
       "summary": "Argo CD GitOps controller for Kubernetes with its web UI, built from source via melange.",
-      "description": "Argo CD declarative GitOps continuous delivery for Kubernetes: the server, controller and notifications binary. Signed, SBOM-attested, rebuilt daily."
+      "description": "Argo CD declarative GitOps continuous delivery for Kubernetes: the server, controller and notifications binary. Signed, SBOM-attested, rebuilt daily.",
+      "seo_noun": "GitOps"
     },
     {
       "name": "argo-cd-repo-server",
@@ -59,7 +61,8 @@
       "primary_package": "argo-cd-repo-server",
       "upstream_url": "https://argo-cd.readthedocs.io",
       "summary": "Argo CD repo-server with bundled git, Helm 4 and Kustomize, built from source via melange.",
-      "description": "Argo CD repo-server rendering manifests from git with bundled Helm and Kustomize. Shell-less despite the tooling, signed, rebuilt daily against CVE fixes."
+      "description": "Argo CD repo-server rendering manifests from git with bundled Helm and Kustomize. Shell-less despite the tooling, signed, rebuilt daily against CVE fixes.",
+      "seo_noun": "GitOps"
     },
     {
       "name": "aws-cli",
@@ -71,7 +74,8 @@
       "primary_package": "aws-cli-2",
       "upstream_url": "https://aws.amazon.com/cli/",
       "summary": "Shell-less AWS CLI v2 built on Wolfi.",
-      "description": "AWS CLI v2 command-line client for managing Amazon Web Services from scripts and CI. Shell-less, non-root, signed and SBOM-attested, rebuilt daily."
+      "description": "AWS CLI v2 command-line client for managing Amazon Web Services from scripts and CI. Shell-less, non-root, signed and SBOM-attested, rebuilt daily.",
+      "seo_noun": "AWS CLI"
     },
     {
       "name": "karpenter",
@@ -119,7 +123,8 @@
       "primary_package": "buildkit",
       "upstream_url": "https://github.com/moby/buildkit",
       "summary": "Shell-less BuildKit concurrent container image builder, built from source via melange.",
-      "description": "BuildKit concurrent container image builder, buildkitd plus buildctl. Shell-less non-root with seccomp, signed and SBOM-attested, rebuilt daily."
+      "description": "BuildKit concurrent container image builder, buildkitd plus buildctl. Shell-less non-root with seccomp, signed and SBOM-attested, rebuilt daily.",
+      "seo_noun": "image builder"
     },
     {
       "name": "bun",
@@ -167,7 +172,8 @@
       "primary_package": "conftest",
       "upstream_url": "https://www.conftest.dev",
       "summary": "Shell-less Conftest OPA config-policy testing CLI, built from source via melange.",
-      "description": "Conftest testing configuration files against Rego policies with Open Policy Agent. Shell-less Go binary, signed and SBOM-attested, rebuilt daily."
+      "description": "Conftest testing configuration files against Rego policies with Open Policy Agent. Shell-less Go binary, signed and SBOM-attested, rebuilt daily.",
+      "seo_noun": "policy testing"
     },
     {
       "name": "consul",
@@ -179,7 +185,8 @@
       "primary_package": "consul",
       "upstream_url": "https://www.consul.io",
       "summary": "Shell-less HashiCorp Consul (BUSL-1.1) built from source via melange.",
-      "description": "HashiCorp Consul service discovery, health checking and service mesh. Built from upstream source under BUSL-1.1, signed and rebuilt daily against CVE fixes."
+      "description": "HashiCorp Consul service discovery, health checking and service mesh. Built from upstream source under BUSL-1.1, signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "service discovery"
     },
     {
       "name": "coredns",
@@ -191,7 +198,8 @@
       "primary_package": "coredns",
       "upstream_url": "https://coredns.io",
       "summary": "CoreDNS DNS server built from source via melange.",
-      "description": "CoreDNS pluggable DNS server and the default Kubernetes cluster resolver. Built from upstream source, shell-less, signed and rebuilt daily against CVE fixes."
+      "description": "CoreDNS pluggable DNS server and the default Kubernetes cluster resolver. Built from upstream source, shell-less, signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "DNS server"
     },
     {
       "name": "cosign",
@@ -203,7 +211,8 @@
       "primary_package": "cosign",
       "upstream_url": "https://www.sigstore.dev",
       "summary": "Shell-less Sigstore Cosign container signing & verification, built from source via melange.",
-      "description": "Sigstore Cosign for signing and verifying container images and OCI artifacts. Shell-less, built from source, signed and rebuilt daily against CVE fixes."
+      "description": "Sigstore Cosign for signing and verifying container images and OCI artifacts. Shell-less, built from source, signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "image signing"
     },
     {
       "name": "crane",
@@ -215,7 +224,8 @@
       "primary_package": "crane",
       "upstream_url": "https://github.com/google/go-containerregistry",
       "summary": "Shell-less crane OCI registry tool (go-containerregistry), built from source via melange.",
-      "description": "crane inspecting, copying and mutating images in OCI registries via go-containerregistry. Shell-less binary, signed and rebuilt daily against CVE fixes."
+      "description": "crane inspecting, copying and mutating images in OCI registries via go-containerregistry. Shell-less binary, signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "OCI registry CLI"
     },
     {
       "name": "deno",
@@ -251,7 +261,8 @@
       "primary_package": "dex",
       "upstream_url": "https://dexidp.io/",
       "summary": "Shell-less Dex OpenID Connect identity provider, built from source via melange.",
-      "description": "Dex OpenID Connect identity provider federating LDAP, SAML and GitHub logins. Shell-less Go binary, signed and SBOM-attested, rebuilt daily."
+      "description": "Dex OpenID Connect identity provider federating LDAP, SAML and GitHub logins. Shell-less Go binary, signed and SBOM-attested, rebuilt daily.",
+      "seo_noun": "OIDC identity provider"
     },
     {
       "name": "dnsmasq",
@@ -263,7 +274,8 @@
       "primary_package": "dnsmasq",
       "upstream_url": "https://thekelleys.org.uk/dnsmasq/doc.html",
       "summary": "Shell-less dnsmasq DNS forwarder/cache and DHCP server built on Wolfi.",
-      "description": "dnsmasq lightweight DNS forwarder, cache and DHCP server for small networks. Shell-less image, signed and SBOM-attested, rebuilt daily from Wolfi."
+      "description": "dnsmasq lightweight DNS forwarder, cache and DHCP server for small networks. Shell-less image, signed and SBOM-attested, rebuilt daily from Wolfi.",
+      "seo_noun": "DNS server"
     },
     {
       "name": "dotnet",
@@ -299,7 +311,8 @@
       "primary_package": "etcd",
       "upstream_url": "https://etcd.io",
       "summary": "etcd distributed key-value store built from source via melange.",
-      "description": "etcd distributed key-value store backing Kubernetes control planes. Built from upstream source, cosign-signed with SBOM attestations, rebuilt daily."
+      "description": "etcd distributed key-value store backing Kubernetes control planes. Built from upstream source, cosign-signed with SBOM attestations, rebuilt daily.",
+      "seo_noun": "key-value store"
     },
     {
       "name": "external-dns",
@@ -371,7 +384,8 @@
       "primary_package": "flux",
       "upstream_url": "https://fluxcd.io",
       "summary": "Shell-less Flux CD GitOps CLI, built from source via melange.",
-      "description": "Flux CD GitOps CLI for bootstrapping and reconciling Kubernetes from git. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt daily."
+      "description": "Flux CD GitOps CLI for bootstrapping and reconciling Kubernetes from git. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt daily.",
+      "seo_noun": "GitOps"
     },
     {
       "name": "gitea",
@@ -383,7 +397,8 @@
       "primary_package": "gitea",
       "upstream_url": "https://gitea.io",
       "summary": "Gitea git hosting built from source via melange.",
-      "description": "Gitea lightweight self-hosted git service with issues, CI and a package registry. Built from source, signed and rebuilt daily against CVE fixes."
+      "description": "Gitea lightweight self-hosted git service with issues, CI and a package registry. Built from source, signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "git server"
     },
     {
       "name": "gitlab-runner",
@@ -395,7 +410,8 @@
       "primary_package": "gitlab-runner",
       "upstream_url": "https://docs.gitlab.com/runner/",
       "summary": "Shell-less GitLab Runner CI/CD job executor, built from source via melange.",
-      "description": "GitLab Runner executes CI/CD jobs from your GitLab pipelines on your own infrastructure. Shell-less non-root binary, signed, SBOM-attested, rebuilt daily."
+      "description": "GitLab Runner executes CI/CD jobs from your GitLab pipelines on your own infrastructure. Shell-less non-root binary, signed, SBOM-attested, rebuilt daily.",
+      "seo_noun": "CI runner"
     },
     {
       "name": "gitleaks",
@@ -407,7 +423,8 @@
       "primary_package": "gitleaks",
       "upstream_url": "https://github.com/gitleaks/gitleaks",
       "summary": "Shell-less Gitleaks secret scanner, built from source via melange.",
-      "description": "Gitleaks detecting hardcoded secrets and credentials in git repositories. Shell-less Go binary, signed with SLSA build provenance, rebuilt daily."
+      "description": "Gitleaks detecting hardcoded secrets and credentials in git repositories. Shell-less Go binary, signed with SLSA build provenance, rebuilt daily.",
+      "seo_noun": "secret scanner"
     },
     {
       "name": "go",
@@ -431,7 +448,8 @@
       "primary_package": "grype",
       "upstream_url": "https://github.com/anchore/grype",
       "summary": "Shell-less Grype vulnerability scanner, built from source via melange.",
-      "description": "Grype scanning container images and filesystems for known vulnerabilities. Shell-less Go binary, signed and SBOM-attested, rebuilt daily against CVE fixes."
+      "description": "Grype scanning container images and filesystems for known vulnerabilities. Shell-less Go binary, signed and SBOM-attested, rebuilt daily against CVE fixes.",
+      "seo_noun": "vulnerability scanner"
     },
     {
       "name": "haproxy",
@@ -455,7 +473,8 @@
       "primary_package": "harbor-portal",
       "upstream_url": "https://goharbor.io",
       "summary": "Harbor's portal UI and nginx reverse proxy, built from source via melange.",
-      "description": "Harbor portal: the Angular UI and nginx reverse proxy fronting the Harbor container registry. Built from source, shell-less and rebuilt daily on CVE fixes."
+      "description": "Harbor portal: the Angular UI and nginx reverse proxy fronting the Harbor container registry. Built from source, shell-less and rebuilt daily on CVE fixes.",
+      "seo_noun": "registry UI"
     },
     {
       "name": "headscale",
@@ -467,7 +486,8 @@
       "primary_package": "headscale",
       "upstream_url": "https://headscale.net",
       "summary": "Headscale self-hosted Tailscale control server, from source.",
-      "description": "Headscale is a self-hosted open source implementation of the Tailscale control server. Built from source, signed with SLSA provenance, rebuilt daily."
+      "description": "Headscale is a self-hosted open source implementation of the Tailscale control server. Built from source, signed with SLSA provenance, rebuilt daily.",
+      "seo_noun": "VPN control server"
     },
     {
       "name": "helm",
@@ -491,7 +511,8 @@
       "primary_package": "helmfile",
       "upstream_url": "https://helmfile.readthedocs.io",
       "summary": "Shell-less Helmfile declarative Helm release manager, built from source via melange.",
-      "description": "Helmfile declaratively managing many Helm releases across environments. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt daily."
+      "description": "Helmfile declaratively managing many Helm releases across environments. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt daily.",
+      "seo_noun": "Helm"
     },
     {
       "name": "httpd",
@@ -539,7 +560,8 @@
       "primary_package": "jenkins",
       "upstream_url": "https://www.jenkins.io",
       "summary": "Shell-less Jenkins with jlink custom JRE, built from source via melange.",
-      "description": "Jenkins automation server for CI/CD pipelines. Runs on a custom jlink JRE with no shell, cosign-signed with SBOM attestations, rebuilt daily."
+      "description": "Jenkins automation server for CI/CD pipelines. Runs on a custom jlink JRE with no shell, cosign-signed with SBOM attestations, rebuilt daily.",
+      "seo_noun": "CI/CD server"
     },
     {
       "name": "kafka",
@@ -563,7 +585,8 @@
       "primary_package": "kaniko",
       "upstream_url": "https://github.com/GoogleContainerTools/kaniko",
       "summary": "Shell-less Kaniko container image builder (executor) built from source via melange.",
-      "description": "Kaniko executor for building container images inside Kubernetes without a Docker daemon. Shell-less, signed and SBOM-attested, rebuilt daily."
+      "description": "Kaniko executor for building container images inside Kubernetes without a Docker daemon. Shell-less, signed and SBOM-attested, rebuilt daily.",
+      "seo_noun": "image builder"
     },
     {
       "name": "keepalived",
@@ -575,7 +598,8 @@
       "primary_package": "keepalived",
       "upstream_url": "https://www.keepalived.org/",
       "summary": "Shell-less Keepalived VRRP failover and LVS load balancer built from source via melange.",
-      "description": "Keepalived VRRP failover and LVS load balancing for high-availability clusters. Built from source, shell-less, signed and rebuilt daily against CVE fixes."
+      "description": "Keepalived VRRP failover and LVS load balancing for high-availability clusters. Built from source, shell-less, signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "high-availability"
     },
     {
       "name": "keycloak",
@@ -587,7 +611,8 @@
       "primary_package": "keycloak",
       "upstream_url": "https://www.keycloak.org",
       "summary": "Keycloak identity and access management server.",
-      "description": "Keycloak identity and access management with OIDC, SAML and social login. Cosign-signed with SBOM attestations, rebuilt daily against CVE fixes."
+      "description": "Keycloak identity and access management with OIDC, SAML and social login. Cosign-signed with SBOM attestations, rebuilt daily against CVE fixes.",
+      "seo_noun": "identity provider"
     },
     {
       "name": "kube-bench",
@@ -731,7 +756,8 @@
       "primary_package": "chartmuseum",
       "upstream_url": "https://chartmuseum.com",
       "summary": "Shell-less ChartMuseum Helm chart repository, built from source via melange.",
-      "description": "ChartMuseum: Helm chart repository server with local, S3, GCS and Azure storage backends and an upload API. Shell-less, non-root, signed and SBOM-attested."
+      "description": "ChartMuseum: Helm chart repository server with local, S3, GCS and Azure storage backends and an upload API. Shell-less, non-root, signed and SBOM-attested.",
+      "seo_noun": "Helm chart repository"
     },
     {
       "name": "prometheus-operator",
@@ -851,7 +877,8 @@
       "primary_package": "mailpit",
       "upstream_url": "https://mailpit.axllent.org",
       "summary": "Shell-less Mailpit SMTP/email testing tool built from source via melange.",
-      "description": "Mailpit SMTP testing server capturing outbound mail with a web UI and API. Shell-less Go binary, signed and SBOM-attested, rebuilt daily against CVE fixes."
+      "description": "Mailpit SMTP testing server capturing outbound mail with a web UI and API. Shell-less Go binary, signed and SBOM-attested, rebuilt daily against CVE fixes.",
+      "seo_noun": "SMTP testing"
     },
     {
       "name": "mariadb",
@@ -900,7 +927,8 @@
       "primary_package": "metallb",
       "upstream_url": "https://metallb.universe.tf",
       "summary": "MetalLB bare-metal load balancer, controller and speaker.",
-      "description": "MetalLB provides LoadBalancer services for bare-metal Kubernetes clusters via ARP and BGP. Built from source, signed, rebuilt daily against CVE fixes."
+      "description": "MetalLB provides LoadBalancer services for bare-metal Kubernetes clusters via ARP and BGP. Built from source, signed, rebuilt daily against CVE fixes.",
+      "seo_noun": "Kubernetes load balancer"
     },
     {
       "name": "metrics-server",
@@ -936,7 +964,8 @@
       "primary_package": "minio",
       "upstream_url": "https://min.io",
       "summary": "Shell-less MinIO S3-compatible object storage built from source via melange.",
-      "description": "MinIO high-performance S3-compatible object storage. Shell-less Go build from upstream source, cosign-signed with SLSA provenance, rebuilt daily."
+      "description": "MinIO high-performance S3-compatible object storage. Shell-less Go build from upstream source, cosign-signed with SLSA provenance, rebuilt daily.",
+      "seo_noun": "object storage"
     },
     {
       "name": "mosquitto",
@@ -1022,7 +1051,8 @@
       "primary_package": "notation",
       "upstream_url": "https://notaryproject.dev",
       "summary": "Shell-less Notation OCI artifact signing/verification CLI, built from source via melange.",
-      "description": "Notation CLI signing and verifying OCI artifacts under the Notary Project spec. Shell-less Go binary, signed and SBOM-attested, rebuilt daily."
+      "description": "Notation CLI signing and verifying OCI artifacts under the Notary Project spec. Shell-less Go binary, signed and SBOM-attested, rebuilt daily.",
+      "seo_noun": "artifact signing"
     },
     {
       "name": "nsq",
@@ -1058,7 +1088,8 @@
       "primary_package": "opa",
       "upstream_url": "https://www.openpolicyagent.org",
       "summary": "Shell-less Open Policy Agent (OPA) policy engine, built from source via melange.",
-      "description": "Open Policy Agent evaluating Rego policies for admission control and authorization. Shell-less Go binary, signed and rebuilt daily against CVEs."
+      "description": "Open Policy Agent evaluating Rego policies for admission control and authorization. Shell-less Go binary, signed and rebuilt daily against CVEs.",
+      "seo_noun": "policy engine"
     },
     {
       "name": "openbao",
@@ -1070,7 +1101,8 @@
       "primary_package": "openbao",
       "upstream_url": "https://openbao.org",
       "summary": "OpenBao secret management server (Vault fork, MPL 2.0).",
-      "description": "OpenBao secrets management and encryption service, the MPL-2.0 Vault fork. Built from source, signed and SBOM-attested, rebuilt daily against CVE fixes."
+      "description": "OpenBao secrets management and encryption service, the MPL-2.0 Vault fork. Built from source, signed and SBOM-attested, rebuilt daily against CVE fixes.",
+      "seo_noun": "secrets management"
     },
     {
       "name": "opensearch",
@@ -1094,7 +1126,8 @@
       "primary_package": "opentofu",
       "upstream_url": "https://opentofu.org",
       "summary": "Shell-less OpenTofu (Terraform-compatible IaC) built from source via melange.",
-      "description": "OpenTofu Terraform-compatible infrastructure-as-code CLI under MPL 2.0. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt daily."
+      "description": "OpenTofu Terraform-compatible infrastructure-as-code CLI under MPL 2.0. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt daily.",
+      "seo_noun": "infrastructure-as-code"
     },
     {
       "name": "oras",
@@ -1106,7 +1139,8 @@
       "primary_package": "oras",
       "upstream_url": "https://oras.land",
       "summary": "Shell-less ORAS OCI registry client, built from source via melange.",
-      "description": "ORAS CLI for pushing and pulling arbitrary artifacts to OCI registries. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt daily."
+      "description": "ORAS CLI for pushing and pulling arbitrary artifacts to OCI registries. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt daily.",
+      "seo_noun": "OCI artifact CLI"
     },
     {
       "name": "osv-scanner",
@@ -1118,7 +1152,8 @@
       "primary_package": "osv-scanner",
       "upstream_url": "https://google.github.io/osv-scanner/",
       "summary": "Shell-less OSV-Scanner dependency vulnerability scanner, built from source via melange.",
-      "description": "OSV-Scanner matching project dependencies against the OSV vulnerability database. Shell-less Go binary, signed and rebuilt daily against CVEs."
+      "description": "OSV-Scanner matching project dependencies against the OSV vulnerability database. Shell-less Go binary, signed and rebuilt daily against CVEs.",
+      "seo_noun": "vulnerability scanner"
     },
     {
       "name": "otelcol",
@@ -1252,7 +1287,8 @@
       "primary_package": "qdrant",
       "upstream_url": "https://qdrant.tech",
       "summary": "Qdrant vector search engine built from source via melange.",
-      "description": "Qdrant vector search engine for embeddings, semantic search and RAG. Built from upstream source, signed with SLSA provenance, rebuilt daily."
+      "description": "Qdrant vector search engine for embeddings, semantic search and RAG. Built from upstream source, signed with SLSA provenance, rebuilt daily.",
+      "seo_noun": "vector database"
     },
     {
       "name": "rabbitmq",
@@ -1276,7 +1312,8 @@
       "primary_package": "rails",
       "upstream_url": "https://rubyonrails.org",
       "summary": "Ruby on Rails built from source via melange.",
-      "description": "Ruby on Rails application runtime with the gems and native extensions preinstalled. Built from source, signed and rebuilt daily against CVE fixes."
+      "description": "Ruby on Rails application runtime with the gems and native extensions preinstalled. Built from source, signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "Ruby on Rails"
     },
     {
       "name": "rclone",
@@ -1288,7 +1325,8 @@
       "primary_package": "rclone",
       "upstream_url": "https://rclone.org/",
       "summary": "Shell-less rclone cloud storage sync tool (70+ object-store and cloud-drive backends), built from source via melange.",
-      "description": "rclone syncing files across 70+ object stores and cloud drives. Shell-less Go binary built from source, cosign-signed and rebuilt daily against CVE fixes."
+      "description": "rclone syncing files across 70+ object stores and cloud drives. Shell-less Go binary built from source, cosign-signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "cloud sync"
     },
     {
       "name": "redis-exporter",
@@ -1327,7 +1365,8 @@
       "primary_package": "regctl",
       "upstream_url": "https://github.com/regclient/regclient",
       "summary": "Shell-less regctl OCI registry client (regclient), built from source via melange.",
-      "description": "regctl querying and managing OCI registries and image manifests via regclient. Shell-less Go binary, signed and rebuilt daily against CVE fixes."
+      "description": "regctl querying and managing OCI registries and image manifests via regclient. Shell-less Go binary, signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "OCI registry CLI"
     },
     {
       "name": "registry",
@@ -1339,7 +1378,8 @@
       "primary_package": "registry",
       "upstream_url": "https://distribution.github.io/distribution/",
       "summary": "Shell-less OCI distribution registry (Docker Registry v2).",
-      "description": "OCI distribution registry (Docker Registry v2) for hosting container images. Shell-less, built from source, signed and rebuilt daily against CVE fixes."
+      "description": "OCI distribution registry (Docker Registry v2) for hosting container images. Shell-less, built from source, signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "container registry"
     },
     {
       "name": "reloader",
@@ -1363,7 +1403,8 @@
       "primary_package": "restic",
       "upstream_url": "https://restic.net/",
       "summary": "Shell-less restic deduplicating, encrypted backup program, built from source via melange.",
-      "description": "restic fast, deduplicating, encrypted backup program for servers and volumes. Shell-less, built from source, signed and rebuilt daily against CVEs."
+      "description": "restic fast, deduplicating, encrypted backup program for servers and volumes. Shell-less, built from source, signed and rebuilt daily against CVEs.",
+      "seo_noun": "backup"
     },
     {
       "name": "ruby",
@@ -1387,7 +1428,8 @@
       "primary_package": "seaweedfs",
       "upstream_url": "https://seaweedfs.com/",
       "summary": "Shell-less SeaweedFS distributed object store and filesystem, built from source via melange.",
-      "description": "SeaweedFS distributed object store and filesystem for billions of small files. Shell-less, built from source, signed and rebuilt daily against CVE fixes."
+      "description": "SeaweedFS distributed object store and filesystem for billions of small files. Shell-less, built from source, signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "object storage"
     },
     {
       "name": "skopeo",
@@ -1399,7 +1441,8 @@
       "primary_package": "skopeo",
       "upstream_url": "https://github.com/containers/skopeo",
       "summary": "Shell-less Skopeo container image inspection/copy tool built from source via melange.",
-      "description": "Skopeo for inspecting, copying and signing container images between registries. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt daily."
+      "description": "Skopeo for inspecting, copying and signing container images between registries. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt daily.",
+      "seo_noun": "image copy tool"
     },
     {
       "name": "solr",
@@ -1423,7 +1466,8 @@
       "primary_package": "sops",
       "upstream_url": "https://getsops.io",
       "summary": "Shell-less SOPS secrets encryption tool, built from source via melange.",
-      "description": "SOPS encrypting secrets in YAML, JSON and env files with KMS, age and PGP. Shell-less Go binary, signed with SLSA provenance, rebuilt daily."
+      "description": "SOPS encrypting secrets in YAML, JSON and env files with KMS, age and PGP. Shell-less Go binary, signed with SLSA provenance, rebuilt daily.",
+      "seo_noun": "secrets encryption"
     },
     {
       "name": "sqlite",
@@ -1447,7 +1491,8 @@
       "primary_package": "step-ca",
       "upstream_url": "https://smallstep.com/docs/step-ca/",
       "summary": "Shell-less step-ca online certificate authority built from source via melange.",
-      "description": "step-ca online certificate authority issuing short-lived X.509 and SSH certificates. Built from source, shell-less, signed and rebuilt daily."
+      "description": "step-ca online certificate authority issuing short-lived X.509 and SSH certificates. Built from source, shell-less, signed and rebuilt daily.",
+      "seo_noun": "certificate authority"
     },
     {
       "name": "step-cli",
@@ -1459,7 +1504,8 @@
       "primary_package": "step-cli",
       "upstream_url": "https://smallstep.com/cli/",
       "summary": "Shell-less smallstep step PKI/certificate CLI, built from source via melange.",
-      "description": "smallstep step CLI for PKI, certificate issuance, JWTs and OAuth flows. Shell-less Go binary, signed and SBOM-attested, rebuilt daily against CVE fixes."
+      "description": "smallstep step CLI for PKI, certificate issuance, JWTs and OAuth flows. Shell-less Go binary, signed and SBOM-attested, rebuilt daily against CVE fixes.",
+      "seo_noun": "PKI CLI"
     },
     {
       "name": "stern",
@@ -1483,7 +1529,8 @@
       "primary_package": "syft",
       "upstream_url": "https://github.com/anchore/syft",
       "summary": "Shell-less Syft SBOM generator, built from source via melange.",
-      "description": "Syft generating SBOMs in SPDX and CycloneDX from images and filesystems. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt daily."
+      "description": "Syft generating SBOMs in SPDX and CycloneDX from images and filesystems. Shell-less Go binary, cosign-signed with SLSA provenance, rebuilt daily.",
+      "seo_noun": "SBOM generator"
     },
     {
       "name": "syncthing",
@@ -1495,7 +1542,8 @@
       "primary_package": "syncthing",
       "upstream_url": "https://syncthing.net",
       "summary": "Shell-less Syncthing continuous file synchronisation daemon, built from source via melange.",
-      "description": "Continuous peer-to-peer file synchronisation between your own devices, no cloud account. Shell-less non-root binary, signed, SBOM-attested, rebuilt daily."
+      "description": "Continuous peer-to-peer file synchronisation between your own devices, no cloud account. Shell-less non-root binary, signed, SBOM-attested, rebuilt daily.",
+      "seo_noun": "file sync"
     },
     {
       "name": "tailscale",
@@ -1507,7 +1555,8 @@
       "primary_package": "tailscale",
       "upstream_url": "https://tailscale.com/",
       "summary": "Shell-less Tailscale WireGuard mesh VPN (tailscaled daemon + CLI), built from source via melange.",
-      "description": "Tailscale WireGuard mesh VPN with the tailscaled daemon and CLI. Shell-less Go build from source, cosign-signed with SLSA provenance, rebuilt daily."
+      "description": "Tailscale WireGuard mesh VPN with the tailscaled daemon and CLI. Shell-less Go build from source, cosign-signed with SLSA provenance, rebuilt daily.",
+      "seo_noun": "VPN"
     },
     {
       "name": "telegraf",
@@ -1543,7 +1592,8 @@
       "primary_package": "temporal-admin-tools",
       "upstream_url": "https://temporal.io",
       "summary": "Temporal admin, schema and CLI tooling built from source.",
-      "description": "Temporal admin toolbox: tdbg, schema tools for Cassandra, SQL and Elasticsearch, plus the temporal and tctl CLIs. Built from source and signed."
+      "description": "Temporal admin toolbox: tdbg, schema tools for Cassandra, SQL and Elasticsearch, plus the temporal and tctl CLIs. Built from source and signed.",
+      "seo_noun": "Temporal admin"
     },
     {
       "name": "temporal-server",
@@ -1555,7 +1605,8 @@
       "primary_package": "temporal-server",
       "upstream_url": "https://temporal.io",
       "summary": "Temporal workflow engine server built from source.",
-      "description": "Temporal workflow engine server with the temporal and tctl CLIs bundled, as upstream ships them. Built from source, signed, rebuilt daily against CVE fixes."
+      "description": "Temporal workflow engine server with the temporal and tctl CLIs bundled, as upstream ships them. Built from source, signed, rebuilt daily against CVE fixes.",
+      "seo_noun": "workflow engine"
     },
     {
       "name": "temporal-ui-server",
@@ -1567,7 +1618,8 @@
       "primary_package": "temporal-ui-server",
       "upstream_url": "https://temporal.io",
       "summary": "Temporal Web UI server built from source.",
-      "description": "Temporal Web UI server with the SvelteKit bundle embedded in the binary. Built from source, signed with SLSA provenance, rebuilt daily against CVE fixes."
+      "description": "Temporal Web UI server with the SvelteKit bundle embedded in the binary. Built from source, signed with SLSA provenance, rebuilt daily against CVE fixes.",
+      "seo_noun": "workflow UI"
     },
     {
       "name": "thanos",
@@ -1615,7 +1667,8 @@
       "primary_package": "trivy",
       "upstream_url": "https://trivy.dev",
       "summary": "Shell-less Trivy vulnerability, IaC and secret scanner.",
-      "description": "Trivy scanner for vulnerabilities, misconfiguration, secrets and licences. Shell-less Go binary, signed and SBOM-attested, rebuilt daily against CVE fixes."
+      "description": "Trivy scanner for vulnerabilities, misconfiguration, secrets and licences. Shell-less Go binary, signed and SBOM-attested, rebuilt daily against CVE fixes.",
+      "seo_noun": "vulnerability scanner"
     },
     {
       "name": "trufflehog",
@@ -1627,7 +1680,8 @@
       "primary_package": "trufflehog",
       "upstream_url": "https://trufflesecurity.com",
       "summary": "Shell-less TruffleHog secret scanner, built from source via melange.",
-      "description": "TruffleHog finding and verifying leaked credentials across git history and files. Shell-less Go binary, signed and rebuilt daily against CVEs."
+      "description": "TruffleHog finding and verifying leaked credentials across git history and files. Shell-less Go binary, signed and rebuilt daily against CVEs.",
+      "seo_noun": "secret scanner"
     },
     {
       "name": "unbound",
@@ -1639,7 +1693,8 @@
       "primary_package": "unbound",
       "upstream_url": "https://www.nlnetlabs.nl/projects/unbound/",
       "summary": "Shell-less Unbound validating recursive DNS resolver built from source via melange.",
-      "description": "Unbound validating, recursive, caching DNS resolver with DNSSEC. Compiled from source, shell-less, cosign-signed and rebuilt daily against CVE fixes."
+      "description": "Unbound validating, recursive, caching DNS resolver with DNSSEC. Compiled from source, shell-less, cosign-signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "DNS resolver"
     },
     {
       "name": "valkey",
@@ -1664,7 +1719,8 @@
       "primary_package": "vaultwarden",
       "upstream_url": "https://github.com/dani-garcia/vaultwarden",
       "summary": "Shell-less Vaultwarden Bitwarden-compatible server built from source.",
-      "description": "Vaultwarden lightweight Bitwarden-compatible password manager server. Shell-less Rust build from source, signed and rebuilt daily against CVEs."
+      "description": "Vaultwarden lightweight Bitwarden-compatible password manager server. Shell-less Rust build from source, signed and rebuilt daily against CVEs.",
+      "seo_noun": "password manager"
     },
     {
       "name": "kvrocks",
@@ -1736,7 +1792,8 @@
       "primary_package": "wordpress",
       "upstream_url": "https://wordpress.org",
       "summary": "Shell-less WordPress on PHP-FPM, built from the official source release.",
-      "description": "WordPress publishing platform served over PHP-FPM, built from the official wordpress.org source release, signed and rebuilt daily against CVE fixes."
+      "description": "WordPress publishing platform served over PHP-FPM, built from the official wordpress.org source release, signed and rebuilt daily against CVE fixes.",
+      "seo_noun": "CMS"
     },
     {
       "name": "zipkin",
@@ -1772,7 +1829,8 @@
       "primary_package": "zot",
       "upstream_url": "https://zotregistry.dev",
       "summary": "Minimal OCI-native container registry (zot), built from source.",
-      "description": "Minimal OCI-native container registry (zot) implementing the OCI distribution spec, with the zli client. Shell-less, built from source, rebuilt daily."
+      "description": "Minimal OCI-native container registry (zot) implementing the OCI distribution spec, with the zli client. Shell-less, built from source, rebuilt daily.",
+      "seo_noun": "container registry"
     },
     {
       "name": "erlang",
@@ -1916,7 +1974,8 @@
       "primary_package": "openldap-2.7",
       "upstream_url": "https://www.openldap.org/",
       "summary": "Shell-less OpenLDAP slapd directory server built on Wolfi.",
-      "description": "OpenLDAP slapd directory server with MDB backend, common overlays and LDAP clients. Shell-less, non-root, fail-closed config, signed, rebuilt daily."
+      "description": "OpenLDAP slapd directory server with MDB backend, common overlays and LDAP clients. Shell-less, non-root, fail-closed config, signed, rebuilt daily.",
+      "seo_noun": "LDAP directory"
     }
   ]
 }

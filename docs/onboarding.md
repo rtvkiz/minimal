@@ -377,6 +377,13 @@ in the first few words (that is the query), then the differentiator. Don't end o
 "built on Wolfi." / "built from source via melange." — the gate rejects those,
 because that is exactly the boilerplate the field exists to escape.
 
+**Set `seo_noun` whenever the category noun is wrong for the image.** The page
+title is `<name> — free hardened <noun> container image`, and the noun falls back
+to the category's (`Kubernetes`, `app`, `infrastructure`, …). That fallback titled
+trivy, cosign and aws-cli "Kubernetes container image" and wordpress an "app" —
+queries nobody types. Use the word people search with: `"seo_noun":"vulnerability
+scanner"`, `"object storage"`, `"identity provider"`. Keep the full title ≤ 65 chars.
+
 ```
 ✅ "Redis-compatible in-memory data store. Shell-less, non-root, signed and
     SBOM-attested, rebuilt daily against upstream CVE fixes."
