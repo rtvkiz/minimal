@@ -171,6 +171,22 @@ export function shortDescription(img: ImageRecord): string {
   return d;
 }
 
+/**
+ * The upstream version of an image's primary package, from its SBOM, without
+ * the Wolfi epoch (-r3) or a post-release snapshot suffix (_git20261106) —
+ * 3.15.2, not 3.15.2_git20261106-r0. Null when the SBOM does not name it.
+ */
+export function appVersion(img: ImageRecord): string | null {
+  const pk = img.primaryPackage;
+  const pkgs = img.packages ?? [];
+  if (!pk || !pkgs.length) return null;
+  const esc = pk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const hit = pkgs.find((p) => p.name === pk)
+    ?? pkgs.find((p) => new RegExp(`^${esc}[-.]?\\d`).test(p.name));
+  if (!hit?.version) return null;
+  return hit.version.replace(/-r\d+$/, '').replace(/_(git|p|svn|cvs|hg)\d*$/, '');
+}
+
 export function totalCves(img: ImageRecord): number {
   return img.vulnerabilities ? img.vulnerabilities.total : 0;
 }

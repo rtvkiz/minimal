@@ -1,6 +1,6 @@
 ---
 import Layout from '../../components/Layout.astro';
-import ImageTable from '../../components/ImageTable.astro';
+import ImageList from '../../components/ImageList.astro';
 import { byCategory, categories, images, imageHref } from '../../lib/catalog';
 const grouped = byCategory();
 const sorted = [...images].sort((a, b) => a.displayName.localeCompare(b.displayName, 'en', { sensitivity: 'base' }));
@@ -62,7 +62,7 @@ const schema = [{
   </div>
 
   <div class="container">
-    <ImageTable images={sorted} sortable id="catalog" />
+    <ImageList images={sorted} sortable id="catalog" />
     <p id="noresults" class="empty-state" hidden>
       No images match your filters. <button type="button" class="btn btn-ghost" id="reset" style="margin-left:8px;height:32px">Clear filters</button>
     </p>
@@ -74,11 +74,11 @@ const schema = [{
   const sortSel = document.getElementById('sort') as HTMLSelectElement;
   const count = document.getElementById('count') as HTMLElement;
   const noresults = document.getElementById('noresults') as HTMLElement;
-  const table = document.getElementById('catalog') as HTMLTableElement;
-  const tbody = table.tBodies[0];
-  const rows = Array.from(tbody.rows);
+  const list = document.getElementById('catalog') as HTMLElement;
+  const tbody = list.querySelector('.ilist-body') as HTMLElement;
+  const rows = Array.from(tbody.querySelectorAll<HTMLElement>('.iitem'));
   const facets = Array.from(document.querySelectorAll<HTMLButtonElement>('#facets .facet'));
-  const headers = Array.from(table.querySelectorAll<HTMLTableCellElement>('th[data-key]'));
+  const headers = Array.from(list.querySelectorAll<HTMLElement>('.ilist-head [data-key]'));
   const total = rows.length;
 
   type Dir = 'asc' | 'desc';
@@ -99,7 +99,7 @@ const schema = [{
   search.value = state.q;
 
   // Unscanned (-1) and unknown sizes sort last whatever the direction.
-  function value(row: HTMLTableRowElement, key: string): string | number | null {
+  function value(row: HTMLElement, key: string): string | number | null {
     const d = row.dataset;
     switch (key) {
       case 'cves': { const n = Number(d.cves); return n < 0 ? null : n; }
@@ -133,11 +133,14 @@ const schema = [{
     // Only worth saying when a filter is hiding something.
     count.textContent = visible === total ? '' : `${visible} of ${total}`;
     noresults.hidden = visible !== 0;
-    table.hidden = visible === 0;
+    list.hidden = visible === 0;
     for (const f of facets) f.setAttribute('aria-pressed', String(f.dataset.cat === state.cat));
     for (const h of headers) {
-      if (h.dataset.key === state.key) h.setAttribute('aria-sort', state.dir === 'asc' ? 'ascending' : 'descending');
-      else h.removeAttribute('aria-sort');
+      // Sort state: data-dir drives the arrow; aria-pressed tells assistive tech
+      // which column is active (aria-sort is only valid on real table headers).
+      const active = h.dataset.key === state.key;
+      if (active) h.dataset.dir = state.dir; else delete h.dataset.dir;
+      h.querySelector('.sort-btn')?.setAttribute('aria-pressed', String(active));
       const arrow = h.querySelector('.arrow');
       if (arrow) arrow.textContent = h.dataset.key === state.key && state.dir === 'desc' ? '▼' : '▲';
     }
@@ -157,7 +160,7 @@ const schema = [{
     state.key = sortSel.value; state.dir = defaultDir(state.key); render();
   });
   for (const f of facets) f.addEventListener('click', () => { state.cat = f.dataset.cat || 'all'; render(); });
-  for (const b of Array.from(table.querySelectorAll<HTMLButtonElement>('.sort-btn'))) {
+  for (const b of Array.from(list.querySelectorAll<HTMLButtonElement>('.sort-btn'))) {
     b.addEventListener('click', () => {
       const k = b.dataset.sort!;
       if (state.key === k) state.dir = state.dir === 'asc' ? 'desc' : 'asc';

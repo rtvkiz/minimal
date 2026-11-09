@@ -1,6 +1,6 @@
 ---
 import Layout from '../../../components/Layout.astro';
-import ImageTable from '../../../components/ImageTable.astro';
+import ImageList from '../../../components/ImageList.astro';
 import { byCategory, categories, categorySlug, images, imageHref } from '../../../lib/catalog';
 
 // One indexable URL per category. /images groups by category already, but only
@@ -59,7 +59,7 @@ const schema = [{
   </div>
 
   <div class="container">
-    <ImageTable images={items} showCategory={false} />
+    <ImageList images={items} showCategory={false} />
 
     <h2 class="section-title" style="margin-top:48px;font-size:1rem">Other categories</h2>
     <div class="facets" style="flex-wrap:wrap">
