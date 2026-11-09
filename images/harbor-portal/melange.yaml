@@ -21,7 +21,7 @@ package:
   # `harbor-portal-minimal` — see docs/onboarding.md "Package naming and
   # scanner visibility".
   name: harbor-portal
-  version: 2.14.6
+  version: 2.16.0
   epoch: 0
   description: "Minimal Harbor portal (Angular UI + Swagger UI static assets) built from source"
   copyright:
@@ -36,7 +36,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: 4f0d14f70e44ace9b97faa82a912108310c5f06a724b7ddafded809817f18446
+  sha256: c9f342a1fd4d10cf9c529d79afc6db3fb639b9c89542bf0aa092d23863f649a6
 
 environment:
   contents:
