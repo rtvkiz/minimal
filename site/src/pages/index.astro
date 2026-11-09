@@ -1,10 +1,22 @@
 ---
 import Layout from '../components/Layout.astro';
-import ImageCard from '../components/ImageCard.astro';
+import ImageList from '../components/ImageList.astro';
+import { imageHref } from '../lib/catalog';
 import CopyButton from '../components/CopyButton.astro';
 import { images, siteStats } from '../lib/catalog';
 
 const stats = siteStats();
+
+// Headline figures, derived from the dataset at build time — never typed in.
+const prodSpecs = (i: typeof images[number]) => (i.variants.prod ?? Object.values(i.variants)[0])?.specs;
+const sizes = images.map((i) => i.size?.bytes).filter((b): b is number => typeof b === 'number').sort((a, b) => a - b);
+const medianMB = sizes.length ? Math.round(sizes[Math.floor(sizes.length / 2)] / 1e6) : null;
+const allHaveDev = images.every((i) => 'dev' in i.variants);
+const nonRoot = images.filter((i) => (prodSpecs(i)?.uid ?? 0) !== 0).length;
+const multiArch = images.filter((i) => {
+  const a = prodSpecs(i)?.archs ?? [];
+  return a.includes('x86_64') && a.includes('aarch64');
+}).length;
 const featuredNames = ['python', 'node-slim', 'go', 'nginx', 'postgres-slim', 'redis-slim'];
 const featured = featuredNames
   .map((n) => images.find((i) => i.name === n))
@@ -78,72 +90,88 @@ const schema = [
 <Layout schema={schema}>
   <section class="hero">
     <div class="container">
-      <span class="eyebrow">Open source · MIT licensed</span>
-      <h1>Free hardened container images</h1>
-      <p class="lead">
-        Free. Signed. Verifiable. Small images — most built from source — rebuilt
-        daily, each one cosign-signed with an SPDX SBOM and SLSA v1.0 build provenance. No
-        account, no Docker Hub pull limits.
-      </p>
-      <div class="cta">
-        <a class="btn btn-primary" href="/images/">Browse {stats.images} images →</a>
-        <a class="btn btn-ghost" href="/about/">How to verify</a>
+      <div class="hero-grid">
+        <div>
+          <h1>Free hardened container images</h1>
+          <p class="lead">Small, signed container images, rebuilt every day. Free to pull — no account needed.</p>
+          <form class="hero-search" action="/images/" method="get" role="search">
+            <label class="field search">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="7" r="4.5" /><path d="m10.5 10.5 3 3" stroke-linecap="round" /></svg>
+              <span class="visually-hidden">Search images</span>
+              <input name="q" type="search" placeholder={`Search ${stats.images} images — postgres, nginx, python…`} autocomplete="off" autocapitalize="off" spellcheck="false" />
+            </label>
+            <button class="btn btn-primary" type="submit">Search</button>
+          </form>
+          <p class="hero-popular">
+            <span>Popular:</span>
+            {featured.map((img) => <a href={imageHref(img.name)}>{img.displayName}<span class="visually-hidden"> image</span></a>)}
+          </p>
+        </div>
+        <div>
+          <div class="terminal">
+            <div class="terminal-bar"><span>Pull and verify in 30 seconds</span></div>
+            <CopyButton code={verifyCmd} />
+          </div>
+          <p class="small" style="margin:10px 0 0"><a href="/about/">All verification commands →</a></p>
+        </div>
       </div>
-      <div class="stats" style="margin-top:36px">
-        <div class="stat"><div class="num">{stats.images}</div><div class="lbl">Images</div></div>
-        <div class="stat"><div class="num">L2</div><div class="lbl">SLSA provenance</div></div>
-        <div class="stat"><div class="num">24h</div><div class="lbl">Rebuild cadence</div></div>
-        <div class="stat"><div class="num">$0</div><div class="lbl">Cost</div></div>
+
+      <div class="stats" style="margin-top:48px">
+        <div class="stat"><div class="num">{stats.images}</div><div class="lbl">{allHaveDev ? 'Images, each with a -dev variant' : 'Images'}</div></div>
+        <div class="stat"><div class="num">{multiArch === stats.images ? 'All' : multiArch}</div><div class="lbl">Built for amd64 and arm64</div></div>
+        <div class="stat"><div class="num">{nonRoot}</div><div class="lbl">Run as non-root by default</div></div>
+        {medianMB !== null && <div class="stat"><div class="num">{medianMB} MB</div><div class="lbl">Median compressed size</div></div>}
       </div>
     </div>
   </section>
 
   <section>
     <div class="container">
-      <h2 class="section-title">Pull and verify in 30 seconds</h2>
-      <p class="section-sub">You don't have to trust us — check the provenance yourself.</p>
-      <div class="container-narrow" style="padding:0">
-        <CopyButton code={verifyCmd} />
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Popular images</h2>
+          <p class="section-sub">With their latest scan results.</p>
+        </div>
+        <a href="/images/" class="small">View all {stats.images} images →</a>
       </div>
+      <ImageList images={featured} />
     </div>
   </section>
 
-  <section style="background:var(--bg-alt)">
+  <section class="section-alt">
     <div class="container">
-      <h2 class="section-title">What every image ships with</h2>
-      <p class="section-sub">Signed, scanned, and rebuilt on a schedule — the same guarantees on every production tag.</p>
-      <div class="verify-grid">
-        <div class="feature"><h3>Cosign keyless signature</h3><p>Verifiable against the public Rekor transparency log — no keys to manage.</p></div>
-        <div class="feature"><h3>SPDX SBOM attestation</h3><p>Every package, version and license, attached as an in-toto attestation.</p></div>
-        <div class="feature"><h3>SLSA v1.0 provenance</h3><p>Cryptographic proof of which workflow, commit and runner built the image.</p></div>
-        <div class="feature"><h3>CVE scan every rebuild</h3><p>Grype runs on every production image each cycle; results published here and in the GitHub Security tab.</p></div>
-        <div class="feature"><h3>Non-root by default</h3><p>Runs as UID 65532 unless the upstream insists otherwise.</p></div>
-        <div class="feature"><h3>No shell where possible</h3><p>Most images don't ship /bin/sh, shrinking the attack surface.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <section style="background:var(--bg-alt)">
-    <div class="container">
-      <div class="container-narrow" style="padding:0">
-        <h2 class="section-title">Common questions</h2>
-        <p class="section-sub">Short answers to what people ask before swapping a base image.</p>
-        {faqs.map((f) => (
-          <details class="faq">
-            <summary>{f.q}</summary>
-            <p set:html={f.a.replace(/`([^`]+)`/g, '<code>$1</code>')} />
-          </details>
-        ))}
+      <div class="split">
+        <div>
+          <h2 class="section-title">What every image ships with</h2>
+          <p class="section-sub">The same guarantees on every production tag, each checkable from your terminal.</p>
+        </div>
+        <div class="verify-grid two">
+          <div class="feature"><h3>Cosign keyless signature</h3><p>Verifiable against the public Rekor transparency log — no keys to manage.</p></div>
+          <div class="feature"><h3>SPDX SBOM attestation</h3><p>Every package, version and license, attached as an in-toto attestation.</p></div>
+          <div class="feature"><h3>SLSA v1.0 provenance</h3><p>Cryptographic proof of which workflow, commit and runner built the image.</p></div>
+          <div class="feature"><h3>CVE scan every rebuild</h3><p>Grype runs on every production image each cycle; results published here and in the GitHub Security tab.</p></div>
+          <div class="feature"><h3>Non-root by default</h3><p>Runs as UID 65532 unless the upstream insists otherwise.</p></div>
+          <div class="feature"><h3>No shell where possible</h3><p>Most images don't ship /bin/sh, shrinking the attack surface.</p></div>
+        </div>
       </div>
     </div>
   </section>
 
   <section>
     <div class="container">
-      <h2 class="section-title">Popular images</h2>
-      <p class="section-sub">A few of the {stats.images} available. <a href="/images/">See all →</a></p>
-      <div class="grid">
-        {featured.map((img) => <ImageCard image={img} />)}
+      <div class="split">
+        <div>
+          <h2 class="section-title">Common questions</h2>
+          <p class="section-sub">Short answers to what people ask before swapping a base image.</p>
+        </div>
+        <div class="faq-list">
+          {faqs.map((f) => (
+            <details class="faq">
+              <summary>{f.q}</summary>
+              <p set:html={f.a.replace(/`([^`]+)`/g, '<code>$1</code>')} />
+            </details>
+          ))}
+        </div>
       </div>
     </div>
   </section>

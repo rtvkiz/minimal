@@ -1,0 +1,36 @@
+---
+// Vulnerability counts as one chip per non-zero severity ("2 H", "1 M").
+//
+// This replaces a proportional bar that showed only the *mix* of severities:
+// an image with one low finding rendered a full-width coloured bar, identical
+// at a glance to one with forty critical findings. Counts carry magnitude.
+import type { ImageRecord } from '../lib/catalog';
+export interface Props { image: ImageRecord; }
+const { image } = Astro.props;
+const v = image.vulnerabilities;
+const c = v?.counts ?? null;
+// Advisories without a CVSS severity (Go GO-YYYY-NNNN) plus negligible ones
+// count toward `total`, so they get a chip of their own.
+const unscored = c ? (c.unknown ?? 0) + (c.negligible ?? 0) : 0;
+const chips = c ? [
+  { k: 'C', n: c.critical ?? 0, cls: 'critical', label: 'critical' },
+  { k: 'H', n: c.high ?? 0, cls: 'high', label: 'high' },
+  { k: 'M', n: c.medium ?? 0, cls: 'medium', label: 'medium' },
+  { k: 'L', n: c.low ?? 0, cls: 'low', label: 'low' },
+  { k: 'U', n: unscored, cls: 'unscored', label: 'unscored' },
+].filter((x) => x.n > 0) : [];
+const label = v
+  ? v.total === 0
+    ? 'No known vulnerabilities'
+    : `${v.total} vulnerabilit${v.total === 1 ? 'y' : 'ies'}: ` + chips.map((x) => `${x.n} ${x.label}`).join(', ')
+  : 'Not yet scanned';
+---
+{!v ? (
+  <span class="sev-none" title={label}>Not scanned</span>
+) : v.total === 0 ? (
+  <span class="sev" title={label}><span class="sev-chip clean">None</span></span>
+) : (
+  <span class="sev" role="img" title={label} aria-label={label}>
+    {chips.map((x) => <span class={`sev-chip ${x.cls}`} aria-hidden="true">{x.n}<span class="k">{x.k}</span></span>)}
+  </span>
+)}
