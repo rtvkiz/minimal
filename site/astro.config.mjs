@@ -123,6 +123,11 @@ const lastmodFor = (pathname) => {
 export default defineConfig({
   site: 'https://minimalcontainers.com',
   trailingSlash: 'ignore',
+  // Astro 7 defaults to JSX whitespace rules ('jsx'), which delete the space
+  // wherever a line of text ends right before an inline tag: the live footer
+  // read "built fromWolfi withapko" and /compare/chainguard "against16".
+  // `true` still minifies, but losslessly — rendered text keeps its spaces.
+  compressHTML: true,
   redirects: siteRedirects,
   build: {
     format: 'directory',

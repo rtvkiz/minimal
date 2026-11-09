@@ -49,12 +49,34 @@ const breadcrumbSchema = crumbs && {
   })),
 };
 const allSchema = [...schema, ...(breadcrumbSchema ? [breadcrumbSchema] : [])];
+
+// Primary navigation. The section that owns the current URL is marked with
+// aria-current so the header shows where you are, not just where you can go.
+const navItems = [
+  { href: '/images/', label: 'Images' },
+  { href: '/docs/', label: 'Docs' },
+  { href: '/compare/', label: 'Compare' },
+  { href: '/blog/', label: 'Blog' },
+  { href: '/about/', label: 'Verify' },
+];
+const path = Astro.url.pathname;
+const current = (href: string) => (path.startsWith(href) ? 'page' : undefined);
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Restore a pinned theme before first paint, so a dark-mode visitor never
+       sees a white flash. No stored choice means "follow the OS", handled in CSS. -->
+  <script is:inline>
+    try {
+      var t = localStorage.getItem('theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script>
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)" />
   <title>{title}</title>
   <meta name="description" content={description} />
   <link rel="canonical" href={canonical} />
@@ -83,55 +105,132 @@ const allSchema = [...schema, ...(breadcrumbSchema ? [breadcrumbSchema] : [])];
           async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
     <div class="container">
-      <a href="/" class="brand">
-        <img src="/icon.svg" alt="" class="logo" width="26" height="26" />
-        <span class="brand-name">minimal</span>
+      <a href="/" class="brand" aria-label="Minimal Containers home">
+        <img src="/icon.svg" alt="" class="logo" width="24" height="24" />
+        <span>minimal</span>
       </a>
-      <nav class="nav">
-        <a href="/images/">Images</a>
-        <a href="/docs/">Docs</a>
-        <a href="/compare/">Compare</a>
-        <a href="/blog/">Blog</a>
-        <a href="/about/">Verify</a>
-        <a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a>
+      <nav class="nav" aria-label="Primary">
+        {navItems.map((n) => <a href={n.href} aria-current={current(n.href)}>{n.label}</a>)}
       </nav>
+      <div class="header-actions">
+        <button class="icon-btn theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg class="icon-sun" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="3" /><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06" stroke-linecap="round" /></svg>
+          <svg class="icon-moon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M13.5 9.6A5.5 5.5 0 0 1 6.4 2.5a5.5 5.5 0 1 0 7.1 7.1Z" stroke-linejoin="round" /></svg>
+        </button>
+        <a class="icon-btn outlined" href="https://github.com/rtvkiz/minimal" rel="noopener">
+          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z" /></svg>
+          <span class="github-label">GitHub</span>
+        </a>
+        <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-nav" aria-label="Open menu">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 4.5h12M2 8h12M2 11.5h12" stroke-linecap="round" /></svg>
+        </button>
+      </div>
     </div>
+    <nav id="mobile-nav" class="mobile-nav" aria-label="Primary" hidden>
+      {navItems.map((n) => <a href={n.href} aria-current={current(n.href)}>{n.label}</a>)}
+      <a href="https://github.com/rtvkiz/minimal" rel="noopener">GitHub</a>
+    </nav>
   </header>
 
-  <main>
+  <main id="main">
     <slot />
   </main>
 
   <footer class="site-footer">
     <div class="container">
-      <div>
-        Minimal Containers · MIT-licensed · built from
-        <a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
-        <a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+      <div class="footer-grid">
+        <div class="about">
+          <a href="/" class="brand" aria-label="Minimal Containers home">
+            <img src="/icon.svg" alt="" class="logo" width="24" height="24" />
+            <span>minimal</span>
+          </a>
+          <p style="margin:12px 0 0">
+            Hardened, MIT-licensed container images built from
+            <a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
+            <a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+            Signed, SBOM-attested, rebuilt daily.
+          </p>
+        </div>
+        <div>
+          <h2>Catalog</h2>
+          <ul>
+            <li><a href="/images/">All images</a></li>
+            <li><a href="/docs/tags/">Tags and pinning</a></li>
+            <li><a href="/docs/dev-variants/">Dev variants</a></li>
+            <li><a href="/rss.xml">RSS</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Trust</h2>
+          <ul>
+            <li><a href="/about/">Verify an image</a></li>
+            <li><a href="/docs/vulnerabilities/">Reading scan results</a></li>
+            <li><a href="/compare/">Comparisons</a></li>
+            <li><a href="https://github.com/rtvkiz/minimal/blob/main/.github/SECURITY.md" rel="noopener">Security policy</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Project</h2>
+          <ul>
+            <li><a href="https://github.com/rtvkiz/minimal" rel="noopener">Source code</a></li>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/docs/">Docs</a></li>
+            <li><a href="https://github.com/rtvkiz/minimal/blob/main/LICENSE" rel="noopener">MIT license</a></li>
+          </ul>
+        </div>
       </div>
-      <div>
-        Updated {dataset.buildDate}
-        {dataset.commitSha && (dataset.runUrl
-          ? <> · <a href={dataset.runUrl} rel="noopener">{dataset.commitSha}</a></>
-          : <> · {dataset.commitSha}</>)}
-        · &copy; {year}
+      <div class="footer-meta">
+        <span>&copy; {year} Minimal Containers</span>
+        <span>
+          Data updated {dataset.buildDate}
+          {dataset.commitSha && (dataset.runUrl
+            ? <> · <a href={dataset.runUrl} rel="noopener">{dataset.commitSha}</a></>
+            : <> · {dataset.commitSha}</>)}
+        </span>
       </div>
     </div>
   </footer>
 
   <script>
-    // Global copy-to-clipboard for any [data-copy] button.
+    // Copy-to-clipboard for any [data-copy] button. The label is restored
+    // from a stored copy rather than textContent, so an icon inside the
+    // button survives the "Copied" state.
     document.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-copy]');
       if (!btn) return;
+      const label = btn.querySelector<HTMLElement>('[data-label]');
       const text = btn.getAttribute('data-copy') || '';
       navigator.clipboard.writeText(text).then(() => {
-        const prev = btn.textContent;
-        btn.textContent = 'Copied';
-        setTimeout(() => { btn.textContent = prev; }, 1400);
-      }).catch(() => { btn.textContent = 'Failed'; });
+        btn.dataset.state = 'copied';
+        if (label) label.textContent = 'Copied';
+        setTimeout(() => { delete btn.dataset.state; if (label) label.textContent = 'Copy'; }, 1400);
+      }).catch(() => { if (label) label.textContent = 'Failed'; });
+    });
+
+    // Theme toggle: flips the effective theme and pins it.
+    const root = document.documentElement;
+    document.querySelector('.theme-toggle')?.addEventListener('click', () => {
+      const pinned = root.getAttribute('data-theme');
+      const isDark = pinned ? pinned === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+      const next = isDark ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch { /* storage blocked: theme lasts this page */ }
+    });
+
+    // Mobile menu.
+    const toggle = document.querySelector<HTMLButtonElement>('.menu-toggle');
+    const panel = document.getElementById('mobile-nav');
+    toggle?.addEventListener('click', () => {
+      const open = toggle.getAttribute('aria-expanded') !== 'true';
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      if (panel) panel.hidden = !open;
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && toggle?.getAttribute('aria-expanded') === 'true') toggle.click();
     });
   </script>
 </body>

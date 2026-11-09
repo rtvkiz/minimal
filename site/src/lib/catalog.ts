@@ -75,6 +75,8 @@ export interface ImageRecord {
   seoNoun: string | null;
   category: string;
   summary: string;
+  /** 140-160 char per-image description from catalog.json (meta description, directory rows). */
+  description?: string;
   upstreamUrl: string | null;
   primaryPackage: string | null;
   repo: string;
