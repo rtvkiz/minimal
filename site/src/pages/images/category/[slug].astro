@@ -1,6 +1,6 @@
 ---
 import Layout from '../../../components/Layout.astro';
-import ImageCard from '../../../components/ImageCard.astro';
+import ImageList from '../../../components/ImageList.astro';
 import { byCategory, categories, categorySlug, images, imageHref } from '../../../lib/catalog';
 
 // One indexable URL per category. /images groups by category already, but only
@@ -47,28 +47,31 @@ const schema = [{
 }];
 ---
 <Layout title={title} description={description} schema={schema} breadcrumbs={[{ name: 'Images', href: '/images/' }]}>
-  <section>
+  <div class="page-head">
     <div class="container">
-      <p style="margin:0 0 6px"><a href="/images/" class="small muted">← All {images.length} images</a></p>
-      <h1 class="section-title">Hardened {category} container images</h1>
-      <p class="section-sub">{blurb}</p>
-
-      <div class="grid" style="margin-top:28px">
-        {items.map((img: any) => <ImageCard image={img} />)}
-      </div>
-
-      <h2 class="section-title" style="margin-top:44px;font-size:1.15rem">Other categories</h2>
-      <div class="facets" style="margin-top:12px">
-        {categories.filter((c) => c !== category).map((c) => (
-          <a class="facet" href={`/images/category/${categorySlug(c)}/`}>{c}</a>
-        ))}
-      </div>
-
-      <p class="small muted" style="margin-top:32px">
-        Every image here is checkable from your terminal — see <a href="/about/">how to verify</a> —
-        and compared against other hardened-image providers with published scan data on the
-        <a href="/compare/">comparison pages</a>.
-      </p>
+      <ol class="breadcrumb">
+        <li><a href="/images/">Images</a></li>
+        <li aria-current="page">{category}</li>
+      </ol>
+      <h1>Hardened {category} container images</h1>
+      <p>{blurb}</p>
     </div>
-  </section>
+  </div>
+
+  <div class="container">
+    <ImageList images={items} showCategory={false} />
+
+    <h2 class="section-title" style="margin-top:48px;font-size:1rem">Other categories</h2>
+    <div class="facets" style="flex-wrap:wrap">
+      {categories.filter((c) => c !== category).map((c) => (
+        <a class="facet" href={`/images/category/${categorySlug(c)}/`}>{c}</a>
+      ))}
+    </div>
+
+    <p class="small muted" style="margin-top:32px">
+      Every image here is checkable from your terminal — see <a href="/about/">how to verify</a> —
+      and compared against other hardened-image providers with published scan data on the
+      <a href="/compare/">comparison pages</a>. All {images.length} images are in the <a href="/images/">full directory</a>.
+    </p>
+  </div>
 </Layout>
