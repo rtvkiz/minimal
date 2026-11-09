@@ -1,0 +1,63 @@
+---
+// The image directory as a list of blocks — one bordered block per image, in
+// the style of Chainguard's directory — with the comparable figures
+// (vulnerabilities, size, build age) in fixed columns on the right, so they
+// still line up down the page the way a table's would.
+//
+// Every block is server-rendered: the full list is in the HTML for crawlers
+// and for anyone with JavaScript disabled.
+import type { ImageRecord } from '../lib/catalog';
+import { imageHref, categorySlug, shortDescription, appVersion } from '../lib/catalog';
+import VulnSummary from './VulnSummary.astro';
+export interface Props { images: ImageRecord[]; showCategory?: boolean; sortable?: boolean; id?: string; }
+const { images, showCategory = true, sortable = false, id } = Astro.props;
+const cves = (i: ImageRecord) => (i.vulnerabilities ? i.vulnerabilities.total : -1);
+const cols = [
+  { key: 'cves', label: 'Vulnerabilities' },
+  { key: 'size', label: 'Size' },
+  { key: 'updated', label: 'Built' },
+];
+---
+<div class="ilist" id={id}>
+  <div class="ilist-head" aria-hidden={sortable ? undefined : 'true'}>
+    <span data-key="name" data-dir={sortable ? 'asc' : undefined}>
+      {sortable ? <button class="sort-btn" type="button" data-sort="name" aria-pressed="true">Image<span class="arrow" aria-hidden="true">▲</span></button> : 'Image'}
+    </span>
+    {cols.map((c) => (
+      <span data-key={c.key} class={c.key === 'cves' ? undefined : 'r'}>
+        {sortable ? <button class="sort-btn" type="button" data-sort={c.key} aria-pressed="false">{c.label}<span class="arrow" aria-hidden="true">▲</span></button> : c.label}
+      </span>
+    ))}
+  </div>
+  <ul class="ilist-body">
+    {images.map((img) => {
+      const desc = shortDescription(img);
+      const ver = appVersion(img);
+      return (
+        <li
+          class="iitem"
+          data-name={img.displayName.toLowerCase()}
+          data-category={img.category}
+          data-cves={cves(img)}
+          data-size={img.size?.bytes ?? ''}
+          data-updated={img.builtAt ?? ''}
+          data-search={`${img.name} ${img.displayName} ${desc} ${img.category}`.toLowerCase()}>
+          <div class="iitem-main">
+            <div class="iitem-title">
+              <a class="iitem-name" href={imageHref(img.name)}>{img.displayName}<span class="visually-hidden"> image</span></a>
+              {showCategory && <a class="iitem-cat" href={`/images/category/${categorySlug(img.category)}/`}>{img.category}</a>}
+            </div>
+            <p class="iitem-desc">{desc}</p>
+            <p class="iitem-meta">
+              <code>{img.repo}</code>
+              {ver && <span>{/^\d/.test(ver) ? `v${ver}` : ver}</span>}
+            </p>
+          </div>
+          <div class="iitem-cve"><VulnSummary image={img} /></div>
+          <div class="iitem-num">{img.size ? img.size.human : '—'}</div>
+          <div class="iitem-age">{img.updatedAgo ?? '—'}</div>
+        </li>
+      );
+    })}
+  </ul>
+</div>
