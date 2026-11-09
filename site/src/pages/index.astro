@@ -91,13 +91,8 @@ const schema = [
     <div class="container">
       <div class="hero-grid">
         <div>
-          <span class="eyebrow">Open source · MIT licensed · rebuilt daily</span>
           <h1>Free hardened container images</h1>
-          <p class="lead">
-            Free. Signed. Verifiable. Small images — most built from source — rebuilt
-            daily, each one cosign-signed with an SPDX SBOM and SLSA v1.0 build provenance. No
-            account, no Docker Hub pull limits.
-          </p>
+          <p class="lead">Small, signed container images, rebuilt every day. Free to pull — no account needed.</p>
           <div class="cta">
             <a class="btn btn-primary" href="/images/">Browse {stats.images} images</a>
             <a class="btn btn-ghost" href="/about/">How to verify</a>
@@ -108,7 +103,6 @@ const schema = [
             <div class="terminal-bar"><span>Pull and verify in 30 seconds</span></div>
             <CopyButton code={verifyCmd} />
           </div>
-          <p class="small muted" style="margin:10px 0 0">You don't have to trust us — check the provenance yourself.</p>
         </div>
       </div>
 
@@ -126,9 +120,8 @@ const schema = [
       <div class="section-head">
         <div>
           <h2 class="section-title">What every image ships with</h2>
-          <p class="section-sub">Signed, scanned, and rebuilt on a schedule — the same guarantees on every production tag.</p>
+          <p class="section-sub">The same guarantees on every production tag.</p>
         </div>
-        <a href="/about/" class="small">Verification commands →</a>
       </div>
       <div class="verify-grid">
         <div class="feature"><h3>Cosign keyless signature</h3><p>Verifiable against the public Rekor transparency log — no keys to manage.</p></div>
@@ -146,7 +139,7 @@ const schema = [
       <div class="section-head">
         <div>
           <h2 class="section-title">Popular images</h2>
-          <p class="section-sub">A few of the {stats.images} available, with their latest scan.</p>
+          <p class="section-sub">With their latest scan results.</p>
         </div>
         <a href="/images/" class="small">View all {stats.images} images →</a>
       </div>

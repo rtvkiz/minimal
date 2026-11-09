@@ -155,6 +155,22 @@ export function byCategory(): Record<string, ImageRecord[]> {
   return out;
 }
 
+/**
+ * The first clause of an image's description — what the software is.
+ *
+ * catalog.json descriptions are written as meta descriptions: "<what it is>.
+ * <how it is built>, signed, rebuilt daily." In a list of 158 rows the second
+ * half is the same sentence 158 times, so directory rows show only the first.
+ */
+export function shortDescription(img: ImageRecord): string {
+  const d = (img.description || img.summary || '').trim();
+  const sentence = /^(.+?\S)\.\s+[A-Z]/.exec(d);
+  if (sentence) return `${sentence[1]}.`;
+  const clause = /^(.+?),\s*(?:built|cosign|signed|shell-less|compiled|rebuilt)\b/i.exec(d);
+  if (clause) return `${clause[1]}.`;
+  return d;
+}
+
 export function totalCves(img: ImageRecord): number {
   return img.vulnerabilities ? img.vulnerabilities.total : 0;
 }

@@ -4,12 +4,12 @@
 // (see .dir in global.css). Every row is server-rendered, so the full list
 // is in the HTML for crawlers and for anyone with JavaScript disabled.
 import type { ImageRecord } from '../lib/catalog';
-import { imageHref, categorySlug } from '../lib/catalog';
+import { imageHref, categorySlug, shortDescription } from '../lib/catalog';
 import VulnSummary from './VulnSummary.astro';
 export interface Props { images: ImageRecord[]; showCategory?: boolean; sortable?: boolean; id?: string; }
 const { images, showCategory = true, sortable = false, id } = Astro.props;
 const cves = (i: ImageRecord) => (i.vulnerabilities ? i.vulnerabilities.total : -1);
-const blurb = (i: ImageRecord) => i.description || i.summary;
+const blurb = (i: ImageRecord) => shortDescription(i);
 const head = (key: string, label: string, right = false) => (
   { key, label, right }
 );

@@ -84,10 +84,7 @@ const schema = [{
         <li><a href={`/images/category/${categorySlug(image.category)}/`}>{image.category}</a></li>
         <li aria-current="page">{image.displayName}</li>
       </ol>
-      <h1>
-        {image.displayName}
-        <a class="cat-badge" href={`/images/category/${categorySlug(image.category)}/`}>{image.category}</a>
-      </h1>
+      <h1>{image.displayName}</h1>
       <p class="summary">{image.description || image.summary}</p>
 
       <dl class="facts">
@@ -137,9 +134,7 @@ const schema = [{
       <dl class="spec-grid">
         <dt>Repository</dt><dd class="kv-mono">{image.repo}</dd>
         {image.digest && <><dt>Digest</dt><dd class="kv-mono">{image.digest}</dd></>}
-        {image.size && <><dt>Size (compressed)</dt><dd>{image.size.human}</dd></>}
-        {image.builtAt && <><dt>Built</dt><dd>{image.builtAt} {image.updatedAgo ? `(${image.updatedAgo})` : ''}</dd></>}
-        {prod?.specs?.archs?.length ? <><dt>Architectures</dt><dd>{prod.specs.archs.join(', ')}</dd></> : null}
+        {image.builtAt && <><dt>Built at</dt><dd class="kv-mono">{image.builtAt}</dd></>}
         {image.primaryPackage && <><dt>Primary package</dt><dd class="kv-mono">{image.primaryPackage}</dd></>}
       </dl>
       {image.degraded && (

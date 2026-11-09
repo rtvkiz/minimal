@@ -28,7 +28,6 @@ const schema = [{
   <div class="page-head" style="border-bottom:0;padding-bottom:8px">
     <div class="container">
       <h1>All {images.length} hardened container images</h1>
-      <p>{images.length} MIT-licensed hardened container images across {categories.length} categories — free, signed, no account required.</p>
     </div>
   </div>
 
@@ -51,10 +50,10 @@ const schema = [{
             <option value="updated">Recently built</option>
           </select>
         </label>
-        <span class="result-count" id="count" aria-live="polite">{images.length} images</span>
+        <span class="result-count" id="count" aria-live="polite"></span>
       </div>
       <div class="facets" id="facets" role="group" aria-label="Filter by category">
-        <button type="button" class="facet" data-cat="all" aria-pressed="true">All <span class="count">{images.length}</span></button>
+        <button type="button" class="facet" data-cat="all" aria-pressed="true">All</button>
         {categories.map((c) => (
           <button type="button" class="facet" data-cat={c} aria-pressed="false">{c} <span class="count">{grouped[c]?.length ?? 0}</span></button>
         ))}
@@ -131,7 +130,8 @@ const schema = [{
       if (show) visible++;
       tbody.appendChild(row);
     }
-    count.textContent = visible === total ? `${total} images` : `${visible} of ${total} images`;
+    // Only worth saying when a filter is hiding something.
+    count.textContent = visible === total ? '' : `${visible} of ${total}`;
     noresults.hidden = visible !== 0;
     table.hidden = visible === 0;
     for (const f of facets) f.setAttribute('aria-pressed', String(f.dataset.cat === state.cat));
