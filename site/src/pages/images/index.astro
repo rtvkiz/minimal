@@ -175,5 +175,8 @@ const schema = [{
       e.preventDefault(); search.focus();
     }
   });
-  render();
+  // The server already renders every row in name order, so only re-render on
+  // load when the URL asks for a different view — re-inserting 158 rows for
+  // nothing was most of this page's main-thread time on mobile.
+  if (state.q || state.cat !== 'all' || state.key !== 'name' || state.dir !== 'asc') render();
 </script>

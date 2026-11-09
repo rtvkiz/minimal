@@ -43,7 +43,7 @@ const cols = [
         data-updated={img.builtAt ?? ''}
         data-search={`${img.name} ${img.displayName} ${blurb(img)} ${img.category}`.toLowerCase()}>
         <td class="c-name">
-          <a class="img-name" href={imageHref(img.name)}>{img.displayName}</a>
+          <a class="img-name" href={imageHref(img.name)}>{img.displayName}<span class="visually-hidden"> image</span></a>
           <div class="img-desc" title={blurb(img)}>{blurb(img)}</div>
         </td>
         {showCategory && (
