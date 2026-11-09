@@ -75,6 +75,8 @@ export interface ImageRecord {
   seoNoun: string | null;
   category: string;
   summary: string;
+  /** 140-160 char per-image description from catalog.json (meta description, directory rows). */
+  description?: string;
   upstreamUrl: string | null;
   primaryPackage: string | null;
   repo: string;
@@ -151,6 +153,38 @@ export function byCategory(): Record<string, ImageRecord[]> {
   for (const c of categories) out[c] = [];
   for (const img of images) (out[img.category] ??= []).push(img);
   return out;
+}
+
+/**
+ * The first clause of an image's description — what the software is.
+ *
+ * catalog.json descriptions are written as meta descriptions: "<what it is>.
+ * <how it is built>, signed, rebuilt daily." In a list of 158 rows the second
+ * half is the same sentence 158 times, so directory rows show only the first.
+ */
+export function shortDescription(img: ImageRecord): string {
+  const d = (img.description || img.summary || '').trim();
+  const sentence = /^(.+?\S)\.\s+[A-Z]/.exec(d);
+  if (sentence) return `${sentence[1]}.`;
+  const clause = /^(.+?),\s*(?:built|cosign|signed|shell-less|compiled|rebuilt)\b/i.exec(d);
+  if (clause) return `${clause[1]}.`;
+  return d;
+}
+
+/**
+ * The upstream version of an image's primary package, from its SBOM, without
+ * the Wolfi epoch (-r3) or a post-release snapshot suffix (_git20261106) —
+ * 3.15.2, not 3.15.2_git20261106-r0. Null when the SBOM does not name it.
+ */
+export function appVersion(img: ImageRecord): string | null {
+  const pk = img.primaryPackage;
+  const pkgs = img.packages ?? [];
+  if (!pk || !pkgs.length) return null;
+  const esc = pk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const hit = pkgs.find((p) => p.name === pk)
+    ?? pkgs.find((p) => new RegExp(`^${esc}[-.]?\\d`).test(p.name));
+  if (!hit?.version) return null;
+  return hit.version.replace(/-r\d+$/, '').replace(/_(git|p|svn|cvs|hg)\d*$/, '');
 }
 
 export function totalCves(img: ImageRecord): number {
