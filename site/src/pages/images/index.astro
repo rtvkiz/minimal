@@ -1,11 +1,12 @@
 ---
 import Layout from '../../components/Layout.astro';
-import ImageCard from '../../components/ImageCard.astro';
-import { byCategory, categories, categorySlug, images, imageHref } from '../../lib/catalog';
+import ImageList from '../../components/ImageList.astro';
+import { byCategory, categories, images, imageHref } from '../../lib/catalog';
 const grouped = byCategory();
+const sorted = [...images].sort((a, b) => a.displayName.localeCompare(b.displayName, 'en', { sensitivity: 'base' }));
 
 // ItemList tells a crawler this is a catalogue and what is in it, rather than
-// leaving it to infer structure from a wall of cards.
+// leaving it to infer structure from a wall of rows.
 const schema = [{
   '@context': 'https://schema.org',
   '@type': 'ItemList',
@@ -24,69 +25,161 @@ const schema = [{
   description={`Browse ${images.length} free, hardened container images across ${categories.length} categories — databases, proxies, observability, Kubernetes tooling and language runtimes. MIT-licensed, signed, rebuilt daily.`}
   schema={schema}
   breadcrumbs={[]}>
-  <section>
+  <div class="page-head" style="border-bottom:0;padding-bottom:8px">
     <div class="container">
-      <h1 class="section-title">All {images.length} hardened container images</h1>
-      <p class="section-sub">{images.length} MIT-licensed hardened container images across {categories.length} categories — free, signed, no account required.</p>
+      <h1>All {images.length} hardened container images</h1>
+    </div>
+  </div>
 
-      <div class="controls">
-        <input id="search" type="search" placeholder="Search images…" autocomplete="off" autocapitalize="off" spellcheck="false" />
+  <div class="toolbar">
+    <div class="container">
+      <div class="toolbar-row">
+        <label class="field search">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="7" r="4.5" /><path d="m10.5 10.5 3 3" stroke-linecap="round" /></svg>
+          <span class="visually-hidden">Search images</span>
+          <input id="search" type="search" placeholder="Search by name or description" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <kbd aria-hidden="true">/</kbd>
+        </label>
+        <label class="field">
+          <span>Sort</span>
+          <select id="sort">
+            <option value="name">Name</option>
+            <option value="category">Category</option>
+            <option value="cves">Fewest vulnerabilities</option>
+            <option value="size">Smallest</option>
+            <option value="updated">Recently built</option>
+          </select>
+        </label>
+        <span class="result-count" id="count" aria-live="polite"></span>
       </div>
-      <div class="facets" id="facets">
-        <span class="facet" data-cat="all" aria-pressed="true">All</span>
-        {categories.map((c) => <span class="facet" data-cat={c} aria-pressed="false">{c}</span>)}
-      </div>
-
-      <p id="noresults" class="notice" hidden style="margin-top:20px">No images match your search.</p>
-
-      <div id="catalog" style="margin-top:24px">
+      <div class="facets" id="facets" role="group" aria-label="Filter by category">
+        <button type="button" class="facet" data-cat="all" aria-pressed="true">All</button>
         {categories.map((c) => (
-          <div class="cat-group" data-category={c}>
-            <h2 class="section-title" style="font-size:1.15rem;margin-top:28px">
-              <a href={`/images/category/${categorySlug(c)}/`}>{c}</a>
-            </h2>
-            <div class="grid">
-              {grouped[c].map((img) => <ImageCard image={img} />)}
-            </div>
-          </div>
+          <button type="button" class="facet" data-cat={c} aria-pressed="false">{c} <span class="count">{grouped[c]?.length ?? 0}</span></button>
         ))}
       </div>
     </div>
-  </section>
+  </div>
+
+  <div class="container">
+    <ImageList images={sorted} sortable id="catalog" />
+    <p id="noresults" class="empty-state" hidden>
+      No images match your filters. <button type="button" class="btn btn-ghost" id="reset" style="margin-left:8px;height:32px">Clear filters</button>
+    </p>
+  </div>
 </Layout>
 
 <script>
   const search = document.getElementById('search') as HTMLInputElement;
-  const facets = Array.from(document.querySelectorAll<HTMLElement>('#facets .facet'));
-  const groups = Array.from(document.querySelectorAll<HTMLElement>('.cat-group'));
-  const cards = Array.from(document.querySelectorAll<HTMLElement>('.card'));
+  const sortSel = document.getElementById('sort') as HTMLSelectElement;
+  const count = document.getElementById('count') as HTMLElement;
   const noresults = document.getElementById('noresults') as HTMLElement;
-  let activeCat = 'all';
+  const list = document.getElementById('catalog') as HTMLElement;
+  const tbody = list.querySelector('.ilist-body') as HTMLElement;
+  const rows = Array.from(tbody.querySelectorAll<HTMLElement>('.iitem'));
+  const facets = Array.from(document.querySelectorAll<HTMLButtonElement>('#facets .facet'));
+  const headers = Array.from(list.querySelectorAll<HTMLElement>('.ilist-head [data-key]'));
+  const total = rows.length;
 
-  function apply() {
-    const q = search.value.trim().toLowerCase();
-    let visible = 0;
-    for (const card of cards) {
-      const matchCat = activeCat === 'all' || card.dataset.category === activeCat;
-      const matchText = !q || (card.dataset.search || '').includes(q);
-      const show = matchCat && matchText;
-      card.style.display = show ? '' : 'none';
-      if (show) visible++;
+  type Dir = 'asc' | 'desc';
+  // The natural first direction for each column: newest builds first, everything else ascending.
+  const defaultDir = (k: string): Dir => (k === 'updated' ? 'desc' : 'asc');
+  const state = { q: '', cat: 'all', key: 'name', dir: 'asc' as Dir };
+
+  // Restore from the URL so a filtered view is linkable.
+  const params = new URLSearchParams(location.search);
+  state.q = params.get('q') ?? '';
+  const urlCat = params.get('category');
+  if (urlCat && facets.some((f) => f.dataset.cat === urlCat)) state.cat = urlCat;
+  const urlSort = params.get('sort');
+  if (urlSort && /^(name|category|cves|size|updated):(asc|desc)$/.test(urlSort)) {
+    const [k, d] = urlSort.split(':');
+    state.key = k; state.dir = d as Dir;
+  }
+  search.value = state.q;
+
+  // Unscanned (-1) and unknown sizes sort last whatever the direction.
+  function value(row: HTMLElement, key: string): string | number | null {
+    const d = row.dataset;
+    switch (key) {
+      case 'cves': { const n = Number(d.cves); return n < 0 ? null : n; }
+      case 'size': return d.size ? Number(d.size) : null;
+      case 'updated': return d.updated || null;
+      case 'category': return d.category || '';
+      default: return d.name || '';
     }
-    // hide empty category headers
-    for (const g of groups) {
-      const anyVisible = Array.from(g.querySelectorAll<HTMLElement>('.card')).some((c) => c.style.display !== 'none');
-      g.style.display = anyVisible ? '' : 'none';
-    }
-    noresults.hidden = visible !== 0;
   }
 
-  search.addEventListener('input', apply);
-  for (const f of facets) {
-    f.addEventListener('click', () => {
-      activeCat = f.dataset.cat || 'all';
-      for (const other of facets) other.setAttribute('aria-pressed', String(other === f));
-      apply();
+  function render() {
+    const q = state.q.trim().toLowerCase();
+    const sorted = [...rows].sort((a, b) => {
+      const va = value(a, state.key), vb = value(b, state.key);
+      if (va === null && vb === null) return 0;
+      if (va === null) return 1;
+      if (vb === null) return -1;
+      const cmp = typeof va === 'number' && typeof vb === 'number'
+        ? va - vb
+        : String(va).localeCompare(String(vb), 'en', { sensitivity: 'base' });
+      return (state.dir === 'asc' ? cmp : -cmp) || (a.dataset.name || '').localeCompare(b.dataset.name || '');
+    });
+    let visible = 0;
+    for (const row of sorted) {
+      const show = (state.cat === 'all' || row.dataset.category === state.cat)
+        && (!q || (row.dataset.search || '').includes(q));
+      row.hidden = !show;
+      if (show) visible++;
+      tbody.appendChild(row);
+    }
+    // Only worth saying when a filter is hiding something.
+    count.textContent = visible === total ? '' : `${visible} of ${total}`;
+    noresults.hidden = visible !== 0;
+    list.hidden = visible === 0;
+    for (const f of facets) f.setAttribute('aria-pressed', String(f.dataset.cat === state.cat));
+    for (const h of headers) {
+      // Sort state: data-dir drives the arrow; aria-pressed tells assistive tech
+      // which column is active (aria-sort is only valid on real table headers).
+      const active = h.dataset.key === state.key;
+      if (active) h.dataset.dir = state.dir; else delete h.dataset.dir;
+      h.querySelector('.sort-btn')?.setAttribute('aria-pressed', String(active));
+      const arrow = h.querySelector('.arrow');
+      if (arrow) arrow.textContent = h.dataset.key === state.key && state.dir === 'desc' ? '▼' : '▲';
+    }
+    sortSel.value = state.key;
+    const opt = `${state.key}:${state.dir}`;
+
+    const next = new URLSearchParams();
+    if (state.q) next.set('q', state.q);
+    if (state.cat !== 'all') next.set('category', state.cat);
+    if (opt !== 'name:asc') next.set('sort', opt);
+    const qs = next.toString();
+    history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
+  }
+
+  search.addEventListener('input', () => { state.q = search.value; render(); });
+  sortSel.addEventListener('change', () => {
+    state.key = sortSel.value; state.dir = defaultDir(state.key); render();
+  });
+  for (const f of facets) f.addEventListener('click', () => { state.cat = f.dataset.cat || 'all'; render(); });
+  for (const b of Array.from(list.querySelectorAll<HTMLButtonElement>('.sort-btn'))) {
+    b.addEventListener('click', () => {
+      const k = b.dataset.sort!;
+      if (state.key === k) state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+      else { state.key = k; state.dir = defaultDir(k); }
+      render();
     });
   }
+  document.getElementById('reset')?.addEventListener('click', () => {
+    state.q = ''; state.cat = 'all'; search.value = ''; render(); search.focus();
+  });
+  // "/" jumps to search, as in most developer tools.
+  document.addEventListener('keydown', (e) => {
+    const t = e.target as HTMLElement;
+    if (e.key === '/' && !e.metaKey && !e.ctrlKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) {
+      e.preventDefault(); search.focus();
+    }
+  });
+  // The server already renders every row in name order, so only re-render on
+  // load when the URL asks for a different view — re-inserting 158 rows for
+  // nothing was most of this page's main-thread time on mobile.
+  if (state.q || state.cat !== 'all' || state.key !== 'name' || state.dir !== 'asc') render();
 </script>

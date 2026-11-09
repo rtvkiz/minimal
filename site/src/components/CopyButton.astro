@@ -1,9 +1,16 @@
 ---
-// A dark code block with a copy-to-clipboard button.
+// A dark code block with a copy-to-clipboard button. Lines starting with "#"
+// render as comments so a multi-step snippet reads as instructions.
 export interface Props { code: string; }
 const { code } = Astro.props;
+const lines = code.split('\n');
 ---
 <div class="codeblock">
-  <pre><code>{code}</code></pre>
-  <button class="copy-btn" type="button" data-copy={code} aria-label="Copy to clipboard">Copy</button>
+  <pre><code>{lines.map((l, i) => (
+    <>{l.startsWith('#') ? <span class="c">{l}</span> : l}{i < lines.length - 1 ? '\n' : ''}</>
+  ))}</code></pre>
+  <button class="copy-btn" type="button" data-copy={code} aria-label="Copy to clipboard">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" /><path d="M10.5 5.5V3.5A1.5 1.5 0 0 0 9 2H3.5A1.5 1.5 0 0 0 2 3.5V9A1.5 1.5 0 0 0 3.5 10.5h2" /></svg>
+    <span data-label>Copy</span>
+  </button>
 </div>

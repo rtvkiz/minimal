@@ -1,7 +1,7 @@
 ---
 import Layout from '../../components/Layout.astro';
 import CopyButton from '../../components/CopyButton.astro';
-import SeverityBar from '../../components/SeverityBar.astro';
+import VulnSummary from '../../components/VulnSummary.astro';
 import { images, getImage, categorySlug, imageTitle, imageHref } from '../../lib/catalog';
 
 export function getStaticPaths() {
@@ -43,6 +43,10 @@ const pageDescription =
     `Free and public — pull ${pullRef.split(':')[0]} with no account.`,
   ].join(' ');
 
+// Registry arch names, shown the way people write them in a FROM line.
+const archLabel = (a: string) => ({ x86_64: 'amd64', aarch64: 'arm64' } as Record<string, string>)[a] ?? a;
+const archs = prod?.specs?.archs?.map(archLabel) ?? [];
+
 const siblings = images
   .filter((i) => i.category === image.category && i.name !== image.name)
   .slice(0, 8);
@@ -75,59 +79,62 @@ const schema = [{
   breadcrumbs={[{ name: 'Images', href: '/images/' }, { name: image.category, href: '/images/' }]}>
   <div class="detail-head">
     <div class="container">
-      <p style="margin:0 0 6px"><a href="/images/" class="small muted">← All images</a></p>
-      <h1>
-        {image.displayName}
-        <a class="cat" href={`/images/category/${categorySlug(image.category)}/`}>{image.category}</a>
-      </h1>
-      <p class="summary">{image.summary}</p>
-      <div class="quickfacts">
-        {image.size && <span><b>Size</b> {image.size.human}</span>}
-        {prod?.specs?.archs?.length ? <span><b>Arch</b> {prod.specs.archs.join(', ')}</span> : null}
-        {prod?.specs?.uid != null && <span><b>User</b> {prod.specs.user}</span>}
-        {image.updatedAgo && <span><b>Updated</b> {image.updatedAgo}</span>}
-        {/* The registry name outlives the page name: these three publish as
-            minimal-<x>-slim, so say so rather than let the pull ref surprise. */}
-        {image.slug !== image.name && <span><b>Publishes as</b> <code class="kv-mono">minimal-{image.name}</code></span>}
-        {image.upstreamUrl && <span><b>Upstream</b> <a href={image.upstreamUrl} rel="noopener">{image.upstreamUrl.replace(/^https?:\/\//, '')}</a></span>}
+      <ol class="breadcrumb">
+        <li><a href="/images/">Images</a></li>
+        <li><a href={`/images/category/${categorySlug(image.category)}/`}>{image.category}</a></li>
+        <li aria-current="page">{image.displayName}</li>
+      </ol>
+      <h1>{image.displayName}</h1>
+      <p class="summary">{image.description || image.summary}</p>
+
+      <dl class="facts">
+        <div class="fact"><dt>Vulnerabilities</dt><dd><a href="#advisories" class="fact-link" data-tab-link="advisories"><VulnSummary image={image} /></a></dd></div>
+        <div class="fact"><dt>Compressed size</dt><dd class="num">{image.size ? image.size.human : '—'}</dd></div>
+        <div class="fact"><dt>Architectures</dt><dd>{archs.length ? archs.join(', ') : '—'}</dd></div>
+        <div class="fact"><dt>Default user</dt><dd>{prod?.specs?.user ?? 'root'}</dd></div>
+        <div class="fact"><dt>Last built</dt><dd>{image.updatedAgo ?? '—'}</dd></div>
+        <div class="fact"><dt>Upstream</dt><dd>{image.upstreamUrl ? <a href={image.upstreamUrl} rel="noopener">{image.upstreamUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a> : '—'}</dd></div>
+      </dl>
+
+      <div class="pull-head">
+        <h2>Pull this image</h2>
+        {hasDev && (
+          <div class="variant-toggle" id="variant-toggle" role="group" aria-label="Variant">
+            <button type="button" data-variant="prod" aria-pressed="true">Production</button>
+            <button type="button" data-variant="dev" aria-pressed="false">Dev</button>
+          </div>
+        )}
       </div>
+      {variantKeys.map((vk) => (
+        <div class="variant-block" data-variant={vk} hidden={vk !== 'prod'}>
+          <CopyButton code={`docker pull ${image.variants[vk].pullRef}`} />
+          {vk === 'dev' && <p class="small muted" style="margin:8px 0 0">The <code>-dev</code> variant adds a shell, package manager and build toolchain. For CI and debugging — not production.</p>}
+        </div>
+      ))}
+      {/* The registry name outlives the page name: these publish as
+          minimal-<x>-slim, so say so rather than let the pull ref surprise. */}
+      {image.slug !== image.name && (
+        <p class="small muted" style="margin:8px 0 0">Publishes as <code>minimal-{image.name}</code>.</p>
+      )}
     </div>
   </div>
 
   <div class="container">
-    <div class="tabs" role="tablist">
+    <div class="tabs" role="tablist" aria-label="Image details">
       <button class="tab" role="tab" aria-selected="true" data-tab="overview">Overview</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="specs">Specifications</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="tags">Tags <span class="muted">({image.tags.length})</span></button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="packages">Packages{image.packages ? <span class="muted"> ({image.packages.length})</span> : null}</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="advisories">Advisories{v ? <span class="muted"> ({v.total})</span> : null}</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="tags">Tags <span class="muted">{image.tags.length}</span></button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="packages">Packages{image.packages ? <span class="muted"> {image.packages.length}</span> : null}</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="advisories">Advisories{v ? <span class="muted"> {v.total}</span> : null}</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="provenance">Provenance</button>
     </div>
 
-    {hasDev && (
-      <div class="variant-toggle" id="variant-toggle" style="margin-top:20px">
-        <button data-variant="prod" aria-pressed="true">Production</button>
-        <button data-variant="dev" aria-pressed="false">Dev</button>
-      </div>
-    )}
-
     <!-- OVERVIEW -->
     <div class="tabpanel" data-panel="overview">
-      <h2 class="section-title" style="font-size:1.1rem">Pull this image</h2>
-      {variantKeys.map((vk) => (
-        <div class="variant-block" data-variant={vk} hidden={vk !== 'prod'}>
-          <CopyButton code={`docker pull ${image.variants[vk].pullRef}`} />
-          {vk === 'dev' && <p class="small muted" style="margin-top:8px">The <code>-dev</code> variant adds a shell, package manager and build toolchain. For CI and debugging — not production.</p>}
-        </div>
-      ))}
-
-      <h2 class="section-title" style="font-size:1.1rem;margin-top:28px">Details</h2>
       <dl class="spec-grid">
         <dt>Repository</dt><dd class="kv-mono">{image.repo}</dd>
         {image.digest && <><dt>Digest</dt><dd class="kv-mono">{image.digest}</dd></>}
-        {image.size && <><dt>Size (compressed)</dt><dd>{image.size.human}</dd></>}
-        {image.builtAt && <><dt>Built</dt><dd>{image.builtAt} {image.updatedAgo ? `(${image.updatedAgo})` : ''}</dd></>}
-        {prod?.specs?.archs?.length ? <><dt>Architectures</dt><dd>{prod.specs.archs.join(', ')}</dd></> : null}
+        {image.builtAt && <><dt>Built at</dt><dd class="kv-mono">{image.builtAt}</dd></>}
         {image.primaryPackage && <><dt>Primary package</dt><dd class="kv-mono">{image.primaryPackage}</dd></>}
       </dl>
       {image.degraded && (
@@ -182,7 +189,7 @@ const schema = [{
       ) : (
         <>
           {image.tagsStatus === 'partial' && <p class="notice warn" style="margin-bottom:16px">Showing a partial tag list — the registry returned incomplete data for this build.</p>}
-          <table class="data">
+          <div class="table-wrap"><table class="data">
             <thead><tr><th>Tag</th><th>Pull</th>{image.tags.some((t) => t.created) && <th>Published</th>}</tr></thead>
             <tbody>
               {image.tags.map((t) => (
@@ -193,7 +200,7 @@ const schema = [{
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </>
       )}
     </div>
@@ -203,14 +210,14 @@ const schema = [{
       {image.packages ? (
         <>
           <p class="section-sub">{image.packages.length} packages in the image, resolved from the SPDX SBOM.</p>
-          <table class="data">
+          <div class="table-wrap"><table class="data">
             <thead><tr><th>Package</th><th>Version</th><th>License</th></tr></thead>
             <tbody>
               {image.packages.map((p) => (
                 <tr><td>{p.name}</td><td class="mono">{p.version || '—'}</td><td>{p.license || '—'}</td></tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </>
       ) : (
         <>
@@ -262,7 +269,7 @@ const schema = [{
                 </span>
               )}
             </div>
-            <table class="data">
+            <div class="table-wrap"><table class="data">
               <thead><tr><th>CVE</th><th>Severity</th><th>Package</th><th>Installed</th><th>Fixed in</th></tr></thead>
               <tbody>
                 {v.list.map((cve) => (
@@ -275,7 +282,7 @@ const schema = [{
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </>
         )
       ) : (
@@ -361,8 +368,16 @@ const schema = [{
     history.replaceState(null, '', `#${name}`);
   }
   for (const t of tabs) t.addEventListener('click', () => selectTab(t.dataset.tab!));
-  const initial = location.hash.replace('#', '');
-  if (initial && tabs.some((t) => t.dataset.tab === initial)) selectTab(initial);
+  const fromHash = () => {
+    const name = location.hash.replace('#', '');
+    if (name && tabs.some((t) => t.dataset.tab === name)) selectTab(name);
+  };
+  fromHash();
+  // In-page links such as the Vulnerabilities fact (#advisories) switch tabs too.
+  window.addEventListener('hashchange', () => {
+    fromHash();
+    document.querySelector('.tabs')?.scrollIntoView({ block: 'start' });
+  });
 
   // Variant toggle (prod/dev) — shows matching .variant-block across tabs
   const vtoggle = document.getElementById('variant-toggle');
