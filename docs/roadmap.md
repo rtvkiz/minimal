@@ -374,6 +374,37 @@ Two lessons from this batch that apply to every future source build:
   so the job is silently never created. Keep image PRs' `build.yml` diffs to the
   image lists only.
 
+## Batch 5 — Bitnami gaps, demand-ranked (2026-11-10)
+
+Source: the Bitnami images we do not cover (`site/src/data/bitnami-map.json`
+gaps), ranked by Docker Hub pulls. Filtered out: SSPL/BSL (mongodb,
+elasticsearch), images free on Chainguard (git), and deployment modes of
+databases we already ship (redis-cluster/sentinel, postgresql-repmgr — patroni
+covers Postgres HA). Wolfi's packages for all of these are frozen or absent, so
+every one is a source build.
+
+| Batch | Image | Pulls | License | Build | Status |
+|---|---|---|---|---|---|
+| 5b | apache-exporter | 19M | MIT | Go | PR #1112 |
+| 5b | elasticsearch-exporter | 16M | Apache-2.0 | Go | PR #1112 |
+| 5b | pgpool | 38M | HPND | C, autotools from the git tag | PR #1112 |
+| 5b | phpmyadmin | 77M | GPL-2.0-only | PHP-FPM on PHP 8.3 | PR #1112 |
+| 5c | azure-cli | 208M | MIT | Python, pip from source | next |
+| 5c | ghost | 131M | MIT | Node app | next |
+| 5c | fluentd | 62M | Apache-2.0 | Ruby gem | next |
+| — | grafana | 72M | AGPL-3.0 | Go + frontend | needs a call on AGPL + a heavy build |
+
+Lessons from 5b:
+- **Wolfi php-8.3 loads `mysqlnd` before `openssl`** (`10-mysqlnd.ini` sorts
+  first) and its `mysqlnd.so` is not linked to libcrypto, so mysqli silently
+  fails to load. phpmyadmin sets `PHP_INI_SCAN_DIR` to an ordered list it ships.
+- **`postgresql-18-dev` pulls OpenSSL 4 headers**, so a C build that needs it
+  cannot also pin `openssl-dev<4` (the two -dev packages collide). pgpool
+  builds against OpenSSL 4.
+- **pgpool.net no longer serves release tarballs**; build from the GitHub tag
+  (needs autotools, bison, flex). The updater gained `{version_underscored}` for
+  its `V4_7_3` tags.
+
 ## Execution model
 
 - **One PR per tier group (~6–8 images).** Each image: 10 registration points
