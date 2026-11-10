@@ -31,7 +31,8 @@
 #                does NOT track its line: it stops updating entirely once a newer
 #                major exists (helm sat on 3.21.3 for four weeks that way).
 #   tarball: (optional) how to fetch the artifact whose hash we record
-#     url:     template with {version} and any keys from `vars`
+#     url:     template with {version} and any keys from `vars`; also {major},
+#              {minor} and {version_underscored} (4.7.3 -> 4_7_3, for V4_7_3 tags)
 #     urls:    list of templates; first that succeeds wins (mirror fallback)
 #     field:   melange.yaml key to write the digest into (sha256, sha512, …)
 #     algo:    digest algorithm (sha256 | sha512); defaults to field name, so
@@ -701,6 +702,40 @@
   links:
     releases: "https://github.com/prometheus/mysqld_exporter/releases"
     notes: "https://github.com/prometheus/mysqld_exporter/releases/tag/v{version}"
+
+- name: phpmyadmin
+  files: [images/phpmyadmin/melange.yaml]
+  source: { type: json, url: "https://www.phpmyadmin.net/home_page/version.json", jq: ".version" }
+  tarball: { url: "https://files.phpmyadmin.net/phpMyAdmin/{version}/phpMyAdmin-{version}-all-languages.tar.gz", field: sha256 }
+  links:
+    releases: "https://www.phpmyadmin.net/downloads/"
+    notes: "https://www.phpmyadmin.net/files/{version}/"
+
+- name: pgpool
+  files: [images/pgpool/melange.yaml]
+  # Upstream tags releases V4_7_3 (plus _RPM, RC and BETA tags). Read the tags
+  # API, keep plain V<maj>_<min>_<patch>, and convert to a dotted version.
+  source: { type: json, url: "https://api.github.com/repos/pgpool/pgpool2/tags?per_page=100", jq: '[.[].name | select(test("^V[0-9]+_[0-9]+_[0-9]+$")) | ltrimstr("V") | gsub("_";".")] | sort_by(split(".") | map(tonumber)) | last' }
+  tarball: { url: "https://github.com/pgpool/pgpool2/archive/refs/tags/V{version_underscored}.tar.gz", field: sha256 }
+  links:
+    releases: "https://www.pgpool.net/docs/latest/en/html/release.html"
+    notes: "https://github.com/pgpool/pgpool2/tree/V{version_underscored}"
+
+- name: elasticsearch-exporter
+  files: [images/elasticsearch-exporter/melange.yaml]
+  source: { type: github-releases-latest, repo: prometheus-community/elasticsearch_exporter, strip-v: true }
+  tarball: { url: "https://github.com/prometheus-community/elasticsearch_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/prometheus-community/elasticsearch_exporter/releases"
+    notes: "https://github.com/prometheus-community/elasticsearch_exporter/releases/tag/v{version}"
+
+- name: apache-exporter
+  files: [images/apache-exporter/melange.yaml]
+  source: { type: github-releases-latest, repo: Lusitaniae/apache_exporter, strip-v: true }
+  tarball: { url: "https://github.com/Lusitaniae/apache_exporter/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/Lusitaniae/apache_exporter/releases"
+    notes: "https://github.com/Lusitaniae/apache_exporter/releases/tag/v{version}"
 
 - name: mongodb-exporter
   cron-enabled: true   # batch-5a (dispatch-validated 2026-11-06 on the onboarding branch)

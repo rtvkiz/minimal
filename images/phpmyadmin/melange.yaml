@@ -1,0 +1,143 @@
+# Melange build configuration for minimal phpmyadmin
+# phpMyAdmin web administration for MySQL and MariaDB, from the official
+# all-languages release (vendor/ and compiled assets included, so no composer or
+# yarn step). Served by PHP-FPM; the image pairs with a web server in front.
+# License: GPL-2.0-only.
+
+package:
+  name: phpmyadmin
+  version: 5.2.3
+  epoch: 0
+  description: "phpMyAdmin web administration for MySQL and MariaDB from the official release"
+  copyright:
+    - license: GPL-2.0-only
+
+vars:
+  # SHA256 of the release tarball - updated by update-versions.yml workflow
+  sha256: 12ba1c425fa4071abbd4e7668c9ebdeac0b0755a467a6d6d5026122bb47c102b
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://files.phpmyadmin.net/phpMyAdmin/${{package.version}}/phpMyAdmin-${{package.version}}-all-languages.tar.gz" \
+        -o /home/build/phpmyadmin.tar.gz
+      echo "${{vars.sha256}}  /home/build/phpmyadmin.tar.gz" | sha256sum -c -
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/share/phpmyadmin"
+      tar xzf /home/build/phpmyadmin.tar.gz \
+        -C "${{targets.destdir}}/usr/share/phpmyadmin" --strip-components=1
+
+  - runs: |
+      cd "${{targets.destdir}}/usr/share/phpmyadmin"
+      # setup/ is the configuration wizard; phpMyAdmin's own docs say to remove
+      # it from production installs. The rest is build metadata or samples that
+      # a served directory should not expose (ChangeLog and RELEASE-DATE also
+      # state the exact version to unauthenticated scanners).
+      rm -rf setup examples
+      rm -f config.sample.inc.php ChangeLog RELEASE-DATE-* README CONTRIBUTING.md \
+        composer.json composer.lock package.json yarn.lock babel.config.json .rtlcssrc.json
+
+  - runs: |
+      # Env-driven configuration instead of a shell entrypoint, as in our
+      # wordpress image: PHP reads the environment itself, so the image stays
+      # shell-less. Variable names follow the official phpmyadmin image.
+      #
+      # Cookie auth needs a 32-byte secret. The official image writes one from
+      # its bash entrypoint; here config.inc.php generates it on first use into
+      # /tmp (per container), unless PMA_BLOWFISH_SECRET supplies one — set it
+      # when running several replicas behind one load balancer, so sessions
+      # survive a request landing on another replica.
+      #
+      # NB: every line keeps the block's indent, including the heredoc
+      # terminator; YAML strips it, so the file starts exactly at `<?php`.
+      cat > "${{targets.destdir}}/usr/share/phpmyadmin/config.inc.php" <<'PHP'
+      <?php
+      declare(strict_types=1);
+
+      $pmaEnv = static function (string $name, ?string $default = null): ?string {
+          $v = getenv($name);
+          return ($v === false || $v === '') ? $default : $v;
+      };
+
+      $secret = $pmaEnv('PMA_BLOWFISH_SECRET');
+      if ($secret === null) {
+          $secretFile = '/tmp/phpmyadmin/blowfish_secret';
+          if (is_readable($secretFile)) {
+              $secret = (string) file_get_contents($secretFile);
+          } else {
+              $secret = bin2hex(random_bytes(16));
+              @mkdir(dirname($secretFile), 0700, true);
+              @file_put_contents($secretFile, $secret, LOCK_EX);
+              @chmod($secretFile, 0600);
+          }
+      }
+      $cfg['blowfish_secret'] = $secret;
+
+      $i = 1;
+      $cfg['Servers'][$i]['auth_type'] = 'cookie';
+      $cfg['Servers'][$i]['host'] = $pmaEnv('PMA_HOST', 'db');
+      $cfg['Servers'][$i]['port'] = $pmaEnv('PMA_PORT', '3306');
+      $cfg['Servers'][$i]['compress'] = false;
+      $cfg['Servers'][$i]['AllowNoPassword'] = false;
+      $cfg['AllowArbitraryServer'] = filter_var($pmaEnv('PMA_ARBITRARY', 'false'), FILTER_VALIDATE_BOOL);
+
+      $cfg['TempDir'] = '/tmp/phpmyadmin';
+      $cfg['UploadDir'] = '';
+      $cfg['SaveDir'] = '';
+      $cfg['VersionCheck'] = false;
+      $cfg['SendErrorReports'] = 'never';
+      $cfg['PmaAbsoluteUri'] = $pmaEnv('PMA_ABSOLUTE_URI', '');
+      PHP
+      chmod 0644 "${{targets.destdir}}/usr/share/phpmyadmin/config.inc.php"
+
+  - runs: |
+      # Explicit PHP extension load order (the image sets PHP_INI_SCAN_DIR here).
+      #
+      # Wolfi's php-8.3-mysqlnd is not linked against libcrypto: it resolves
+      # EVP_* only if openssl.so is already loaded. Its ini is 10-mysqlnd.ini,
+      # which sorts BEFORE 10-openssl.ini, so mysqlnd fails to load ("undefined
+      # symbol: EVP_PKEY_CTX_new") and mysqli with it — phpMyAdmin then has no
+      # database driver. (php-8.4 links mysqlnd properly and names it 20-.)
+      # One file, openssl first, exactly the extensions the apko config installs;
+      # test.sh asserts every one of them loads.
+      mkdir -p "${{targets.destdir}}/etc/phpmyadmin/php.d"
+      cat > "${{targets.destdir}}/etc/phpmyadmin/php.d/extensions.ini" <<'INI'
+      extension=openssl.so
+      extension=mysqlnd.so
+      extension=mysqli.so
+      extension=ctype.so
+      extension=mbstring.so
+      extension=iconv.so
+      extension=sodium.so
+      extension=xml.so
+      extension=dom.so
+      extension=simplexml.so
+      extension=xmlwriter.so
+      extension=zip.so
+      extension=gd.so
+      zend_extension=opcache.so
+      INI
+
+  - runs: |
+      echo "Verifying phpMyAdmin payload..."
+      pma="${{targets.destdir}}/usr/share/phpmyadmin"
+      grep -q "VERSION = '${{package.version}}'" "$pma/libraries/classes/Version.php"
+      test -f "$pma/index.php"
+      test -d "$pma/vendor"
+      test -f "$pma/config.inc.php"
+      head -c5 "$pma/config.inc.php" | grep -q '<?php'
+      test ! -e "$pma/setup"
+      test ! -e "$pma/ChangeLog"
+      head -1 "${{targets.destdir}}/etc/phpmyadmin/php.d/extensions.ini" | grep -qx "extension=openssl.so"

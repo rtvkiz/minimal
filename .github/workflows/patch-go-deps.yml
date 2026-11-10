@@ -189,6 +189,8 @@ jobs:
             [nginx-prometheus-exporter]="/home/build/nginx-prometheus-exporter-${D}{{package.version}}"
             [memcached-exporter]="/home/build/memcached-exporter-${D}{{package.version}}"
             [mysqld-exporter]="/home/build/mysqld-exporter-${D}{{package.version}}"
+            [elasticsearch-exporter]="/home/build/elasticsearch-exporter-${D}{{package.version}}"
+            [apache-exporter]="/home/build/apache-exporter-${D}{{package.version}}"
             [mongodb-exporter]="/home/build/mongodb-exporter-${D}{{package.version}}"
             [configmap-reload]="/home/build/configmap-reload-${D}{{package.version}}"
             [contour]="/home/build/contour-${D}{{package.version}}"
@@ -299,6 +301,8 @@ jobs:
             [nginx-prometheus-exporter]="github.com/nginx/nginx-prometheus-exporter"
             [memcached-exporter]="github.com/prometheus/memcached_exporter"
             [mysqld-exporter]="github.com/prometheus/mysqld_exporter"
+            [elasticsearch-exporter]="github.com/prometheus-community/elasticsearch_exporter"
+            [apache-exporter]="github.com/Lusitaniae/apache_exporter"
             [mongodb-exporter]="github.com/percona/mongodb_exporter"
             [configmap-reload]="github.com/jimmidyson/configmap-reload"
             [contour]="github.com/projectcontour/contour"
@@ -408,6 +412,8 @@ jobs:
             [nginx-prometheus-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [memcached-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [mysqld-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [elasticsearch-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [apache-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [mongodb-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [configmap-reload]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [contour]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

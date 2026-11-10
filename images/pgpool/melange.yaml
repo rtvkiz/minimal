@@ -1,0 +1,119 @@
+# Melange build configuration for minimal pgpool
+# Pgpool-II: connection pooling, load balancing and failover between PostgreSQL
+# clients and servers. Built from the upstream git tag (pgpool.net no longer
+# serves release tarballs directly), so configure is generated here.
+# License: the HPND notice in upstream's COPYING.
+
+package:
+  # Upstream's own name for the project; Wolfi's (now frozen) package was
+  # `pgpool2-4.7`, which this does not collide with.
+  name: pgpool
+  version: 4.7.3
+  epoch: 0
+  description: "Minimal Pgpool-II built from source"
+  copyright:
+    - license: HPND
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 4c933840c5e2bdd99a4f41e65b36bdec44454a116d023e473fcc33f9e651bee1
+
+var-transforms:
+  # Upstream tags releases V4_7_3, not v4.7.3.
+  - from: ${{package.version}}
+    match: \.
+    replace: _
+    to: tag-version
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - autoconf
+      - automake
+      - libtool
+      - bison
+      - flex
+      # Brings libpq and pg_config. It also pulls OpenSSL 4's headers (Wolfi's
+      # bare `openssl-dev`), so OpenSSL 3 cannot be pinned alongside it — the two
+      # -dev packages ship the same files. pgpool builds against OpenSSL 4.
+      - postgresql-18-dev
+      - openssl-dev
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/pgpool-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/pgpool/pgpool2/archive/refs/tags/V${{vars.tag-version}}.tar.gz" \
+        -o /home/build/pgpool.tar.gz
+      echo "${{vars.sha256}}  /home/build/pgpool.tar.gz" | sha256sum -c -
+      tar xzf /home/build/pgpool.tar.gz -C /home/build/pgpool-${{package.version}} --strip-components=1
+      rm /home/build/pgpool.tar.gz
+
+  # The git tag ships configure.ac, not a generated configure.
+  - runs: |
+      cd /home/build/pgpool-${{package.version}}
+      autoreconf -fi
+      ./configure \
+        --prefix=/usr \
+        --sysconfdir=/etc/pgpool \
+        --with-openssl \
+        --disable-rpath
+
+  # Build only the server and its admin tools (src/). The parser is built first
+  # and serially: its generated sources race under -j otherwise. The pgproto
+  # test tool is skipped — it needs a source patch and we do not ship it.
+  - runs: |
+      cd /home/build/pgpool-${{package.version}}
+      make -C src/parser
+      make -C src -j"$(nproc)"
+      make -C src DESTDIR="${{targets.destdir}}" install
+      rm -rf "${{targets.destdir}}/usr/include" "${{targets.destdir}}/usr/lib/"*.a "${{targets.destdir}}/usr/lib/"*.la
+      # pgpool_setup and watchdog_setup are shell scripts that stand up local test
+      # clusters; they need a shell this image does not have, so drop them and
+      # strip only the ELF binaries that remain.
+      rm -f "${{targets.destdir}}/usr/bin/pgpool_setup" "${{targets.destdir}}/usr/bin/watchdog_setup"
+      for f in "${{targets.destdir}}/usr/bin/"*; do
+        if head -c4 "$f" | grep -q "ELF"; then strip --strip-unneeded "$f"; fi
+      done
+
+  # A container-ready default config: listen on :9999 as nonroot, every runtime
+  # file under /tmp (the only writable dir), log to stderr. It pools a single
+  # backend named `postgres` in raw mode — no primary detection, which in
+  # streaming_replication mode blocks startup for up to 5 minutes when no
+  # replication user is configured. For replication/failover setups, mount your
+  # own /etc/pgpool/pgpool.conf, or pass -f.
+  - runs: |
+      mkdir -p "${{targets.destdir}}/etc/pgpool"
+      cat > "${{targets.destdir}}/etc/pgpool/pgpool.conf" << 'CFG'
+      backend_clustering_mode = 'raw'
+      listen_addresses = '*'
+      port = 9999
+      unix_socket_directories = '/tmp'
+      pcp_listen_addresses = '*'
+      pcp_port = 9898
+      pcp_socket_dir = '/tmp'
+      pid_file_name = '/tmp/pgpool.pid'
+      logdir = '/tmp'
+      log_destination = 'stderr'
+      backend_hostname0 = 'postgres'
+      backend_port0 = 5432
+      backend_weight0 = 1
+      backend_flag0 = 'ALLOW_TO_FAILOVER'
+      health_check_period = 0
+      enable_pool_hba = off
+      CFG
+      : > "${{targets.destdir}}/etc/pgpool/pcp.conf"
+      : > "${{targets.destdir}}/etc/pgpool/pool_passwd"
+
+  - runs: |
+      echo "Verifying pgpool binary and version..."
+      "${{targets.destdir}}/usr/bin/pgpool" --version 2>&1 | grep -q "${{package.version}}" \
+        || { echo "FAIL: pgpool did not report ${{package.version}}"; exit 1; }

@@ -1,0 +1,66 @@
+# Melange build configuration for minimal apache-exporter
+# Exposes Apache httpd mod_status metrics for Prometheus on :9117. Point it at a server with --scrape_uri (default http://localhost/server-status/?auto).
+# The upstream binary keeps its underscore name (apache_exporter); image and package use
+# the catalog's hyphenated convention, same as mysqld-exporter.
+# Pure Go from source, CGO off (static, shell-less). License: MIT.
+
+package:
+  # Named exactly what upstream calls it, not `apache-exporter-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: apache-exporter
+  version: 1.1.3
+  epoch: 0
+  description: "Minimal Apache httpd Exporter built from source"
+  copyright:
+    - license: MIT
+  dependencies:
+    # Wolfi ships `apache-exporter` too (frozen at 1.0.12). apko resolves a
+    # top-level name across all repositories by version, so pin ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 2aed64530c7e6f40247beb514ff312ab329ee167596abf6ec45b1a5c416260c4
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/apache-exporter-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/Lusitaniae/apache_exporter/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/apache-exporter.tar.gz
+      echo "${{vars.sha256}}  /home/build/apache-exporter.tar.gz" | sha256sum -c -
+      tar xzf /home/build/apache-exporter.tar.gz -C /home/build/apache-exporter-${{package.version}} --strip-components=1
+      rm /home/build/apache-exporter.tar.gz
+
+  - runs: |
+      cd /home/build/apache-exporter-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/prometheus/common/version.Version=${{package.version}}" \
+        -o /home/build/apache_exporter-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/apache_exporter-bin "${{targets.destdir}}/usr/bin/apache_exporter"
+      chmod 0755 "${{targets.destdir}}/usr/bin/apache_exporter"
+
+  - runs: |
+      echo "Verifying apache-exporter binary and injected version..."
+      "${{targets.destdir}}/usr/bin/apache_exporter" --version 2>&1 | grep -q "version ${{package.version}}" \
+        || { echo "FAIL: version ${{package.version}} not reported - ldflag wrong?"; exit 1; }
