@@ -34,6 +34,16 @@ const ALIASES = {
   node: 'node-slim',
   apache: 'httpd',
   'php-fpm': 'php',
+  // Same software, named for the component or vendor on Bitnami's side. Without
+  // these, sealed-secrets-controller (3.1B pulls) headlined the "no replacement"
+  // list while we ship it as sealed-secrets.
+  'sealed-secrets-controller': 'sealed-secrets',
+  'sealed-secrets-kubeseal': 'kubeseal',
+  temporal: 'temporal-server',
+  'temporal-ui': 'temporal-ui-server',
+  'grafana-loki': 'loki',
+  'grafana-tempo': 'tempo',
+  golang: 'go',
 };
 
 // --- 1. What Bitnami publishes ---------------------------------------------
