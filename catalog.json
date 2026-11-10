@@ -1905,6 +1905,58 @@
       "description": "Prometheus MySQL Server Exporter for MySQL and MariaDB metrics. Shell-less static Go binary built from source, signed, SBOM-attested, rebuilt daily."
     },
     {
+      "name": "phpmyadmin",
+      "category": "Apps",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "phpmyadmin",
+      "upstream_url": "https://www.phpmyadmin.net",
+      "summary": "Shell-less phpMyAdmin on PHP-FPM, from the official release.",
+      "description": "phpMyAdmin web administration for MySQL and MariaDB on PHP-FPM. Env-configured, setup wizard removed, shell-less and non-root, signed and rebuilt daily.",
+      "seo_noun": "MySQL admin UI"
+    },
+    {
+      "name": "pgpool",
+      "category": "Databases",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "pgpool",
+      "upstream_url": "https://www.pgpool.net",
+      "summary": "Shell-less Pgpool-II PostgreSQL middleware, built from source via melange.",
+      "description": "Pgpool-II connection pooler, load balancer and failover manager for PostgreSQL. Shell-less, non-root, built from source, signed, rebuilt daily.",
+      "seo_noun": "PostgreSQL pooler"
+    },
+    {
+      "name": "elasticsearch-exporter",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "elasticsearch-exporter",
+      "upstream_url": "https://github.com/prometheus-community/elasticsearch_exporter",
+      "summary": "Shell-less Prometheus Elasticsearch Exporter, built from source via melange.",
+      "description": "Prometheus exporter for Elasticsearch and OpenSearch cluster, node and index health metrics. Shell-less static Go binary, signed, rebuilt daily.",
+      "seo_noun": "metrics exporter"
+    },
+    {
+      "name": "apache-exporter",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "apache-exporter",
+      "upstream_url": "https://github.com/Lusitaniae/apache_exporter",
+      "summary": "Shell-less Prometheus Apache httpd Exporter, built from source via melange.",
+      "description": "Prometheus exporter for Apache httpd mod_status: workers, scoreboard, traffic and uptime. Shell-less static Go binary, signed, SBOM-attested, rebuilt daily.",
+      "seo_noun": "metrics exporter"
+    },
+    {
       "name": "mongodb-exporter",
       "category": "Observability",
       "variants": [

@@ -19,6 +19,7 @@ files=$(jq -r '.files[] | if type == "string" then . else .path end' <<<"$row" |
 releases=$(j '.links.releases // empty')
 notes_tmpl=$(j '.links.notes // empty')
 notes_url="${notes_tmpl//\{version\}/$new}"
+notes_url="${notes_url//\{version_underscored\}/${new//./_}}"
 image_name="minimal-$name"
 # Image-name overrides (e.g. distribution → registry, redis → redis-slim).
 # NB: hyphenated keys MUST be bracket-quoted in jq — `.image-name` is

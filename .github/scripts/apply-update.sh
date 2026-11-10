@@ -29,6 +29,9 @@ render() {
   tmpl="${tmpl//\{version\}/$new_version}"
   tmpl="${tmpl//\{major\}/$major}"
   tmpl="${tmpl//\{minor\}/$minor}"
+  # Upstreams that tag releases as V4_7_3 (pgpool) need the version with dots
+  # replaced; {version} itself stays dotted for melange and the PR text.
+  tmpl="${tmpl//\{version_underscored\}/${new_version//./_}}"
   while IFS=$'\t' read -r k v; do
     [ -z "$k" ] && continue
     tmpl="${tmpl//\{$k\}/$v}"

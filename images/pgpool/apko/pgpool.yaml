@@ -1,0 +1,56 @@
+# Minimal pgpool image - Pgpool-II built from source via melange
+# Connection pooling, load balancing and failover in front of PostgreSQL. Listens
+# on :9999 (clients) and :9898 (PCP admin). The default config points at a
+# backend named `postgres`; mount your own /etc/pgpool/pgpool.conf for real use.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - pgpool
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/pgpool
+
+# -n: stay in the foreground (no daemonize), as a container process must.
+cmd: -n -f /etc/pgpool/pgpool.conf
+
+work-dir: /tmp
+
+environment:
+  PATH: /usr/bin:/bin
+  HOME: /tmp
+
+paths:
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-pgpool"
+  org.opencontainers.image.description: "Hardened shell-less Pgpool-II built from source via melange with CVE patches on every rebuild"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/pgpool"
+  org.opencontainers.image.licenses: "HPND"
+
+archs:
+  - x86_64
+  - aarch64

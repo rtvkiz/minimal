@@ -1,0 +1,97 @@
+# Development variant of minimal-phpmyadmin. Not intended for production.
+# phpMyAdmin served by PHP-FPM on :9000, configured from the environment:
+# PMA_HOST (default "db"), PMA_PORT (3306), PMA_ARBITRARY, PMA_ABSOLUTE_URI and
+# PMA_BLOWFISH_SECRET (set it when running more than one replica).
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - phpmyadmin
+    # PHP 8.3, not 8.4: phpMyAdmin 5.2 supports PHP >=7.2,<8.4
+    # (phpmyadmin.net/home_page/version.json). FastCGI on :9000; pair with a
+    # web server in front (our nginx image works directly).
+    - php-8.3-fpm
+    - php-8.3-fpm-config
+    # Required or strongly recommended by phpMyAdmin's requirements page:
+    # mysqli is the driver; mbstring/ctype/iconv for multibyte data; sodium and
+    # openssl for cookie-auth encryption; xml/dom/simplexml/xmlwriter for
+    # import and export; zip and gd for compressed exports and charts.
+    - php-8.3-mysqli
+    - php-8.3-mysqlnd
+    - php-8.3-mbstring
+    - php-8.3-ctype
+    - php-8.3-iconv
+    - php-8.3-sodium
+    - php-8.3-openssl
+    - php-8.3-xml
+    - php-8.3-dom
+    - php-8.3-simplexml
+    - php-8.3-xmlwriter
+    - php-8.3-zip
+    - php-8.3-gd
+    - php-8.3-opcache
+    - ca-certificates-bundle
+    - tini
+    # Debugging surface for the dev variant.
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+    - curl
+    - openssl
+    - bind-tools
+    - iputils
+    - jq
+    # php CLI so `php -l` and `php -r` work interactively.
+    - php-8.3
+
+accounts:
+  groups:
+    - groupname: phpmyadmin
+      gid: 65532
+  users:
+    - username: phpmyadmin
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /sbin/tini -- /usr/bin/php-fpm --nodaemonize
+
+work-dir: /usr/share/phpmyadmin
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  HOME: /tmp
+  # Load extensions from the package's ordered list instead of /etc/php/conf.d,
+  # whose file names load mysqlnd before openssl (see melange.yaml).
+  PHP_INI_SCAN_DIR: /etc/phpmyadmin/php.d
+  PMA_HOST: db
+  PMA_PORT: "3306"
+
+paths:
+  # The application tree stays read-only; phpMyAdmin writes only its TempDir
+  # (twig cache, uploads in progress) and the generated secret, both in /tmp.
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-phpmyadmin-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-phpmyadmin: same app + shell + PHP CLI and debugging tools. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/phpmyadmin"
+  org.opencontainers.image.licenses: "GPL-2.0-only"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

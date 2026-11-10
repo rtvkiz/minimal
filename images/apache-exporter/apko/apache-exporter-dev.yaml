@@ -1,0 +1,67 @@
+# Development variant of minimal-apache-exporter. Not intended for production.
+#
+# Minimal apache-exporter image - built from source via melange
+# Exposes Apache httpd mod_status metrics for Prometheus on :9117. Point it at a
+# server with --scrape_uri (default http://localhost/server-status/?auto).
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - apache-exporter
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- Debugging ---
+    - curl
+    - openssl
+    - bind-tools
+    - jq
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/apache_exporter
+
+work-dir: /tmp
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  HOME: /tmp
+
+paths:
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-apache-exporter-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-apache-exporter: same binary + shell + curl/openssl/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/apache-exporter"
+  org.opencontainers.image.licenses: "MIT"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64
