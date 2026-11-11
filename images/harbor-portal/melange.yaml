@@ -36,7 +36,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: c9f342a1fd4d10cf9c529d79afc6db3fb639b9c89542bf0aa092d23863f649a6
+  sha256: 0142713eb73eeddb5997473853e03135d47cc2b36ee140f439a4ca0e17e67a22
 
 environment:
   contents:
