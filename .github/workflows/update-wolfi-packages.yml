@@ -204,6 +204,27 @@ jobs:
             echo "  -> Up to date"
           fi
 
+          # --- CouchDB ---
+          # Same shape as OpenLDAP: Wolfi ships one couchdb-N.N package per minor
+          # line. This block was missing, so the image sat on couchdb-3.3 after
+          # Wolfi published couchdb-3.5 — the daily rebuild only refreshes within
+          # the pinned line, it never moves to a new one.
+          CURRENT_COUCHDB=$(grep -oP '^\s*-\s*\Kcouchdb-\d+\.\d+\b(?=\s*$)' images/couchdb/apko/couchdb.yaml | head -1)
+          echo "Current CouchDB package: $CURRENT_COUCHDB"
+
+          LATEST_COUCHDB=$(grep -E "^couchdb-[0-9]+\.[0-9]+ " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t- -k2 -V | tail -1)
+          echo "Latest CouchDB package: $LATEST_COUCHDB"
+
+          if [ -n "$LATEST_COUCHDB" ] && [ "$LATEST_COUCHDB" != "$CURRENT_COUCHDB" ]; then
+            echo "couchdb_update=true" >> $GITHUB_OUTPUT
+            echo "couchdb_current=$CURRENT_COUCHDB" >> $GITHUB_OUTPUT
+            echo "couchdb_latest=$LATEST_COUCHDB" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_COUCHDB -> $LATEST_COUCHDB"
+          else
+            echo "  -> Up to date"
+          fi
+
           # Summary
           echo ""
           echo "=== Summary ==="
@@ -230,6 +251,9 @@ jobs:
           fi
           if [ -n "$LATEST_OPENLDAP" ] && [ "$LATEST_OPENLDAP" != "$CURRENT_OPENLDAP" ]; then
             echo "OpenLDAP: $CURRENT_OPENLDAP -> $LATEST_OPENLDAP"
+          fi
+          if [ -n "$LATEST_COUCHDB" ] && [ "$LATEST_COUCHDB" != "$CURRENT_COUCHDB" ]; then
+            echo "CouchDB: $CURRENT_COUCHDB -> $LATEST_COUCHDB"
           fi
 
       # --- Python PR ---
@@ -441,6 +465,42 @@ jobs:
               --body "Upgrades OpenLDAP from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
 
           **Needs review — not auto-merged.** A new OpenLDAP line can remove or rename backends, overlays and config directives that existing slapd configurations reference. Check the upstream CHANGES file and confirm every \`${NEW}-*\` subpackage the image lists exists before merging.
+
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml)."
+          fi
+          git checkout main
+          git checkout -- .
+
+      # --- CouchDB PR ---
+      # Opened for review, NOT auto-merged: a new CouchDB line can change config
+      # defaults and on-disk/replication behaviour, and the smoke test only
+      # proves boot + a create/read round-trip. catalog.json's primary_package
+      # names the line too, so it moves in the same commit.
+      - name: Create CouchDB PR
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.check.outputs.couchdb_update == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          OLD="${{ steps.check.outputs.couchdb_current }}"
+          NEW="${{ steps.check.outputs.couchdb_latest }}"
+          sed -i -E "s/\b${OLD//./\\.}\b/${NEW}/g" images/couchdb/apko/*.yaml
+          sed -i -E "s/\"primary_package\": \"${OLD//./\\.}\"/\"primary_package\": \"${NEW}\"/" catalog.json
+          BRANCH="update-couchdb-${NEW}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add images/couchdb/apko/ catalog.json
+          git commit -m "chore(couchdb): upgrade to ${NEW}"
+          git push --force -u origin "$BRANCH"
+          PR_URL=$(gh pr list --head "$BRANCH" --base main --state open --json url --jq '.[0].url // ""')
+          if [ -z "$PR_URL" ]; then
+            gh pr create \
+              --title "chore(couchdb): upgrade to ${NEW}" \
+              --label dependencies \
+              --body "Upgrades CouchDB from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
+
+          **Needs review — not auto-merged.** A new CouchDB line can change config defaults and storage/replication behaviour. Read the upstream release notes before merging.
 
           ---
           Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml)."
