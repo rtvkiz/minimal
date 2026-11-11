@@ -20,7 +20,7 @@ wolfi-versioned:
   - postgres-slim   # postgresql-*
   - patroni         # patroni (unversioned) BUT pins postgresql-* like postgres-slim;
                     # update-wolfi-packages.yml rewrites both in lockstep
-  - couchdb         # couchdb-3.3
+  - couchdb         # couchdb-3.N (line bumped by update-wolfi-packages.yml)
   - aws-cli         # aws-cli-2 (major-line PR is opened for review, not auto-merged)
   - openldap        # openldap-2.7 (new 2.N line PR is opened for review, not auto-merged)
 
