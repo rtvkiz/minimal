@@ -1,0 +1,94 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><!-- Restore a pinned theme before first paint, so a dark-mode visitor never
+       sees a white flash. No stored choice means "follow the OS", handled in CSS. --><script>
+    try {
+      var t = localStorage.getItem('theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script><meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)"><title>Debugging a container that has no shell — Minimal Containers</title><meta name="description" content="Distroless images remove the shell an attacker would use, and the one you would use. Here are the techniques that still work, in the order you should reach for them."><link rel="canonical" href="https://minimalcontainers.com/blog/debugging-a-container-with-no-shell/"><meta property="og:title" content="Debugging a container that has no shell — Minimal Containers"><meta property="og:description" content="Distroless images remove the shell an attacker would use, and the one you would use. Here are the techniques that still work, in the order you should reach for them."><meta property="og:type" content="article"><meta property="og:url" content="https://minimalcontainers.com/blog/debugging-a-container-with-no-shell/"><meta property="og:site_name" content="Minimal Containers"><meta property="og:image" content="https://minimalcontainers.com/og.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Debugging a container that has no shell — Minimal Containers"><meta name="twitter:description" content="Distroless images remove the shell an attacker would use, and the one you would use. Here are the techniques that still work, in the order you should reach for them."><meta name="twitter:image" content="https://minimalcontainers.com/og.png"><meta property="article:published_time" content="2026-09-06"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Debugging a container that has no shell","description":"Distroless images remove the shell an attacker would use, and the one you would use. Here are the techniques that still work, in the order you should reach for them.","datePublished":"2026-09-06","dateModified":"2026-09-06","url":"https://minimalcontainers.com/blog/debugging-a-container-with-no-shell","author":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"},"publisher":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://minimalcontainers.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://minimalcontainers.com/blog/"},{"@type":"ListItem","position":3,"name":"Debugging a container that has no shell — Minimal Containers","item":"https://minimalcontainers.com/blog/debugging-a-container-with-no-shell/"}]}</script><link rel="icon" type="image/svg+xml" href="/icon.svg"><!-- GoatCounter: cookieless, no personal data, no consent banner needed.
+       Dashboard is private by default (goatcounter settings.go defaults
+       `Public` to "private"), so the numbers are not publicly visible.
+       Loaded async so it never blocks render, and the site works fine when
+       ad blockers drop it — expect undercounting on a technical audience. --><script data-goatcounter="https://minimal.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script><link rel="stylesheet" href="/_astro/Layout.DWvsyJEI.css"></head> <body> <a class="skip-link" href="#main">Skip to content</a> <header class="site-header"> <div class="container"> <a href="/" class="brand" aria-label="Minimal Containers home"> <img src="/icon.svg" alt="" class="logo" width="24" height="24"> <span>minimal</span> </a> <nav class="nav" aria-label="Primary"> <a href="/images/">Images</a><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="/blog/" aria-current="page">Blog</a><a href="/about/">Verify</a> </nav> <div class="header-actions"> <button class="icon-btn theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode"> <svg class="icon-sun" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06" stroke-linecap="round"></path></svg> <svg class="icon-moon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M13.5 9.6A5.5 5.5 0 0 1 6.4 2.5a5.5 5.5 0 1 0 7.1 7.1Z" stroke-linejoin="round"></path></svg> </button> <a class="icon-btn outlined" href="https://github.com/rtvkiz/minimal" rel="noopener" aria-label="GitHub repository"> <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"></path></svg> <span class="github-label">GitHub</span> </a> <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-nav" aria-label="Open menu"> <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 4.5h12M2 8h12M2 11.5h12" stroke-linecap="round"></path></svg> </button> </div> </div> <nav id="mobile-nav" class="mobile-nav" aria-label="Primary" hidden> <a href="/images/">Images</a><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="/blog/" aria-current="page">Blog</a><a href="/about/">Verify</a> <a href="https://github.com/rtvkiz/minimal" rel="noopener">GitHub</a> </nav> </header> <main id="main">  <section> <div class="container-narrow"> <p style="margin:0 0 6px"><a href="/blog/" class="small muted">← Blog</a></p> <h1 class="section-title">Debugging a container that has no shell</h1> <p class="small muted"> <time datetime="2026-09-06">6 September 2026</time>  </p> <article class="prose" style="margin-top:28px"> <p>The first time <code>kubectl exec</code> fails on a distroless image, it looks like the
+image is broken:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>$ docker exec -it mycontainer sh</span></span>
+<span class="line"><span>OCI runtime exec failed: exec: "sh": executable file not found in $PATH</span></span></code></pre>
+<p>Nothing is broken. There is no shell, on purpose. The same absence that stops an
+attacker from chaining a command injection into a foothold stops you from poking
+around, and the techniques below are how you work anyway.</p>
+<p>They are listed roughly in the order to try them: cheapest and least invasive
+first.</p>
+<h2 id="1-run-a-different-binary-in-the-same-image">1. Run a different binary in the same image</h2>
+<p><code>--entrypoint</code> replaces the command without changing the image. Most of what
+you want to know early (is the binary there, what version is it, does it
+parse the config) needs no shell at all:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>docker run --rm --entrypoint /usr/bin/haproxy ghcr.io/rtvkiz/minimal-haproxy:latest -vv</span></span>
+<span class="line"><span>docker run --rm -v "$PWD/haproxy.cfg:/etc/haproxy/haproxy.cfg:ro" \</span></span>
+<span class="line"><span>  --entrypoint /usr/bin/haproxy ghcr.io/rtvkiz/minimal-haproxy:latest \</span></span>
+<span class="line"><span>  -c -f /etc/haproxy/haproxy.cfg</span></span></code></pre>
+<p>Note the second one: a config check, offline, with no shell involved. A
+surprising number of “the container won’t start” incidents end here.</p>
+<h2 id="2-inspect-the-filesystem-from-outside">2. Inspect the filesystem from outside</h2>
+<p>You do not need to be inside a container to read its filesystem.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># what is actually in the image, without running it</span></span>
+<span class="line"><span>docker create --name tmp ghcr.io/rtvkiz/minimal-nginx:latest</span></span>
+<span class="line"><span>docker export tmp | tar -tv | head -50</span></span>
+<span class="line"><span>docker cp tmp:/etc/nginx/nginx.conf ./nginx.conf</span></span>
+<span class="line"><span>docker rm tmp</span></span></code></pre>
+<p><code>docker cp</code> works against a running container too, and works whether or not that
+container has a shell. If your question is “what file is at this path”, this is
+the whole answer.</p>
+<h2 id="3-attach-a-debug-container-that-has-the-tools">3. Attach a debug container that has the tools</h2>
+<p>This is the technique that replaces <code>exec</code> properly, and it is the one worth
+learning if you only learn one.</p>
+<p>Kubernetes:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>kubectl debug -it mypod --image=busybox:latest --target=mycontainer</span></span></code></pre>
+<p>The <code>--target</code> flag is what makes it useful: the debug container shares the
+target’s process namespace, so <code>ps</code> sees the real process, and <code>/proc/1/root</code>
+gives you the target’s filesystem:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>ls /proc/1/root/etc</span></span>
+<span class="line"><span>cat /proc/1/root/etc/nginx/nginx.conf</span></span></code></pre>
+<p>Docker has an equivalent:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>docker run --rm -it --pid=container:mycontainer \</span></span>
+<span class="line"><span>  --network=container:mycontainer --cap-add SYS_PTRACE \</span></span>
+<span class="line"><span>  busybox:latest sh</span></span></code></pre>
+<p>Sharing <code>--network</code> matters more than people expect. Half of “the service is
+down” turns out to be DNS or a listener bound to <code>127.0.0.1</code>, and both are only
+visible from inside that network namespace:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>wget -qO- http://127.0.0.1:8080/healthz</span></span>
+<span class="line"><span>nslookup my-service.default.svc.cluster.local</span></span></code></pre>
+<h2 id="4-use-the-dev-variant">4. Use the dev variant</h2>
+<p>Every image we publish has a <code>-dev</code> tag carrying the same primary binary plus a
+shell and the usual tools: <code>bash</code>, <code>curl</code>, <code>openssl</code>, <code>dig</code>, <code>jq</code>, <code>git</code>, <code>apk</code>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>docker run --rm -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-nginx:latest-dev</span></span></code></pre>
+<p>Swap the tag, reproduce the problem, keep everything else identical. Because
+both variants are built from the same package, a bug that reproduces in <code>-dev</code>
+is a bug in your setup or in the software; a bug that <em>stops</em> reproducing is
+usually about the missing shell or the tools themselves.</p>
+<p>The rule that makes this safe: <strong><code>-dev</code> is for debugging, not for production.</strong>
+It exists so that the production image never needs to grow a shell “just for
+now”. A shell added during an incident is a shell that is still there a year
+later.</p>
+<h2 id="5-read-the-logs-properly">5. Read the logs properly</h2>
+<p>Obvious, and still skipped:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>docker logs --timestamps --tail 200 mycontainer</span></span>
+<span class="line"><span>kubectl logs mypod -c mycontainer --previous   # the container that just crashed</span></span></code></pre>
+<p><code>--previous</code> is the one people forget. A container in <code>CrashLoopBackOff</code> has
+already told you why it died; the current instance may not have got far enough
+to repeat it.</p>
+<h2 id="what-actually-changes">What actually changes</h2>
+<p>The shift is from <em>interactive exploration</em> to <em>asking specific questions</em>. You
+lose “let me look around”, which is genuinely convenient. You keep everything
+that is diagnostic, and you gain that the same absence works against an
+attacker, continuously, in every container you run.</p>
+<p>If you find yourself needing a shell in production repeatedly for the same
+reason, that is a signal about the image or the workload: a missing health
+endpoint, a config that cannot be validated ahead of time, logs that do not
+say enough. Fixing the underlying gap is better than keeping a shell around
+for it.</p>
+ </article> </div> </section>  </main> <footer class="site-footer"> <div class="container"> <div class="footer-grid"> <div class="about"> <a href="/" class="brand" aria-label="Minimal Containers home"> <img src="/icon.svg" alt="" class="logo" width="24" height="24"> <span>minimal</span> </a> <p style="margin:12px 0 0">
+Hardened, MIT-licensed container images built from
+<a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
+<a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+            Signed, SBOM-attested, rebuilt daily.
+</p> </div> <div> <h2>Catalog</h2> <ul> <li><a href="/images/">All images</a></li> <li><a href="/docs/tags/">Tags and pinning</a></li> <li><a href="/docs/dev-variants/">Dev variants</a></li> <li><a href="/rss.xml">RSS</a></li> </ul> </div> <div> <h2>Trust</h2> <ul> <li><a href="/about/">Verify an image</a></li> <li><a href="/docs/vulnerabilities/">Reading scan results</a></li> <li><a href="/compare/">Comparisons</a></li> <li><a href="https://github.com/rtvkiz/minimal/blob/main/.github/SECURITY.md" rel="noopener">Security policy</a></li> </ul> </div> <div> <h2>Project</h2> <ul> <li><a href="https://github.com/rtvkiz/minimal" rel="noopener">Source code</a></li> <li><a href="/blog/">Blog</a></li> <li><a href="/docs/">Docs</a></li> <li><a href="https://github.com/rtvkiz/minimal/blob/main/LICENSE" rel="noopener">MIT license</a></li> </ul> </div> </div> <div class="footer-meta"> <span>&copy; 2026 Minimal Containers</span> <span>
+Data updated 2026-11-12 16:37 UTC  · <a href="https://github.com/rtvkiz/minimal/actions/runs/43257586829" rel="noopener">1f66e93</a> </span> </div> </div> </footer><script type="module">document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-copy]`);if(!t)return;let n=t.querySelector(`[data-label]`),r=t.getAttribute(`data-copy`)||``;navigator.clipboard.writeText(r).then(()=>{t.dataset.state=`copied`,n&&(n.textContent=`Copied`),setTimeout(()=>{delete t.dataset.state,n&&(n.textContent=`Copy`)},1400)}).catch(()=>{n&&(n.textContent=`Failed`)})});var e=document.documentElement;document.querySelector(`.theme-toggle`)?.addEventListener(`click`,()=>{let t=e.getAttribute(`data-theme`),n=(t?t===`dark`:matchMedia(`(prefers-color-scheme: dark)`).matches)?`light`:`dark`;e.setAttribute(`data-theme`,n);try{localStorage.setItem(`theme`,n)}catch{}});var t=document.querySelector(`.menu-toggle`),n=document.getElementById(`mobile-nav`);t?.addEventListener(`click`,()=>{let e=t.getAttribute(`aria-expanded`)!==`true`;t.setAttribute(`aria-expanded`,String(e)),t.setAttribute(`aria-label`,e?`Close menu`:`Open menu`),n&&(n.hidden=!e)}),document.addEventListener(`keydown`,e=>{e.key===`Escape`&&t?.getAttribute(`aria-expanded`)===`true`&&t.click()});</script> </body> </html>

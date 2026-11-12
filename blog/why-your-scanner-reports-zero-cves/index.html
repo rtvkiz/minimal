@@ -1,0 +1,119 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><!-- Restore a pinned theme before first paint, so a dark-mode visitor never
+       sees a white flash. No stored choice means "follow the OS", handled in CSS. --><script>
+    try {
+      var t = localStorage.getItem('theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script><meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)"><title>Why your scanner reports zero CVEs — Minimal Containers</title><meta name="description" content="A clean Grype report can mean your image is clean, or it can mean the scanner never identified the software inside it. Here is the difference, and how to tell which one you have."><link rel="canonical" href="https://minimalcontainers.com/blog/why-your-scanner-reports-zero-cves/"><meta property="og:title" content="Why your scanner reports zero CVEs — Minimal Containers"><meta property="og:description" content="A clean Grype report can mean your image is clean, or it can mean the scanner never identified the software inside it. Here is the difference, and how to tell which one you have."><meta property="og:type" content="article"><meta property="og:url" content="https://minimalcontainers.com/blog/why-your-scanner-reports-zero-cves/"><meta property="og:site_name" content="Minimal Containers"><meta property="og:image" content="https://minimalcontainers.com/og.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Why your scanner reports zero CVEs — Minimal Containers"><meta name="twitter:description" content="A clean Grype report can mean your image is clean, or it can mean the scanner never identified the software inside it. Here is the difference, and how to tell which one you have."><meta name="twitter:image" content="https://minimalcontainers.com/og.png"><meta property="article:published_time" content="2026-09-06"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Why your scanner reports zero CVEs","description":"A clean Grype report can mean your image is clean, or it can mean the scanner never identified the software inside it. Here is the difference, and how to tell which one you have.","datePublished":"2026-09-06","dateModified":"2026-09-06","url":"https://minimalcontainers.com/blog/why-your-scanner-reports-zero-cves","author":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"},"publisher":{"@type":"Organization","name":"Minimal Containers","url":"https://minimalcontainers.com"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://minimalcontainers.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://minimalcontainers.com/blog/"},{"@type":"ListItem","position":3,"name":"Why your scanner reports zero CVEs — Minimal Containers","item":"https://minimalcontainers.com/blog/why-your-scanner-reports-zero-cves/"}]}</script><link rel="icon" type="image/svg+xml" href="/icon.svg"><!-- GoatCounter: cookieless, no personal data, no consent banner needed.
+       Dashboard is private by default (goatcounter settings.go defaults
+       `Public` to "private"), so the numbers are not publicly visible.
+       Loaded async so it never blocks render, and the site works fine when
+       ad blockers drop it — expect undercounting on a technical audience. --><script data-goatcounter="https://minimal.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script><link rel="stylesheet" href="/_astro/Layout.DWvsyJEI.css"></head> <body> <a class="skip-link" href="#main">Skip to content</a> <header class="site-header"> <div class="container"> <a href="/" class="brand" aria-label="Minimal Containers home"> <img src="/icon.svg" alt="" class="logo" width="24" height="24"> <span>minimal</span> </a> <nav class="nav" aria-label="Primary"> <a href="/images/">Images</a><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="/blog/" aria-current="page">Blog</a><a href="/about/">Verify</a> </nav> <div class="header-actions"> <button class="icon-btn theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode"> <svg class="icon-sun" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06" stroke-linecap="round"></path></svg> <svg class="icon-moon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M13.5 9.6A5.5 5.5 0 0 1 6.4 2.5a5.5 5.5 0 1 0 7.1 7.1Z" stroke-linejoin="round"></path></svg> </button> <a class="icon-btn outlined" href="https://github.com/rtvkiz/minimal" rel="noopener" aria-label="GitHub repository"> <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"></path></svg> <span class="github-label">GitHub</span> </a> <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-nav" aria-label="Open menu"> <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 4.5h12M2 8h12M2 11.5h12" stroke-linecap="round"></path></svg> </button> </div> </div> <nav id="mobile-nav" class="mobile-nav" aria-label="Primary" hidden> <a href="/images/">Images</a><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="/blog/" aria-current="page">Blog</a><a href="/about/">Verify</a> <a href="https://github.com/rtvkiz/minimal" rel="noopener">GitHub</a> </nav> </header> <main id="main">  <section> <div class="container-narrow"> <p style="margin:0 0 6px"><a href="/blog/" class="small muted">← Blog</a></p> <h1 class="section-title">Why your scanner reports zero CVEs</h1> <p class="small muted"> <time datetime="2026-09-06">6 September 2026</time>  </p> <article class="prose" style="margin-top:28px"> <p>A vulnerability report with nothing in it has two possible meanings, and they
+look identical:</p>
+<ol>
+<li>The scanner identified the software in your image and found no known
+vulnerabilities.</li>
+<li>The scanner did not identify the software at all, so it had nothing to match
+against.</li>
+</ol>
+<p>The second one is worse than a report full of findings, because it is
+indistinguishable from success. Nobody escalates a green scan.</p>
+<p>We hit this in a way that was easy to measure. Two builds of HAProxy, same
+upstream version, same source, same everything, except the name of the apk
+package inside. One reported <strong>0 findings</strong>. The other reported <strong>14</strong>. The
+binaries were byte-identical in every way that matters to an attacker.</p>
+<h2 id="what-the-scanner-is-actually-doing">What the scanner is actually doing</h2>
+<p>Grype does not look at your image and recognise HAProxy. It reads a package
+inventory produced by Syft, and then matches each entry in that inventory
+against vulnerability data. Two of those matching paths matter here:</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Keyed on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Distro security database (e.g. <code>wolfi:distro:wolfi:rolling</code>)</td>
+<td>the apk package <strong>name</strong></td>
+</tr>
+<tr>
+<td><code>nvd:cpe</code></td>
+<td>a CPE that Syft <strong>derives from</strong> the apk package name</td>
+</tr>
+</tbody>
+</table>
+<p>Both are keyed on a string. Not a hash, not a symbol table, not the contents
+of the binary. The name recorded in the package database, nothing else.</p>
+<p>So if the package inside your image is called <code>haproxy</code>, the distro database has
+an entry under <code>haproxy</code>, NVD has <code>cpe:2.3:a:haproxy:haproxy:*</code>, and both paths
+hit. Name it something reasonable-sounding but nonstandard instead
+(<code>haproxy-minimal</code>, <code>haproxy-slim</code>, <code>our-haproxy</code>) and:</p>
+<ul>
+<li>the distro database has no entry under that name, so that path finds nothing;</li>
+<li>Syft derives <code>cpe:2.3:a:haproxy-minimal:haproxy-minimal:*</code>, which matches
+nothing in NVD, because NVD does not index a product by that name.</li>
+</ul>
+<p>Two paths, both broken by the same string, and no error anywhere. The scan
+succeeds. It just has nothing to say.</p>
+<h2 id="why-a-cpe-declaration-does-not-save-you">Why a CPE declaration does not save you</h2>
+<p>The obvious fix is to declare the correct CPE in your build config. For scanning
+the <em>image</em>, it does not help.</p>
+<p>Syft’s <code>apk-db-cataloger</code> reads <code>/usr/lib/apk/db/installed</code>. That file records
+the package name, version and dependencies. It has no CPE field. A CPE you
+declared at build time lives in your build metadata, and an SBOM embedded at,
+say, <code>/var/lib/db/sbom/</code> is not what <code>grype &lt;image&gt;</code> reads either.</p>
+<p>So the package name is not a label on the identity. For a C or C++ image it <em>is</em>
+the identity, and renaming the package is the only fix.</p>
+<h2 id="go-images-are-accidentally-protected">Go images are accidentally protected</h2>
+<p>If your image is a Go binary, you may have never seen this, and that is luck
+rather than design. Syft’s <code>go-module</code> cataloguer reads the build information
+that the Go toolchain embeds in every binary: module path and dependency
+versions. That gives the image a second, independent identity that has
+nothing to do with the apk name.</p>
+<p>The practical consequence is uneven: a Go image with a mangled package name
+still gets its dependencies scanned. A C image with the same mistake is
+completely invisible. If you are auditing a mixed fleet, the C and C++ images are
+where to look first.</p>
+<h2 id="how-to-check-your-own-images">How to check your own images</h2>
+<p>The useful question is not “does my scan pass” but “did the scanner find the
+thing I care about”. Ask it directly.</p>
+<p>List what the scanner thinks is installed:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>syft ghcr.io/rtvkiz/minimal-haproxy:latest -o json \</span></span>
+<span class="line"><span>  | jq -r '.artifacts[] | "\(.type)\t\(.name)\t\(.version)"' | sort</span></span></code></pre>
+<p>Look at the CPEs it derived, which is where a bad name shows up:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>syft &lt;your-image&gt; -o json | jq -r '.artifacts[].cpes[]?' | sort -u</span></span></code></pre>
+<p>If you see a product field that no vendor would ever publish (your internal
+suffix, your company name, a <code>-slim</code> or <code>-minimal</code>), that entry is matching
+nothing.</p>
+<p>Then confirm the negative is real. Scan a version you <em>know</em> has published
+advisories:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>grype &lt;your-image&gt;:&lt;an-old-tag&gt;</span></span></code></pre>
+<p>An old build of anything widely deployed should produce findings. If an image
+from a year ago is also clean, the problem is identification, not hygiene. This
+takes a minute and is the single most useful check you can run against a
+scanning pipeline you have not verified before.</p>
+<h2 id="what-we-do-about-it">What we do about it</h2>
+<p>Every package we build carries the name upstream uses: <code>haproxy</code>, <code>nginx</code>,
+<code>redis</code>, <code>postgresql</code>, never a decorated variant. The image is called
+<code>minimal-haproxy</code>; the <em>package</em> inside it is <code>haproxy</code>. Those are different
+namespaces and only one of them is load-bearing for scanners. A check on
+every pull request enforces that, rather than leaving it to convention,
+because it’s exactly the kind of thing that stays invisible until someone
+re-reads it. A suffix, or a mismatch between the package we build and the
+package the image config asks for, fails the build.</p>
+<p>That comes with an honest caveat: matching by name means you inherit
+whatever the advisory feeds say about that name, including their mistakes
+and their timing. Naming things correctly gets you into the conversation. It
+doesn’t end it. Before you trust a clean report, ours or anyone’s, confirm
+the scanner actually listed the software you expected, with a version you
+recognise, under a name the advisory databases use. A clean scan of an
+unidentified image isn’t a security result. It’s an empty question.</p>
+ </article> </div> </section>  </main> <footer class="site-footer"> <div class="container"> <div class="footer-grid"> <div class="about"> <a href="/" class="brand" aria-label="Minimal Containers home"> <img src="/icon.svg" alt="" class="logo" width="24" height="24"> <span>minimal</span> </a> <p style="margin:12px 0 0">
+Hardened, MIT-licensed container images built from
+<a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
+<a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+            Signed, SBOM-attested, rebuilt daily.
+</p> </div> <div> <h2>Catalog</h2> <ul> <li><a href="/images/">All images</a></li> <li><a href="/docs/tags/">Tags and pinning</a></li> <li><a href="/docs/dev-variants/">Dev variants</a></li> <li><a href="/rss.xml">RSS</a></li> </ul> </div> <div> <h2>Trust</h2> <ul> <li><a href="/about/">Verify an image</a></li> <li><a href="/docs/vulnerabilities/">Reading scan results</a></li> <li><a href="/compare/">Comparisons</a></li> <li><a href="https://github.com/rtvkiz/minimal/blob/main/.github/SECURITY.md" rel="noopener">Security policy</a></li> </ul> </div> <div> <h2>Project</h2> <ul> <li><a href="https://github.com/rtvkiz/minimal" rel="noopener">Source code</a></li> <li><a href="/blog/">Blog</a></li> <li><a href="/docs/">Docs</a></li> <li><a href="https://github.com/rtvkiz/minimal/blob/main/LICENSE" rel="noopener">MIT license</a></li> </ul> </div> </div> <div class="footer-meta"> <span>&copy; 2026 Minimal Containers</span> <span>
+Data updated 2026-11-12 16:37 UTC  · <a href="https://github.com/rtvkiz/minimal/actions/runs/43257586829" rel="noopener">1f66e93</a> </span> </div> </div> </footer><script type="module">document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-copy]`);if(!t)return;let n=t.querySelector(`[data-label]`),r=t.getAttribute(`data-copy`)||``;navigator.clipboard.writeText(r).then(()=>{t.dataset.state=`copied`,n&&(n.textContent=`Copied`),setTimeout(()=>{delete t.dataset.state,n&&(n.textContent=`Copy`)},1400)}).catch(()=>{n&&(n.textContent=`Failed`)})});var e=document.documentElement;document.querySelector(`.theme-toggle`)?.addEventListener(`click`,()=>{let t=e.getAttribute(`data-theme`),n=(t?t===`dark`:matchMedia(`(prefers-color-scheme: dark)`).matches)?`light`:`dark`;e.setAttribute(`data-theme`,n);try{localStorage.setItem(`theme`,n)}catch{}});var t=document.querySelector(`.menu-toggle`),n=document.getElementById(`mobile-nav`);t?.addEventListener(`click`,()=>{let e=t.getAttribute(`aria-expanded`)!==`true`;t.setAttribute(`aria-expanded`,String(e)),t.setAttribute(`aria-label`,e?`Close menu`:`Open menu`),n&&(n.hidden=!e)}),document.addEventListener(`keydown`,e=>{e.key===`Escape`&&t?.getAttribute(`aria-expanded`)===`true`&&t.click()});</script> </body> </html>
