@@ -12,7 +12,7 @@ package:
   # Named exactly what upstream calls it, not `karpenter-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: karpenter
-  version: 1.15.1
+  version: 1.15.2
   epoch: 0
   description: "Minimal Karpenter controller (AWS provider) built from source"
   copyright:
@@ -25,7 +25,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: 4e84a4e5049314d2ccb2c9c7b8add96ef30d1d64ddf3c2218f738f0b0447f129
+  sha256: 10140cbfbedf5991f365cc08366be1050889ed99fc648de8a0329ef9e903cbae
 
 environment:
   contents:
