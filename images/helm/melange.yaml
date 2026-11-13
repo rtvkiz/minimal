@@ -11,7 +11,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:helm:helm:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: helm
-  version: 4.3.1
+  version: 4.3.2
   epoch: 0
   description: "Minimal Helm CLI for Kubernetes built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of helm source tarball - updated by update-versions.yml workflow
-  sha256: e7b803b6a248c18aea067dbccacaf651c29946db75d05fb23f318ff2f15961c6
+  sha256: 7d848fa8880cca40f9548e46255d38e3e25259847fe81775c5a09af0c3dda2e1
 
 environment:
   contents:
