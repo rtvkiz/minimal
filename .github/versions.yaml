@@ -73,6 +73,19 @@
     releases: "https://github.com/apache/airflow/releases"
     notes: "https://github.com/apache/airflow/releases/tag/{version}"
 
+- name: azure-cli
+  cron-enabled: true
+  files: [images/azure-cli/melange.yaml]
+  source: { type: json, url: "https://pypi.org/pypi/azure-cli/json", jq: ".info.version" }
+  # TWO digests move together (airflow precedent): the wheel and upstream's
+  # pinned Linux requirements file, which fixes the whole dependency closure.
+  tarballs:
+    - { url: "https://files.pythonhosted.org/packages/py3/a/azure-cli/azure_cli-{version}-py3-none-any.whl", field: sha256 }
+    - { url: "https://raw.githubusercontent.com/Azure/azure-cli/azure-cli-{version}/src/azure-cli/requirements.py3.Linux.txt", field: requirements-sha256, algo: sha256 }
+  links:
+    releases: "https://github.com/Azure/azure-cli/releases"
+    notes: "https://github.com/Azure/azure-cli/releases/tag/azure-cli-{version}"
+
 - name: wordpress
   cron-enabled: true
   files: [images/wordpress/melange.yaml]
@@ -1445,6 +1458,19 @@
     releases: "https://rubygems.org/gems/rails"
     notes: "https://github.com/rails/rails/releases/tag/v{version}"
 
+- name: fluentd
+  cron-enabled: true
+  # The fluentd gem; its Ruby interpreter is moved by the `ruby` row above.
+  files: [images/fluentd/melange.yaml]
+  source:
+    type: json
+    url: "https://rubygems.org/api/v1/versions/fluentd/latest.json"
+    jq: '.version'
+  tarball: { url: "https://rubygems.org/downloads/fluentd-{version}.gem", field: sha256 }
+  links:
+    releases: "https://github.com/fluent/fluentd/releases"
+    notes: "https://github.com/fluent/fluentd/releases/tag/v{version}"
+
 # ============================================================================
 # envoy — ships prebuilt linux binaries (x86_64 + aarch_64); melange.yaml
 # carries two checksum fields (sha256_x86 / sha256_arm). Exercises the
@@ -1520,8 +1546,15 @@
   cron-enabled: true   # wave 7
   # Ruby bump touches BOTH ruby/melange.yaml AND rails/melange.yaml — rails is
   # built on top of the same Ruby interpreter and tracks ruby_version 1:1.
-  files: [images/ruby/melange.yaml, images/rails/melange.yaml]
-  extra-fields: [ruby_version]   # also rewrite `^  ruby_version:` in every file
+  # fluentd builds the same interpreter, but its own `version:` is the fluentd
+  # gem, so it joins through custom entries that touch ONLY ruby_version and
+  # ruby_sha256 ({sha256} is this row's computed ruby tarball digest).
+  files:
+    - images/ruby/melange.yaml
+    - images/rails/melange.yaml
+    - { path: images/fluentd/melange.yaml, pattern: '^  ruby_version: .*', template: '  ruby_version: {version}' }
+    - { path: images/fluentd/melange.yaml, pattern: '^  ruby_sha256: .*', template: '  ruby_sha256: {sha256}' }
+  extra-fields: [ruby_version]   # also rewrite `^  ruby_version:` in every string-form file
   source:
     type: github-tags
     repo: ruby/ruby
@@ -1702,3 +1735,12 @@
   links:
     releases: "https://github.com/temporalio/ui-server/releases"
     notes: "https://github.com/temporalio/ui-server/releases/tag/v{version}"
+- name: ghost
+  cron-enabled: true
+  files: [images/ghost/melange.yaml]
+  # npm's dist-tag `latest` — the version ghost-cli installs.
+  source: { type: json, url: "https://registry.npmjs.org/ghost/latest", jq: ".version" }
+  tarball: { url: "https://registry.npmjs.org/ghost/-/ghost-{version}.tgz", field: sha512 }
+  links:
+    releases: "https://github.com/TryGhost/Ghost/releases"
+    notes: "https://github.com/TryGhost/Ghost/releases/tag/v{version}"

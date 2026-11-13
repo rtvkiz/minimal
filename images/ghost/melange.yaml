@@ -1,0 +1,122 @@
+# Ghost, installed from the `ghost` package published to npm.
+#
+# WHY THE NPM PACKAGE AND NOT THE GITHUB TARBALL. The repo is a monorepo whose
+# admin UI (Ember + React) is built by pnpm — the frontend-in-bwrap blocker that
+# keeps alloy and authelia off the roadmap. The npm package is what ghost-cli
+# (Ghost's official installer) installs, and it SHIPS the built admin under
+# core/built/admin, so building from it needs no frontend toolchain. Its direct
+# dependencies are exact-pinned in package.json; the tarball is verified by its
+# sha512 (npm's own dist.integrity).
+#
+# NODE LINE. nodejs-24 is pinned like every toolchain and moved by
+# bump-toolchain-pins.sh. Ghost declares a narrow `engines.node` range, and the
+# smoke test asserts the runtime satisfies it — so a bump to a Node line Ghost
+# does not support fails the probe and the repair step holds this image back,
+# with no special case anywhere.
+package:
+  name: ghost
+  version: 6.77.0
+  epoch: 0
+  description: "Ghost publishing platform"
+  copyright:
+    - license: MIT
+  dependencies:
+    # Wolfi ships no ghost today; guard against one appearing at a higher
+    # version and replacing this build.
+    provider-priority: 100
+    runtime:
+      - nodejs-24
+
+vars:
+  # npm dist.integrity (sha512) of ghost-<version>.tgz, hex-encoded
+  sha512: abf66caa4862ce232defec844ce55906ff0f59b7ead171a05d3494951aa4424d9208e86ee8b682eb22c865859e29c3f328aad31c8ed099374d8b571faa43f921
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - nodejs-24
+      - npm
+      # node-gyp fallback for better-sqlite3 when no prebuilt binary matches
+      - python-3.14
+
+pipeline:
+  - runs: |
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://registry.npmjs.org/ghost/-/ghost-${{package.version}}.tgz" \
+        -o /home/build/ghost.tgz
+      echo "${{vars.sha512}}  /home/build/ghost.tgz" | sha512sum -c -
+      mkdir -p /home/build/ghost
+      tar xzf /home/build/ghost.tgz -C /home/build/ghost --strip-components=1
+
+  - runs: |
+      # Install at the FINAL runtime path. Production dependencies only; the
+      # bundled @tryghost/* components resolve from the package's own
+      # components/*.tgz (file: specs). better-sqlite3 (Ghost's SQLite driver)
+      # builds its native addon here.
+      #
+      # --legacy-peer-deps: Ghost pins knex 3.x while bookshelf@1.2.0 still
+      # declares `peer knex <0.22`. ghost-cli installs with yarn v1, which does
+      # not enforce peer ranges, so every real Ghost install runs this exact
+      # combination; npm >= 7 would refuse it (ERESOLVE) without the flag.
+      #
+      # npm 12 runs NO dependency install scripts unless allowlisted
+      # (allow-scripts defaults to empty) and only accepts the allowlist from
+      # package.json or a project .npmrc. Allow exactly the one native addon
+      # Ghost needs — better-sqlite3, its SQLite driver — and nothing else.
+      # npm reports dtrace-provider (optional, via bunyan) as blocked; its own
+      # script is `node-gyp rebuild || node suppress-error.js`, i.e. designed
+      # to no-op where DTrace is absent, which is every Linux host.
+      mkdir -p /usr/lib
+      cp -a /home/build/ghost /usr/lib/ghost
+      cd /usr/lib/ghost
+      printf 'allow-scripts[]=better-sqlite3\n' > .npmrc
+      npm install --omit=dev --legacy-peer-deps --no-audit --no-fund 2>&1 | tee /home/build/npm-install.log
+      grep -iE "allow-?scripts|scripts? (were )?(not run|skipped)" /home/build/npm-install.log || true
+      rm -f .npmrc
+      npm cache clean --force
+
+  - runs: |
+      # Shell-less replacement for the official image's docker-entrypoint.sh:
+      # seed an empty content volume with the shipped themes/dirs, then boot.
+      cat > /usr/lib/ghost/minimal-entrypoint.js <<'JS'
+      'use strict';
+      // Seed the content directory on first boot (what the official image's
+      // docker-entrypoint.sh does with cp -r), then hand over to Ghost.
+      const fs = require('fs');
+      const path = require('path');
+      const base = path.join(__dirname, 'content.orig');
+      const target = process.env.paths__contentPath || path.join(__dirname, 'content');
+      for (const entry of fs.readdirSync(base)) {
+        const dst = path.join(target, entry);
+        if (!fs.existsSync(dst)) fs.cpSync(path.join(base, entry), dst, {recursive: true});
+      }
+      require('./index.js');
+      JS
+      sed -i 's/^      //' /usr/lib/ghost/minimal-entrypoint.js
+
+      # The shipped content tree becomes the read-only seed; the live content
+      # dir is /var/lib/ghost/content (created by apko `paths:`).
+      mv /usr/lib/ghost/content /usr/lib/ghost/content.orig
+
+      # Trim what a running server never reads.
+      find /usr/lib/ghost/node_modules -type d \( -name test -o -name tests -o -name __tests__ -o -name docs -o -name example -o -name examples \) -prune -exec rm -rf {} + 2>/dev/null || true
+      find /usr/lib/ghost/node_modules -type f \( -name '*.md' -o -name '*.map' -o -name '*.ts' ! -name '*.d.ts' \) -delete 2>/dev/null || true
+
+      mkdir -p "${{targets.destdir}}/usr/lib"
+      cp -a /usr/lib/ghost "${{targets.destdir}}/usr/lib/ghost"
+
+  - runs: |
+      echo "Verifying Ghost build..."
+      node -e "const p=require('/usr/lib/ghost/package.json'); if (p.version !== '${{package.version}}') process.exit(1)"
+      test -f "${{targets.destdir}}/usr/lib/ghost/core/built/admin/index.html"
+      test -d "${{targets.destdir}}/usr/lib/ghost/content.orig/themes/casper"
+      # The native SQLite driver must have built.
+      node -e "require('/usr/lib/ghost/node_modules/better-sqlite3')(':memory:').prepare('select 1 as x').get()"

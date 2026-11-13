@@ -1,0 +1,96 @@
+# Minimal fluentd image - built from source via melange
+# Ruby (source-built, same build as rails) + the fluentd gem closure.
+# Shell-less: fluentd's supervisor spawns its worker with an argv array, and
+# the zero-downtime-restart re-exec is a metacharacter-free string Ruby execs
+# directly — neither path needs /bin/sh.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Our Ruby + fluentd (built from source via melange)
+    - fluentd
+
+    # Core runtime dependencies
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libstdc++
+
+    # Ruby runtime libs (shared libs used by the ruby binary)
+    - libssl3
+    - libcrypto3
+    - libcrypt1
+    - zlib
+    - yaml
+    - libffi
+    - readline
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/fluentd
+
+work-dir: /fluentd
+
+# Paths match the official fluent/fluentd image: config at
+# /fluentd/etc/fluent.conf, plugins in /fluentd/plugins, writable /fluentd/log
+# for buffer and file outputs.
+environment:
+  PATH: /usr/bin:/bin
+  FLUENT_CONF: /fluentd/etc/fluent.conf
+  FLUENT_PLUGIN: /fluentd/plugins
+  # Ruby's Dir.tmpdir rejects a world-writable dir without the sticky bit,
+  # and apko's /tmp lands as 0777 (the 1 is not applied), so fluentd's
+  # worker died with "could not find a temporary directory". A private,
+  # non-world-writable tmp satisfies that check outright.
+  TMPDIR: /fluentd/tmp
+  LANG: C.UTF-8
+
+paths:
+  - path: /fluentd/log
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /fluentd/plugins
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /fluentd/tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o700
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-fluentd"
+  org.opencontainers.image.description: "Hardened shell-less fluentd log collector on a source-built Ruby, with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/fluentd"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

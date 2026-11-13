@@ -167,7 +167,10 @@ jobs:
             {"name":"argo-cd-repo-server","variants":["prod","dev"]},
             {"name":"harbor-portal","variants":["prod","dev"]},
             {"name":"kong","variants":["prod","dev"]},
-            {"name":"vector","variants":["prod","dev"]}
+            {"name":"vector","variants":["prod","dev"]},
+            {"name":"fluentd","variants":["prod","dev"]},
+            {"name":"azure-cli","variants":["prod","dev"]},
+            {"name":"ghost","variants":["prod","dev"]}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},
@@ -184,7 +187,10 @@ jobs:
             {"name":"patroni","grep":"patroni","variants":["prod","dev"]},
             {"name":"couchdb","grep":"couchdb-[0-9]","variants":["prod","dev"]},
             {"name":"aws-cli","grep":"aws-cli-[0-9]","variants":["prod","dev"]},
-            {"name":"openldap","grep":"openldap-[0-9]","variants":["prod","dev"]}
+            {"name":"openldap","grep":"openldap-[0-9]","variants":["prod","dev"]},
+            {"name":"maven","grep":"maven-[0-9]","variants":["prod","dev"]},
+            {"name":"gradle","grep":"gradle-[0-9]","variants":["prod","dev"]},
+            {"name":"rust","grep":"rust-[0-9]","variants":["prod","dev"]}
           ]'
 
           # Determine if full rebuild is needed

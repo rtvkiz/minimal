@@ -1,0 +1,138 @@
+# Melange build configuration for minimal fluentd
+# Builds Ruby from source (same interpreter build as rails) + installs the
+# fluentd gem and its runtime gem closure.
+#
+# Two versions, each on its own auto-update row in .github/versions.yaml:
+#   version      — the fluentd gem (row `fluentd`, rubygems)
+#   ruby_version — the interpreter; rewritten by the shared `ruby` row together
+#                  with images/ruby and images/rails, so all three move in
+#                  lockstep. No dependency on a Wolfi ruby-N.N line, which
+#                  nothing would ever advance — and gem native extensions are
+#                  built against this exact interpreter's ABI.
+
+package:
+  # Named `fluentd`, exactly as upstream and NVD (cpe:2.3:a:fluentd:fluentd:*)
+  # index it. Wolfi ships no fluentd package today; provider-priority guards
+  # against one appearing at a higher version and replacing this build.
+  name: fluentd
+  version: 1.20.1
+  epoch: 0
+  description: "fluentd log collector on a source-built Ruby"
+  copyright:
+    - license: Apache-2.0 AND Ruby
+  options:
+    no-depends: true
+  dependencies:
+    provider-priority: 100
+
+vars:
+  # sha256 of the platform=ruby fluentd-<version>.gem from rubygems.org
+  sha256: edaef4fc98b7a82b5d0a3c0094da90e3e51c207f5609aadd434ee40eaac83174
+  ruby_version: 4.0.9
+  # sha256 of https://cache.ruby-lang.org/pub/ruby/<minor>/ruby-<ruby_version>.tar.gz
+  ruby_sha256: c35350682ff050b79702d57ade4516e7336063f510155d19fb2fb5b3f3909511
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - linux-headers
+      - openssl-dev
+      - zlib-dev
+      - yaml-dev
+      - libffi-dev
+      - readline-dev
+      - gdbm-dev
+
+pipeline:
+  # Download and verify the Ruby source and the fluentd gem
+  - runs: |
+      mkdir -p /home/build
+      cd /home/build
+      ruby_minor=$(echo "${{vars.ruby_version}}" | cut -d. -f1,2)
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://cache.ruby-lang.org/pub/ruby/${ruby_minor}/ruby-${{vars.ruby_version}}.tar.gz" \
+        -o /home/build/ruby.tar.gz
+      echo "${{vars.ruby_sha256}}  /home/build/ruby.tar.gz" | sha256sum -c -
+      tar xzf ruby.tar.gz
+      rm ruby.tar.gz
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://rubygems.org/downloads/fluentd-${{package.version}}.gem" \
+        -o /home/build/fluentd-${{package.version}}.gem
+      echo "${{vars.sha256}}  /home/build/fluentd-${{package.version}}.gem" | sha256sum -c -
+
+  # Configure and build Ruby (same flags as images/rails)
+  - runs: |
+      cd /home/build/ruby-${{vars.ruby_version}}
+      ./configure \
+        --prefix=/usr \
+        --disable-install-doc \
+        --disable-install-rdoc \
+        --with-openssl-dir=/usr \
+        --with-readline-dir=/usr \
+        --enable-shared \
+        --disable-jit-support
+      make -j$(nproc)
+
+  # Install Ruby to the build system so gem native extensions compile against it
+  - runs: |
+      cd /home/build/ruby-${{vars.ruby_version}}
+      make install
+      ruby -v
+
+  # Install fluentd from the verified .gem; its runtime gem closure resolves
+  # from rubygems.org (same model as rails). Native extensions (cool.io,
+  # msgpack, strptime, zstd-ruby, http_parser.rb) compile here.
+  - runs: |
+      cd /home/build
+      gem install --no-document ./fluentd-${{package.version}}.gem
+
+      fluentd --version
+      echo "✓ fluentd installed"
+
+  # Copy everything to destdir for packaging
+  - runs: |
+      cd /home/build/ruby-${{vars.ruby_version}}
+      make install DESTDIR="${{targets.destdir}}"
+
+      # Installed gems (fluentd + its closure)
+      cp -a /usr/lib/ruby/gems "${{targets.destdir}}/usr/lib/ruby/"
+
+      # fluentd's executables (gem bin wrappers)
+      for cmd in fluentd fluent-cat fluent-gem fluent-plugin-config-format \
+                 fluent-plugin-generate fluent-binlog-reader fluent-ca-generate \
+                 fluent-cap-ctl fluent-ctl fluent-debug; do
+        if [ -f /usr/bin/$cmd ]; then
+          cp /usr/bin/$cmd "${{targets.destdir}}/usr/bin/$cmd"
+        fi
+      done
+      [ -f "${{targets.destdir}}/usr/bin/fluentd" ] || { echo "fluentd binstub missing"; exit 1; }
+
+      # Default config at the official fluent/fluentd image's path, so
+      # `-v ./fluent.conf:/fluentd/etc/fluent.conf` is a drop-in. FLUENT_CONF
+      # (set in the apko config) points fluentd at it. Forward input -> stdout:
+      # the image runs and accepts events out of the box.
+      mkdir -p "${{targets.destdir}}/fluentd/etc"
+      cat > "${{targets.destdir}}/fluentd/etc/fluent.conf" <<'CONF'
+      <source>
+        @type forward
+        port 24224
+        bind 0.0.0.0
+      </source>
+
+      <match **>
+        @type stdout
+      </match>
+      CONF
+      sed -i 's/^      //' "${{targets.destdir}}/fluentd/etc/fluent.conf"
+
+      # Strip binaries
+      find "${{targets.destdir}}/usr" -type f -name "*.so" -exec strip --strip-unneeded {} \; 2>/dev/null || true
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/ruby" 2>/dev/null || true
