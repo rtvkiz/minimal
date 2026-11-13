@@ -1,0 +1,72 @@
+# Minimal Rust image - using Wolfi's pre-built toolchain
+# CVE patching via the daily rebuild (Wolfi versioned package)
+# Builder-shaped, like minimal-go: rustc + cargo plus the linker they shell
+# out to. Shell-less — rustc execs `cc` directly, no /bin/sh involved.
+#
+# rust-1.N is a version line, moved by the Rust block in
+# update-wolfi-packages.yml.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Rust toolchain from Wolfi (rustc, cargo, rustdoc, clippy, rustfmt)
+    - rust-1.99
+
+    # Linker: rustc invokes `cc` to link, which needs gcc + binutils (ld) and
+    # the glibc startup files/headers (crt1.o, libc.so linker script).
+    - gcc
+    - binutils
+    - glibc-dev
+
+    # Certificates (crates.io over TLS)
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/cargo
+
+work-dir: /app
+
+# CARGO_HOME defaults to $HOME/.cargo = /tmp/.cargo (registry index + crate
+# cache). Mount a volume there to persist it between builds.
+environment:
+  PATH: /usr/bin:/bin
+  HOME: /tmp
+
+paths:
+  - path: /app
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-rust"
+  org.opencontainers.image.description: "Hardened shell-less Rust builder image (rustc + cargo), built on Wolfi with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/rust"
+  org.opencontainers.image.licenses: "MIT OR Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

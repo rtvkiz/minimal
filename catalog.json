@@ -2028,6 +2028,45 @@
       "summary": "Shell-less OpenLDAP slapd directory server built on Wolfi.",
       "description": "OpenLDAP slapd directory server with MDB backend, common overlays and LDAP clients. Shell-less, non-root, fail-closed config, signed, rebuilt daily.",
       "seo_noun": "LDAP directory"
+    },
+    {
+      "name": "maven",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "maven-3.10",
+      "upstream_url": "https://maven.apache.org",
+      "seo_noun": "Maven build tool",
+      "summary": "Apache Maven on a full OpenJDK, built on Wolfi.",
+      "description": "Apache Maven build tool on a full OpenJDK for compiling, testing and packaging Java projects in CI and multi-stage builds. Non-root, signed, rebuilt daily."
+    },
+    {
+      "name": "gradle",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "gradle-9",
+      "upstream_url": "https://gradle.org",
+      "seo_noun": "Gradle build tool",
+      "summary": "Gradle build tool on a full OpenJDK, built on Wolfi.",
+      "description": "Gradle build automation on a full OpenJDK for Java, Kotlin and Groovy projects in CI pipelines and multi-stage builds. Non-root, signed and SBOM-attested."
+    },
+    {
+      "name": "rust",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "rust-1.99",
+      "upstream_url": "https://www.rust-lang.org",
+      "seo_noun": "Rust toolchain",
+      "summary": "Shell-less Rust toolchain (rustc + cargo) built on Wolfi.",
+      "description": "Rust toolchain with rustc, cargo, clippy and rustfmt plus a working linker, for compiling Rust binaries in CI and multi-stage builds. Shell-less, non-root."
     }
   ]
 }

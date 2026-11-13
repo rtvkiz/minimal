@@ -184,7 +184,10 @@ jobs:
             {"name":"patroni","grep":"patroni","variants":["prod","dev"]},
             {"name":"couchdb","grep":"couchdb-[0-9]","variants":["prod","dev"]},
             {"name":"aws-cli","grep":"aws-cli-[0-9]","variants":["prod","dev"]},
-            {"name":"openldap","grep":"openldap-[0-9]","variants":["prod","dev"]}
+            {"name":"openldap","grep":"openldap-[0-9]","variants":["prod","dev"]},
+            {"name":"maven","grep":"maven-[0-9]","variants":["prod","dev"]},
+            {"name":"gradle","grep":"gradle-[0-9]","variants":["prod","dev"]},
+            {"name":"rust","grep":"rust-[0-9]","variants":["prod","dev"]}
           ]'
 
           # Determine if full rebuild is needed

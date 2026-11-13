@@ -1,0 +1,9 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/rtvkiz/minimal/vex/rust",
+  "author": "rtvkiz",
+  "timestamp": "2026-11-13T18:18:32Z",
+  "version": 1,
+  "tooling": "tools/vex/validate.sh",
+  "statements": []
+}

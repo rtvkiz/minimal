@@ -23,6 +23,9 @@ wolfi-versioned:
   - couchdb         # couchdb-3.N (line bumped by update-wolfi-packages.yml)
   - aws-cli         # aws-cli-2 (major-line PR is opened for review, not auto-merged)
   - openldap        # openldap-2.7 (new 2.N line PR is opened for review, not auto-merged)
+  - maven           # maven-3.N + openjdk-N-default-jdk (JDK moves with the java image's OpenJDK PR)
+  - gradle          # gradle-N + openjdk-N-default-jdk (JDK moves with the java image's OpenJDK PR)
+  - rust            # rust-1.N
 
 # wolfi-rolling: apko references an *unversioned / rolling* Wolfi package
 # (e.g. apache2, nginx-mainline, sqlite, bun). Wolfi keeps that single package at

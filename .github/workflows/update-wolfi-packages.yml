@@ -225,6 +225,54 @@ jobs:
             echo "  -> Up to date"
           fi
 
+          # --- Maven ---
+          # maven-N.N per minor line (maven-3.9 and maven-3.10 coexist).
+          CURRENT_MAVEN=$(grep -oP '^\s*-\s*\Kmaven-\d+\.\d+\b(?=\s*$)' images/maven/apko/maven.yaml | head -1)
+          echo "Current Maven package: $CURRENT_MAVEN"
+          LATEST_MAVEN=$(grep -E "^maven-[0-9]+\.[0-9]+ " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t- -k2 -V | tail -1)
+          echo "Latest Maven package: $LATEST_MAVEN"
+          if [ -n "$LATEST_MAVEN" ] && [ "$LATEST_MAVEN" != "$CURRENT_MAVEN" ]; then
+            echo "maven_update=true" >> $GITHUB_OUTPUT
+            echo "maven_current=$CURRENT_MAVEN" >> $GITHUB_OUTPUT
+            echo "maven_latest=$LATEST_MAVEN" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_MAVEN -> $LATEST_MAVEN"
+          else
+            echo "  -> Up to date"
+          fi
+
+          # --- Gradle ---
+          # gradle-N per major line (the trailing space excludes gradle-stage0).
+          CURRENT_GRADLE=$(grep -oP '^\s*-\s*\Kgradle-\d+\b(?=\s*$)' images/gradle/apko/gradle.yaml | head -1)
+          echo "Current Gradle package: $CURRENT_GRADLE"
+          LATEST_GRADLE=$(grep -E "^gradle-[0-9]+ " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t- -k2 -n | tail -1)
+          echo "Latest Gradle package: $LATEST_GRADLE"
+          if [ -n "$LATEST_GRADLE" ] && [ "$LATEST_GRADLE" != "$CURRENT_GRADLE" ]; then
+            echo "gradle_update=true" >> $GITHUB_OUTPUT
+            echo "gradle_current=$CURRENT_GRADLE" >> $GITHUB_OUTPUT
+            echo "gradle_latest=$LATEST_GRADLE" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_GRADLE -> $LATEST_GRADLE"
+          else
+            echo "  -> Up to date"
+          fi
+
+          # --- Rust ---
+          # rust-1.N per release; -V so rust-1.100 sorts after rust-1.99.
+          CURRENT_RUST=$(grep -oP '^\s*-\s*\Krust-1\.\d+\b(?=\s*$)' images/rust/apko/rust.yaml | head -1)
+          echo "Current Rust package: $CURRENT_RUST"
+          LATEST_RUST=$(grep -E "^rust-1\.[0-9]+ " /tmp/packages.txt | \
+            awk '{print $1}' | sort -t- -k2 -V | tail -1)
+          echo "Latest Rust package: $LATEST_RUST"
+          if [ -n "$LATEST_RUST" ] && [ "$LATEST_RUST" != "$CURRENT_RUST" ]; then
+            echo "rust_update=true" >> $GITHUB_OUTPUT
+            echo "rust_current=$CURRENT_RUST" >> $GITHUB_OUTPUT
+            echo "rust_latest=$LATEST_RUST" >> $GITHUB_OUTPUT
+            echo "  -> Update available: $CURRENT_RUST -> $LATEST_RUST"
+          else
+            echo "  -> Up to date"
+          fi
+
           # Summary
           echo ""
           echo "=== Summary ==="
@@ -254,6 +302,15 @@ jobs:
           fi
           if [ -n "$LATEST_COUCHDB" ] && [ "$LATEST_COUCHDB" != "$CURRENT_COUCHDB" ]; then
             echo "CouchDB: $CURRENT_COUCHDB -> $LATEST_COUCHDB"
+          fi
+          if [ -n "$LATEST_MAVEN" ] && [ "$LATEST_MAVEN" != "$CURRENT_MAVEN" ]; then
+            echo "Maven: $CURRENT_MAVEN -> $LATEST_MAVEN"
+          fi
+          if [ -n "$LATEST_GRADLE" ] && [ "$LATEST_GRADLE" != "$CURRENT_GRADLE" ]; then
+            echo "Gradle: $CURRENT_GRADLE -> $LATEST_GRADLE"
+          fi
+          if [ -n "$LATEST_RUST" ] && [ "$LATEST_RUST" != "$CURRENT_RUST" ]; then
+            echo "Rust: $CURRENT_RUST -> $LATEST_RUST"
           fi
 
       # --- Python PR ---
@@ -385,6 +442,11 @@ jobs:
           # JAVA_HOME token. The old per-suffix seds missed dev's default-jdk.
           sed -i -E "s/openjdk-${OLD_VER}\b/openjdk-${NEW_VER}/g" images/java/apko/*.yaml
           sed -i "s/java-${OLD_VER}-openjdk/java-${NEW_VER}-openjdk/g" images/java/apko/*.yaml
+          # maven and gradle pin openjdk-N-default-jdk (a JDK, not the java image's
+          # JRE) and move in lockstep, so this PR's CI also proves both build
+          # tools run on the new JDK before it auto-merges. Their JAVA_HOME is
+          # the version-free /usr/lib/jvm/default-jvm, so only the pin changes.
+          sed -i -E "s/openjdk-${OLD_VER}\b/openjdk-${NEW_VER}/g" images/maven/apko/*.yaml images/gradle/apko/*.yaml
           BRANCH="update-java-${NEW}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -505,6 +567,107 @@ jobs:
           ---
           Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml)."
           fi
+          git checkout main
+          git checkout -- .
+
+      # --- Maven PR ---
+      # Opened for review, NOT auto-merged: a new Maven line can change default plugin versions and lifecycle behaviour.
+      # catalog.json's primary_package names the line too, so it moves in the same commit.
+      - name: Create Maven PR
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.check.outputs.maven_update == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          OLD="${{ steps.check.outputs.maven_current }}"
+          NEW="${{ steps.check.outputs.maven_latest }}"
+          sed -i -E "s/\b${OLD//./\\.}\b/${NEW}/g" images/maven/apko/*.yaml
+          sed -i -E "s/\"primary_package\": \"${OLD//./\\.}\"/\"primary_package\": \"${NEW}\"/" catalog.json
+          BRANCH="update-maven-${NEW}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add images/maven/apko/ catalog.json
+          git commit -m "chore(maven): upgrade to ${NEW}"
+          git push --force -u origin "$BRANCH"
+          PR_URL=$(gh pr list --head "$BRANCH" --base main --state open --json url --jq '.[0].url // ""')
+          if [ -z "$PR_URL" ]; then
+            gh pr create \
+              --title "chore(maven): upgrade to ${NEW}" \
+              --label dependencies \
+              --body "Upgrades Maven from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
+
+          **Needs review — not auto-merged.** a new Maven line can change default plugin versions and lifecycle behaviour. Read the upstream release notes before merging.
+
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml)."
+          fi
+          git checkout main
+          git checkout -- .
+
+      # --- Gradle PR ---
+      # Opened for review, NOT auto-merged: a new Gradle major removes deprecated APIs and can break existing build scripts.
+      # catalog.json's primary_package names the line too, so it moves in the same commit.
+      - name: Create Gradle PR
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.check.outputs.gradle_update == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          OLD="${{ steps.check.outputs.gradle_current }}"
+          NEW="${{ steps.check.outputs.gradle_latest }}"
+          sed -i -E "s/\b${OLD//./\\.}\b/${NEW}/g" images/gradle/apko/*.yaml
+          sed -i -E "s/\"primary_package\": \"${OLD//./\\.}\"/\"primary_package\": \"${NEW}\"/" catalog.json
+          BRANCH="update-gradle-${NEW}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add images/gradle/apko/ catalog.json
+          git commit -m "chore(gradle): upgrade to ${NEW}"
+          git push --force -u origin "$BRANCH"
+          PR_URL=$(gh pr list --head "$BRANCH" --base main --state open --json url --jq '.[0].url // ""')
+          if [ -z "$PR_URL" ]; then
+            gh pr create \
+              --title "chore(gradle): upgrade to ${NEW}" \
+              --label dependencies \
+              --body "Upgrades Gradle from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
+
+          **Needs review — not auto-merged.** a new Gradle major removes deprecated APIs and can break existing build scripts. Read the upstream release notes before merging.
+
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml)."
+          fi
+          git checkout main
+          git checkout -- .
+
+      # --- Rust PR ---
+      # Auto-merged like Go: Rust's stability guarantee makes 1.N bumps safe for
+      # existing code, and auto-merge still waits for this PR's build + smoke test.
+      - name: Create Rust PR
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) && steps.check.outputs.rust_update == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          OLD="${{ steps.check.outputs.rust_current }}"
+          NEW="${{ steps.check.outputs.rust_latest }}"
+          sed -i -E "s/\b${OLD//./\\.}\b/${NEW}/g" images/rust/apko/*.yaml
+          sed -i -E "s/\"primary_package\": \"${OLD//./\\.}\"/\"primary_package\": \"${NEW}\"/" catalog.json
+          BRANCH="update-rust-${NEW}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add images/rust/apko/ catalog.json
+          git commit -m "chore(rust): upgrade to ${NEW}"
+          git push --force -u origin "$BRANCH"
+          PR_URL=$(gh pr list --head "$BRANCH" --base main --state open --json url --jq '.[0].url // ""')
+          if [ -z "$PR_URL" ]; then
+            PR_URL=$(gh pr create \
+              --title "chore(rust): upgrade to ${NEW}" \
+              --label dependencies \
+              --body "Upgrades Rust from \`${OLD}\` to \`${NEW}\` (detected from Wolfi APKINDEX).
+
+          ---
+          Auto-created by [update-wolfi-packages](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update-wolfi-packages.yml).")
+          fi
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
           git checkout main
           git checkout -- .
 
