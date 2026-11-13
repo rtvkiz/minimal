@@ -149,6 +149,9 @@ MEMCACHED_EXPORTER_VERSION ?= $(call melange_version,images/memcached-exporter/m
 MYSQLD_EXPORTER_VERSION ?= $(call melange_version,images/mysqld-exporter/melange.yaml)
 PHPMYADMIN_VERSION ?= $(call melange_version,images/phpmyadmin/melange.yaml)
 PGPOOL_VERSION ?= $(call melange_version,images/pgpool/melange.yaml)
+GHOST_VERSION ?= $(call melange_version,images/ghost/melange.yaml)
+AZURE_CLI_VERSION ?= $(call melange_version,images/azure-cli/melange.yaml)
+FLUENTD_VERSION ?= $(call melange_version,images/fluentd/melange.yaml)
 ELASTICSEARCH_EXPORTER_VERSION ?= $(call melange_version,images/elasticsearch-exporter/melange.yaml)
 APACHE_EXPORTER_VERSION ?= $(call melange_version,images/apache-exporter/melange.yaml)
 MONGODB_EXPORTER_VERSION ?= $(call melange_version,images/mongodb-exporter/melange.yaml)
@@ -306,6 +309,9 @@ endef
 .PHONY: mysqld-exporter mysqld-exporter-melange test-mysqld-exporter
 .PHONY: phpmyadmin phpmyadmin-melange test-phpmyadmin
 .PHONY: pgpool pgpool-melange test-pgpool
+.PHONY: ghost ghost-melange ghost-dev test-ghost test-ghost-dev
+.PHONY: azure-cli azure-cli-melange azure-cli-dev test-azure-cli test-azure-cli-dev
+.PHONY: fluentd fluentd-melange fluentd-dev test-fluentd test-fluentd-dev
 .PHONY: elasticsearch-exporter elasticsearch-exporter-melange test-elasticsearch-exporter
 .PHONY: apache-exporter apache-exporter-melange test-apache-exporter
 .PHONY: mongodb-exporter mongodb-exporter-melange test-mongodb-exporter
@@ -341,7 +347,7 @@ endef
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl sealed-secrets cloudnative-pg argo-rollouts trust-manager chartmuseum prometheus-operator kube-rbac-proxy cadvisor nginx-prometheus-exporter memcached-exporter argo-cd argo-cd-repo-server karpenter keda harbor-portal aws-cli mysqld-exporter mongodb-exporter configmap-reload contour cluster-autoscaler jmx-exporter openldap apache-exporter elasticsearch-exporter pgpool phpmyadmin maven gradle rust
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl sealed-secrets cloudnative-pg argo-rollouts trust-manager chartmuseum prometheus-operator kube-rbac-proxy cadvisor nginx-prometheus-exporter memcached-exporter argo-cd argo-cd-repo-server karpenter keda harbor-portal aws-cli mysqld-exporter mongodb-exporter configmap-reload contour cluster-autoscaler jmx-exporter openldap apache-exporter elasticsearch-exporter pgpool phpmyadmin maven gradle rust fluentd azure-cli ghost
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -499,6 +505,9 @@ $(eval $(call DEV_IMAGE_RULE,memcached-exporter,memcached-exporter-melange,--rep
 $(eval $(call DEV_IMAGE_RULE,mysqld-exporter,mysqld-exporter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,phpmyadmin,phpmyadmin-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,pgpool,pgpool-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,ghost,ghost-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,azure-cli,azure-cli-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,fluentd,fluentd-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,elasticsearch-exporter,elasticsearch-exporter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,apache-exporter,apache-exporter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,mongodb-exporter,mongodb-exporter-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -3328,6 +3337,75 @@ pgpool: pgpool-melange
 	@rm -f pgpool.tar sbom-*.spdx.json
 	@echo "✓ minimal-pgpool built (source build)"
 
+ghost-melange: keygen
+	@echo "Building ghost $(GHOST_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/ghost/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ ghost package built from source"
+
+ghost: ghost-melange
+	@echo "Assembling minimal-ghost image with apko..."
+	apko build images/ghost/apko/ghost.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-ghost:$(VERSION) \
+		ghost.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < ghost.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-ghost:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-ghost:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-ghost:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-ghost:latest
+	@rm -f ghost.tar sbom-*.spdx.json
+	@echo "✓ minimal-ghost built (source build)"
+
+azure-cli-melange: keygen
+	@echo "Building azure-cli $(AZURE_CLI_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/azure-cli/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ azure-cli package built from source"
+
+azure-cli: azure-cli-melange
+	@echo "Assembling minimal-azure-cli image with apko..."
+	apko build images/azure-cli/apko/azure-cli.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-azure-cli:$(VERSION) \
+		azure-cli.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < azure-cli.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-azure-cli:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-azure-cli:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-azure-cli:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-azure-cli:latest
+	@rm -f azure-cli.tar sbom-*.spdx.json
+	@echo "✓ minimal-azure-cli built (source build)"
+
+fluentd-melange: keygen
+	@echo "Building fluentd $(FLUENTD_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/fluentd/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ fluentd package built from source"
+
+fluentd: fluentd-melange
+	@echo "Assembling minimal-fluentd image with apko..."
+	apko build images/fluentd/apko/fluentd.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-fluentd:$(VERSION) \
+		fluentd.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < fluentd.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-fluentd:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-fluentd:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-fluentd:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-fluentd:latest
+	@rm -f fluentd.tar sbom-*.spdx.json
+	@echo "✓ minimal-fluentd built (source build)"
+
 elasticsearch-exporter-melange: keygen
 	@echo "Building elasticsearch-exporter $(ELASTICSEARCH_EXPORTER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build images/elasticsearch-exporter/melange.yaml \
@@ -4212,7 +4290,7 @@ scan-%:
 		$(REGISTRY)/$(OWNER)/minimal-$*:latest
 	@echo "✓ minimal-$*: scan passed"
 
-scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks scan-cmctl scan-sealed-secrets scan-cloudnative-pg scan-argo-rollouts scan-trust-manager scan-chartmuseum scan-prometheus-operator scan-kube-rbac-proxy scan-cadvisor scan-nginx-prometheus-exporter scan-memcached-exporter scan-argo-cd scan-argo-cd-repo-server scan-karpenter scan-keda scan-harbor-portal scan-aws-cli scan-openldap scan-mysqld-exporter scan-mongodb-exporter scan-configmap-reload scan-contour scan-cluster-autoscaler scan-jmx-exporter scan-apache-exporter scan-elasticsearch-exporter scan-pgpool scan-phpmyadmin scan-maven scan-gradle scan-rust
+scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks scan-cmctl scan-sealed-secrets scan-cloudnative-pg scan-argo-rollouts scan-trust-manager scan-chartmuseum scan-prometheus-operator scan-kube-rbac-proxy scan-cadvisor scan-nginx-prometheus-exporter scan-memcached-exporter scan-argo-cd scan-argo-cd-repo-server scan-karpenter scan-keda scan-harbor-portal scan-aws-cli scan-openldap scan-mysqld-exporter scan-mongodb-exporter scan-configmap-reload scan-contour scan-cluster-autoscaler scan-jmx-exporter scan-apache-exporter scan-elasticsearch-exporter scan-pgpool scan-phpmyadmin scan-maven scan-gradle scan-rust scan-fluentd scan-azure-cli scan-ghost
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -4636,7 +4714,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev test-cmctl test-cmctl-dev test-sealed-secrets test-sealed-secrets-dev test-cloudnative-pg test-cloudnative-pg-dev test-argo-rollouts test-argo-rollouts-dev test-trust-manager test-trust-manager-dev test-chartmuseum test-chartmuseum-dev test-prometheus-operator test-prometheus-operator-dev test-kube-rbac-proxy test-kube-rbac-proxy-dev test-cadvisor test-cadvisor-dev test-nginx-prometheus-exporter test-nginx-prometheus-exporter-dev test-memcached-exporter test-memcached-exporter-dev test-argo-cd test-argo-cd-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev test-harbor-portal test-harbor-portal-dev test-aws-cli test-mysqld-exporter test-mongodb-exporter test-configmap-reload test-contour test-cluster-autoscaler test-jmx-exporter test-openldap test-apache-exporter test-elasticsearch-exporter test-pgpool test-phpmyadmin test-maven test-gradle test-rust
+test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev test-cmctl test-cmctl-dev test-sealed-secrets test-sealed-secrets-dev test-cloudnative-pg test-cloudnative-pg-dev test-argo-rollouts test-argo-rollouts-dev test-trust-manager test-trust-manager-dev test-chartmuseum test-chartmuseum-dev test-prometheus-operator test-prometheus-operator-dev test-kube-rbac-proxy test-kube-rbac-proxy-dev test-cadvisor test-cadvisor-dev test-nginx-prometheus-exporter test-nginx-prometheus-exporter-dev test-memcached-exporter test-memcached-exporter-dev test-argo-cd test-argo-cd-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev test-harbor-portal test-harbor-portal-dev test-aws-cli test-mysqld-exporter test-mongodb-exporter test-configmap-reload test-contour test-cluster-autoscaler test-jmx-exporter test-openldap test-apache-exporter test-elasticsearch-exporter test-pgpool test-phpmyadmin test-maven test-gradle test-rust test-fluentd test-azure-cli test-ghost
 
 $(eval $(call DEV_TEST_RULE,python))
 $(eval $(call DEV_TEST_RULE,node-slim))
@@ -4761,6 +4839,9 @@ $(eval $(call DEV_TEST_RULE,memcached-exporter))
 $(eval $(call DEV_TEST_RULE,mysqld-exporter))
 $(eval $(call DEV_TEST_RULE,phpmyadmin))
 $(eval $(call DEV_TEST_RULE,pgpool))
+$(eval $(call DEV_TEST_RULE,ghost))
+$(eval $(call DEV_TEST_RULE,azure-cli))
+$(eval $(call DEV_TEST_RULE,fluentd))
 $(eval $(call DEV_TEST_RULE,elasticsearch-exporter))
 $(eval $(call DEV_TEST_RULE,apache-exporter))
 $(eval $(call DEV_TEST_RULE,mongodb-exporter))
@@ -5391,6 +5472,24 @@ test-pgpool:
 		images/pgpool/test.sh
 	@echo "✓ pgpool tests passed"
 
+test-ghost:
+	@echo "Testing ghost image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-ghost:latest" && \
+		images/ghost/test.sh
+	@echo "✓ ghost tests passed"
+
+test-azure-cli:
+	@echo "Testing azure-cli image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-azure-cli:latest" && \
+		images/azure-cli/test.sh
+	@echo "✓ azure-cli tests passed"
+
+test-fluentd:
+	@echo "Testing fluentd image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-fluentd:latest" && \
+		images/fluentd/test.sh
+	@echo "✓ fluentd tests passed"
+
 test-elasticsearch-exporter:
 	@echo "Testing elasticsearch-exporter image..."
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-elasticsearch-exporter:latest" && \
@@ -5852,7 +5951,7 @@ push-%:
 	docker push $(REGISTRY)/$(OWNER)/minimal-$*:$(or $(PUSH_VER_$*),$(VERSION))
 	docker push $(REGISTRY)/$(OWNER)/minimal-$*:latest
 
-push: push-python push-node-slim push-bun push-go push-java push-ruby push-php push-dotnet push-deno push-mysql push-mariadb push-postgres-slim push-pgbouncer push-unbound push-dnsmasq push-keepalived push-vector push-patroni push-metrics-server push-external-dns push-velero push-kaniko push-step-ca push-skopeo push-sqlite push-opensearch push-meilisearch push-airflow push-wordpress push-redis-slim push-valkey push-memcached push-kafka push-zookeeper push-cassandra push-solr push-pulsar push-tomcat push-rabbitmq push-nats push-mosquitto push-nginx push-httpd push-caddy push-haproxy push-traefik push-envoy push-oauth2-proxy push-prometheus push-alertmanager push-victoria-metrics push-thanos push-mimir push-jaeger push-loki push-tempo push-otelcol push-fluent-bit push-telegraf push-node-exporter push-blackbox-exporter push-pushgateway push-coredns push-etcd push-openbao push-keycloak push-qdrant push-registry push-consul push-helm push-kubectl push-opentofu push-trivy push-cosign push-syft push-grype push-osv-scanner push-oras push-notation push-conftest push-kubeconform push-kube-bench push-trufflehog push-flux push-kustomize push-sops push-crane push-kubeseal push-helmfile push-regctl push-stern push-gitleaks push-step-cli push-opa push-jenkins push-gitea push-minio push-rails push-mailpit push-external-secrets push-kyverno push-flagger push-reloader push-postgres-exporter push-headscale push-victoria-logs push-metallb push-temporal-server push-temporal-admin-tools push-temporal-ui-server push-kong push-couchdb push-kvrocks push-cmctl push-sealed-secrets push-cloudnative-pg push-argo-rollouts push-trust-manager push-chartmuseum push-prometheus-operator push-kube-rbac-proxy push-cadvisor push-nginx-prometheus-exporter push-memcached-exporter push-argo-cd push-argo-cd-repo-server push-aws-cli push-mysqld-exporter push-mongodb-exporter push-configmap-reload push-contour push-cluster-autoscaler push-jmx-exporter push-openldap push-apache-exporter push-elasticsearch-exporter push-pgpool push-phpmyadmin push-maven push-gradle push-rust
+push: push-python push-node-slim push-bun push-go push-java push-ruby push-php push-dotnet push-deno push-mysql push-mariadb push-postgres-slim push-pgbouncer push-unbound push-dnsmasq push-keepalived push-vector push-patroni push-metrics-server push-external-dns push-velero push-kaniko push-step-ca push-skopeo push-sqlite push-opensearch push-meilisearch push-airflow push-wordpress push-redis-slim push-valkey push-memcached push-kafka push-zookeeper push-cassandra push-solr push-pulsar push-tomcat push-rabbitmq push-nats push-mosquitto push-nginx push-httpd push-caddy push-haproxy push-traefik push-envoy push-oauth2-proxy push-prometheus push-alertmanager push-victoria-metrics push-thanos push-mimir push-jaeger push-loki push-tempo push-otelcol push-fluent-bit push-telegraf push-node-exporter push-blackbox-exporter push-pushgateway push-coredns push-etcd push-openbao push-keycloak push-qdrant push-registry push-consul push-helm push-kubectl push-opentofu push-trivy push-cosign push-syft push-grype push-osv-scanner push-oras push-notation push-conftest push-kubeconform push-kube-bench push-trufflehog push-flux push-kustomize push-sops push-crane push-kubeseal push-helmfile push-regctl push-stern push-gitleaks push-step-cli push-opa push-jenkins push-gitea push-minio push-rails push-mailpit push-external-secrets push-kyverno push-flagger push-reloader push-postgres-exporter push-headscale push-victoria-logs push-metallb push-temporal-server push-temporal-admin-tools push-temporal-ui-server push-kong push-couchdb push-kvrocks push-cmctl push-sealed-secrets push-cloudnative-pg push-argo-rollouts push-trust-manager push-chartmuseum push-prometheus-operator push-kube-rbac-proxy push-cadvisor push-nginx-prometheus-exporter push-memcached-exporter push-argo-cd push-argo-cd-repo-server push-aws-cli push-mysqld-exporter push-mongodb-exporter push-configmap-reload push-contour push-cluster-autoscaler push-jmx-exporter push-openldap push-apache-exporter push-elasticsearch-exporter push-pgpool push-phpmyadmin push-maven push-gradle push-rust push-fluentd push-azure-cli push-ghost
 
 #------------------------------------------------------------------------------
 # CLEANUP

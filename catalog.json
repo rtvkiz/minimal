@@ -2067,6 +2067,45 @@
       "seo_noun": "Rust toolchain",
       "summary": "Shell-less Rust toolchain (rustc + cargo) built on Wolfi.",
       "description": "Rust toolchain with rustc, cargo, clippy and rustfmt plus a working linker, for compiling Rust binaries in CI and multi-stage builds. Shell-less, non-root."
+    },
+    {
+      "name": "fluentd",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "fluentd",
+      "upstream_url": "https://www.fluentd.org",
+      "seo_noun": "log collector",
+      "summary": "Shell-less fluentd log collector on a source-built Ruby.",
+      "description": "Fluentd unified logging layer that collects, filters and routes logs to any backend. Shell-less, non-root, on a source-built Ruby rebuilt daily for CVE fixes."
+    },
+    {
+      "name": "azure-cli",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "azure-cli",
+      "upstream_url": "https://learn.microsoft.com/cli/azure",
+      "seo_noun": "Azure CLI",
+      "summary": "Shell-less Azure CLI built from source via melange.",
+      "description": "Microsoft Azure command-line interface for managing Azure resources from CI pipelines and scripts. Shell-less and non-root, with a pinned dependency closure."
+    },
+    {
+      "name": "ghost",
+      "category": "Apps",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "ghost",
+      "upstream_url": "https://ghost.org",
+      "seo_noun": "publishing platform",
+      "summary": "Shell-less Ghost publishing platform on Node.js.",
+      "description": "Ghost open-source publishing platform for blogs, newsletters and paid memberships, on Node.js 24. Shell-less, non-root, SQLite by default, MySQL in production."
     }
   ]
 }

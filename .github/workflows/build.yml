@@ -167,7 +167,10 @@ jobs:
             {"name":"argo-cd-repo-server","variants":["prod","dev"]},
             {"name":"harbor-portal","variants":["prod","dev"]},
             {"name":"kong","variants":["prod","dev"]},
-            {"name":"vector","variants":["prod","dev"]}
+            {"name":"vector","variants":["prod","dev"]},
+            {"name":"fluentd","variants":["prod","dev"]},
+            {"name":"azure-cli","variants":["prod","dev"]},
+            {"name":"ghost","variants":["prod","dev"]}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},

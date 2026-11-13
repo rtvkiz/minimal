@@ -1,0 +1,125 @@
+# Azure CLI, installed from the azure-cli wheel published to PyPI.
+#
+# DETERMINISM. Upstream pins its Linux dependency versions per release in
+# src/azure-cli/requirements.py3.Linux.txt — it is what Microsoft's own
+# packages install against. Both the wheel and that file are sha256-verified
+# and the file constrains the resolve, so every version it pins is fixed for a
+# given package.version rather than floating with PyPI (airflow precedent).
+#
+# PYTHON LINE. python-3.14 is the newest Python azure-cli declares support for
+# (its classifiers stop at 3.14). Moving to a newer line is a compatibility
+# decision tied to upstream, not a mechanical bump; Wolfi's python-3.14 keeps
+# receiving 3.14.x patch releases, which the daily rebuild picks up.
+package:
+  name: azure-cli
+  version: 2.92.0
+  epoch: 0
+  description: "Azure command-line interface"
+  copyright:
+    - license: MIT
+  dependencies:
+    # Wolfi ships no azure-cli today; guard against one appearing at a higher
+    # version and replacing this build (apko resolves top-level names by
+    # version across all repositories).
+    provider-priority: 100
+    runtime:
+      - python-3.14
+
+vars:
+  sha256: 7257ab8c949e3d412fc220686d2adce56e72f5190c6ffa2799c91441a3210291
+  requirements-sha256: 9bfa04d75348d537db6746928d1c8f5435f2af4e436848e6ce1590935cf90d52
+  python: "3.14"
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - python-3.14
+      - python-3.14-dev
+      - py3.14-pip
+      # resolver with dependency overrides (see the install step)
+      - uv
+      - libffi-dev
+      - openssl-dev
+
+pipeline:
+  - runs: |
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://files.pythonhosted.org/packages/py3/a/azure-cli/azure_cli-${{package.version}}-py3-none-any.whl" \
+        -o /home/build/azure_cli-${{package.version}}-py3-none-any.whl
+      echo "${{vars.sha256}}  /home/build/azure_cli-${{package.version}}-py3-none-any.whl" | sha256sum -c -
+
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://raw.githubusercontent.com/Azure/azure-cli/azure-cli-${{package.version}}/src/azure-cli/requirements.py3.Linux.txt" \
+        -o /home/build/requirements.txt
+      echo "${{vars.requirements-sha256}}  /home/build/requirements.txt" | sha256sum -c -
+
+  - runs: |
+      # Build the venv at its FINAL runtime path (/opt/az, where Microsoft's
+      # own Linux packages put it), not inside destdir: a venv is not
+      # relocatable, its scripts carry absolute shebangs.
+      python${{vars.python}} -m venv /opt/az
+      /opt/az/bin/pip install --no-cache-dir --upgrade pip setuptools wheel
+      # Resolve the verified wheel with the requirements file as CONSTRAINTS.
+      # It pins every version it lists but is not a complete closure
+      # (typing-extensions, azure-ai-projects, decorator, ... are absent), so
+      # it cannot be installed --no-deps; upstream resolves it too.
+      #
+      # One override, via uv (pip has no per-dependency override): the file
+      # pins portalocker 3.2.0, but azure-cli-telemetry 1.1.0 on PyPI was
+      # published with `portalocker<3`. Upstream builds telemetry from its
+      # source tree, where 1.1.0 declares `portalocker>=1.6,<4` — the override
+      # restates that real bound, and the constraint still pins 3.2.0.
+      printf 'portalocker>=1.6,<4\n' > /home/build/overrides.txt
+      uv pip install --python /opt/az/bin/python --no-cache \
+        "/home/build/azure_cli-${{package.version}}-py3-none-any.whl" \
+        --constraint /home/build/requirements.txt \
+        --override /home/build/overrides.txt
+      /opt/az/bin/pip check || true
+
+  - runs: |
+      # The `az` script pip installs is a bash wrapper around
+      # `python -m azure.cli`. Replace it with a Python launcher that does the
+      # same thing, so the prod image needs no shell at all.
+      cat > /opt/az/bin/az <<'PY'
+      #!/opt/az/bin/python3
+      import runpy
+      import sys
+      sys.argv[0] = "az"
+      runpy.run_module("azure.cli", run_name="__main__", alter_sys=True)
+      PY
+      sed -i 's/^      //' /opt/az/bin/az
+      chmod 0755 /opt/az/bin/az
+
+      # Trim what the CLI never reads. Test trees and bytecode caches are a
+      # large share of the closure and carry scanner findings without ever
+      # being imported. setuptools/wheel are build-time only; pip STAYS —
+      # `az extension add` installs extensions with it.
+      find /opt/az -type d -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
+      find /opt/az -type d -name 'tests' -prune -exec rm -rf {} + 2>/dev/null || true
+      find /opt/az -type f -name '*.pyc' -delete 2>/dev/null || true
+      /opt/az/bin/pip uninstall -y setuptools wheel
+      # uv leaves a world-writable (0666) .lock in the venv root; melange's
+      # worldwrite linter rejects it, and nothing reads it at runtime.
+      rm -f /opt/az/.lock
+
+      mkdir -p "${{targets.destdir}}/opt"
+      cp -a /opt/az "${{targets.destdir}}/opt/az"
+
+      # Relative symlink — an absolute one dangles during melange's verify step.
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf ../../opt/az/bin/az "${{targets.destdir}}/usr/bin/az"
+
+  - runs: |
+      echo "Verifying Azure CLI build..."
+      # Run from the real path: the launcher's shebang points at
+      # /opt/az/bin/python3, which only resolves outside destdir.
+      /opt/az/bin/az version --output json | grep -q "\"azure-cli\": \"${{package.version}}\""
+      head -1 "${{targets.destdir}}/opt/az/bin/az" | grep -qx '#!/opt/az/bin/python3'

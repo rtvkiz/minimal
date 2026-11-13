@@ -48,6 +48,7 @@
     each image's melange.yaml.
   images:
     - { name: rails, src-root: "/home/build", build-marker: "gem install --no-document rails" }
+    - { name: fluentd, src-root: "/home/build", build-marker: "gem install --no-document ./fluentd" }
 
 - name: rust
   artifact-type: rust-crate
@@ -96,6 +97,10 @@
     # `cp -a /opt/airflow/venv` is the copy-into-destdir step, so the bump happens
     # after the install and before the venv is staged and trimmed.
     - { name: airflow, src-root: "/home/build", build-marker: "cp -a /opt/airflow/venv" }
+    # azure-cli's venv is /opt/az, so it overrides the row's airflow-path pip.
+    # The marker names the launcher/trim/stage step, which runs after the
+    # constraints-pinned install — same placement rule as airflow above.
+    - { name: azure-cli, src-root: "/home/build", build-marker: "cp -a /opt/az", update-template: "/opt/az/bin/pip install --no-cache-dir --no-deps \"{pkg}=={ver}\"" }
 
 - name: maven
   artifact-type: java-archive
