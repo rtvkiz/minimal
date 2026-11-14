@@ -90,6 +90,11 @@ pipeline:
   # Install fluentd from the verified .gem; its runtime gem closure resolves
   # from rubygems.org (same model as rails). Native extensions (cool.io,
   # msgpack, strptime, zstd-ruby, http_parser.rb) compile here.
+  # patch-bundler-deps: auto-generated — do not edit manually
+  - runs: |
+      cd /home/build
+      gem install json -v 2.19.2 --no-document
+  # end-patch-bundler-deps
   - runs: |
       cd /home/build
       gem install --no-document ./fluentd-${{package.version}}.gem
