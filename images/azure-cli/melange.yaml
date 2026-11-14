@@ -88,7 +88,7 @@ pipeline:
   - runs: |
       cd /home/build
       /opt/az/bin/pip install --no-cache-dir --no-deps "cryptography==50.0.0"
-      /opt/az/bin/pip install --no-cache-dir --no-deps "oauthlib==4.0.0"
+      /opt/az/bin/pip install --no-cache-dir --no-deps "oauthlib==4.0.1"
       /opt/az/bin/pip install --no-cache-dir --no-deps "urllib3==2.8.0"
   # end-patch-python-deps
   - runs: |
