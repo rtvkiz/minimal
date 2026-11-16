@@ -2062,7 +2062,7 @@
         "prod",
         "dev"
       ],
-      "primary_package": "rust-1.99",
+      "primary_package": "rust-1.100",
       "upstream_url": "https://www.rust-lang.org",
       "seo_noun": "Rust toolchain",
       "summary": "Shell-less Rust toolchain (rustc + cargo) built on Wolfi.",
