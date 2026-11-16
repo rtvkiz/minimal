@@ -695,8 +695,24 @@ jobs:
                 if [ "$is_log_family" = true ] && [ "$cur_major" != "$OTEL_TOP_MAJOR" ]; then
                   echo "    drop $line: log-family pre-1.0 fix version is the breaking log.KeyValue/log.String rewrite, not safe to auto-apply"
                 elif [ "$is_log_family" = false ] && [ "$OTEL_TOP_REQUIRES_LOG" = true ] && [ "$SOURCE_ON_OLD_LOG_API" = true ]; then
-                  echo "    keep $line: not forcing to OTEL_TOP (${OTEL_TOP}) — it requires otel/log, which this image's source isn't on"
-                  NEW_OTEL=$(printf '%s\n%s' "$NEW_OTEL" "$line")
+                  # Falling back to grype's own fix version is not enough when
+                  # that version is itself on the otel/log-requiring line:
+                  # temporal-server broke a FOURTH time (2026-11-15, PR #1145)
+                  # because grype's fix for otel/sdk and otel/trace was v1.47.0
+                  # — the sibling harmonizer below then raised core otel to
+                  # v1.47.0 too, and its go.mod drags otel/log to v1.47.0. Core
+                  # otel and its sdk/exporters release in lockstep, so check the
+                  # CORE module at this entry's version and defer the bump when
+                  # it requires otel/log; it resumes once upstream moves off the
+                  # pre-1.0 log API (the image leaves the old-log list).
+                  entry_ver="${line##*@}"
+                  if curl -fs --max-time 10 "https://proxy.golang.org/go.opentelemetry.io/otel/@v/${entry_ver}.mod" 2>/dev/null \
+                      | grep -qE '^[[:space:]]+go\.opentelemetry\.io/otel/log[[:space:]]'; then
+                    echo "    defer $line: otel ${entry_ver} requires otel/log, which this image's source isn't on"
+                  else
+                    echo "    keep $line: not forcing to OTEL_TOP (${OTEL_TOP}) — it requires otel/log, which this image's source isn't on"
+                    NEW_OTEL=$(printf '%s\n%s' "$NEW_OTEL" "$line")
+                  fi
                 elif [ "$cur_major" = "$OTEL_TOP_MAJOR" ]; then
                   NEW_OTEL=$(printf '%s\n%s@%s' "$NEW_OTEL" "$pkg" "$OTEL_TOP")
                   [ "$pkg" = "go.opentelemetry.io/otel/sdk/log" ] && SDK_LOG_ON_OTEL_TOP=true
@@ -774,6 +790,13 @@ jobs:
             # >= grype's fix, so the CVE stays patched — this corrects upward,
             # it never skips a bump. Generalizes the otel/x-family harmonizers
             # above to arbitrary cross-module constraints.
+            # `unset` first: this runs once per image at global scope, and a
+            # bare `declare -A` on an existing array keeps its contents, so PIN
+            # accumulated every earlier image's pins and any image that
+            # harmonized got all of them written into its block (temporal-
+            # server inherited otel/log@v1.47.0, slack-go, knative from
+            # traefik/zot/trivy and broke, PR #1145).
+            unset PIN
             declare -A PIN
             while IFS= read -r mv; do
               [ -z "$mv" ] && continue
