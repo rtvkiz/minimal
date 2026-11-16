@@ -16,7 +16,7 @@ contents:
     - wolfi-baselayout
 
     # Rust toolchain from Wolfi (rustc, cargo, rustdoc, clippy, rustfmt)
-    - rust-1.99
+    - rust-1.100
 
     # Linker: rustc invokes `cc` to link, which needs gcc + binutils (ld) and
     # the glibc startup files/headers (crt1.o, libc.so linker script).
