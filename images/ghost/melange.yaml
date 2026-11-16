@@ -25,7 +25,7 @@ package:
     # version and replacing this build.
     provider-priority: 100
     runtime:
-      - nodejs-24
+      - nodejs-26
 
 vars:
   # npm dist.integrity (sha512) of ghost-<version>.tgz, hex-encoded
@@ -42,7 +42,7 @@ environment:
       - ca-certificates-bundle
       - curl
       - build-base
-      - nodejs-24
+      - nodejs-26
       - npm
       # node-gyp fallback for better-sqlite3 when no prebuilt binary matches
       - python-3.14
