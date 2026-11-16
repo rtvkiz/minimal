@@ -1,6 +1,6 @@
 # Development variant of minimal-dotnet.
 #
-# Prod ships dotnet-10-runtime (just the runtime). Dev ships dotnet-10
+# Prod ships dotnet-11-runtime (just the runtime). Dev ships dotnet-11
 # (full SDK with dotnet build, dotnet publish, dotnet test, etc.) plus
 # shell, apk-tools, git, full ICU data, tzdata.
 #
@@ -17,10 +17,10 @@ contents:
     - wolfi-baselayout
 
     # Full .NET 10 SDK + runtime (SDK is a separate Wolfi package)
-    - dotnet-10
-    - dotnet-10-runtime
-    - dotnet-10-sdk
-    - dotnet-10-targeting-pack
+    - dotnet-11
+    - dotnet-11-runtime
+    - dotnet-11-sdk
+    - dotnet-11-targeting-pack
 
     # Core runtime deps (same as prod)
     - glibc
