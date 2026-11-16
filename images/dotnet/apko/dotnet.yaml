@@ -12,7 +12,7 @@ contents:
     - wolfi-baselayout
 
     # .NET Runtime from Wolfi (CVE-patched)
-    - dotnet-10-runtime
+    - dotnet-11-runtime
 
     # Core runtime dependencies
     - glibc
