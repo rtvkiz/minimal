@@ -12,7 +12,7 @@
 # receiving 3.14.x patch releases, which the daily rebuild picks up.
 package:
   name: azure-cli
-  version: 2.92.0
+  version: 2.93.0
   epoch: 0
   description: "Azure command-line interface"
   copyright:
@@ -26,8 +26,8 @@ package:
       - python-3.14
 
 vars:
-  sha256: 7257ab8c949e3d412fc220686d2adce56e72f5190c6ffa2799c91441a3210291
-  requirements-sha256: 9bfa04d75348d537db6746928d1c8f5435f2af4e436848e6ce1590935cf90d52
+  sha256: 96c8b6c0ccad4576d8628641ec8beaf49872107fb30c9cad9feb82ff7b84ed2d
+  requirements-sha256: 11d0f42401c801a7bf53b7fe62593af8871875292ed606715ff2afedba4212a9
   python: "3.14"
 
 environment:
