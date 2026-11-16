@@ -4,7 +4,7 @@ import data from '../../data/comparison.json';
 import bitnami from '../../data/bitnami-map.json';
 import { images } from '../../lib/catalog';
 
-const title = 'Hardened container image alternatives — Chainguard, distroless, Docker Hardened compared';
+const title = 'Free hardened container image alternatives — Chainguard, Docker Hardened, Bitnami, Minimus';
 const description =
   `An evidence-based comparison of free hardened container images. ${data.chainguard.compared + data.distroless.compared} version-matched images scanned head-to-head with the same Grype build, including the images where Minimal loses.`;
 
@@ -30,7 +30,7 @@ const datasetSchema = {
 <Layout title={title} description={description} schema={[datasetSchema]} breadcrumbs={[]}>
   <section>
     <div class="container-narrow">
-      <h1 class="section-title">Comparing hardened container images</h1>
+      <h1 class="section-title">Free alternatives to Chainguard, Docker Hardened, Bitnami and Minimus</h1>
       <p class="section-sub">
         If you are looking for a Chainguard alternative, a replacement for Minimus (which shut down
         in October 2026), a replacement for
@@ -64,7 +64,7 @@ const datasetSchema = {
           </p>
         </a>
         <a class="card" href="/blog/migrating-from-minimus-to-minimal/">
-          <h2 style="font-size:1.1rem;margin:0 0 6px">Moving off Minimus</h2>
+          <h2 style="font-size:1.1rem;margin:0 0 6px">Minimus alternatives</h2>
           <p class="small muted" style="margin:0">
             Minimus ceased operations and turned off its registry on 2026-10-22. What changes when
             you switch an image to Minimal, and how to verify what you pulled.

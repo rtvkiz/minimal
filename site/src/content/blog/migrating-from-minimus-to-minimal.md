@@ -1,14 +1,35 @@
 ---
-title: "Migrating from Minimus to Minimal"
-description: "What actually breaks when you move a container image to Minimal: the missing shell, the non-root UID, and the tag you should not have pinned. With the commands to verify what you pulled."
+title: "Minimus alternatives: free options, and migrating to Minimal"
+description: "Minimus shut down in October 2026. The free alternatives, and what actually breaks when you move an image to Minimal: the missing shell, the non-root UID, and the tag you should not have pinned."
 published: "2026-08-31"
-updated: "2026-11-02"
+updated: "2026-11-10"
 ---
 
 > **Update, 2026-11-02:** Minimus ceased operations and turned off its registry
 > (`reg.mini.dev`) on 2026-10-22, after a maintenance-only period that began on
 > 2026-08-24. Images you already pulled keep running, but they no longer
 > receive updates or CVE fixes. Everything below still applies to moving them.
+
+## Free Minimus alternatives
+
+These are the main free options. None of them needs a contract:
+
+- **Docker Hardened Images**: 1,000+ images, free under Apache-2.0 since
+  December 2025. [Comparison](/compare/docker-hardened/).
+- **Chainguard**: a free tier of publicly pullable images. The full catalog is
+  paid. [Comparison](/compare/chainguard/).
+- **Red Hat Hardened Images**: a no-cost catalog of 45+ images, generally
+  available since May 2026, at [images.redhat.com](https://images.redhat.com/).
+- **Google distroless**: bare Python, Java and Node.js runtimes, meant as a
+  base layer for your own image rather than as a ready-to-run catalog.
+  [Comparison](/compare/distroless/).
+- **Minimal** (this project): a smaller, MIT-licensed [catalog](/images/) with
+  no account and no paid tier.
+
+The linked comparison pages scan each one against Minimal with the same Grype
+build and database. The rest of this post covers moving an image to Minimal.
+
+## Moving an image to Minimal
 
 Swapping one hardened base for another is mostly a find-and-replace. The
 interesting part is the small number of things that break afterward, and they
