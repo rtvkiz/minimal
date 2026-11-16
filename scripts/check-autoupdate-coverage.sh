@@ -132,6 +132,18 @@ for name in "${bespoke[@]:-}" "${exempt[@]:-}"; do
   in_prod "$name" || err "$COVERAGE lists '$name' which is not a prod image in $CATALOG"
 done
 
+# --- wolfi-versioned must have a line-bumper ----------------------------------
+# The daily rebuild only refreshes WITHIN a pinned line (couchdb-3.3 -> -r22);
+# moving to a new line needs a block in update-wolfi-packages.yml that rewrites
+# the image's apko configs. Classifying an image wolfi-versioned without one
+# passed this check while couchdb sat on 3.3 after Wolfi shipped couchdb-3.5.
+WOLFI_WF=".github/workflows/update-wolfi-packages.yml"
+for name in "${wolfi_versioned[@]:-}"; do
+  [ -n "$name" ] || continue
+  grep -qF "images/$name/apko/" "$WOLFI_WF" \
+    || err "$name: classified wolfi-versioned but $WOLFI_WF never rewrites images/$name/apko/ — no line-bumper, it will freeze on its current line (add a check + PR block, or classify wolfi-rolling)"
+done
+
 # --- VEX existence: every prod image ships a vex/<name>.openvex.json ----------
 for img in "${prod[@]}"; do
   [ -f "vex/$img.openvex.json" ] || err "$img: missing vex/$img.openvex.json (every catalog image needs a VEX file)"

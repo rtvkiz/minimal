@@ -1,0 +1,115 @@
+# Development variant of minimal-fluentd.
+# Same Ruby + fluentd as prod, plus the runtime dev template: shell, apk-tools,
+# and a C toolchain so `fluent-gem install` can build plugins with native
+# extensions (e.g. fluent-plugin-kafka's rdkafka, fluent-plugin-s3 deps).
+#
+# Installing a plugin into the image needs root (the gem dir is root-owned):
+#   FROM ghcr.io/rtvkiz/minimal-fluentd:latest-dev
+#   USER root
+#   RUN fluent-gem install fluent-plugin-elasticsearch
+#   USER 65532
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - fluentd
+    - glibc
+    - glibc-locale-posix
+    - ld-linux
+    - libgcc
+    - libstdc++
+    - libssl3
+    - libcrypto3
+    - libcrypt1
+    - zlib
+    - yaml
+    - libffi
+    - readline
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+
+    # --- C/C++ toolchain for native gem extensions ---
+    - build-base
+    - gcc
+    - binutils
+    - make
+    - pkgconf
+    - posix-cc-wrappers
+    - linux-headers
+    - openssf-compiler-options
+    - glibc-dev
+    - libstdc++-dev
+
+    # --- Utilities ---
+    - git
+    - curl
+    - jq
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/fluentd
+
+work-dir: /fluentd
+
+environment:
+  PATH: /usr/bin:/bin
+  FLUENT_CONF: /fluentd/etc/fluent.conf
+  FLUENT_PLUGIN: /fluentd/plugins
+  # Ruby's Dir.tmpdir rejects a world-writable dir without the sticky bit,
+  # and apko's /tmp lands as 0777 (the 1 is not applied), so fluentd's
+  # worker died with "could not find a temporary directory". A private,
+  # non-world-writable tmp satisfies that check outright.
+  TMPDIR: /fluentd/tmp
+  LANG: C.UTF-8
+
+paths:
+  - path: /fluentd/log
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /fluentd/plugins
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /fluentd/tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o700
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-fluentd-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-fluentd: same fluentd + shell, C toolchain for native plugin gems. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/fluentd"
+  org.opencontainers.image.licenses: "Apache-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

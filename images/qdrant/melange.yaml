@@ -11,7 +11,7 @@ package:
   # bare, as cpe:2.3:a:qdrant:qdrant:*, so none of them matched, and the Wolfi
   # secdb missed it too.
   name: qdrant
-  version: 1.20.0
+  version: 1.20.1
   epoch: 0
   description: "Minimal Qdrant vector search engine built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: af99d21802edb5039b17d9c6fce2b367a0d3064e42a0c36b56d3a5e17973ee70
+  sha256: 1d2800e1c17708c922b291d2808299fdcb5b1fb0ff8be2f7ca88ca386d13c55d
 
 environment:
   contents:

@@ -1,0 +1,81 @@
+# Development variant of minimal-gradle.
+# Same Gradle + JDK as prod, plus the runtime dev template (bash, apk-tools,
+# C toolchain for JNI / cpp-plugin builds, git for source dependencies).
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - gradle-9
+    - openjdk-27-default-jdk
+    - busybox
+    - ca-certificates-bundle
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - bash
+    - apk-tools
+    - wget
+
+    # --- C/C++ toolchain (JNI / Gradle cpp-application builds) ---
+    - build-base
+    - gcc
+    - binutils
+    - make
+    - pkgconf
+    - posix-cc-wrappers
+    - linux-headers
+    - openssf-compiler-options
+    - glibc-dev
+
+    # --- SCM + utilities ---
+    - git
+    - curl
+    - jq
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/gradle
+
+work-dir: /app
+
+environment:
+  PATH: /usr/lib/jvm/default-jvm/bin:/usr/bin:/bin
+  JAVA_HOME: /usr/lib/jvm/default-jvm
+  HOME: /tmp
+  LANG: C.UTF-8
+
+paths:
+  - path: /app
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-gradle-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-gradle: same Gradle + JDK + shell, C toolchain and git for builds. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/gradle"
+  org.opencontainers.image.licenses: "Apache-2.0"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

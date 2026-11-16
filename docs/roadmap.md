@@ -182,14 +182,14 @@ package ⇒ `wolfi-versioned`; `(r)` = unversioned/rolling ⇒ `wolfi-rolling`.
 | [ ] | wordpress | `wordpress` (r) + `wordpress-oci-entrypoint` | 🟡 GPL-2.0-or-later | 1.5B | Apps | Largest single demand number in the survey. Pairs with our `php`/`httpd`; Wolfi ships the OCI entrypoint too. Fills the thinnest category (Apps, 6). Note: shipped separately as our own `wordpress` (php-fpm, not this Wolfi package) — see W3 note below on why sonarqube/nextcloud didn't follow the same cheap path. |
 | moved → W3 | sonarqube | `sonarqube` (r) | 🟡 LGPL-3.0 | 1.2B | K8s, CI & IaC | **Reclassified 2026-09-28: not W1.** See Tier W3. |
 | moved → W3 | nextcloud | `nextcloud-server-33` (v) | 🟡 AGPL-3.0 | 1.0B | Apps | **Reclassified 2026-09-28: not W1.** See Tier W3. |
-| [ ] | maven | `maven-3.9` (v) | 🟢 Apache-2.0 | 767M | Languages & Runtimes | Build-tool image on top of our `java`. Near-zero effort, very high demand. |
+| [x] | maven | `maven-3.10` (v) + `openjdk-27-default-jdk` | 🟢 Apache-2.0 | 767M | Languages & Runtimes | **Shipped (batch 5c).** Full JDK (javac), not our `java` JRE. `/usr/bin/mvn` is a `#!/bin/sh` launcher, so it carries `busybox` only (couchdb-style exception). The JDK pin moves with the java image's OpenJDK PR, so a new JDK is CI-tested on maven before it lands. |
 | [x] | kong | `kong` (r) + coreutils + busybox | 🟢 Apache-2.0 | 359M | Web Servers & Proxies | **Shipped 2026-09-28.** Not `kong-entrypoint` (needs bash for KONG_* env translation that CLI/env overrides already do). Two real gaps found in the Wolfi package: LuaJIT's shared lib isn't on the default loader path (needs `LD_LIBRARY_PATH`), and `kong start` shells out `ulimit -n` internally — carries `busybox` only (never bash) for that one call, same exception shape as the postgres family. |
 | [x] | neo4j | `neo4j-2025.12` (v) | 🟡 GPL-3.0 | 322M | Databases | **Shipped** (source-built, ahead of this survey). |
-| [ ] | gradle | `gradle-9` (v) | 🟢 Apache-2.0 | 300M | Languages & Runtimes | Same shape as maven. |
+| [x] | gradle | `gradle-9` (v) + `openjdk-27-default-jdk` | 🟢 Apache-2.0 | 300M | Languages & Runtimes | **Shipped (batch 5c).** Same shape as maven (busybox launcher exception, JDK moves with the java image). Not on the `default-jdk` virtual: Gradle often refuses a JDK newer than it supports, so a JDK major must arrive as a tested PR. |
 | [x] | perl | `perl` (r) | 🟡 Artistic-1.0 / GPL-1.0+ | 255M | Languages & Runtimes | **Shipped** (source-built, ahead of this survey). |
 | [x] | couchdb | `couchdb-3.3` (v) + busybox | 🟢 Apache-2.0 | 205M | Databases | **Shipped 2026-09-28.** `/usr/bin/couchdb` is itself a `#!/bin/sh` launcher script that builds the `erlexec` command line — no way to start it without a shell, so it carries `busybox` only (never bash), same exception shape as the postgres family. No admin account ships by default (CouchDB refuses to boot without one) — mount your own `local.ini`. |
 | [x] | argo-cd | `argo-cd-3.4` + `-repo-server` (v) | 🟢 Apache-2.0 | 148M | K8s, CI & IaC | **Shipped 2026-10-16, as two images.** Wolfi packaging removes the yarn-frontend build entirely - `argo-cd-3.4` is a pure static Go binary, no `D:` deps at all, genuinely shell-less. `argo-cd-3.4-repo-server` carries real runtime deps (git/git-lfs/gnupg/helm~3/kustomize/openssh/tzdata) as apk dependencies, and its own packaged entrypoint (`uid_entrypoint.sh`) needs a shell to patch `/etc/passwd` for an arbitrary runtime UID - bypassed entirely by setting `run-as: 65532` directly and execing `/usr/local/bin/argocd-repo-server` (the `-compat` package's symlink set) as the entrypoint, so this image is shell-less too despite the tooling. Verified for real, not assumed: built and smoke-tested locally (prod+dev, both images, x86_64) - repo-server actually boots and opens its gRPC port on :8081 with no shell present. |
-| [ ] | rust | `rust-1.92` (v) | 🟢 MIT OR Apache-2.0 | 143M | Languages & Runtimes | Toolchain image (builder-shaped, like our `go`). |
+| [x] | rust | `rust-1.99` (v) + gcc/binutils/glibc-dev | 🟢 MIT OR Apache-2.0 | 143M | Languages & Runtimes | **Shipped (batch 5c).** Builder-shaped like `go`, and shell-less: rustc execs `cc` directly. `rust-1.N` bumps auto-merge like Go. |
 | [x] | erlang | `erlang-28` (v) | 🟢 Apache-2.0 | 65M | Languages & Runtimes | **Shipped** (source-built, ahead of this survey). |
 | [x] | meilisearch | source-built | 🟢 MIT | 51M | Databases | Wolfi lagged seven releases, so v1.53.2 was built from source using the established Rust pattern. |
 | [x] | temporal | source-built (temporal-server/-admin-tools/-ui-server) | 🟢 MIT | 47M | Apps | **Shipped** (source-built, three images, ahead of this survey — not the single apko-only `temporal` package this row originally named). |
@@ -389,10 +389,30 @@ every one is a source build.
 | 5b | elasticsearch-exporter | 16M | Apache-2.0 | Go | PR #1112 |
 | 5b | pgpool | 38M | HPND | C, autotools from the git tag | PR #1112 |
 | 5b | phpmyadmin | 77M | GPL-2.0-only | PHP-FPM on PHP 8.3 | PR #1112 |
-| 5c | azure-cli | 208M | MIT | Python, pip from source | next |
-| 5c | ghost | 131M | MIT | Node app | next |
-| 5c | fluentd | 62M | Apache-2.0 | Ruby gem | next |
+| 5c | azure-cli | 208M | MIT | Python, pip from source | batch 5c |
+| 5c | ghost | 131M | MIT | Node app | batch 5c |
+| 5c | fluentd | 62M | Apache-2.0 | Ruby gem | batch 5c |
 | — | grafana | 72M | AGPL-3.0 | Go + frontend | needs a call on AGPL + a heavy build |
+
+Lessons from 5c (shipped with maven, gradle and rust):
+- **azure-cli's requirements file is a closure, not a constraint set.** It pins
+  `portalocker 3.2.0` while `azure-cli-telemetry 1.1.0`'s PyPI metadata says
+  `<3`, so resolving against it fails (`ResolutionImpossible`). Upstream's
+  `install_full.sh` installs everything `--no-deps`; the recipe does the same.
+- **Ghost needs `--legacy-peer-deps`.** `bookshelf@1.2.0` still declares a
+  `knex <0.22` peer next to Ghost's `knex 3.x`; ghost-cli installs with yarn v1,
+  which never enforced it. The npm package ships the built admin, so no
+  frontend toolchain is needed.
+- **apko (v1.1.6, local and CI) does not apply the sticky bit.** Every image's
+  `/tmp` is declared `0o1777` but lands as `0777` (checked on maven and
+  fluentd), and Ruby's `Dir.tmpdir` rejects a world-writable
+  dir without it — fluentd's worker died with "could not find a temporary
+  directory". fluentd sets `TMPDIR` to a private 0700 dir. Other images that
+  call `Dir.tmpdir` / `mkstemp`-style checks may hit the same thing.
+- **A source build on a toolchain line needs a guard, not a special case.**
+  ghost pins `nodejs-24`, which `bump-toolchain-pins.sh` moves fleet-wide; its
+  smoke test asserts the runtime satisfies Ghost's `engines.node`, so a bump to
+  an unsupported Node fails the probe and the repair step holds it back.
 
 Lessons from 5b:
 - **Wolfi php-8.3 loads `mysqlnd` before `openssl`** (`10-mysqlnd.ini` sorts

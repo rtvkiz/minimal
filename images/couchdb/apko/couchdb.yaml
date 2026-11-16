@@ -14,7 +14,7 @@ contents:
     - wolfi-baselayout
 
     # CouchDB from Wolfi (CVE-patched)
-    - couchdb-3.3
+    - couchdb-3.5
 
     # /usr/bin/couchdb is a #!/bin/sh launcher script — no shell, no start.
     - busybox

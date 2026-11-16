@@ -3,12 +3,10 @@
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 
-echo "Testing couchdb version..."
 # /usr/bin/couchdb has no CLI version/help flag — it always execs erlexec and
-# boots the full server, so read the release metadata file directly instead.
-v=$(docker run --rm --entrypoint /bin/cat "$IMAGE" /usr/share/couchdb/releases/start_erl.data 2>&1)
-echo "$v" | grep -qE '3\.[0-9]+\.[0-9]+' || { echo "FAIL: unexpected release data: $v"; exit 1; }
-
+# boots the full server — so the version is asserted from the running server's
+# welcome response below. releases/start_erl.data is NOT a reliable source:
+# Wolfi's couchdb-3.5 build leaves the release vsn empty there ("16.4.0.7 ").
 echo "Testing couchdb boots with a mounted admin config and answers HTTP (offline)..."
 conf=$(mktemp -d); chmod 0777 "$conf"
 cat > "$conf/local.ini" <<'INI'
@@ -37,6 +35,9 @@ for _ in $(seq 1 20); do
   sleep 1
 done
 [ "$ok" = 1 ] || { echo "FAIL: couchdb did not answer on :5984"; docker logs "$cid" 2>&1 | tail -30; exit 1; }
+
+echo "Testing couchdb version (from the welcome response)..."
+echo "$root" | grep -qE '"version":"3\.[0-9]+\.[0-9]+"' || { echo "FAIL: unexpected version in welcome: $root"; exit 1; }
 
 echo "Testing a create/read round-trip (offline, local data only)..."
 put=$(curl -sf -u admin:testpass123 -X PUT "http://127.0.0.1:${port}/smoke-test")

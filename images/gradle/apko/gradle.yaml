@@ -1,0 +1,81 @@
+# Minimal Gradle image - using Wolfi's pre-built packages
+# CVE patching via the daily rebuild (Wolfi versioned packages)
+# Build-tool image: Gradle on a full JDK (javac is needed to compile).
+#
+# Carries busybox only (never bash): /usr/bin/gradle is a `#!/bin/sh` launcher
+# script (plain POSIX, no bashisms) that resolves APP_HOME and builds the java
+# command line — there is no way to run Gradle without a shell.
+#
+# Two version lines, both moved by update-wolfi-packages.yml:
+#   gradle-N    — the Gradle block
+#   openjdk-N-* — the OpenJDK block, together with the java image. Pinned
+#                 rather than the `default-jdk` virtual: Gradle often refuses a
+#                 JDK newer than it supports, so a new JDK major must arrive as
+#                 a PR that CI tests, not silently on a rebuild.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Gradle from Wolfi (CVE-patched)
+    - gradle-9
+
+    # Full JDK (javac) — compileJava needs it, a JRE is not enough
+    - openjdk-27-default-jdk
+
+    # /usr/bin/gradle is a #!/bin/sh launcher script — no shell, no Gradle.
+    - busybox
+
+    # Certificates (plugin portal / Maven Central over TLS)
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/gradle
+
+work-dir: /app
+
+# GRADLE_USER_HOME defaults to $HOME/.gradle = /tmp/.gradle (dependency cache,
+# wrapper dists, native libs). Mount a volume there to persist it.
+environment:
+  PATH: /usr/lib/jvm/default-jvm/bin:/usr/bin:/bin
+  JAVA_HOME: /usr/lib/jvm/default-jvm
+  HOME: /tmp
+  LANG: C.UTF-8
+
+paths:
+  - path: /app
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-gradle"
+  org.opencontainers.image.description: "Hardened Gradle build image on OpenJDK, built on Wolfi with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/gradle"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

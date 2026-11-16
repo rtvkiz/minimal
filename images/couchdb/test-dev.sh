@@ -4,10 +4,8 @@
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 
-echo "Testing couchdb version..."
-v=$(docker run --rm --entrypoint /bin/cat "$IMAGE" /usr/share/couchdb/releases/start_erl.data 2>&1)
-echo "$v" | grep -qE '3\.[0-9]+\.[0-9]+' || { echo "FAIL: unexpected release data: $v"; exit 1; }
-
+# Version is asserted from the welcome response below, not releases/start_erl.data
+# (Wolfi's couchdb-3.5 build leaves the release vsn empty there).
 echo "Testing couchdb boots and jq can parse its welcome response (offline)..."
 conf=$(mktemp -d); chmod 0777 "$conf"
 cat > "$conf/local.ini" <<'INI'
@@ -37,6 +35,9 @@ done
 root=$(docker exec "$cid" curl -sf -u admin:testpass123 http://127.0.0.1:5984/)
 vendor=$(docker exec "$cid" sh -c "echo '$root' | jq -r '.vendor.name'")
 echo "$vendor" | grep -qi 'apache' || { echo "FAIL: unexpected vendor via jq: $vendor"; exit 1; }
+version=$(docker exec "$cid" sh -c "echo '$root' | jq -r '.version'")
+echo "$version" | grep -qE '^3\.[0-9]+\.[0-9]+$' || { echo "FAIL: unexpected version via jq: $version"; exit 1; }
+echo "couchdb $version"
 
 echo "Verifying bash present (dev only)..."
 docker run --rm --entrypoint /bin/bash "$IMAGE" -c "echo x" 2>&1 | grep -q x \

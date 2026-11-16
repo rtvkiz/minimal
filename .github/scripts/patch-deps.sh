@@ -33,7 +33,12 @@ if [ "$(jq -r '.mode // "deps"' <<<"$row")" = "bundled-jar" ]; then
   exec "$(dirname "$0")/patch-bundled-jars.sh" "$row"
 fi
 artifact_type=$(j '.["artifact-type"]')
-update_template=$(j '.["update-template"]')
+# An image may override the row's update-template (its package manager lives
+# somewhere else — airflow's venv is /opt/airflow/venv, azure-cli's /opt/az).
+# The per-image loop below re-points update_template, which render and
+# existing_pins both read, so the parser always matches what was emitted.
+row_update_template=$(j '.["update-template"]')
+update_template="$row_update_template"
 verify_url_template=$(j '.["verify-url"]')
 registry="${REGISTRY:-ghcr.io}"
 owner="${GITHUB_REPOSITORY_OWNER:?GITHUB_REPOSITORY_OWNER required}"
@@ -199,6 +204,7 @@ for i in $(seq 0 $((image_count - 1))); do
   image=$(jq -r '.name' <<<"$img_json")
   src_root_raw=$(jq -r '.["src-root"]' <<<"$img_json")
   build_marker=$(jq -r '.["build-marker"]' <<<"$img_json")
+  update_template=$(jq -r --arg d "$row_update_template" '.["update-template"] // $d' <<<"$img_json")
   # Re-inject the literal melange template ${{package.version}} that we
   # escaped as <<PKG_VERSION>> in the registry. This survives toJson + bash.
   src_root="${src_root_raw//<<PKG_VERSION>>/\${\{package.version\}\}}"
