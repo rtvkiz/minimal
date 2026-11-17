@@ -1,0 +1,7 @@
+2026-11-17T03:34:42.2863925Z Testing ghost version (expect 6.77.0)...
+2026-11-17T03:34:44.0559077Z Testing the runtime Node satisfies Ghost's engines.node...
+2026-11-17T03:34:44.2366825Z FAIL: UNSUPPORTED node 26.13.1 vs ^22.23.5 || ^24.22.3
+2026-11-17T03:34:44.2381289Z ##[error]Process completed with exit code 1.
+2026-11-17T03:34:44.2533160Z Post job cleanup.
+2026-11-17T03:34:44.5893708Z ##[group]Uploading combined SARIF debug artifact
+2026-11-17T03:34:44.5896658Z ##[endgroup]
