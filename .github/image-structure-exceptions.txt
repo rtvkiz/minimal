@@ -13,7 +13,9 @@
 # place the "shell-less, nonroot" promise does not hold.
 
 prod-shell airflow              scheduler/worker subprocesses exec /bin/sh; busybox only
+prod-shell bash                 the shell is the product: bash plus busybox utilities
 prod-shell cassandra            bin/cassandra and its entrypoint are #!/bin/sh
+prod-shell composer             Symfony Process runs git and package scripts through /bin/sh
 prod-shell couchdb              /usr/bin/couchdb is a #!/bin/sh launcher
 prod-shell erlang               erl is a #!/bin/sh wrapper around erlexec
 prod-shell flink                launchers are #!/usr/bin/env bash scripts
