@@ -2,6 +2,7 @@
 title: "Kafka 4.x moved your config paths and didn't make a fuss about it"
 description: "KRaft, Log4j 2, a renamed StorageTool class: Kafka 4.x changed four things upgraders hit blind, because the errors don't mention that a major version happened."
 published: "2026-09-28"
+tags: ["upgrades-and-migrations"]
 ---
 
 Upgrading a Kafka image from 3.x to 4.x looks like a version bump. It isn't.

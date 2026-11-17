@@ -16,8 +16,9 @@
 # distros' build events. Comparing them across distros is not a meaningful
 # operation, and grype has no way to know our apk is not one of theirs.
 #
-# On 2026-08-24 this accounted for 439 of 648 findings — 68% of the catalogue's
-# reported CVEs, none of them present in the images.
+# On 2026-08-24 this accounted for 341 of 644 findings — 53% of the catalogue's
+# reported CVEs, none of them present in the images (PR #593, verified against
+# run 32765714853: 303 counted + 341 withheld).
 #
 # THE RULE. Three outcomes, decided by evidence rather than by suppression:
 #

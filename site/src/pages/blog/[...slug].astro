@@ -1,6 +1,7 @@
 ---
 import Layout from '../../components/Layout.astro';
 import { getCollection, render } from 'astro:content';
+import { BLOG_TAGS } from '../../lib/blog-tags';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft);
@@ -21,6 +22,7 @@ const schema = [{
   datePublished: post.data.published,
   dateModified: post.data.updated ?? post.data.published,
   url: new URL(`/blog/${post.id}`, Astro.site).href,
+  keywords: post.data.tags.map((t) => BLOG_TAGS[t].label).join(', '),
   author: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
   publisher: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
 }];
@@ -42,6 +44,11 @@ const schema = [{
       <article class="prose" style="margin-top:28px">
         <Content />
       </article>
+      <nav aria-label="Topics" class="tag-list" style="margin-top:32px">
+        {post.data.tags.map((t) => (
+          <a class="tag-chip" href={`/blog/tag/${t}/`}>{BLOG_TAGS[t].label}</a>
+        ))}
+      </nav>
     </div>
   </section>
 </Layout>
