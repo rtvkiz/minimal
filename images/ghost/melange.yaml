@@ -110,6 +110,29 @@ pipeline:
       find /usr/lib/ghost/node_modules -type d \( -name test -o -name tests -o -name __tests__ -o -name docs -o -name example -o -name examples \) -prune -exec rm -rf {} + 2>/dev/null || true
       find /usr/lib/ghost/node_modules -type f \( -name '*.md' -o -name '*.map' -o -name '*.ts' ! -name '*.d.ts' \) -delete 2>/dev/null || true
 
+      # Drop prebuilt native binaries for every platform but this one. Ghost
+      # 6.78.0 pulled in the bare-* modules (bare-fs, bare-buffer, bare-path,
+      # bare-url), which ship prebuilds/<os>-<arch>/ for every target. melange's
+      # SCA then read the linux-arm64 ones in the x86_64 package and added a
+      # runtime dep on so:ld-linux-aarch64.so.1, which nothing on x86_64
+      # provides, so apko could not resolve the package. Only linux-<this
+      # arch> glibc builds can load here; musl variants need a loader Wolfi
+      # does not ship.
+      case "$(uname -m)" in
+        x86_64) NODE_ARCH=x64 ;;
+        aarch64) NODE_ARCH=arm64 ;;
+      esac
+      find /usr/lib/ghost/node_modules -type d -name prebuilds -prune | while read -r d; do
+        for e in "$d"/*; do
+          [ -e "$e" ] || continue
+          case "${e##*/}" in
+            linux-"$NODE_ARCH"|linux-"$NODE_ARCH".*) ;;
+            *) rm -rf "$e" ;;
+          esac
+        done
+        find "$d" -name '*musl*' -exec rm -rf {} + 2>/dev/null || true
+      done
+
       mkdir -p "${{targets.destdir}}/usr/lib"
       cp -a /usr/lib/ghost "${{targets.destdir}}/usr/lib/ghost"
 
