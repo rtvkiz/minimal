@@ -59,7 +59,12 @@ if grep -qaE '^[^ ]+\.go:[0-9]+:[0-9]+: ' "$log" \
   || grep -qaE 'declared and not used|imported and not used' "$log" \
   || grep -qaE 'error\[E[0-9]+\]:' "$log" `# rustc` \
   || grep -qaE '^error: could not compile' "$log" \
-  || grep -qaE 'requires [^ ]+@[^ ,]+, not |module .* found .*but does not contain package' "$log" ; then
+  || grep -qaE 'requires [^ ]+@[^ ,]+, not |module .* found .*but does not contain package' "$log" \
+  `# A smoke test's explicit runtime-compatibility verdict (images/ghost/test.sh` \
+  `# checks node against engines.node). It compiles fine on the new toolchain;` \
+  `# the test is what says the app does not support it. Seen 2026-11-17: ghost` \
+  `# on nodejs-26 vs "^22 || ^24", left as "unknown" so the PR stayed red.` \
+  || grep -qaE 'FAIL: UNSUPPORTED ' "$log" ; then
   echo "build"; exit 0
 fi
 
