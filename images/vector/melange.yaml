@@ -21,7 +21,7 @@ package:
   # Named exactly what upstream calls it, not `vector-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: vector
-  version: 0.61.0
+  version: 0.62.0
   epoch: 0
   description: "Minimal Vector observability data pipeline built from source"
   copyright:
@@ -35,7 +35,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: e5a6ea7c9fb830eea61beb08556066990844cf8529a8d2aa1d274f868da883fc
+  sha256: 15f3b5d9e79ef9250c3007756f5bce72ee9ab2319ce9eab3b6cb37ce42bc34fb
 
 environment:
   contents:
