@@ -11,7 +11,7 @@ package:
   # product bare, as cpe:2.3:a:mosquitto:mosquitto:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: mosquitto
-  version: 2.1.2
+  version: 2.1.4
   epoch: 0
   description: "Minimal Eclipse Mosquitto MQTT broker built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of mosquitto source tarball - updated by update-versions.yml workflow
-  sha256: fd905380691ac65ea5a93779e8214941829e3d6e038d5edff9eac5fd74cbed02
+  sha256: ca30b26ccd3041c0e11fc407fe4f2e62bc445e8d8dea94a083cc60c09bd5ea30
 
 environment:
   contents:
