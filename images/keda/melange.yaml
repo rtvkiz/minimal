@@ -14,7 +14,7 @@ package:
   # Named exactly what upstream calls it, not `keda-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: keda
-  version: 2.21.0
+  version: 2.21.1
   epoch: 0
   description: "Minimal KEDA operator built from source"
   copyright:
@@ -26,7 +26,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: 37c98bc1d0567c9041c1cc135b0f64144f625b74fc8b180f94704eb881cc7482
+  sha256: efcd134d395d1fa702b1e3685aae3083330541d17638fc831ea0f4fd27de39e9
 
 environment:
   contents:
@@ -156,7 +156,7 @@ pipeline:
         ( set -e
           cd "$root"
           cp go.mod .pgd-orig.mod
-          _PGDA=$(_pgd_filter github.com/andybalholm/brotli@v1.2.7 github.com/go-jose/go-jose/v4@v4.1.6 github.com/klauspost/compress@v1.20.2 golang.org/x/crypto@v0.59.0 golang.org/x/net@v0.62.0 golang.org/x/sys@v0.50.0 golang.org/x/text@v0.44.0 golang.org/x/term@v0.48.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.25.0 golang.org/x/tools@v0.52.0)
+          _PGDA=$(_pgd_filter github.com/andybalholm/brotli@v1.2.7 github.com/go-jose/go-jose/v4@v4.1.6 github.com/klauspost/compress@v1.20.2 golang.org/x/crypto@v0.59.0 golang.org/x/net@v0.63.0 golang.org/x/sys@v0.50.0 golang.org/x/text@v0.44.0 golang.org/x/term@v0.48.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.25.0 golang.org/x/tools@v0.53.0)
           if [ -n "$_PGDA" ]; then _pgd_get $_PGDA; fi
           go mod tidy -e
           # go mod tidy can downgrade a source-pinned require below what the
