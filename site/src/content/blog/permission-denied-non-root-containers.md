@@ -2,6 +2,7 @@
 title: "Permission denied: running containers as a non-root user"
 description: "Almost every non-root container failure is one of four things. What each looks like, why the fix is not chmod 777, and how to make a directory writable in the image itself."
 published: "2026-09-06"
+tags: ["non-root-and-shell-less"]
 ---
 
 `runAsNonRoot: true` is one of the highest-value settings in a Pod spec, and the

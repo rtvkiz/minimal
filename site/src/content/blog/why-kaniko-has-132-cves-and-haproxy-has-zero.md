@@ -2,6 +2,7 @@
 title: "Why kaniko has 132 CVEs and haproxy has zero, in the same catalog"
 description: "43% of our images scan clean. One of the rest has 132 unique CVEs. Both numbers are honest; the gap is about what the scanner can see, not how carefully either image was built."
 published: "2026-10-21"
+tags: ["vulnerability-scanning"]
 ---
 
 As of the scan behind our published comparison data, 58 of our 135 scanned

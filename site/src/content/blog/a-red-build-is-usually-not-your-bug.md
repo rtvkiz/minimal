@@ -2,6 +2,7 @@
 title: "A red build is usually not your bug"
 description: "Most CI failures in a dependency-heavy pipeline are someone else's outage wearing a convincing error message. How to classify one in about two minutes before you start debugging."
 published: "2026-09-06"
+tags: ["ci-and-automation"]
 ---
 
 A build that pulls from GitHub, a module proxy, Maven Central and a package

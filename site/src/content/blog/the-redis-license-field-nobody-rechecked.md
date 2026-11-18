@@ -2,6 +2,7 @@
 title: "The Redis license field nobody rechecked for nine months"
 description: "Our redis-slim build has declared SSPL-1.0 since it was created in January. Redis stopped being SSPL-only in May. The field was correct on day one, which is how it stayed wrong for nine months."
 published: "2026-10-21"
+tags: ["packaging-and-licensing"]
 ---
 
 `images/redis-slim/melange.yaml` has declared `license: SSPL-1.0` since the

@@ -2,6 +2,7 @@
 title: "A dependency bump that fixed nothing and broke four builds"
 description: "An automated CVE patcher bumped a module nobody had a vulnerability in, and four builds broke the same way. Harmonizing a dependency family's versions is not the same thing as patching one."
 published: "2026-10-14"
+tags: ["ci-and-automation", "vulnerability-scanning"]
 ---
 
 A transitive-dependency bot exists to do one job: find a package with a known

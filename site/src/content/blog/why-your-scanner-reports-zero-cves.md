@@ -2,6 +2,7 @@
 title: "Why your scanner reports zero CVEs"
 description: "A clean Grype report can mean your image is clean, or it can mean the scanner never identified the software inside it. Here is the difference, and how to tell which one you have."
 published: "2026-09-06"
+tags: ["vulnerability-scanning", "packaging-and-licensing"]
 ---
 
 A vulnerability report with nothing in it has two possible meanings, and they
