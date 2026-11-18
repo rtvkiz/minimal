@@ -23,9 +23,12 @@ for m in mysqli mysqlnd pgsql pdo_sqlite session openssl mbstring; do
 done
 
 echo "Starting PostgreSQL (password auth, reachable on a private network)..."
+# A fresh random password per run, passed in through the environment: the
+# database only lives for this test, and nothing credential-shaped is committed.
+pg_pw=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 docker network create "$net" >/dev/null
-docker run -d --name "adminer-pg-$$" --network "$net" --entrypoint /bin/sh "$PG_IMAGE" -c \
-  'echo smoke-pw > /tmp/pw && initdb -D "$PGDATA" -U postgres --auth=scram-sha-256 --pwfile=/tmp/pw >/dev/null \
+docker run -d --name "adminer-pg-$$" --network "$net" -e "SMOKE_PG_PW=$pg_pw" --entrypoint /bin/sh "$PG_IMAGE" -c \
+  'printf "%s\n" "$SMOKE_PG_PW" > /tmp/pw && initdb -D "$PGDATA" -U postgres --auth=scram-sha-256 --pwfile=/tmp/pw >/dev/null \
    && echo "host all all 0.0.0.0/0 scram-sha-256" >> "$PGDATA/pg_hba.conf" \
    && exec postgres -D "$PGDATA" -h 0.0.0.0' >/dev/null
 ready=0
@@ -54,7 +57,7 @@ t=$(echo "$page" | tok)
 echo "Testing login to PostgreSQL through Adminer..."
 code=$(curl -s -c "$jar" -b "$jar" -o /dev/null -w '%{http_code}' -X POST "$B/" \
   --data-urlencode "auth[driver]=pgsql" --data-urlencode "auth[server]=adminer-pg-$$" \
-  --data-urlencode "auth[username]=postgres" --data-urlencode "auth[password]=smoke-pw" \
+  --data-urlencode "auth[username]=postgres" --data-urlencode "auth[password]=${pg_pw}" \
   --data-urlencode "auth[db]=postgres" --data-urlencode "token=$t")
 [ "$code" = 303 ] || { echo "FAIL: login returned HTTP $code, expected a 303 redirect"; exit 1; }
 
