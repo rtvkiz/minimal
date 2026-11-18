@@ -1,0 +1,91 @@
+# Development variant of minimal-composer.
+# Same Composer + PHP 8.5 as prod, plus the dev minimum (shell, apk-tools) and
+# unzip/curl for packages whose scripts expect them.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Composer from Wolfi (listed first: build.yml takes the primary package's
+    # version from the first package line matching `composer`)
+    - composer
+
+    # Base filesystem
+    - wolfi-baselayout
+
+    # PHP 8.5 CLI and the extensions Composer needs: phar to run itself,
+    # openssl for TLS to Packagist, zip to unpack dist archives, mbstring,
+    # ctype, iconv and fileinfo for package metadata, curl for downloads.
+    - php-8.5
+    - php-8.5-phar
+    - php-8.5-openssl
+    - php-8.5-zip
+    - php-8.5-mbstring
+    - php-8.5-ctype
+    - php-8.5-iconv
+    - php-8.5-fileinfo
+    - php-8.5-curl
+
+    # Certificates (Packagist and VCS hosts over TLS)
+    - ca-certificates-bundle
+
+    - busybox
+
+    # --- Dev variant minimum (CONVENTIONS.md) ---
+    - bash
+    - apk-tools
+    - wget
+
+    # --- Utilities Composer scripts commonly call ---
+    - unzip
+    - curl
+    - jq
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/php /usr/bin/composer
+
+work-dir: /app
+
+# HOME=/tmp: Composer's cache and global config land in /tmp/.composer and
+# /tmp/.cache (mount a volume, or set COMPOSER_HOME / COMPOSER_CACHE_DIR, to
+# persist them between builds).
+environment:
+  PATH: /usr/bin:/bin
+  HOME: /tmp
+  LANG: C.UTF-8
+
+paths:
+  - path: /app
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-composer-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-composer: same Composer and PHP 8.5 plus a shell, apk-tools, unzip and curl. Not for production."
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/composer"
+  org.opencontainers.image.licenses: "MIT"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64
