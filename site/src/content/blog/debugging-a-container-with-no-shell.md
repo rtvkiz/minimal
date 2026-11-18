@@ -2,6 +2,7 @@
 title: "Debugging a container that has no shell"
 description: "Distroless images remove the shell an attacker would use, and the one you would use. Here are the techniques that still work, in the order you should reach for them."
 published: "2026-09-06"
+tags: ["non-root-and-shell-less"]
 ---
 
 The first time `kubectl exec` fails on a distroless image, it looks like the
