@@ -1,0 +1,53 @@
+# Melange build configuration for minimal jetty
+# Eclipse Jetty, from the official jetty-home distribution on Maven Central
+# (prebuilt jars; Jetty's own release artifact). JETTY_HOME only: the image
+# runs it against a writable JETTY_BASE (/var/lib/jetty, created by apko
+# paths:, since melange must not create /var dirs) with modules selected on the
+# java command line, so no generated start.d files and no shell are needed.
+# License: EPL-2.0 OR Apache-2.0.
+
+package:
+  name: jetty
+  version: 12.1.15
+  epoch: 0
+  description: "Eclipse Jetty web server and servlet container from the official jetty-home distribution"
+  copyright:
+    - license: EPL-2.0 OR Apache-2.0
+  dependencies:
+    # Wolfi ships no jetty today; guard against one appearing at a higher
+    # version and replacing this build.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the jetty-home tarball - updated by update-versions.yml workflow
+  sha256: dc2054089aab9495cca548ee67be491cd710023dacf9365870c93a88933c2a62
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-home/${{package.version}}/jetty-home-${{package.version}}.tar.gz" \
+        -o /home/build/jetty-home.tar.gz
+      echo "${{vars.sha256}}  /home/build/jetty-home.tar.gz" | sha256sum -c -
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/share/jetty"
+      tar xzf /home/build/jetty-home.tar.gz -C "${{targets.destdir}}/usr/share/jetty" --strip-components=1
+      # Demo/test material a served container should not carry.
+      rm -rf "${{targets.destdir}}/usr/share/jetty/demo-base" "${{targets.destdir}}/usr/share/jetty/demos"
+      chmod -R a+rX "${{targets.destdir}}/usr/share/jetty"
+
+  - runs: |
+      echo "Verifying Jetty build..."
+      test -f "${{targets.destdir}}/usr/share/jetty/start.jar"
+      ls "${{targets.destdir}}/usr/share/jetty/lib" | grep -q "jetty-server-${{package.version}}.jar"

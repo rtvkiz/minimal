@@ -2106,6 +2106,84 @@
       "seo_noun": "publishing platform",
       "summary": "Shell-less Ghost publishing platform on Node.js.",
       "description": "Ghost open-source publishing platform for blogs, newsletters and paid memberships, on Node.js 24. Shell-less, non-root, SQLite by default, MySQL in production."
+    },
+    {
+      "name": "bash",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "bash",
+      "upstream_url": "https://www.gnu.org/software/bash/",
+      "seo_noun": "Bash shell",
+      "summary": "GNU Bash with busybox utilities and no package manager, built on Wolfi.",
+      "description": "GNU Bash with busybox utilities for running shell scripts in CI jobs, init containers and multi-stage builds. No package manager in prod, non-root, signed."
+    },
+    {
+      "name": "composer",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "composer",
+      "upstream_url": "https://getcomposer.org",
+      "seo_noun": "PHP dependency manager",
+      "summary": "Composer on PHP 8.5 with git, built on Wolfi.",
+      "description": "Composer dependency manager on PHP 8.5 with git, for resolving and installing PHP packages in CI and multi-stage builds. No package manager, non-root, signed."
+    },
+    {
+      "name": "adminer",
+      "category": "Apps",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "adminer",
+      "upstream_url": "https://www.adminer.org",
+      "seo_noun": "database manager",
+      "summary": "Shell-less Adminer database manager on PHP 8.5.",
+      "description": "Adminer web database manager for MySQL, MariaDB, PostgreSQL and SQLite, served by PHP's built-in server on port 8080. Shell-less, non-root, rebuilt daily."
+    },
+    {
+      "name": "jetty",
+      "category": "Web Servers & Proxies",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "jetty",
+      "upstream_url": "https://jetty.org",
+      "seo_noun": "servlet container",
+      "summary": "Shell-less Eclipse Jetty on OpenJDK 25.",
+      "description": "Eclipse Jetty web server and servlet container on OpenJDK 25, deploying WARs or exploded webapps from a mounted directory. Shell-less, non-root, signed."
+    },
+    {
+      "name": "tomee",
+      "category": "Web Servers & Proxies",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "tomee",
+      "upstream_url": "https://tomee.apache.org",
+      "seo_noun": "Jakarta EE server",
+      "summary": "Shell-less Apache TomEE Web Profile on OpenJDK 25.",
+      "description": "Apache TomEE Jakarta EE Web Profile server on OpenJDK 25: Tomcat plus CDI, JPA, JAX-RS and EJB Lite for WAR deployments. Shell-less, non-root, signed."
+    },
+    {
+      "name": "groovy",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "groovy",
+      "upstream_url": "https://groovy-lang.org",
+      "seo_noun": "Groovy runtime",
+      "summary": "Shell-less Apache Groovy on OpenJDK 25.",
+      "description": "Apache Groovy language runtime on OpenJDK 25 for running Groovy scripts and build logic in CI, with the JSON and XML modules bundled. Shell-less, non-root."
     }
   ]
 }
