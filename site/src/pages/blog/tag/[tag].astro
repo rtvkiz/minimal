@@ -1,0 +1,53 @@
+---
+import Layout from '../../../components/Layout.astro';
+import { getCollection } from 'astro:content';
+import { BLOG_TAGS, BLOG_TAG_SLUGS, type BlogTag } from '../../../lib/blog-tags';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  return BLOG_TAG_SLUGS
+    .map((tag) => ({
+      params: { tag },
+      props: {
+        tag,
+        posts: posts
+          .filter((p) => p.data.tags.includes(tag))
+          .sort((a, b) => b.data.published.localeCompare(a.data.published)),
+      },
+    }))
+    // A topic with no published posts gets no page rather than an empty one.
+    .filter((p) => p.props.posts.length > 0);
+}
+
+const { tag, posts } = Astro.props as { tag: BlogTag; posts: Awaited<ReturnType<typeof getCollection<'blog'>>> };
+const { label, description } = BLOG_TAGS[tag];
+
+const fmt = (d: string) =>
+  new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+---
+<Layout
+  title={`${label} — Minimal Containers blog`}
+  description={description}
+  breadcrumbs={[{ name: 'Blog', href: '/blog/' }]}>
+  <section>
+    <div class="container-narrow">
+      <p style="margin:0 0 6px"><a href="/blog/" class="small muted">← Blog</a></p>
+      <h1 class="section-title">{label}</h1>
+      <p class="section-sub">{description}</p>
+
+      <div style="margin-top:28px">
+        {posts.map((p) => (
+          <article style="padding:22px 0;border-bottom:1px solid var(--border)">
+            <p class="small muted" style="margin:0 0 6px">
+              <time datetime={p.data.published}>{fmt(p.data.published)}</time>
+            </p>
+            <h2 style="font-size:1.15rem;margin:0 0 8px">
+              <a href={`/blog/${p.id}/`}>{p.data.title}</a>
+            </h2>
+            <p class="small muted" style="margin:0">{p.data.description}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>
