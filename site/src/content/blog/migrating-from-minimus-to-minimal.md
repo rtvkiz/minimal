@@ -3,6 +3,7 @@ title: "Minimus alternatives: free options, and migrating to Minimal"
 description: "Minimus shut down in October 2026. The free alternatives, and what actually breaks when you move an image to Minimal: the missing shell, the non-root UID, and the tag you should not have pinned."
 published: "2026-08-31"
 updated: "2026-11-10"
+tags: ["upgrades-and-migrations", "non-root-and-shell-less"]
 ---
 
 > **Update, 2026-11-02:** Minimus ceased operations and turned off its registry
