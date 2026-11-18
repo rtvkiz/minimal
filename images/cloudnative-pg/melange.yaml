@@ -14,7 +14,7 @@ package:
   # Named exactly what upstream calls it, not `cloudnative-pg-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: cloudnative-pg
-  version: 1.30.1
+  version: 1.30.2
   epoch: 0
   description: "Minimal CloudNativePG operator built from source"
   copyright:
@@ -26,7 +26,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: a7a814f2c5a67412de95061190772f6f297727c2a6178b0f54fbf766b8d56a59
+  sha256: 9d958196e2c29ad5aa8443b76bf8d474a6537da38504805099d3526611853271
 
 environment:
   contents:
@@ -156,7 +156,7 @@ pipeline:
         ( set -e
           cd "$root"
           cp go.mod .pgd-orig.mod
-          _PGDA=$(_pgd_filter golang.org/x/crypto@v0.59.0 golang.org/x/net@v0.62.0 golang.org/x/sys@v0.50.0 golang.org/x/text@v0.44.0 golang.org/x/term@v0.48.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.25.0 golang.org/x/tools@v0.52.0)
+          _PGDA=$(_pgd_filter golang.org/x/crypto@v0.59.0 golang.org/x/net@v0.63.0 golang.org/x/sys@v0.50.0 golang.org/x/text@v0.44.0 golang.org/x/term@v0.48.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.25.0 golang.org/x/tools@v0.53.0)
           if [ -n "$_PGDA" ]; then _pgd_get $_PGDA; fi
           go mod tidy -e
           # go mod tidy can downgrade a source-pinned require below what the

@@ -1,0 +1,48 @@
+# Melange build configuration for minimal adminer
+# Adminer database management in a single PHP file, from the official GitHub
+# release asset (the all-drivers, all-languages build). Served by PHP's built-in
+# web server, as the official adminer image does.
+# License: Apache-2.0 OR GPL-2.0-only (upstream LICENSE: "Apache License 2.0 or GPL 2.0").
+
+package:
+  name: adminer
+  version: 6.3.0
+  epoch: 0
+  description: "Adminer database management in a single PHP file, from the official release"
+  copyright:
+    - license: Apache-2.0 OR GPL-2.0-only
+  dependencies:
+    # Wolfi ships no adminer today; guard against one appearing at a higher
+    # version and replacing this build.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the release asset - updated by update-versions.yml workflow
+  sha256: 641e1a31e8cc333a309e202ef9446e1fd38c2069ed5f9ee509b80d70089d0503
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/vrana/adminer/releases/download/v${{package.version}}/adminer-${{package.version}}.php" \
+        -o /home/build/adminer.php
+      echo "${{vars.sha256}}  /home/build/adminer.php" | sha256sum -c -
+
+  - runs: |
+      # The single file is the whole application. Installed as index.php so the
+      # built-in server answers on / without a router script.
+      install -Dm644 /home/build/adminer.php "${{targets.destdir}}/usr/share/adminer/index.php"
+
+  - runs: |
+      echo "Verifying Adminer build..."
+      grep -q "${{package.version}}" "${{targets.destdir}}/usr/share/adminer/index.php"

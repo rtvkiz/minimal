@@ -1,0 +1,61 @@
+# Melange build configuration for minimal tomee
+# Apache TomEE (Jakarta EE Web Profile flavor) from the official ASF binary
+# distribution, verified against the sha512 Apache publishes. The image runs it
+# shell-less: catalina.sh's run-mode java command line is spelled out in the
+# apko entrypoint instead of being assembled by the script.
+# License: Apache-2.0.
+
+package:
+  name: tomee
+  version: 10.3.0
+  epoch: 0
+  description: "Apache TomEE Jakarta EE Web Profile server from the official ASF distribution"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi ships no tomee today; guard against one appearing at a higher
+    # version and replacing this build.
+    provider-priority: 100
+
+vars:
+  # SHA512 of the webprofile tarball - updated by update-versions.yml workflow
+  sha512: 6c0ca666939535e3d4fb091e9155e85fd2dfe6f4f84035f84cb156574ce48c7a920d3f58ba3c1485a9a81b4735b96a1491f36776f17ab2a0084e3b8eb979b167
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://dlcdn.apache.org/tomee/tomee-${{package.version}}/apache-tomee-${{package.version}}-webprofile.tar.gz" \
+        -o /home/build/tomee.tar.gz || \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://archive.apache.org/dist/tomee/tomee-${{package.version}}/apache-tomee-${{package.version}}-webprofile.tar.gz" \
+        -o /home/build/tomee.tar.gz
+      echo "${{vars.sha512}}  /home/build/tomee.tar.gz" | sha512sum -c -
+
+  - runs: |
+      T="${{targets.destdir}}/opt/tomee"
+      mkdir -p "$T"
+      tar xzf /home/build/tomee.tar.gz -C "$T" --strip-components=1
+      # Admin and sample webapps a hardened server should not expose, Windows
+      # launchers and service binaries, bundled native-library source tarballs,
+      # and the shell launchers this image does not use.
+      rm -rf "$T/webapps/docs" "$T/webapps/manager" "$T/webapps/host-manager" "$T/webapps/ROOT"
+      rm -f "$T"/bin/*.bat "$T"/bin/*.exe "$T"/bin/*.original "$T"/bin/*.tar.gz "$T"/bin/*.sh \
+        "$T"/bin/service.readme.txt "$T"/BUILDING.txt "$T"/CONTRIBUTING.md "$T"/RUNNING.txt
+      chmod -R a+rX "$T"
+
+  - runs: |
+      echo "Verifying TomEE build..."
+      test -f "${{targets.destdir}}/opt/tomee/bin/bootstrap.jar"
+      test -f "${{targets.destdir}}/opt/tomee/lib/openejb-javaagent.jar"
+      ls "${{targets.destdir}}/opt/tomee/lib" | grep -q "tomee-catalina-${{package.version}}.jar"

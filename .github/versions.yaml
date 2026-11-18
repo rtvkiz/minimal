@@ -1744,3 +1744,73 @@
   links:
     releases: "https://github.com/TryGhost/Ghost/releases"
     notes: "https://github.com/TryGhost/Ghost/releases/tag/v{version}"
+
+- name: adminer
+  cron-enabled: true   # batch-6a (dispatch-validated on the onboarding branch)
+  files: [images/adminer/melange.yaml]
+  source: { type: github-releases-latest, repo: vrana/adminer, strip-v: true }
+  # The release asset is the application itself: one PHP file, hashed whole.
+  tarball: { url: "https://github.com/vrana/adminer/releases/download/v{version}/adminer-{version}.php", field: sha256 }
+  links:
+    releases: "https://github.com/vrana/adminer/releases"
+    notes: "https://github.com/vrana/adminer/releases/tag/v{version}"
+
+- name: jetty
+  # Pinned to the Jetty 12.1 line (the pattern names it): a new 12.N or 13
+  # changes the EE environments and module names, so it should arrive as a
+  # reviewed change, not a cron bump. The </version> anchor excludes betas.
+  cron-enabled: true   # batch-6a (dispatch-validated on the onboarding branch)
+  files: [images/jetty/melange.yaml]
+  source:
+    type: scrape
+    urls:
+      - "https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-home/maven-metadata.xml"
+    pattern: '<version>12\.1\.[0-9]+</version>'
+  tarball: { url: "https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-home/{version}/jetty-home-{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/jetty/jetty.project/releases"
+    notes: "https://github.com/jetty/jetty.project/releases/tag/jetty-{version}"
+
+- name: tomee
+  # Pinned to the TomEE 10 line (Jakarta EE 10): the pattern names it, which
+  # also keeps 11.0.0-M* milestones out. TomEE 11 moves to Jakarta EE 11 and
+  # should arrive as a reviewed change, like tomcat's major lines.
+  cron-enabled: true   # batch-6a (dispatch-validated on the onboarding branch)
+  files: [images/tomee/melange.yaml]
+  source:
+    type: scrape
+    urls:
+      - "https://dlcdn.apache.org/tomee/"
+      - "https://downloads.apache.org/tomee/"
+    pattern: 'href="tomee-10\.[0-9]+\.[0-9]+/"'
+  tarball:
+    urls:
+      - "https://downloads.apache.org/tomee/tomee-{version}/apache-tomee-{version}-webprofile.tar.gz"
+      - "https://dlcdn.apache.org/tomee/tomee-{version}/apache-tomee-{version}-webprofile.tar.gz"
+      - "https://archive.apache.org/dist/tomee/tomee-{version}/apache-tomee-{version}-webprofile.tar.gz"
+    field: sha512
+  links:
+    releases: "https://tomee.apache.org/download.html"
+    notes: "https://tomee.apache.org/tomee-{version}-release-notes.html"
+
+- name: groovy
+  # Pinned to the Groovy 6 line (the pattern names it): a Groovy major can
+  # change language semantics under existing scripts, so 7 should arrive as a
+  # reviewed change. dlcdn lists one directory per current release line.
+  cron-enabled: true   # batch-6a (dispatch-validated on the onboarding branch)
+  files: [images/groovy/melange.yaml]
+  source:
+    type: scrape
+    urls:
+      - "https://dlcdn.apache.org/groovy/"
+      - "https://downloads.apache.org/groovy/"
+    pattern: 'href="6\.[0-9]+\.[0-9]+/"'
+  tarball:
+    urls:
+      - "https://dlcdn.apache.org/groovy/{version}/distribution/apache-groovy-binary-{version}.zip"
+      - "https://archive.apache.org/dist/groovy/{version}/distribution/apache-groovy-binary-{version}.zip"
+    field: sha256
+  links:
+    releases: "https://groovy.apache.org/download.html"
+    notes: "https://groovy-lang.org/changelogs/changelog-{version}.html"
+

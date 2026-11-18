@@ -14,7 +14,7 @@ package:
   # (cpe:2.3:a:seaweedfs:seaweedfs-minimal:*, ...). NVD indexes this product
   # bare, as cpe:2.3:a:seaweedfs:seaweedfs:*, so none of them matched.
   name: seaweedfs
-  version: 4.53
+  version: 4.54
   epoch: 0
   description: "Minimal SeaweedFS distributed object store and filesystem built from source"
   copyright:
@@ -31,7 +31,7 @@ package:
 
 vars:
   # SHA256 of seaweedfs source tarball - updated by update-versions.yml workflow
-  sha256: ab943b1b82f969fd3cb8e81f2c0dfc5b1b2868cd7891c59b9b671fb6825bc220
+  sha256: de5b91cd158845903c359c493f57cffd0fe29a8883ccd9e4786a0bb4c8f78300
 
 environment:
   contents:
@@ -168,7 +168,7 @@ pipeline:
         ( set -e
           cd "$root"
           cp go.mod .pgd-orig.mod
-          _PGDA=$(_pgd_filter github.com/apache/thrift@v0.25.0 github.com/go-jose/go-jose/v4@v4.1.6 golang.org/x/image@v0.45.0 google.golang.org/grpc@v1.85.0-dev.0.20260825072537-93e31b48545e golang.org/x/crypto@v0.59.0 golang.org/x/net@v0.62.0 golang.org/x/sys@v0.50.0 golang.org/x/text@v0.44.0 golang.org/x/term@v0.48.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.25.0 golang.org/x/tools@v0.52.0)
+          _PGDA=$(_pgd_filter github.com/apache/thrift@v0.25.0 github.com/go-jose/go-jose/v4@v4.1.6 golang.org/x/image@v0.45.0 google.golang.org/grpc@v1.85.0-dev.0.20260825072537-93e31b48545e golang.org/x/crypto@v0.59.0 golang.org/x/net@v0.63.0 golang.org/x/sys@v0.50.0 golang.org/x/text@v0.44.0 golang.org/x/term@v0.48.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.25.0 golang.org/x/tools@v0.53.0)
           if [ -n "$_PGDA" ]; then _pgd_get $_PGDA; fi
           go mod tidy -e
           # go mod tidy can downgrade a source-pinned require below what the
