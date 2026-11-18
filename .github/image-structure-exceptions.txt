@@ -1,0 +1,44 @@
+# Declared exceptions to the image structure invariants checked by
+# .github/scripts/check-image-structure.sh. One per line:
+#
+#   <check> <image> <reason>
+#
+# checks:
+#   prod-shell  prod variant may contain /bin/sh (bash and apk-tools are still
+#               reported). Reason must say what execs the shell.
+#   prod-root   prod variant may run as root (uid 0 or no USER set).
+#
+# A reason is required; an entry without one is ignored and the image is
+# reported as if it had no exception. Keep this list short: every entry is a
+# place the "shell-less, nonroot" promise does not hold.
+
+prod-shell airflow              scheduler/worker subprocesses exec /bin/sh; busybox only
+prod-shell bash                 the shell is the product: bash plus busybox utilities
+prod-shell cassandra            bin/cassandra and its entrypoint are #!/bin/sh
+prod-shell composer             Symfony Process runs git and package scripts through /bin/sh
+prod-shell couchdb              /usr/bin/couchdb is a #!/bin/sh launcher
+prod-shell erlang               erl is a #!/bin/sh wrapper around erlexec
+prod-shell flink                launchers are #!/usr/bin/env bash scripts
+prod-shell gitea                git hooks run through sh
+prod-shell gradle               /usr/bin/gradle is a #!/bin/sh launcher
+prod-shell kafka                KRaft initialisation entrypoint is a shell script
+prod-shell keycloak             entrypoint /opt/keycloak/bin/kc.sh is a bash script
+prod-shell kong                 kong CLI shebang chain needs /usr/bin/env + sh
+prod-shell mariadb              entrypoint is a shell script
+prod-shell maven                /usr/bin/mvn is a #!/bin/sh launcher
+prod-shell mysql                entrypoint is a shell script
+prod-shell neo4j                launchers are shell scripts; package hard-depends on bash
+prod-shell opensearch           bin/opensearch is a bash script
+prod-shell patroni              initdb popen()s /bin/sh (postgres family)
+prod-shell postgres-slim        initdb popen()s /bin/sh (postgres family)
+prod-shell pulsar               bin/pulsar is a bash launcher
+prod-shell rabbitmq             sbin startup scripts are #!/bin/sh
+prod-shell solr                 bin/solr is a bash launcher
+prod-shell temporal-admin-tools operator toolbox image; interactive by design
+prod-shell timescaledb          initdb popen()s /bin/sh (postgres family)
+prod-shell tomcat               entrypoint /usr/bin/tomcat-entrypoint.sh
+prod-shell zookeeper            entrypoint is a shell script
+
+prod-root buildkit              buildkitd needs root for rootful builds
+prod-root kaniko                kaniko executor must run as root to build images
+prod-root kube-vip              manages VIPs; needs root for NET_ADMIN/NET_RAW

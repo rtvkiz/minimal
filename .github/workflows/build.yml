@@ -966,6 +966,20 @@ jobs:
           export IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}"
           bash ./${{ matrix.test_script }}
 
+      - name: Check image structure (report-only)
+        # Central structural invariants (nonroot, no shell/apk in prod, -dev has
+        # shell+apk, our package at the recipe version). REPORT mode: findings are
+        # ::warning annotations and the script always exits 0; continue-on-error
+        # is a second guard so this step can never turn a build red while the
+        # catalog's existing findings are worked down. Flip to MODE=assert later.
+        continue-on-error: true
+        env:
+          MODE: report
+        run: |
+          bash .github/scripts/check-image-structure.sh \
+            "${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}" \
+            "${{ matrix.name }}" "${{ matrix.variant }}" "${{ matrix.melange_config }}"
+
       - name: Publish image
         if: github.event_name != 'pull_request'
         id: publish
