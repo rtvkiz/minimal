@@ -39,6 +39,7 @@ const PREFIX = 'minimal-';
 const GH_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
 const SKIP_TAGS = process.env.SKIP_TAGS === '1' || process.env.SKIP_TAGS === 'true';
 const FETCH_TIMEOUT_MS = 8000;
+const CONCURRENCY = 8;
 
 const warnings = [];
 function warn(msg) { warnings.push(msg); console.warn(`  ! ${msg}`); }
@@ -72,11 +73,14 @@ function agoFrom(iso) {
   return years === 1 ? '1 year ago' : `${years} years ago`;
 }
 
-async function fetchWithTimeout(url, opts = {}) {
+// The timeout covers the body read too, not just the response headers, so a
+// stalled body can't hang the build.
+async function fetchJson(url, opts = {}) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    return await fetch(url, { ...opts, signal: ctrl.signal });
+    const res = await fetch(url, { ...opts, signal: ctrl.signal });
+    return { ok: res.ok, status: res.status, body: res.ok ? await res.json() : null };
   } finally {
     clearTimeout(t);
   }
@@ -272,12 +276,12 @@ async function fetchTags(imageName, fallbacks) {
     try {
       const all = [];
       for (let page = 1; page <= 10; page++) {
-        const res = await fetchWithTimeout(
+        const res = await fetchJson(
           `https://api.github.com/users/${ORG}/packages/container/${encodeURIComponent(pkg)}/versions?per_page=100&page=${page}`,
           { headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' } }
         );
         if (!res.ok) throw new Error(`REST ${res.status}`);
-        const versions = await res.json();
+        const versions = res.body;
         if (!Array.isArray(versions) || versions.length === 0) break;
         for (const v of versions) {
           const meta = v.metadata && v.metadata.container;
@@ -300,16 +304,16 @@ async function fetchTags(imageName, fallbacks) {
 
   // 2) Anonymous registry v2 tags/list (names only)
   try {
-    const tokRes = await fetchWithTimeout(
+    const tokRes = await fetchJson(
       `https://${REGISTRY}/token?scope=repository:${ORG}/${pkg}:pull&service=${REGISTRY}`
     );
     if (!tokRes.ok) throw new Error(`token ${tokRes.status}`);
-    const { token } = await tokRes.json();
-    const res = await fetchWithTimeout(`https://${REGISTRY}/v2/${ORG}/${pkg}/tags/list`, {
+    const { token } = tokRes.body;
+    const res = await fetchJson(`https://${REGISTRY}/v2/${ORG}/${pkg}/tags/list`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error(`tags/list ${res.status}`);
-    const body = await res.json();
+    const body = res.body;
     const names = (Array.isArray(body.tags) ? body.tags : []).filter(isMeaningfulTag);
     if (names.length) {
       // tags/list is paginated & alphabetical; page 1 may miss tags when cosign
@@ -439,6 +443,22 @@ function tryOr(fn, onErr) {
   try { return fn(); } catch (e) { onErr(e); return null; }
 }
 
+async function buildRecord(entry) {
+  try {
+    return await buildImage(entry);
+  } catch (e) {
+    // Last-resort isolation: never let one image kill the whole build.
+    warn(`image "${entry.name}" failed hard: ${e.message}`);
+    return {
+      name: entry.name, category: entry.category, summary: entry.summary || '',
+      description: entry.description || '',
+      repo: `${REGISTRY}/${ORG}/${PREFIX}${entry.name}`, variants: {}, tags: [],
+      dataStatus: { apko: false, grype: false, meta: false, sbom: false, config: false, tags: 'none' },
+      degraded: true, notes: [`assembly failed: ${e.message}`],
+    };
+  }
+}
+
 //--- main --------------------------------------------------------------------
 
 async function main() {
@@ -457,22 +477,19 @@ async function main() {
 
   console.log(`Building catalog: ${images.length} images${REPORTS_DIR ? ` (reports: ${REPORTS_DIR})` : ' (no reports — metadata + specs + tags only)'}`);
 
-  const records = [];
-  for (const entry of images) {
-    try {
-      records.push(await buildImage(entry));
-    } catch (e) {
-      // Last-resort isolation: never let one image kill the whole build.
-      warn(`image "${entry.name}" failed hard: ${e.message}`);
-      records.push({
-        name: entry.name, category: entry.category, summary: entry.summary || '',
-        description: entry.description || '',
-        repo: `${REGISTRY}/${ORG}/${PREFIX}${entry.name}`, variants: {}, tags: [],
-        dataStatus: { apko: false, grype: false, meta: false, sbom: false, config: false, tags: 'none' },
-        degraded: true, notes: [`assembly failed: ${e.message}`],
-      });
+  // Bounded concurrency: tag listing is network-bound (up to 10 API pages per
+  // image), and fetching 170+ images one at a time ran past the deploy job's
+  // 20-minute timeout. Results are written by index, so record order still
+  // follows catalog.json.
+  const records = new Array(images.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < images.length) {
+      const i = next++;
+      records[i] = await buildRecord(images[i]);
     }
-  }
+  };
+  await Promise.all(Array.from({ length: CONCURRENCY }, worker));
 
   // Fatal guard: reports dir given but nothing landed -> refuse to publish empty.
   if (REPORTS_DIR) {
