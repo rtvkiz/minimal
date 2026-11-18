@@ -425,6 +425,41 @@ Lessons from 5b:
   (needs autotools, bison, flex). The updater gained `{version_underscored}` for
   its `V4_7_3` tags.
 
+## Batch 6 — Docker Hub official-image gaps (2026-11-17)
+
+Source: Docker Hub's `library/` images ranked by pulls, minus OS bases, images
+we ship under another name (mosquitto, java, go) and non-OSS licenses (mongo
+SSPL, vault BSL, elasticsearch/kibana/logstash, sentry, couchbase).
+
+| Batch | Image | Pulls | License | Build | Status |
+|---|---|---|---|---|---|
+| 6a | bash | 594M | GPL-3.0-or-later | Wolfi package (busybox utilities) | batch 6a |
+| 6a | adminer | 412M | Apache-2.0 OR GPL-2.0-only | single PHP file on Wolfi PHP 8.5 | batch 6a |
+| 6a | composer | 253M | MIT | Wolfi package on PHP 8.5 | batch 6a |
+| 6a | groovy | 79M | Apache-2.0 | ASF binary on OpenJDK 25 JRE | batch 6a |
+| 6a | jetty | 47M | EPL-2.0 OR Apache-2.0 | jetty-home on OpenJDK 25 JRE | batch 6a |
+| 6a | tomee | 27M | Apache-2.0 | ASF webprofile on OpenJDK 25 JRE | batch 6a |
+| 6b | mongo-express | 278M | MIT | Node app (ghost pattern) | next |
+| 6b | drupal | 211M | GPL-2.0-or-later | PHP-FPM (wordpress pattern) | next |
+| 6b | matomo | 141M | GPL-3.0-or-later | PHP-FPM | next |
+| — | influxdb | 1.1B | MIT / Apache-2.0 | Rust, own effort | not scheduled |
+
+Lessons from 6a:
+- **Composer cannot run shell-less.** It launches git and package scripts through
+  Symfony Process, which goes through `/bin/sh`; `composer --version` works,
+  `composer validate` dies with "Unable to launch a new process". busybox only,
+  like maven. A version-only test would have shipped it broken.
+- **Wolfi's PHP is fresh, our source-built `php` is too lean for apps.** Our
+  php has no phar/ctype/zip; composer and adminer run on Wolfi's `php-8.5-*`
+  packages, as phpmyadmin runs on 8.3. php-8.5's mysqlnd links libcrypto, so
+  phpmyadmin's extension-order workaround is not needed on 8.5.
+- **JVM servers can be shell-less** by writing the launcher's java command line
+  into the entrypoint. TomEE's `catalina.sh` adds six `--add-opens`, the OpenEJB
+  javaagent and JULI logging properties; JDK 25 additionally wants
+  `--enable-native-access=ALL-UNNAMED` for Tomcat's JNI loader. Tests fail on
+  any startup WARNING, which is how the missing `conf/conf.d` and Jetty
+  `environments/` dirs were found.
+
 ## Execution model
 
 - **One PR per tier group (~6–8 images).** Each image: 10 registration points

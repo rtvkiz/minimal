@@ -1,0 +1,59 @@
+# Melange build configuration for minimal groovy
+# Apache Groovy from the official ASF binary distribution (prebuilt jars),
+# verified against the sha256 Apache publishes. The image runs it shell-less:
+# the bin/ launchers are shell scripts, so the entrypoint calls
+# groovy.ui.GroovyMain on a lib/* classpath directly (java expands the
+# wildcard itself; no version-specific jar names to go stale).
+# License: Apache-2.0.
+
+package:
+  name: groovy
+  version: 6.0.0
+  epoch: 0
+  description: "Apache Groovy language runtime from the official ASF binary distribution"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi ships no groovy today; guard against one appearing at a higher
+    # version and replacing this build.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the binary distribution zip - updated by update-versions.yml workflow
+  sha256: 54ab1a877f01da2ed16ed43c1ed7a8d6c36b122714c6959712700e89e6efde7c
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://dlcdn.apache.org/groovy/${{package.version}}/distribution/apache-groovy-binary-${{package.version}}.zip" \
+        -o /home/build/groovy.zip || \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://archive.apache.org/dist/groovy/${{package.version}}/distribution/apache-groovy-binary-${{package.version}}.zip" \
+        -o /home/build/groovy.zip
+      echo "${{vars.sha256}}  /home/build/groovy.zip" | sha256sum -c -
+
+  - runs: |
+      cd /home/build && unzip -q groovy.zip
+      G="${{targets.destdir}}/usr/share/groovy"
+      mkdir -p "$G"
+      cp -a "/home/build/groovy-${{package.version}}/lib" "/home/build/groovy-${{package.version}}/conf" \
+        "/home/build/groovy-${{package.version}}/LICENSE" "/home/build/groovy-${{package.version}}/NOTICE" \
+        "/home/build/groovy-${{package.version}}/licenses" "$G/"
+      # bin/ (shell and Windows launchers) and grooid/ (Android build) are not
+      # used by this image.
+      chmod -R a+rX "$G"
+
+  - runs: |
+      echo "Verifying Groovy build..."
+      test -f "${{targets.destdir}}/usr/share/groovy/lib/groovy-${{package.version}}.jar"

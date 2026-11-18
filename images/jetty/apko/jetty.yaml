@@ -1,0 +1,89 @@
+# Minimal Jetty image
+# Eclipse Jetty (built from the official jetty-home via melange) on Wolfi's
+# OpenJDK 25 JRE. Shell-less: the entrypoint is java itself, running
+# start.jar with JETTY_HOME/JETTY_BASE and the enabled modules as arguments.
+#
+# Modules: http (port 8080) and ee10-deploy, which deploys whatever is in
+# /var/lib/jetty/webapps (a WAR, or an exploded directory) at startup. Mount
+# your webapps there; add modules by overriding the command, e.g.
+#   docker run IMAGE --module=http,ee10-deploy,ee10-jsp
+#
+# OpenJDK is pinned to the 25 LTS line, so a new JDK major arrives as a PR
+# that CI tests, not silently on a rebuild.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Our Jetty (built from the official jetty-home via melange)
+    - jetty
+
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Java runtime
+    - openjdk-25-jre
+    - openjdk-25-default-jvm
+
+    # Certificates
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/lib/jvm/java-25-openjdk/bin/java -Djava.io.tmpdir=/tmp -jar /usr/share/jetty/start.jar jetty.home=/usr/share/jetty jetty.base=/var/lib/jetty
+
+cmd: --module=http,ee10-deploy
+
+work-dir: /var/lib/jetty
+
+environment:
+  PATH: /usr/lib/jvm/java-25-openjdk/bin:/usr/bin:/bin
+  JAVA_HOME: /usr/lib/jvm/java-25-openjdk
+  JETTY_HOME: /usr/share/jetty
+  JETTY_BASE: /var/lib/jetty
+  HOME: /tmp
+
+paths:
+  - path: /var/lib/jetty
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /var/lib/jetty/webapps
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  # Jetty 12's deployer scans environments/ for per-environment config.
+  - path: /var/lib/jetty/environments
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-jetty"
+  org.opencontainers.image.description: "Hardened shell-less Eclipse Jetty on OpenJDK 25, built from the official jetty-home with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/jetty"
+  org.opencontainers.image.licenses: "EPL-2.0 OR Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

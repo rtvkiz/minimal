@@ -1,0 +1,81 @@
+# Minimal Adminer image
+# Adminer (built from the official release via melange) on Wolfi's PHP 8.5,
+# served by PHP's built-in web server on :8080, the same model as the official
+# adminer image. Shell-less: the server is php itself, configured on the
+# command line, so nothing needs a shell to start.
+#
+# Drivers: MySQL/MariaDB (mysqli), PostgreSQL (pgsql) and SQLite (pdo_sqlite).
+# php-8.5's mysqlnd links libcrypto itself, so the php-8.3 extension-order
+# workaround in images/phpmyadmin is not needed here; test.sh asserts every
+# driver loads.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # Our Adminer (built from the official release via melange)
+    - adminer
+
+    # Base filesystem
+    - wolfi-baselayout
+
+    # PHP 8.5 CLI (includes the built-in web server)
+    - php-8.5
+
+    # Database drivers
+    - php-8.5-mysqli
+    - php-8.5-mysqlnd
+    - php-8.5-pgsql
+    - php-8.5-pdo
+    - php-8.5-pdo_sqlite
+
+    # TLS to databases, and the string/charset handling Adminer uses
+    - php-8.5-openssl
+    - php-8.5-mbstring
+    - php-8.5-iconv
+    - php-8.5-ctype
+
+    # Certificates (TLS connections to managed databases)
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+# PHP_CLI_SERVER_WORKERS lets the built-in server handle requests in parallel
+# instead of one at a time.
+entrypoint:
+  command: /usr/bin/php -S 0.0.0.0:8080 -t /usr/share/adminer
+
+work-dir: /usr/share/adminer
+
+environment:
+  PATH: /usr/bin:/bin
+  PHP_CLI_SERVER_WORKERS: "4"
+  LANG: C.UTF-8
+
+paths:
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-adminer"
+  org.opencontainers.image.description: "Hardened shell-less Adminer database manager on PHP 8.5, built from the official release with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/adminer"
+  org.opencontainers.image.licenses: "Apache-2.0 OR GPL-2.0-only"
+
+archs:
+  - x86_64
+  - aarch64

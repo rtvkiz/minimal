@@ -37,6 +37,8 @@ wolfi-rolling:
   - sqlite          # sqlite (unversioned)
   - bun             # bun (unversioned)
   - dnsmasq         # dnsmasq (unversioned)
+  - bash            # bash (unversioned)
+  - composer        # composer (unversioned); PHP pinned to php-8.5 (line bumped by hand, like the JDK pins)
 
 # bespoke: SOURCE-BUILT images auto-updated by a dedicated workflow instead of
 # the shared .github/versions.yaml pipeline. Each MUST name the workflow and a
