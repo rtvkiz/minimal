@@ -11,7 +11,7 @@ package:
   # this product bare, as cpe:2.3:a:node-exporter:node-exporter:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: node-exporter
-  version: 1.12.1
+  version: 1.13.0
   epoch: 0
   description: "Minimal Prometheus node_exporter (host hardware & OS metrics) built from source"
   copyright:
@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 of node_exporter source tarball - updated by update-versions.yml workflow
-  sha256: a90f1df0fde58d216d4a7d342e64831d2e3257db8084deadbe69754d34b15142
+  sha256: fd62e16b49c55300314f3b74bd736d9d151a62a1ab075258786c7aeeee94e48e
 
 environment:
   contents:
