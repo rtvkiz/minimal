@@ -28,9 +28,9 @@ package:
 vars:
   # sha256 of the platform=ruby fluentd-<version>.gem from rubygems.org
   sha256: edaef4fc98b7a82b5d0a3c0094da90e3e51c207f5609aadd434ee40eaac83174
-  ruby_version: 4.0.9
+  ruby_version: 4.0.10
   # sha256 of https://cache.ruby-lang.org/pub/ruby/<minor>/ruby-<ruby_version>.tar.gz
-  ruby_sha256: c35350682ff050b79702d57ade4516e7336063f510155d19fb2fb5b3f3909511
+  ruby_sha256: b53eef3371fa5d3e3b74340edcd015f06d5d8853968d4e539a5264fce41ed9f1
 
 environment:
   contents:
