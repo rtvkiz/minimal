@@ -9,7 +9,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:etcd:etcd:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: etcd
-  version: 3.7.3
+  version: 3.7.4
   epoch: 0
   description: "Minimal etcd distributed key-value store built from source"
   copyright:
@@ -26,7 +26,7 @@ package:
     provider-priority: 100
 
 vars:
-  sha256: 38455879fd3744d9aec12f45e890bede61df8b2323279e2c895bbb1bd484681f
+  sha256: b0282ec3148c7cb379ac345efd92d7bc06888f656e6f0902c75918a65d796a76
 
 environment:
   contents:
