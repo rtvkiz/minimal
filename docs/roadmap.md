@@ -439,7 +439,7 @@ SSPL, vault BSL, elasticsearch/kibana/logstash, sentry, couchbase).
 | 6a | groovy | 79M | Apache-2.0 | ASF binary on OpenJDK 25 JRE | batch 6a |
 | 6a | jetty | 47M | EPL-2.0 OR Apache-2.0 | jetty-home on OpenJDK 25 JRE | batch 6a |
 | 6a | tomee | 27M | Apache-2.0 | ASF webprofile on OpenJDK 25 JRE | batch 6a |
-| 6b | mongo-express | 278M | MIT | Node app (ghost pattern) | next |
+| 6b | mongo-express | 278M | MIT | Node app (ghost pattern) | deferred: no stable release since 1.0.2 (2023) |
 | 6b | drupal | 211M | GPL-2.0-or-later | drupal.org tarball on Wolfi PHP 8.4 FPM | batch 6b |
 | 6b | matomo | 141M | GPL-3.0-or-later | builds.matomo.org tarball on Wolfi PHP 8.4 FPM | batch 6b |
 | — | influxdb | 1.1B | MIT / Apache-2.0 | Rust, own effort | not scheduled |
@@ -461,6 +461,12 @@ Lessons from 6a:
   `environments/` dirs were found.
 
 Lessons from 6b:
+- **mongo-express is deferred, not dropped.** Upstream's only current line is
+  `1.1.0-rc-4`; the last stable release is 1.0.2 from 2023, which Docker's own
+  image still ships. `check-upstream.sh` accepts only `N.N.N`, so an rc build
+  could not have the live auto-update row every image needs, and 1.0.2 would
+  ship three years of npm dependency CVEs. Revisit when 1.1.0 is tagged — the
+  ghost pattern and a `github-releases-latest` row then apply unchanged.
 - **Drupal and Matomo both run with read-only code and no shell entrypoint.**
   Drupal takes its database from an env-driven `settings.php`; a non-interactive
   `install_drupal()` with no database form completes against it with the file
