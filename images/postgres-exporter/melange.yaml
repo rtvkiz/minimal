@@ -8,14 +8,14 @@ package:
   # for the image. See docs/onboarding.md "Package naming and scanner
   # visibility" (haproxy-minimal: 0 findings vs haproxy: 14, same version).
   name: postgres-exporter
-  version: 0.20.1
+  version: 0.21.1
   epoch: 0
   description: "Prometheus PostgreSQL exporter built from source via melange."
   copyright:
     - license: Apache-2.0
 
 vars:
-  sha256: be5d9b71cdedcc5bd484869a2a1c66e51f76d5620ebf681781f22acc0cba283b
+  sha256: e7327b6a500a6b08c78bf1f94b66132b6b0d19717738d42b8bb53f7586227ba5
 
 environment:
   contents:
