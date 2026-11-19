@@ -1,0 +1,77 @@
+# Matomo, from the official builds.matomo.org release tarball.
+#
+# Matomo is interpreted PHP and the release tarball already carries the
+# Composer-resolved vendor/ tree and the bundled front-end assets, so there is
+# no compile or dependency-install step: this recipe pins that release by
+# digest and adds a bootstrap.php that moves every runtime-written path out of
+# the code tree.
+#
+# Wolfi does not package Matomo.
+package:
+  name: matomo
+  version: 5.14.3
+  epoch: 0
+  description: "Matomo web analytics platform from the official release"
+  copyright:
+    - license: GPL-3.0-or-later
+
+vars:
+  sha256: 7fa48e56257ea716ca7f916294833fb10d0b72271896b100e5c0441e5a7460a2
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://builds.matomo.org/matomo-${{package.version}}.tar.gz" \
+        -o /home/build/matomo.tar.gz
+      echo "${{vars.sha256}}  /home/build/matomo.tar.gz" | sha256sum -c -
+
+  - runs: |
+      # The tarball holds matomo/ plus a sibling "How to install Matomo.html";
+      # only matomo/ is the application.
+      mkdir -p /home/build/src "${{targets.destdir}}/usr/share/matomo"
+      tar xzf /home/build/matomo.tar.gz -C /home/build/src
+      cp -a /home/build/src/matomo/. "${{targets.destdir}}/usr/share/matomo/"
+
+  - runs: |
+      # Matomo's own hook for relocating instance data: index.php, the tracker
+      # (piwik.php/matomo.php) and the console all require bootstrap.php from
+      # the document root before core boots, and PIWIK_USER_PATH decides where
+      # config/config.ini.php, tmp/ and misc/user/ live. Pointing it outside
+      # the docroot keeps the code read-only and the installer-written config
+      # (which holds the database password) unservable.
+      #
+      # NB: every line carries the block's 6-space indent, including the
+      # heredoc terminator; YAML strips it, so the file starts at `<?php`.
+      cat > "${{targets.destdir}}/usr/share/matomo/bootstrap.php" <<'PHP'
+      <?php
+      if (!defined('PIWIK_USER_PATH')) {
+          $_matomo_user_path = getenv('MATOMO_USER_PATH');
+          define('PIWIK_USER_PATH', ($_matomo_user_path === false || $_matomo_user_path === '') ? '/var/lib/matomo' : $_matomo_user_path);
+          unset($_matomo_user_path);
+      }
+      PHP
+      chmod 0644 "${{targets.destdir}}/usr/share/matomo/bootstrap.php"
+
+  - runs: |
+      echo "Verifying Matomo payload..."
+      m="${{targets.destdir}}/usr/share/matomo"
+      # Version::VERSION is the authoritative statement of what shipped.
+      grep -q "const VERSION = '${{package.version}}'" "$m/core/Version.php"
+      test -f "$m/index.php"
+      test -f "$m/matomo.php"
+      test -f "$m/console"
+      test -f "$m/vendor/autoload.php"
+      test -f "$m/config/global.ini.php"
+      test -f "$m/bootstrap.php"
+      test ! -e "$m/config/config.ini.php"

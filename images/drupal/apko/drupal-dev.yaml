@@ -1,0 +1,121 @@
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - drupal
+    # PHP-FPM speaks FastCGI and expects a web server in front of it (our
+    # `nginx` image pairs directly), matching upstream's `drupal:fpm` tag and
+    # keeping the web server out of this image's attack surface. 8.4 is the
+    # version Drupal 11 recommends (core/lib/Drupal.php RECOMMENDED_PHP).
+    - php-8.4-fpm
+    - php-8.4-fpm-config
+    # core/composer.json requires PDO, dom, gd, SimpleXML and xml; date,
+    # filter, hash, json, pcre, session, SPL, tokenizer and zlib are compiled
+    # into Wolfi's php-8.4 itself. One PDO driver per database core supports.
+    - php-8.4-pdo
+    - php-8.4-mysqlnd
+    - php-8.4-pdo_mysql
+    - php-8.4-pdo_pgsql
+    - php-8.4-pdo_sqlite
+    - php-8.4-dom
+    - php-8.4-gd
+    - php-8.4-simplexml
+    - php-8.4-xml
+    - php-8.4-xmlwriter
+    - php-8.4-mbstring
+    - php-8.4-ctype
+    - php-8.4-curl
+    - php-8.4-fileinfo
+    - php-8.4-iconv
+    - php-8.4-openssl
+    - php-8.4-opcache
+    - php-8.4-zip
+    - ca-certificates-bundle
+    - tini
+    # Debugging surface for the dev variant.
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+    - curl
+    - openssl
+    - bind-tools
+    - iputils
+    - jq
+    - git
+    # php CLI so core/scripts/drupal and `php -r` work interactively.
+    - php-8.4
+
+accounts:
+  groups:
+    - groupname: drupal
+      gid: 65532
+  users:
+    - username: drupal
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /sbin/tini -- /usr/bin/php-fpm --nodaemonize
+
+work-dir: /usr/share/drupal
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  HOME: /tmp
+  DRUPAL_DB_DRIVER: mysql
+  DRUPAL_DB_NAME: drupal
+  DRUPAL_DB_USER: drupal
+
+paths:
+  # Public files (uploads, aggregated CSS/JS, image styles) are the only tree
+  # under the docroot Drupal writes at runtime. Code stays read-only.
+  - path: /usr/share/drupal/sites/default/files
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+    recursive: true
+  # Private files and the config sync directory live outside the docroot so
+  # neither can be served by the web server in front.
+  - path: /var/lib/drupal
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o750
+  - path: /var/lib/drupal/private
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o750
+  - path: /var/lib/drupal/config
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o750
+  - path: /var/lib/drupal/config/sync
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o750
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-drupal-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-drupal with a shell, PHP CLI, and network debugging tools"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/drupal"
+  org.opencontainers.image.licenses: "GPL-2.0-or-later"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

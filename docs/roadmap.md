@@ -440,8 +440,8 @@ SSPL, vault BSL, elasticsearch/kibana/logstash, sentry, couchbase).
 | 6a | jetty | 47M | EPL-2.0 OR Apache-2.0 | jetty-home on OpenJDK 25 JRE | batch 6a |
 | 6a | tomee | 27M | Apache-2.0 | ASF webprofile on OpenJDK 25 JRE | batch 6a |
 | 6b | mongo-express | 278M | MIT | Node app (ghost pattern) | next |
-| 6b | drupal | 211M | GPL-2.0-or-later | PHP-FPM (wordpress pattern) | next |
-| 6b | matomo | 141M | GPL-3.0-or-later | PHP-FPM | next |
+| 6b | drupal | 211M | GPL-2.0-or-later | drupal.org tarball on Wolfi PHP 8.4 FPM | batch 6b |
+| 6b | matomo | 141M | GPL-3.0-or-later | builds.matomo.org tarball on Wolfi PHP 8.4 FPM | batch 6b |
 | — | influxdb | 1.1B | MIT / Apache-2.0 | Rust, own effort | not scheduled |
 
 Lessons from 6a:
@@ -459,6 +459,21 @@ Lessons from 6a:
   `--enable-native-access=ALL-UNNAMED` for Tomcat's JNI loader. Tests fail on
   any startup WARNING, which is how the missing `conf/conf.d` and Jetty
   `environments/` dirs were found.
+
+Lessons from 6b:
+- **Drupal and Matomo both run with read-only code and no shell entrypoint.**
+  Drupal takes its database from an env-driven `settings.php`; a non-interactive
+  `install_drupal()` with no database form completes against it with the file
+  read-only, which `test-dev.sh` proves end to end on SQLite. Matomo's own
+  `bootstrap.php` hook sets `PIWIK_USER_PATH`, which moves `config/`, `tmp/` and
+  `misc/user/` to `/var/lib/matomo` for the UI, the tracker and `console` alike.
+- **Wolfi's `pdo_mysql` needs `php-8.4-mysqlnd` listed explicitly.** Without it
+  the extension fails with `undefined symbol: mysqlnd_get_client_info`, which
+  php-fpm reports only as a startup warning. Both tests fail on any warning in
+  `php-fpm -m`, because a missing-module check alone reads it as "not loaded".
+- **Drupal renders PHP notices into the page, not the FPM log.** A FastCGI probe
+  without `HTTP_USER_AGENT` triggered one before the session started and broke
+  the next installer step; the test now fails on PHP error markup in the page.
 
 ## Execution model
 

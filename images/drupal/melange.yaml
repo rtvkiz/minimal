@@ -1,0 +1,127 @@
+# Drupal, from the official drupal.org release tarball.
+#
+# Drupal is interpreted PHP and the drupal.org tarball already carries the
+# Composer-resolved vendor/ tree, so there is no compile or dependency-install
+# step: this recipe pins that release by digest, strips the files a served site
+# must not expose, and authors a settings.php that reads the environment.
+#
+# Wolfi does not package Drupal.
+package:
+  name: drupal
+  version: 11.4.13
+  epoch: 0
+  description: "Drupal content management framework from the official drupal.org release"
+  copyright:
+    - license: GPL-2.0-or-later
+
+vars:
+  sha256: b0f33b15f7e3dae988d631ef7488919315e36e133713bdfd78f51a8e5e121925
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://ftp.drupal.org/files/projects/drupal-${{package.version}}.tar.gz" \
+        -o /home/build/drupal.tar.gz
+      echo "${{vars.sha256}}  /home/build/drupal.tar.gz" | sha256sum -c -
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/share/drupal"
+      tar xzf /home/build/drupal.tar.gz \
+        -C "${{targets.destdir}}/usr/share/drupal" --strip-components=1
+
+  - runs: |
+      cd "${{targets.destdir}}/usr/share/drupal"
+      # core/CHANGELOG.txt and the install/upgrade notes state the exact core
+      # version to anyone who requests them; nothing at runtime reads them.
+      rm -f core/CHANGELOG.txt core/INSTALL.txt core/INSTALL.mysql.txt \
+        core/INSTALL.pgsql.txt core/INSTALL.sqlite.txt core/UPDATE.txt \
+        INSTALL.txt README.md example.gitignore
+      # Apache-only and editor/lint config. This image serves through PHP-FPM
+      # behind a separate web server, where these are dead weight.
+      rm -f .htaccess .ht.router.php .csslintrc .editorconfig .eslintignore \
+        .eslintrc.json .gitattributes
+
+  - runs: |
+      # Env-driven settings.php instead of a shell entrypoint or a writable
+      # sites/default for the web installer to edit. PHP reads the environment
+      # itself, so a static file gives the same result and keeps the image
+      # shell-less with core's directories read-only.
+      #
+      # NB: every line below carries the block's 6-space indent, including the
+      # heredoc terminator. YAML strips that common indent before bash sees it,
+      # so the generated file starts at `<?php` with no leading whitespace.
+      cat > "${{targets.destdir}}/usr/share/drupal/sites/default/settings.php" <<'PHP'
+      <?php
+      /**
+       * Environment-driven Drupal settings.
+       * Every value comes from the container environment; nothing is baked in.
+       */
+      $_drupal_env = static function (string $name, $default = null) {
+          $v = getenv($name);
+          return ($v === false || $v === '') ? $default : $v;
+      };
+
+      $databases = [];
+      $_drupal_driver = $_drupal_env('DRUPAL_DB_DRIVER', 'mysql');
+      if ($_drupal_env('DRUPAL_DB_HOST') !== null || $_drupal_driver === 'sqlite') {
+          $databases['default']['default'] = [
+              'driver'    => $_drupal_driver,
+              'database'  => $_drupal_env('DRUPAL_DB_NAME', 'drupal'),
+              'username'  => $_drupal_env('DRUPAL_DB_USER', 'drupal'),
+              'password'  => $_drupal_env('DRUPAL_DB_PASSWORD', ''),
+              'host'      => $_drupal_env('DRUPAL_DB_HOST', 'localhost'),
+              'port'      => $_drupal_env('DRUPAL_DB_PORT', ''),
+              'prefix'    => $_drupal_env('DRUPAL_DB_PREFIX', ''),
+              'namespace' => "Drupal\\{$_drupal_driver}\\Driver\\Database\\{$_drupal_driver}",
+              'autoload'  => "core/modules/{$_drupal_driver}/src/Driver/Database/{$_drupal_driver}/",
+          ];
+      }
+
+      $settings['hash_salt'] = $_drupal_env('DRUPAL_HASH_SALT', '');
+      // Outside the docroot, so exported configuration is never web-servable.
+      $settings['config_sync_directory'] = $_drupal_env('DRUPAL_CONFIG_SYNC_DIRECTORY', '/var/lib/drupal/config/sync');
+      $settings['file_private_path'] = $_drupal_env('DRUPAL_FILE_PRIVATE_PATH', '/var/lib/drupal/private');
+      $settings['file_temp_path'] = $_drupal_env('DRUPAL_FILE_TEMP_PATH', '/tmp');
+
+      if ($_drupal_env('DRUPAL_TRUSTED_HOST_PATTERNS') !== null) {
+          $settings['trusted_host_patterns'] = array_map('trim', explode(',', $_drupal_env('DRUPAL_TRUSTED_HOST_PATTERNS')));
+      }
+
+      // Code is immutable in this image: no update.php without a login, no
+      // authorize.php module/theme installs, no permission rewrites on start.
+      $settings['update_free_access'] = FALSE;
+      $settings['allow_authorize_operations'] = FALSE;
+      $settings['skip_permissions_hardening'] = TRUE;
+      $settings['file_scan_ignore_directories'] = ['node_modules', 'bower_components'];
+      $settings['entity_update_batch_size'] = 50;
+      $settings['entity_update_backup'] = TRUE;
+
+      if (file_exists($app_root . '/' . $site_path . '/settings.local.php')) {
+          include $app_root . '/' . $site_path . '/settings.local.php';
+      }
+      PHP
+      chmod 0644 "${{targets.destdir}}/usr/share/drupal/sites/default/settings.php"
+
+  - runs: |
+      echo "Verifying Drupal payload..."
+      d="${{targets.destdir}}/usr/share/drupal"
+      # Drupal::VERSION is the authoritative statement of what shipped.
+      grep -q "const VERSION = '${{package.version}}'" "$d/core/lib/Drupal.php"
+      test -f "$d/index.php"
+      test -f "$d/core/install.php"
+      test -f "$d/vendor/autoload.php"
+      test -f "$d/sites/default/settings.php"
+      # Assert the strip actually happened — these leak the version if served.
+      test ! -e "$d/core/CHANGELOG.txt"
+      test ! -e "$d/core/INSTALL.txt"

@@ -1,0 +1,115 @@
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    - wolfi-baselayout
+    - matomo
+    # PHP-FPM speaks FastCGI and expects a web server in front of it (our
+    # `nginx` image pairs directly), matching upstream's `matomo:fpm` tag and
+    # keeping the web server out of this image's attack surface.
+    - php-8.4-fpm
+    - php-8.4-fpm-config
+    # Matomo's Diagnostics plugin: PDO + a MySQL adapter (PDO\MYSQL or MYSQLI)
+    # are required, gd for graphs, dom/SimpleXML/openssl are recommended;
+    # zlib, json, filter, hash and session are compiled into Wolfi's php-8.4.
+    - php-8.4-pdo
+    - php-8.4-mysqlnd
+    - php-8.4-pdo_mysql
+    - php-8.4-mysqli
+    - php-8.4-gd
+    - php-8.4-mbstring
+    - php-8.4-xml
+    - php-8.4-dom
+    - php-8.4-simplexml
+    - php-8.4-curl
+    - php-8.4-iconv
+    - php-8.4-ctype
+    - php-8.4-fileinfo
+    - php-8.4-openssl
+    - php-8.4-opcache
+    - php-8.4-zip
+    - ca-certificates-bundle
+    - tini
+    # Debugging surface for the dev variant.
+    - busybox
+    - bash
+    - apk-tools
+    - wget
+    - curl
+    - openssl
+    - bind-tools
+    - iputils
+    - jq
+    - git
+    # php CLI so ./console (core:archive, config:set) works interactively.
+    - php-8.4
+
+accounts:
+  groups:
+    - groupname: matomo
+      gid: 65532
+  users:
+    - username: matomo
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /sbin/tini -- /usr/bin/php-fpm --nodaemonize
+
+work-dir: /usr/share/matomo
+
+environment:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
+  HOME: /tmp
+  MATOMO_USER_PATH: /var/lib/matomo
+
+paths:
+  # bootstrap.php points PIWIK_USER_PATH here: the installer writes
+  # config/config.ini.php, caches and compiled templates go to tmp/, and
+  # uploaded logos to misc/user/. All of it is outside the docroot, which
+  # stays read-only.
+  - path: /var/lib/matomo
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o750
+  - path: /var/lib/matomo/config
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o750
+  - path: /var/lib/matomo/tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o750
+  - path: /var/lib/matomo/misc
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o750
+  - path: /var/lib/matomo/misc/user
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o750
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-matomo-dev"
+  org.opencontainers.image.description: "Dev variant of minimal-matomo with a shell, PHP CLI, and network debugging tools"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/matomo"
+  org.opencontainers.image.licenses: "GPL-3.0-or-later"
+  dev.minimal.variant: "dev"
+
+archs:
+  - x86_64
+  - aarch64

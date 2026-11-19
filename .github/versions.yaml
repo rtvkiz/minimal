@@ -1814,3 +1814,25 @@
     releases: "https://groovy.apache.org/download.html"
     notes: "https://groovy-lang.org/changelogs/changelog-{version}.html"
 
+
+- name: drupal
+  # drupal.org's release-history feed lists every supported core release with
+  # its tarball link; the highest one is the current release.
+  cron-enabled: true   # batch-6b (dispatch-validated on the onboarding branch)
+  files: [images/drupal/melange.yaml]
+  source: { type: scrape, urls: ["https://updates.drupal.org/release-history/drupal/current"], pattern: 'drupal-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz' }
+  tarball: { url: "https://ftp.drupal.org/files/projects/drupal-{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://www.drupal.org/project/drupal/releases"
+    notes: "https://www.drupal.org/project/drupal/releases/{version}"
+
+- name: matomo
+  # GitHub releases carry bare N.N.N tags; the tarball is the packaged build
+  # from builds.matomo.org (vendor/ included), not the GitHub source archive.
+  cron-enabled: true   # batch-6b (dispatch-validated on the onboarding branch)
+  files: [images/matomo/melange.yaml]
+  source: { type: github-releases-latest, repo: matomo-org/matomo }
+  tarball: { url: "https://builds.matomo.org/matomo-{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/matomo-org/matomo/releases"
+    notes: "https://github.com/matomo-org/matomo/releases/tag/{version}"
