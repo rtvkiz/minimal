@@ -2184,6 +2184,32 @@
       "seo_noun": "Groovy runtime",
       "summary": "Shell-less Apache Groovy on OpenJDK 25.",
       "description": "Apache Groovy language runtime on OpenJDK 25 for running Groovy scripts and build logic in CI, with the JSON and XML modules bundled. Shell-less, non-root."
+    },
+    {
+      "name": "drupal",
+      "category": "Apps",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "drupal",
+      "upstream_url": "https://www.drupal.org",
+      "seo_noun": "CMS",
+      "summary": "Shell-less Drupal on PHP-FPM, from the official drupal.org release.",
+      "description": "Drupal content management framework on PHP-FPM from the official drupal.org release, configured from env with a read-only settings.php. Shell-less, non-root."
+    },
+    {
+      "name": "matomo",
+      "category": "Apps",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "matomo",
+      "upstream_url": "https://matomo.org",
+      "seo_noun": "web analytics",
+      "summary": "Shell-less Matomo on PHP-FPM, from the official release.",
+      "description": "Matomo self-hosted web analytics, a privacy-first Google Analytics alternative, on PHP-FPM with its config and caches kept out of the docroot. Shell-less."
     }
   ]
 }
