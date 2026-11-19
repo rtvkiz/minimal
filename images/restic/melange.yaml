@@ -10,7 +10,7 @@ package:
   # (cpe:2.3:a:restic:restic-minimal:*, ...). NVD indexes this product bare,
   # as cpe:2.3:a:restic:restic:*, so none of them matched.
   name: restic
-  version: 0.19.1
+  version: 0.20.0
   epoch: 0
   description: "Minimal restic deduplicating backup program built from source"
   copyright:
@@ -27,7 +27,7 @@ package:
 
 vars:
   # SHA256 of restic source tarball - updated by update-versions.yml workflow
-  sha256: bb9b1a19040744d26d8a79be029d4e6b189c45ccc9d8831d7fe367d3c33df725
+  sha256: 7def5bbe05e62640f7b030b865b6f304701fd876f7836f5a6a603b56e1f4e30a
 
 environment:
   contents:
