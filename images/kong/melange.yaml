@@ -22,7 +22,7 @@ package:
   # Named exactly what upstream calls it, not `kong-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: kong
-  version: 3.9.4
+  version: 3.9.5
   epoch: 0
   description: "Minimal Kong Gateway (OSS) built from source"
   copyright:
@@ -44,7 +44,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: 099636a1dea318f59c0cc7b4921f313623701d7e9917ea334e1e0f8d5404494a
+  sha256: 1742800bfa84100a0b4b06277564b2cb85005a668ce60cc3245c66094ace57df
 
 environment:
   contents:
