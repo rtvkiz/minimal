@@ -10,8 +10,8 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:ruby:ruby:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: ruby
-  version: 4.0.9
-  epoch: 1
+  version: 4.0.10
+  epoch: 0
   description: "Minimal Ruby runtime built from source"
   copyright:
     - license: Ruby AND MIT
@@ -29,9 +29,9 @@ package:
     provider-priority: 100
 
 vars:
-  ruby_version: 4.0.9
+  ruby_version: 4.0.10
   # SHA256 from https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.4.tar.gz
-  sha256: c35350682ff050b79702d57ade4516e7336063f510155d19fb2fb5b3f3909511
+  sha256: b53eef3371fa5d3e3b74340edcd015f06d5d8853968d4e539a5264fce41ed9f1
 
 environment:
   contents:
