@@ -12,7 +12,7 @@ package:
   # Named exactly what upstream calls it, not `cadvisor-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: cadvisor
-  version: 0.61.0
+  version: 0.61.1
   epoch: 0
   description: "Minimal cAdvisor built from source"
   copyright:
@@ -24,7 +24,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: c668e45337cd79031124f091cebcd36af6267e81878186eef70cc4756ba3c02c
+  sha256: fbb23e259c3939dcf7ed9aaff2bdc217356f4aaf578541d2d46fbc12a9789ce2
 
 environment:
   contents:
