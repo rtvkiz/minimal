@@ -9,7 +9,7 @@ package:
   # ...). NVD indexes this product bare, as cpe:2.3:a:flux:flux:*, so none of
   # them matched, and the Wolfi secdb missed it too.
   name: flux
-  version: 2.10.0
+  version: 2.10.1
   epoch: 0
   description: "Minimal Flux CD GitOps toolkit CLI built from source"
   copyright:
@@ -26,7 +26,7 @@ package:
 
 vars:
   # SHA256 of flux source tarball - updated by update-versions.yml workflow
-  sha256: 1b96e764547d572c0c217e8a2d326370a71cce977ab597cc16894aa9cd095b87
+  sha256: c51e8faaaa57ecb517a8956800973ea39fd30b7a003a6eb3d25f88595ae1a093
 
 environment:
   contents:
