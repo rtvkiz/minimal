@@ -171,6 +171,11 @@ jobs:
             {"name":"fluentd","variants":["prod","dev"]},
             {"name":"azure-cli","variants":["prod","dev"]},
             {"name":"ghost","variants":["prod","dev"]},
+            {"name":"gatekeeper","variants":["prod","dev"]},
+            {"name":"envoy-gateway","variants":["prod","dev"]},
+            {"name":"falcosidekick","variants":["prod","dev"]},
+            {"name":"whoami","variants":["prod","dev"]},
+            {"name":"aws-node-termination-handler","variants":["prod","dev"]},
             {"name":"adminer","variants":["prod","dev"]},
             {"name":"jetty","variants":["prod","dev"]},
             {"name":"tomee","variants":["prod","dev"]},
@@ -196,6 +201,8 @@ jobs:
             {"name":"gradle","grep":"gradle-[0-9]","variants":["prod","dev"]},
             {"name":"rust","grep":"rust-[0-9]","variants":["prod","dev"]},
             {"name":"bash","grep":"bash","variants":["prod","dev"]},
+            {"name":"curl","grep":"curl","variants":["prod","dev"]},
+            {"name":"ollama","grep":"ollama","variants":["prod","dev"]},
             {"name":"composer","grep":"composer","variants":["prod","dev"]}
           ]'
 

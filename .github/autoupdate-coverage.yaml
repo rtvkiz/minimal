@@ -38,6 +38,8 @@ wolfi-rolling:
   - bun             # bun (unversioned)
   - dnsmasq         # dnsmasq (unversioned)
   - bash            # bash (unversioned)
+  - curl            # curl (unversioned)
+  - ollama          # ollama + ollama-cpu (unversioned)
   - composer        # composer (unversioned); PHP pinned to php-8.5 (line bumped by hand, like the JDK pins)
 
 # bespoke: SOURCE-BUILT images auto-updated by a dedicated workflow instead of

@@ -150,6 +150,11 @@ MYSQLD_EXPORTER_VERSION ?= $(call melange_version,images/mysqld-exporter/melange
 PHPMYADMIN_VERSION ?= $(call melange_version,images/phpmyadmin/melange.yaml)
 DRUPAL_VERSION ?= $(call melange_version,images/drupal/melange.yaml)
 MATOMO_VERSION ?= $(call melange_version,images/matomo/melange.yaml)
+GATEKEEPER_VERSION ?= $(call melange_version,images/gatekeeper/melange.yaml)
+ENVOY_GATEWAY_VERSION ?= $(call melange_version,images/envoy-gateway/melange.yaml)
+FALCOSIDEKICK_VERSION ?= $(call melange_version,images/falcosidekick/melange.yaml)
+WHOAMI_VERSION ?= $(call melange_version,images/whoami/melange.yaml)
+AWS_NODE_TERMINATION_HANDLER_VERSION ?= $(call melange_version,images/aws-node-termination-handler/melange.yaml)
 GROOVY_VERSION ?= $(call melange_version,images/groovy/melange.yaml)
 TOMEE_VERSION ?= $(call melange_version,images/tomee/melange.yaml)
 JETTY_VERSION ?= $(call melange_version,images/jetty/melange.yaml)
@@ -318,6 +323,13 @@ endef
 .PHONY: phpmyadmin phpmyadmin-melange test-phpmyadmin
 .PHONY: drupal drupal-melange test-drupal
 .PHONY: matomo matomo-melange test-matomo
+.PHONY: gatekeeper gatekeeper-melange test-gatekeeper
+.PHONY: envoy-gateway envoy-gateway-melange test-envoy-gateway
+.PHONY: falcosidekick falcosidekick-melange test-falcosidekick
+.PHONY: whoami whoami-melange test-whoami
+.PHONY: aws-node-termination-handler aws-node-termination-handler-melange test-aws-node-termination-handler
+.PHONY: curl curl-dev test-curl test-curl-dev
+.PHONY: ollama ollama-dev test-ollama test-ollama-dev
 .PHONY: groovy groovy-melange test-groovy
 .PHONY: tomee tomee-melange test-tomee
 .PHONY: jetty jetty-melange test-jetty
@@ -361,7 +373,7 @@ endef
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl sealed-secrets cloudnative-pg argo-rollouts trust-manager chartmuseum prometheus-operator kube-rbac-proxy cadvisor nginx-prometheus-exporter memcached-exporter argo-cd argo-cd-repo-server karpenter keda harbor-portal aws-cli mysqld-exporter mongodb-exporter configmap-reload contour cluster-autoscaler jmx-exporter openldap apache-exporter elasticsearch-exporter pgpool phpmyadmin groovy tomee jetty adminer maven composer bash gradle rust fluentd azure-cli ghost drupal matomo
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl sealed-secrets cloudnative-pg argo-rollouts trust-manager chartmuseum prometheus-operator kube-rbac-proxy cadvisor nginx-prometheus-exporter memcached-exporter argo-cd argo-cd-repo-server karpenter keda harbor-portal aws-cli mysqld-exporter mongodb-exporter configmap-reload contour cluster-autoscaler jmx-exporter openldap apache-exporter elasticsearch-exporter pgpool phpmyadmin groovy tomee jetty adminer maven composer bash gradle rust fluentd azure-cli ghost drupal matomo gatekeeper envoy-gateway falcosidekick whoami aws-node-termination-handler curl ollama
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -522,6 +534,13 @@ $(eval $(call DEV_IMAGE_RULE,mysqld-exporter,mysqld-exporter-melange,--repositor
 $(eval $(call DEV_IMAGE_RULE,phpmyadmin,phpmyadmin-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,drupal,drupal-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,matomo,matomo-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,gatekeeper,gatekeeper-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,envoy-gateway,envoy-gateway-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,falcosidekick,falcosidekick-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,whoami,whoami-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,aws-node-termination-handler,aws-node-termination-handler-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,curl))
+$(eval $(call DEV_IMAGE_RULE,ollama))
 $(eval $(call DEV_IMAGE_RULE,groovy,groovy-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,tomee,tomee-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,jetty,jetty-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -3525,6 +3544,149 @@ pgpool: pgpool-melange
 	@rm -f pgpool.tar sbom-*.spdx.json
 	@echo "✓ minimal-pgpool built (source build)"
 
+gatekeeper-melange: keygen
+	@echo "Building gatekeeper $(GATEKEEPER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/gatekeeper/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ gatekeeper package built from source"
+
+gatekeeper: gatekeeper-melange
+	@echo "Assembling minimal-gatekeeper image with apko..."
+	apko build images/gatekeeper/apko/gatekeeper.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-gatekeeper:$(VERSION) \
+		gatekeeper.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < gatekeeper.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-gatekeeper:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-gatekeeper:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-gatekeeper:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-gatekeeper:latest
+	@rm -f gatekeeper.tar sbom-*.spdx.json
+	@echo "✓ minimal-gatekeeper built (source build)"
+
+envoy-gateway-melange: keygen
+	@echo "Building envoy-gateway $(ENVOY_GATEWAY_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/envoy-gateway/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ envoy-gateway package built from source"
+
+envoy-gateway: envoy-gateway-melange
+	@echo "Assembling minimal-envoy-gateway image with apko..."
+	apko build images/envoy-gateway/apko/envoy-gateway.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-envoy-gateway:$(VERSION) \
+		envoy-gateway.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < envoy-gateway.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-envoy-gateway:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-envoy-gateway:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-envoy-gateway:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-envoy-gateway:latest
+	@rm -f envoy-gateway.tar sbom-*.spdx.json
+	@echo "✓ minimal-envoy-gateway built (source build)"
+
+falcosidekick-melange: keygen
+	@echo "Building falcosidekick $(FALCOSIDEKICK_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/falcosidekick/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ falcosidekick package built from source"
+
+falcosidekick: falcosidekick-melange
+	@echo "Assembling minimal-falcosidekick image with apko..."
+	apko build images/falcosidekick/apko/falcosidekick.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-falcosidekick:$(VERSION) \
+		falcosidekick.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < falcosidekick.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-falcosidekick:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-falcosidekick:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-falcosidekick:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-falcosidekick:latest
+	@rm -f falcosidekick.tar sbom-*.spdx.json
+	@echo "✓ minimal-falcosidekick built (source build)"
+
+whoami-melange: keygen
+	@echo "Building whoami $(WHOAMI_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/whoami/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ whoami package built from source"
+
+whoami: whoami-melange
+	@echo "Assembling minimal-whoami image with apko..."
+	apko build images/whoami/apko/whoami.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-whoami:$(VERSION) \
+		whoami.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < whoami.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-whoami:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-whoami:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-whoami:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-whoami:latest
+	@rm -f whoami.tar sbom-*.spdx.json
+	@echo "✓ minimal-whoami built (source build)"
+
+aws-node-termination-handler-melange: keygen
+	@echo "Building aws-node-termination-handler $(AWS_NODE_TERMINATION_HANDLER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/aws-node-termination-handler/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ aws-node-termination-handler package built from source"
+
+aws-node-termination-handler: aws-node-termination-handler-melange
+	@echo "Assembling minimal-aws-node-termination-handler image with apko..."
+	apko build images/aws-node-termination-handler/apko/aws-node-termination-handler.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-aws-node-termination-handler:$(VERSION) \
+		aws-node-termination-handler.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < aws-node-termination-handler.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-aws-node-termination-handler:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-aws-node-termination-handler:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-aws-node-termination-handler:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-aws-node-termination-handler:latest
+	@rm -f aws-node-termination-handler.tar sbom-*.spdx.json
+	@echo "✓ minimal-aws-node-termination-handler built (source build)"
+
+curl:
+	@echo "Assembling minimal-curl image with apko..."
+	apko build images/curl/apko/curl.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-curl:$(VERSION) \
+		curl.tar \
+		--arch x86_64
+	docker load < curl.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-curl:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-curl:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-curl:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-curl:latest
+	@rm -f curl.tar sbom-*.spdx.json
+	@echo "✓ minimal-curl built (Wolfi package)"
+
+ollama:
+	@echo "Assembling minimal-ollama image with apko..."
+	apko build images/ollama/apko/ollama.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-ollama:$(VERSION) \
+		ollama.tar \
+		--arch x86_64
+	docker load < ollama.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-ollama:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-ollama:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-ollama:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-ollama:latest
+	@rm -f ollama.tar sbom-*.spdx.json
+	@echo "✓ minimal-ollama built (Wolfi package)"
+
 ghost-melange: keygen
 	@echo "Building ghost $(GHOST_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build images/ghost/melange.yaml \
@@ -4478,7 +4640,7 @@ scan-%:
 		$(REGISTRY)/$(OWNER)/minimal-$*:latest
 	@echo "✓ minimal-$*: scan passed"
 
-scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks scan-cmctl scan-sealed-secrets scan-cloudnative-pg scan-argo-rollouts scan-trust-manager scan-chartmuseum scan-prometheus-operator scan-kube-rbac-proxy scan-cadvisor scan-nginx-prometheus-exporter scan-memcached-exporter scan-argo-cd scan-argo-cd-repo-server scan-karpenter scan-keda scan-harbor-portal scan-aws-cli scan-openldap scan-mysqld-exporter scan-mongodb-exporter scan-configmap-reload scan-contour scan-cluster-autoscaler scan-jmx-exporter scan-apache-exporter scan-elasticsearch-exporter scan-pgpool scan-phpmyadmin scan-groovy scan-tomee scan-jetty scan-adminer scan-maven scan-composer scan-bash scan-gradle scan-rust scan-fluentd scan-azure-cli scan-ghost scan-drupal scan-matomo
+scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks scan-cmctl scan-sealed-secrets scan-cloudnative-pg scan-argo-rollouts scan-trust-manager scan-chartmuseum scan-prometheus-operator scan-kube-rbac-proxy scan-cadvisor scan-nginx-prometheus-exporter scan-memcached-exporter scan-argo-cd scan-argo-cd-repo-server scan-karpenter scan-keda scan-harbor-portal scan-aws-cli scan-openldap scan-mysqld-exporter scan-mongodb-exporter scan-configmap-reload scan-contour scan-cluster-autoscaler scan-jmx-exporter scan-apache-exporter scan-elasticsearch-exporter scan-pgpool scan-phpmyadmin scan-groovy scan-tomee scan-jetty scan-adminer scan-maven scan-composer scan-bash scan-gradle scan-rust scan-fluentd scan-azure-cli scan-ghost scan-drupal scan-matomo scan-gatekeeper scan-envoy-gateway scan-falcosidekick scan-whoami scan-aws-node-termination-handler scan-curl scan-ollama
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -4914,7 +5076,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev test-cmctl test-cmctl-dev test-sealed-secrets test-sealed-secrets-dev test-cloudnative-pg test-cloudnative-pg-dev test-argo-rollouts test-argo-rollouts-dev test-trust-manager test-trust-manager-dev test-chartmuseum test-chartmuseum-dev test-prometheus-operator test-prometheus-operator-dev test-kube-rbac-proxy test-kube-rbac-proxy-dev test-cadvisor test-cadvisor-dev test-nginx-prometheus-exporter test-nginx-prometheus-exporter-dev test-memcached-exporter test-memcached-exporter-dev test-argo-cd test-argo-cd-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev test-harbor-portal test-harbor-portal-dev test-aws-cli test-mysqld-exporter test-mongodb-exporter test-configmap-reload test-contour test-cluster-autoscaler test-jmx-exporter test-openldap test-apache-exporter test-elasticsearch-exporter test-pgpool test-phpmyadmin test-groovy test-tomee test-jetty test-adminer test-maven test-composer test-bash test-gradle test-rust test-fluentd test-azure-cli test-ghost test-drupal test-matomo
+test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev test-cmctl test-cmctl-dev test-sealed-secrets test-sealed-secrets-dev test-cloudnative-pg test-cloudnative-pg-dev test-argo-rollouts test-argo-rollouts-dev test-trust-manager test-trust-manager-dev test-chartmuseum test-chartmuseum-dev test-prometheus-operator test-prometheus-operator-dev test-kube-rbac-proxy test-kube-rbac-proxy-dev test-cadvisor test-cadvisor-dev test-nginx-prometheus-exporter test-nginx-prometheus-exporter-dev test-memcached-exporter test-memcached-exporter-dev test-argo-cd test-argo-cd-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev test-harbor-portal test-harbor-portal-dev test-aws-cli test-mysqld-exporter test-mongodb-exporter test-configmap-reload test-contour test-cluster-autoscaler test-jmx-exporter test-openldap test-apache-exporter test-elasticsearch-exporter test-pgpool test-phpmyadmin test-groovy test-tomee test-jetty test-adminer test-maven test-composer test-bash test-gradle test-rust test-fluentd test-azure-cli test-ghost test-drupal test-matomo test-gatekeeper test-envoy-gateway test-falcosidekick test-whoami test-aws-node-termination-handler test-curl test-ollama
 
 $(eval $(call DEV_TEST_RULE,python))
 $(eval $(call DEV_TEST_RULE,node-slim))
@@ -5042,6 +5204,13 @@ $(eval $(call DEV_TEST_RULE,mysqld-exporter))
 $(eval $(call DEV_TEST_RULE,phpmyadmin))
 $(eval $(call DEV_TEST_RULE,drupal))
 $(eval $(call DEV_TEST_RULE,matomo))
+$(eval $(call DEV_TEST_RULE,gatekeeper))
+$(eval $(call DEV_TEST_RULE,envoy-gateway))
+$(eval $(call DEV_TEST_RULE,falcosidekick))
+$(eval $(call DEV_TEST_RULE,whoami))
+$(eval $(call DEV_TEST_RULE,aws-node-termination-handler))
+$(eval $(call DEV_TEST_RULE,curl))
+$(eval $(call DEV_TEST_RULE,ollama))
 $(eval $(call DEV_TEST_RULE,groovy))
 $(eval $(call DEV_TEST_RULE,tomee))
 $(eval $(call DEV_TEST_RULE,jetty))
@@ -5715,6 +5884,48 @@ test-pgpool:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-pgpool:latest" && \
 		images/pgpool/test.sh
 	@echo "✓ pgpool tests passed"
+
+test-gatekeeper:
+	@echo "Testing gatekeeper image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-gatekeeper:latest" && \
+		images/gatekeeper/test.sh
+	@echo "✓ gatekeeper tests passed"
+
+test-envoy-gateway:
+	@echo "Testing envoy-gateway image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-envoy-gateway:latest" && \
+		images/envoy-gateway/test.sh
+	@echo "✓ envoy-gateway tests passed"
+
+test-falcosidekick:
+	@echo "Testing falcosidekick image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-falcosidekick:latest" && \
+		images/falcosidekick/test.sh
+	@echo "✓ falcosidekick tests passed"
+
+test-whoami:
+	@echo "Testing whoami image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-whoami:latest" && \
+		images/whoami/test.sh
+	@echo "✓ whoami tests passed"
+
+test-aws-node-termination-handler:
+	@echo "Testing aws-node-termination-handler image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-aws-node-termination-handler:latest" && \
+		images/aws-node-termination-handler/test.sh
+	@echo "✓ aws-node-termination-handler tests passed"
+
+test-curl:
+	@echo "Testing curl image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-curl:latest" && \
+		images/curl/test.sh
+	@echo "✓ curl tests passed"
+
+test-ollama:
+	@echo "Testing ollama image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-ollama:latest" && \
+		images/ollama/test.sh
+	@echo "✓ ollama tests passed"
 
 test-ghost:
 	@echo "Testing ghost image..."

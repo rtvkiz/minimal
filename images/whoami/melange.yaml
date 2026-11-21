@@ -1,0 +1,64 @@
+# Melange build configuration for minimal whoami
+# Traefik whoami: tiny HTTP server that echoes the request (headers, client
+# IP, hostname) back - the standard target for testing proxies and ingress.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi does not package it.
+
+package:
+  # Named exactly what upstream calls it, not `whoami-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: whoami
+  version: 1.12.0
+  epoch: 0
+  description: "Minimal whoami built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: ed07fcf7005cef51d74e42bc34bfec9e76965fe1efb972d6d28e8ce84ed11e8c
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/whoami-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/traefik/whoami/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/whoami.tar.gz
+      echo "${{vars.sha256}}  /home/build/whoami.tar.gz" | sha256sum -c -
+      tar xzf /home/build/whoami.tar.gz -C /home/build/whoami-${{package.version}} --strip-components=1
+      rm /home/build/whoami.tar.gz
+
+  - runs: |
+      cd /home/build/whoami-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid=" \
+        -o /home/build/whoami-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/whoami-bin "${{targets.destdir}}/usr/bin/traefik-whoami"
+      chmod 0755 "${{targets.destdir}}/usr/bin/traefik-whoami"
+      mkdir -p "$(dirname "${{targets.destdir}}/whoami")"
+      ln -sf usr/bin/traefik-whoami "${{targets.destdir}}/whoami"
+
+  - runs: |
+      echo "Verifying whoami binary..."
+      "${{targets.destdir}}/usr/bin/traefik-whoami" --help 2>&1 | grep -q -- "-port" \
+        || { echo "FAIL: whoami binary did not run as expected"; exit 1; }

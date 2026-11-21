@@ -481,6 +481,42 @@ Lessons from 6b:
   without `HTTP_USER_AGENT` triggered one before the session started and broke
   the next installer step; the test now fails on PHP error markup in the page.
 
+## Wave 5 — Docker Hub demand beyond library/ (2026-11-21)
+
+Source: Docker Hub pull counts for ~100 vendor namespaces (prom, grafana,
+amazon, calico, portainer, selenium, otel, …), minus everything we ship, OS
+bases, and the non-OSS set. Wolfi freshness checked against the live APKINDEX:
+packages last built in June 2026 are frozen, so those candidates are source
+builds even where Wolfi has a package.
+
+| Batch | Image | Pulls | License | Build | Status |
+|---|---|---:|---|---|---|
+| 7a | curl | 6.8B | curl | Wolfi `curl` (fresh) | batch 7a |
+| 7a | gatekeeper | 3.2B | Apache-2.0 | Go; Wolfi `gatekeeper-3.22` frozen | batch 7a |
+| 7a | ollama | 204M | MIT | Wolfi `ollama` + `ollama-cpu` (fresh), CPU only | batch 7a |
+| 7a | envoy-gateway | 74M | Apache-2.0 | Go; Wolfi frozen | batch 7a |
+| 7a | whoami | 48M | Apache-2.0 | Go; not in Wolfi | batch 7a |
+| 7a | falcosidekick | 38M | Apache-2.0 | Go; Wolfi frozen | batch 7a |
+| 7a | aws-node-termination-handler | 175M | Apache-2.0 | Go; Wolfi frozen | batch 7a |
+| 7b | amazon-cloudwatch-agent | 2.2B | MIT | Go; Wolfi frozen | next |
+| 7b | aws-xray-daemon | 1.6B | Apache-2.0 | Go; Wolfi frozen | next |
+| 7b | aws-efs-csi-driver | 1.3B | Apache-2.0 | Go; Wolfi frozen; needs nfs-utils/stunnel at runtime | next |
+| 7b | aws-load-balancer-controller | 165M | Apache-2.0 | Go; Wolfi frozen | next |
+| 7b | aws-ebs-csi-driver | 53M | Apache-2.0 | Go; Wolfi frozen | next |
+| 7c | otelcol-contrib | 1.4B | Apache-2.0 | Go via ocb; large graph — CI build, likely SKIP_IMAGES | own effort |
+| 7c | harbor (core, jobservice, registryctl, exporter) | 30M+ each | Apache-2.0 | Go, one repo; completes harbor-portal | own effort |
+| 7c | postgis | 351M | GPL-2.0 | Wolfi `postgis-18` (fresh) on our postgres-slim — check ABI pairing first | own effort |
+| — | calico (node, cni, kube-controllers, typha) | 1.7B / 1.3B / 700M | Apache-2.0 | Go + BPF/iptables, multi-image | own effort |
+| — | jenkins inbound-agent | 522M | MIT | JAR on JRE; agents need a shell + git (dev-shaped prod) | needs a call |
+| — | selenium standalone-chrome | 528M | Apache-2.0 | Java + Chromium; Chromium CVE churn | needs a call |
+| — | falco | 88M | Apache-2.0 | C++ + kernel driver/eBPF | own effort |
+| — | mediawiki / odoo / owncloud | 50–60M | GPL / LGPL / AGPL | PHP/Python apps (drupal/matomo pattern) | later |
+
+Skipped: watchtower (repo archived 2025-12), kubernetes dashboard (archived),
+portainer (frontend-in-bwrap), renovate (Node, heavy), n8n (Sustainable Use
+License 🔴), cockroach/confluent cp-*/redpanda/arangodb/directus (BSL or
+community licenses 🔴), dynamodb-local/filebeat (proprietary/Elastic 🔴).
+
 ## Execution model
 
 - **One PR per tier group (~6–8 images).** Each image: 10 registration points

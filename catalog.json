@@ -2210,6 +2210,97 @@
       "seo_noun": "web analytics",
       "summary": "Shell-less Matomo on PHP-FPM, from the official release.",
       "description": "Matomo self-hosted web analytics, a privacy-first Google Analytics alternative, on PHP-FPM with its config and caches kept out of the docroot. Shell-less."
+    },
+    {
+      "name": "gatekeeper",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "gatekeeper",
+      "upstream_url": "https://github.com/open-policy-agent/gatekeeper",
+      "seo_noun": "policy controller",
+      "summary": "Shell-less OPA Gatekeeper policy controller, built from source via melange.",
+      "description": "OPA Gatekeeper: Kubernetes admission webhook and audit controller enforcing Rego ConstraintTemplates. Drop-in /manager entrypoint, shell-less, non-root."
+    },
+    {
+      "name": "envoy-gateway",
+      "category": "Web Servers & Proxies",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "envoy-gateway",
+      "upstream_url": "https://gateway.envoyproxy.io",
+      "seo_noun": "Gateway API",
+      "summary": "Shell-less Envoy Gateway control plane, built from source via melange.",
+      "description": "Envoy Gateway control plane: implements the Kubernetes Gateway API by provisioning and configuring Envoy proxies. Shell-less, non-root, signed, SBOM-attested."
+    },
+    {
+      "name": "falcosidekick",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "falcosidekick",
+      "upstream_url": "https://github.com/falcosecurity/falcosidekick",
+      "seo_noun": "Falco event router",
+      "summary": "Shell-less Falcosidekick event forwarder, built from source via melange.",
+      "description": "Falcosidekick routes Falco runtime-security alerts to Slack, Loki, Kafka, webhooks, SIEMs and cloud queues. Static Go binary, shell-less, non-root, signed."
+    },
+    {
+      "name": "whoami",
+      "category": "Web Servers & Proxies",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "whoami",
+      "upstream_url": "https://github.com/traefik/whoami",
+      "seo_noun": "HTTP echo server",
+      "summary": "Shell-less Traefik whoami echo server, built from source via melange.",
+      "description": "Traefik whoami: tiny HTTP server echoing request headers, client IP and hostname, for testing ingress, proxies and load balancers. Non-root on :8080."
+    },
+    {
+      "name": "aws-node-termination-handler",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "aws-node-termination-handler",
+      "upstream_url": "https://github.com/aws/aws-node-termination-handler",
+      "seo_noun": "EKS",
+      "summary": "Shell-less AWS Node Termination Handler, built from source via melange.",
+      "description": "AWS Node Termination Handler drains EKS nodes before EC2 Spot interruptions, scheduled events and ASG scale-in. Static Go binary, shell-less, non-root."
+    },
+    {
+      "name": "curl",
+      "category": "Infrastructure",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "curl",
+      "upstream_url": "https://curl.se",
+      "seo_noun": "curl CLI",
+      "summary": "Shell-less curl with HTTP/2, HTTP/3 and TLS, built on Wolfi.",
+      "description": "curl command-line HTTP client with HTTP/2, HTTP/3, brotli and OpenSSL, as a drop-in for curlimages/curl in CI jobs and init containers. Shell-less, non-root."
+    },
+    {
+      "name": "ollama",
+      "category": "Apps",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "ollama",
+      "upstream_url": "https://ollama.com",
+      "seo_noun": "local LLM server",
+      "summary": "Shell-less Ollama LLM server with CPU backends, built on Wolfi.",
+      "description": "Ollama server for running open LLMs such as Llama, Qwen and Gemma locally over a REST API, with llama.cpp CPU backends. Shell-less and non-root."
     }
   ]
 }

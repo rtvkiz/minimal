@@ -185,6 +185,11 @@ jobs:
             [chartmuseum]="/home/build/chartmuseum-${D}{{package.version}}"
             [prometheus-operator]="/home/build/prometheus-operator-${D}{{package.version}}"
             [kube-rbac-proxy]="/home/build/kube-rbac-proxy-${D}{{package.version}}"
+            [gatekeeper]="/home/build/gatekeeper-${D}{{package.version}}"
+            [envoy-gateway]="/home/build/envoy-gateway-${D}{{package.version}}"
+            [falcosidekick]="/home/build/falcosidekick-${D}{{package.version}}"
+            [whoami]="/home/build/whoami-${D}{{package.version}}"
+            [aws-node-termination-handler]="/home/build/aws-node-termination-handler-${D}{{package.version}}"
             [cadvisor]="/home/build/cadvisor-${D}{{package.version}}/cmd"
             [nginx-prometheus-exporter]="/home/build/nginx-prometheus-exporter-${D}{{package.version}}"
             [memcached-exporter]="/home/build/memcached-exporter-${D}{{package.version}}"
@@ -297,6 +302,11 @@ jobs:
             [chartmuseum]="helm.sh/chartmuseum"
             [prometheus-operator]="github.com/prometheus-operator/prometheus-operator"
             [kube-rbac-proxy]="github.com/brancz/kube-rbac-proxy"
+            [gatekeeper]="github.com/open-policy-agent/gatekeeper/v3"
+            [envoy-gateway]="github.com/envoyproxy/gateway"
+            [falcosidekick]="github.com/falcosecurity/falcosidekick"
+            [whoami]="github.com/traefik/whoami"
+            [aws-node-termination-handler]="github.com/aws/aws-node-termination-handler"
             [cadvisor]="github.com/google/cadvisor/cmd"
             [nginx-prometheus-exporter]="github.com/nginx/nginx-prometheus-exporter"
             [memcached-exporter]="github.com/prometheus/memcached_exporter"
@@ -408,6 +418,11 @@ jobs:
             [chartmuseum]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [prometheus-operator]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [kube-rbac-proxy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [gatekeeper]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [envoy-gateway]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [falcosidekick]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [whoami]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [aws-node-termination-handler]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [cadvisor]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [nginx-prometheus-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [memcached-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
