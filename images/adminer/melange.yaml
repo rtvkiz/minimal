@@ -6,7 +6,7 @@
 
 package:
   name: adminer
-  version: 6.3.0
+  version: 6.3.1
   epoch: 0
   description: "Adminer database management in a single PHP file, from the official release"
   copyright:
@@ -18,7 +18,7 @@ package:
 
 vars:
   # SHA256 of the release asset - updated by update-versions.yml workflow
-  sha256: 641e1a31e8cc333a309e202ef9446e1fd38c2069ed5f9ee509b80d70089d0503
+  sha256: a9aed04e4e68c4e46283804a69ee70cad4fbf23203b46470b760868b2fd9bd76
 
 environment:
   contents:
