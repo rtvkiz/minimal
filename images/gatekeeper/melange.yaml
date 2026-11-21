@@ -1,0 +1,70 @@
+# Melange build configuration for minimal gatekeeper
+# Policy controller for Kubernetes: an OPA-based admission webhook plus audit,
+# enforcing ConstraintTemplates/Constraints written in Rego.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `gatekeeper-3.22` package stopped receiving builds in June 2026 (recipe removed
+# from wolfi-dev/os), so it is frozen a minor behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `gatekeeper-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: gatekeeper
+  version: 3.23.1
+  epoch: 0
+  description: "Minimal gatekeeper built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) package of this name; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 8d49585365c26e809754850b4119b0f97eaba608071b1c99bc3e68b41038272e
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/gatekeeper-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/open-policy-agent/gatekeeper/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/gatekeeper.tar.gz
+      echo "${{vars.sha256}}  /home/build/gatekeeper.tar.gz" | sha256sum -c -
+      tar xzf /home/build/gatekeeper.tar.gz -C /home/build/gatekeeper-${{package.version}} --strip-components=1
+      rm /home/build/gatekeeper.tar.gz
+
+  - runs: |
+      cd /home/build/gatekeeper-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/open-policy-agent/gatekeeper/v3/pkg/version.Version=v${{package.version}}" \
+        -o /home/build/gatekeeper-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/gatekeeper-bin "${{targets.destdir}}/usr/bin/gatekeeper"
+      chmod 0755 "${{targets.destdir}}/usr/bin/gatekeeper"
+      mkdir -p "$(dirname "${{targets.destdir}}/manager")"
+      ln -sf usr/bin/gatekeeper "${{targets.destdir}}/manager"
+
+  - runs: |
+      echo "Verifying gatekeeper binary..."
+      "${{targets.destdir}}/usr/bin/gatekeeper" --help 2>&1 | grep -q -- "--operation" \
+        || { echo "FAIL: gatekeeper binary did not run as expected"; exit 1; }

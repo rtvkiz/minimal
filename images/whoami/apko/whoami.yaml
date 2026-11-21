@@ -1,0 +1,54 @@
+# Minimal whoami image - built from source via melange
+# Traefik whoami: HTTP server that echoes the request back.
+# Listens on :8080, not upstream's :80 - nonroot cannot bind a privileged port.
+# Override with --port / WHOAMI_PORT_NUMBER.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - whoami
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /whoami
+
+work-dir: /tmp
+
+environment:
+  PATH: /usr/bin:/bin
+  HOME: /tmp
+  WHOAMI_PORT_NUMBER: "8080"
+
+paths:
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-whoami"
+  org.opencontainers.image.description: "Hardened shell-less whoami built from source via melange with CVE patches on every rebuild"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/whoami"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

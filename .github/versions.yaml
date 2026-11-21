@@ -1836,3 +1836,48 @@
   links:
     releases: "https://github.com/matomo-org/matomo/releases"
     notes: "https://github.com/matomo-org/matomo/releases/tag/{version}"
+
+- name: gatekeeper
+  cron-enabled: true   # batch-7a (dispatch-validated on the onboarding branch)
+  files: [images/gatekeeper/melange.yaml]
+  source: { type: github-releases-latest, repo: open-policy-agent/gatekeeper, strip-v: true }
+  tarball: { url: "https://github.com/open-policy-agent/gatekeeper/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/open-policy-agent/gatekeeper/releases"
+    notes: "https://github.com/open-policy-agent/gatekeeper/releases/tag/v{version}"
+
+- name: envoy-gateway
+  cron-enabled: true   # batch-7a (dispatch-validated on the onboarding branch)
+  files: [images/envoy-gateway/melange.yaml]
+  source: { type: github-releases-latest, repo: envoyproxy/gateway, strip-v: true }
+  tarball: { url: "https://github.com/envoyproxy/gateway/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/envoyproxy/gateway/releases"
+    notes: "https://github.com/envoyproxy/gateway/releases/tag/v{version}"
+
+- name: falcosidekick
+  cron-enabled: true   # batch-7a (dispatch-validated on the onboarding branch)
+  files: [images/falcosidekick/melange.yaml]
+  source: { type: github-releases-latest, repo: falcosecurity/falcosidekick }
+  tarball: { url: "https://github.com/falcosecurity/falcosidekick/archive/refs/tags/{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/falcosecurity/falcosidekick/releases"
+    notes: "https://github.com/falcosecurity/falcosidekick/releases/tag/{version}"
+
+- name: whoami
+  cron-enabled: true   # batch-7a (dispatch-validated on the onboarding branch)
+  files: [images/whoami/melange.yaml]
+  source: { type: github-releases-latest, repo: traefik/whoami, strip-v: true }
+  tarball: { url: "https://github.com/traefik/whoami/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/traefik/whoami/releases"
+    notes: "https://github.com/traefik/whoami/releases/tag/v{version}"
+
+- name: aws-node-termination-handler
+  cron-enabled: true   # batch-7a (dispatch-validated on the onboarding branch)
+  files: [images/aws-node-termination-handler/melange.yaml]
+  source: { type: github-releases-latest, repo: aws/aws-node-termination-handler, strip-v: true }
+  tarball: { url: "https://github.com/aws/aws-node-termination-handler/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/aws/aws-node-termination-handler/releases"
+    notes: "https://github.com/aws/aws-node-termination-handler/releases/tag/v{version}"

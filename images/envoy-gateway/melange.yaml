@@ -1,0 +1,71 @@
+# Melange build configuration for minimal envoy-gateway
+# Envoy Gateway control plane: implements the Kubernetes Gateway API by
+# programming fleets of Envoy proxies (the data plane runs from the envoy image).
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `envoy-gateway` package stopped receiving builds in June 2026 (recipe removed
+# from wolfi-dev/os), so it is frozen two minors behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `envoy-gateway-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: envoy-gateway
+  version: 1.10.0
+  epoch: 0
+  description: "Minimal envoy-gateway built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) package of this name; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 584323d4c3e0a354ce40d72f9bf8c1dc2eca51de1c0d8bb47df230a156cc7a43
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/envoy-gateway-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/envoyproxy/gateway/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/envoy-gateway.tar.gz
+      echo "${{vars.sha256}}  /home/build/envoy-gateway.tar.gz" | sha256sum -c -
+      tar xzf /home/build/envoy-gateway.tar.gz -C /home/build/envoy-gateway-${{package.version}} --strip-components=1
+      rm /home/build/envoy-gateway.tar.gz
+
+  - runs: |
+      cd /home/build/envoy-gateway-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X github.com/envoyproxy/gateway/internal/cmd/version.envoyGatewayVersion=v${{package.version}} \
+          -X github.com/envoyproxy/gateway/internal/cmd/version.gitCommitID=v${{package.version}}" \
+        -o /home/build/envoy-gateway-bin \
+        ./cmd/envoy-gateway
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/envoy-gateway-bin "${{targets.destdir}}/usr/bin/envoy-gateway"
+      chmod 0755 "${{targets.destdir}}/usr/bin/envoy-gateway"
+      mkdir -p "$(dirname "${{targets.destdir}}/usr/local/bin/envoy-gateway")"
+      ln -sf ../../bin/envoy-gateway "${{targets.destdir}}/usr/local/bin/envoy-gateway"
+
+  - runs: |
+      echo "Verifying envoy-gateway binary..."
+      "${{targets.destdir}}/usr/bin/envoy-gateway" version 2>&1 | grep -q "v${{package.version}}" \
+        || { echo "FAIL: envoy-gateway binary did not run as expected"; exit 1; }

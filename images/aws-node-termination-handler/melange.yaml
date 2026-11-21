@@ -1,0 +1,69 @@
+# Melange build configuration for minimal aws-node-termination-handler
+# AWS Node Termination Handler: drains Kubernetes nodes ahead of EC2 Spot
+# interruptions, scheduled maintenance, ASG scale-in and rebalance recommendations.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `aws-node-termination-handler` package stopped receiving builds in June 2026
+# (recipe removed from wolfi-dev/os), so it never gets another CVE rebuild.
+
+package:
+  # Named exactly what upstream calls it, not `aws-node-termination-handler-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: aws-node-termination-handler
+  version: 1.25.6
+  epoch: 0
+  description: "Minimal aws-node-termination-handler built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) package of this name; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 101fba79c174fe275c06ca6aaf92d8a3b62098b1ec52b4adb238167eb8acbfc8
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/aws-node-termination-handler-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/aws/aws-node-termination-handler/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/aws-node-termination-handler.tar.gz
+      echo "${{vars.sha256}}  /home/build/aws-node-termination-handler.tar.gz" | sha256sum -c -
+      tar xzf /home/build/aws-node-termination-handler.tar.gz -C /home/build/aws-node-termination-handler-${{package.version}} --strip-components=1
+      rm /home/build/aws-node-termination-handler.tar.gz
+
+  - runs: |
+      cd /home/build/aws-node-termination-handler-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath -tags nthlinux \
+        -ldflags="-s -w -buildid=" \
+        -o /home/build/aws-node-termination-handler-bin \
+        ./cmd/node-termination-handler.go
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/aws-node-termination-handler-bin "${{targets.destdir}}/usr/bin/node-termination-handler"
+      chmod 0755 "${{targets.destdir}}/usr/bin/node-termination-handler"
+      mkdir -p "$(dirname "${{targets.destdir}}/node-termination-handler")"
+      ln -sf usr/bin/node-termination-handler "${{targets.destdir}}/node-termination-handler"
+
+  - runs: |
+      echo "Verifying aws-node-termination-handler binary..."
+      "${{targets.destdir}}/usr/bin/node-termination-handler" --help 2>&1 | grep -q -- "-node-name" \
+        || { echo "FAIL: aws-node-termination-handler binary did not run as expected"; exit 1; }

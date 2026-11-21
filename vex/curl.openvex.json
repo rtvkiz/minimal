@@ -1,0 +1,9 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/rtvkiz/minimal/vex/curl",
+  "author": "rtvkiz",
+  "timestamp": "2026-11-21T20:58:21Z",
+  "version": 1,
+  "tooling": "tools/vex/validate.sh",
+  "statements": []
+}

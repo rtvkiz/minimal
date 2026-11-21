@@ -1,0 +1,68 @@
+# Melange build configuration for minimal falcosidekick
+# Falcosidekick: fans Falco runtime-security events out to 70+ outputs
+# (Slack, Loki, Kafka, webhooks, cloud queues, SIEMs).
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `falcosidekick` package stopped receiving builds in June 2026 (recipe removed
+# from wolfi-dev/os), so it is frozen behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `falcosidekick-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: falcosidekick
+  version: 2.35.1
+  epoch: 0
+  description: "Minimal falcosidekick built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) package of this name; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 9efb27f329e128cfa89fc176e65963ad183ecf05b19c1ee0333e4af1fd25fd8c
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/falcosidekick-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/falcosecurity/falcosidekick/archive/refs/tags/${{package.version}}.tar.gz" \
+        -o /home/build/falcosidekick.tar.gz
+      echo "${{vars.sha256}}  /home/build/falcosidekick.tar.gz" | sha256sum -c -
+      tar xzf /home/build/falcosidekick.tar.gz -C /home/build/falcosidekick-${{package.version}} --strip-components=1
+      rm /home/build/falcosidekick.tar.gz
+
+  - runs: |
+      cd /home/build/falcosidekick-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X main.GitVersion=${{package.version}} -X main.gitTreeState=clean" \
+        -o /home/build/falcosidekick-bin \
+        .
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/falcosidekick-bin "${{targets.destdir}}/usr/bin/falcosidekick"
+      chmod 0755 "${{targets.destdir}}/usr/bin/falcosidekick"
+
+  - runs: |
+      echo "Verifying falcosidekick binary..."
+      "${{targets.destdir}}/usr/bin/falcosidekick" --version 2>&1 | grep -q "${{package.version}}" \
+        || { echo "FAIL: falcosidekick binary did not run as expected"; exit 1; }
