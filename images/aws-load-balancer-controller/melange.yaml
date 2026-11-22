@@ -1,0 +1,74 @@
+# Melange build configuration for minimal aws-load-balancer-controller
+# AWS Load Balancer Controller: provisions ALBs for Ingress and NLBs for
+# Service type=LoadBalancer (plus the Gateway API) on Kubernetes.
+# Pure Go from source, CGO off (static). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `aws-load-balancer-controller` package stopped receiving builds in June
+# 2026 (recipe removed from wolfi-dev/os), so it is frozen behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `aws-load-balancer-controller-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: aws-load-balancer-controller
+  version: 3.6.3
+  epoch: 0
+  description: "Minimal aws-load-balancer-controller built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) package of this name; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 221e61b09a012ba4e71f9f36a1423b3247af782ad220bf3063906e7c4d098729
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/aws-load-balancer-controller-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/kubernetes-sigs/aws-load-balancer-controller/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/aws-load-balancer-controller.tar.gz
+      echo "${{vars.sha256}}  /home/build/aws-load-balancer-controller.tar.gz" | sha256sum -c -
+      tar xzf /home/build/aws-load-balancer-controller.tar.gz -C /home/build/aws-load-balancer-controller-${{package.version}} --strip-components=1
+      rm /home/build/aws-load-balancer-controller.tar.gz
+
+  - runs: |
+      cd /home/build/aws-load-balancer-controller-${{package.version}}
+      # Upstream links a static-pie with CGO; osusergo,netgo + CGO off gives the
+      # same pure-Go user/DNS resolution with no libc at all.
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath -tags osusergo,netgo,static_build \
+        -ldflags="-s -w -buildid= \
+          -X sigs.k8s.io/aws-load-balancer-controller/v3/pkg/version.GitVersion=v${{package.version}} \
+          -X sigs.k8s.io/aws-load-balancer-controller/v3/pkg/version.GitCommit=v${{package.version}}" \
+        -o /home/build/aws-load-balancer-controller-bin \
+        ./main.go
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/aws-load-balancer-controller-bin "${{targets.destdir}}/usr/bin/aws-load-balancer-controller"
+      chmod 0755 "${{targets.destdir}}/usr/bin/aws-load-balancer-controller"
+      # Upstream's image and Helm chart run /controller.
+      ln -sf usr/bin/aws-load-balancer-controller "${{targets.destdir}}/controller"
+
+
+  - runs: |
+      echo "Verifying aws-load-balancer-controller binary..."
+      "${{targets.destdir}}/usr/bin/aws-load-balancer-controller" --help 2>&1 | grep -q -- "--cluster-name" \
+        || { echo "FAIL: aws-load-balancer-controller binary did not run as expected"; exit 1; }

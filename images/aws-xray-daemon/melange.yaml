@@ -1,0 +1,71 @@
+# Melange build configuration for minimal aws-xray-daemon
+# AWS X-Ray daemon: listens for trace segments over UDP :2000, batches them and
+# relays them to the X-Ray API.
+# Pure Go from source, CGO off (static). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `aws-xray-daemon` package stopped receiving builds in June 2026
+# (recipe removed from wolfi-dev/os), so it never gets another CVE rebuild.
+
+package:
+  # Named exactly what upstream calls it, not `aws-xray-daemon-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: aws-xray-daemon
+  version: 3.7.2
+  epoch: 0
+  description: "Minimal aws-xray-daemon built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) package of this name; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: f83f1449391e7c61b32f709b46777b107cfa4e4f8ed82ec7bfe3567c3c2a9ad7
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/aws-xray-daemon-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/aws/aws-xray-daemon/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/aws-xray-daemon.tar.gz
+      echo "${{vars.sha256}}  /home/build/aws-xray-daemon.tar.gz" | sha256sum -c -
+      tar xzf /home/build/aws-xray-daemon.tar.gz -C /home/build/aws-xray-daemon-${{package.version}} --strip-components=1
+      rm /home/build/aws-xray-daemon.tar.gz
+
+  - runs: |
+      cd /home/build/aws-xray-daemon-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= -X github.com/aws/aws-xray-daemon/pkg/cfg.Version=${{package.version}}" \
+        -o /home/build/aws-xray-daemon-bin \
+        ./cmd/tracing/daemon.go ./cmd/tracing/tracing.go
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin" "${{targets.destdir}}/etc/amazon/xray"
+      cp /home/build/aws-xray-daemon-bin "${{targets.destdir}}/usr/bin/xray"
+      chmod 0755 "${{targets.destdir}}/usr/bin/xray"
+      # Upstream's image ships the binary at /xray and the default config here.
+      ln -sf usr/bin/xray "${{targets.destdir}}/xray"
+      cp /home/build/aws-xray-daemon-${{package.version}}/pkg/cfg.yaml "${{targets.destdir}}/etc/amazon/xray/cfg.yaml"
+
+
+  - runs: |
+      echo "Verifying aws-xray-daemon binary..."
+      "${{targets.destdir}}/usr/bin/xray" --version 2>&1 | grep -q "${{package.version}}" \
+        || { echo "FAIL: aws-xray-daemon binary did not run as expected"; exit 1; }

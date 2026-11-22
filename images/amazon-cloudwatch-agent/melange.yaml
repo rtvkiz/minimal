@@ -1,0 +1,82 @@
+# Melange build configuration for minimal amazon-cloudwatch-agent
+# Amazon CloudWatch Agent: collects host/container metrics, logs and traces
+# (Container Insights, EMF, StatsD, collectd, OTLP) and ships them to CloudWatch.
+# Pure Go from source, CGO off (static). License: MIT.
+#
+# Source-built rather than apko-only: Wolfi's `amazon-cloudwatch-agent` package stopped receiving builds in June 2026
+# (recipe removed from wolfi-dev/os), so it is frozen behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `amazon-cloudwatch-agent-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: amazon-cloudwatch-agent
+  version: 1.300074.0
+  epoch: 0
+  description: "Minimal amazon-cloudwatch-agent built from source"
+  copyright:
+    - license: MIT
+  dependencies:
+    # Wolfi still ships a (frozen) package of this name; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: cb37b0e99b44bb64085554bf28c3cf1e409b938ec577bcd48285db771995a678
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/amazon-cloudwatch-agent-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/aws/amazon-cloudwatch-agent/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/amazon-cloudwatch-agent.tar.gz
+      echo "${{vars.sha256}}  /home/build/amazon-cloudwatch-agent.tar.gz" | sha256sum -c -
+      tar xzf /home/build/amazon-cloudwatch-agent.tar.gz -C /home/build/amazon-cloudwatch-agent-${{package.version}} --strip-components=1
+      rm /home/build/amazon-cloudwatch-agent.tar.gz
+
+  - runs: |
+      cd /home/build/amazon-cloudwatch-agent-${{package.version}}
+      for c in amazon-cloudwatch-agent start-amazon-cloudwatch-agent config-translator workload-discovery; do
+        GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+          -trimpath \
+          -ldflags="-s -w -buildid= \
+            -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.VersionStr=${{package.version}} \
+            -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.BuildStr=${{package.version}}" \
+          -o /home/build/cwagent-bin/$c \
+          ./cmd/$c
+      done
+
+  - runs: |
+      # Same layout as upstream's amazon/cloudwatch-agent image (the .deb's
+      # /opt/aws tree minus the ctl script, config-downloader and the wizard,
+      # which upstream's Dockerfile also deletes). The JMX jar is not shipped:
+      # it is a prebuilt binary blob in the repo, and JMX collection needs a JVM.
+      d="${{targets.destdir}}/opt/aws/amazon-cloudwatch-agent"
+      mkdir -p "$d/bin" "$d/etc/amazon-cloudwatch-agent.d" "$d/doc"
+      cp /home/build/cwagent-bin/* "$d/bin/"
+      chmod 0755 "$d/bin/"*
+      echo "${{package.version}}" > "$d/bin/CWAGENT_VERSION"
+      cd /home/build/amazon-cloudwatch-agent-${{package.version}}
+      cp cfg/commonconfig/common-config.toml "$d/etc/"
+      cp translator/config/schema.json "$d/doc/amazon-cloudwatch-agent-schema.json"
+      cp LICENSE "$d/LICENSE"
+
+
+  - runs: |
+      echo "Verifying amazon-cloudwatch-agent binary..."
+      "${{targets.destdir}}/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent" -version 2>&1 | grep -q "${{package.version}}" \
+        || { echo "FAIL: amazon-cloudwatch-agent binary did not run as expected"; exit 1; }

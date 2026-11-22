@@ -1,0 +1,73 @@
+# Minimal aws-ebs-csi-driver image - built from source via melange
+# Amazon EBS CSI driver (controller + node plugin, one binary).
+# The node plugin formats, checks, mounts and grows volumes by exec'ing the
+# standard tools (k8s mount-utils), so those ship in prod: util-linux pieces,
+# e2fsprogs and xfsprogs, plus nvme-cli for NVMe device identification.
+#
+# Declared prod-shell exception: e2fsprogs-extra (resize2fs) and xfsprogs-extra
+# (xfs_growfs) depend on bash, so bash is present. No busybox, no apk-tools.
+# Without them online volume expansion fails.
+#
+# Default user is nonroot (the controller role). The node DaemonSet must run as
+# root and privileged to mount - upstream's Helm chart already sets runAsUser: 0.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - wolfi-baselayout
+    - aws-ebs-csi-driver
+    - ca-certificates-bundle
+    - mount
+    - umount
+    - blkid
+    - lsblk
+    - blockdev
+    - findmnt
+    - util-linux-misc
+    - e2fsprogs
+    - e2fsprogs-extra
+    - xfsprogs-core
+    - xfsprogs-extra
+    - nvme-cli
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/aws-ebs-csi-driver
+
+work-dir: /tmp
+
+environment:
+  PATH: /usr/bin:/bin:/usr/sbin:/sbin
+  HOME: /tmp
+
+paths:
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-aws-ebs-csi-driver"
+  org.opencontainers.image.description: "Hardened aws-ebs-csi-driver built from source via melange with CVE patches on every rebuild"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/aws-ebs-csi-driver"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64

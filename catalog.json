@@ -2301,6 +2301,58 @@
       "seo_noun": "local LLM server",
       "summary": "Shell-less Ollama LLM server with CPU backends, built on Wolfi.",
       "description": "Ollama server for running open LLMs such as Llama, Qwen and Gemma locally over a REST API, with llama.cpp CPU backends. Shell-less and non-root."
+    },
+    {
+      "name": "amazon-cloudwatch-agent",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "amazon-cloudwatch-agent",
+      "upstream_url": "https://github.com/aws/amazon-cloudwatch-agent",
+      "seo_noun": "AWS",
+      "summary": "Shell-less Amazon CloudWatch Agent, built from source via melange.",
+      "description": "Amazon CloudWatch Agent ships host and container metrics, logs and traces to CloudWatch, incl. Container Insights. Upstream /opt/aws layout, shell-less."
+    },
+    {
+      "name": "aws-xray-daemon",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "aws-xray-daemon",
+      "upstream_url": "https://github.com/aws/aws-xray-daemon",
+      "seo_noun": "X-Ray daemon",
+      "summary": "Shell-less AWS X-Ray daemon, built from source via melange.",
+      "description": "AWS X-Ray daemon: receives trace segments from X-Ray SDKs over UDP 2000 and relays them to the X-Ray API. Same /xray entrypoint as upstream, non-root."
+    },
+    {
+      "name": "aws-load-balancer-controller",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "aws-load-balancer-controller",
+      "upstream_url": "https://kubernetes-sigs.github.io/aws-load-balancer-controller/",
+      "seo_noun": "EKS",
+      "summary": "Shell-less AWS Load Balancer Controller, built from source via melange.",
+      "description": "AWS Load Balancer Controller provisions ALBs for Kubernetes Ingress and NLBs for LoadBalancer Services on EKS. Drop-in /controller, shell-less, non-root."
+    },
+    {
+      "name": "aws-ebs-csi-driver",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "aws-ebs-csi-driver",
+      "upstream_url": "https://github.com/kubernetes-sigs/aws-ebs-csi-driver",
+      "seo_noun": "EBS CSI",
+      "summary": "Amazon EBS CSI driver with its mount and filesystem tools, from source.",
+      "description": "Amazon EBS CSI driver: controller and node plugin that create, attach, format, mount and resize EBS volumes for EKS. Ships ext4/XFS tools, no package manager."
     }
   ]
 }
