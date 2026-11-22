@@ -498,11 +498,11 @@ builds even where Wolfi has a package.
 | 7a | whoami | 48M | Apache-2.0 | Go; not in Wolfi | batch 7a |
 | 7a | falcosidekick | 38M | Apache-2.0 | Go; Wolfi frozen | batch 7a |
 | 7a | aws-node-termination-handler | 175M | Apache-2.0 | Go; Wolfi frozen | batch 7a |
-| 7b | amazon-cloudwatch-agent | 2.2B | MIT | Go; Wolfi frozen | next |
-| 7b | aws-xray-daemon | 1.6B | Apache-2.0 | Go; Wolfi frozen | next |
-| 7b | aws-efs-csi-driver | 1.3B | Apache-2.0 | Go; Wolfi frozen; needs nfs-utils/stunnel at runtime | next |
-| 7b | aws-load-balancer-controller | 165M | Apache-2.0 | Go; Wolfi frozen | next |
-| 7b | aws-ebs-csi-driver | 53M | Apache-2.0 | Go; Wolfi frozen | next |
+| 7b | amazon-cloudwatch-agent | 2.2B | MIT | Go; Wolfi frozen | batch 7b |
+| 7b | aws-xray-daemon | 1.6B | Apache-2.0 | Go; Wolfi frozen | batch 7b |
+| — | aws-efs-csi-driver | 1.3B | Apache-2.0 | Go; Wolfi frozen. Deferred from 7b: needs AWS's Python efs-utils + stunnel + nfs-utils at runtime, and `releases/latest` is a Helm-chart tag (needs a `github-tags` pattern) | own effort |
+| 7b | aws-load-balancer-controller | 165M | Apache-2.0 | Go; Wolfi frozen | batch 7b |
+| 7b | aws-ebs-csi-driver | 53M | Apache-2.0 | Go; Wolfi frozen; ships util-linux/e2fsprogs/xfsprogs/nvme-cli (bash comes with the -extra packages — declared exception) | batch 7b |
 | 7c | otelcol-contrib | 1.4B | Apache-2.0 | Go via ocb; large graph — CI build, likely SKIP_IMAGES | own effort |
 | 7c | harbor (core, jobservice, registryctl, exporter) | 30M+ each | Apache-2.0 | Go, one repo; completes harbor-portal | own effort |
 | 7c | postgis | 351M | GPL-2.0 | Wolfi `postgis-18` (fresh) on our postgres-slim — check ABI pairing first | own effort |

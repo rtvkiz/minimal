@@ -1881,3 +1881,39 @@
   links:
     releases: "https://github.com/aws/aws-node-termination-handler/releases"
     notes: "https://github.com/aws/aws-node-termination-handler/releases/tag/v{version}"
+
+- name: amazon-cloudwatch-agent
+  cron-enabled: true   # batch-7b (dispatch-validated on the onboarding branch)
+  files: [images/amazon-cloudwatch-agent/melange.yaml]
+  source: { type: github-releases-latest, repo: aws/amazon-cloudwatch-agent, strip-v: true }
+  tarball: { url: "https://github.com/aws/amazon-cloudwatch-agent/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/aws/amazon-cloudwatch-agent/releases"
+    notes: "https://github.com/aws/amazon-cloudwatch-agent/releases/tag/v{version}"
+
+- name: aws-xray-daemon
+  cron-enabled: true   # batch-7b (dispatch-validated on the onboarding branch)
+  files: [images/aws-xray-daemon/melange.yaml]
+  source: { type: github-releases-latest, repo: aws/aws-xray-daemon, strip-v: true }
+  tarball: { url: "https://github.com/aws/aws-xray-daemon/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/aws/aws-xray-daemon/releases"
+    notes: "https://github.com/aws/aws-xray-daemon/releases/tag/v{version}"
+
+- name: aws-load-balancer-controller
+  cron-enabled: true   # batch-7b (dispatch-validated on the onboarding branch)
+  files: [images/aws-load-balancer-controller/melange.yaml]
+  source: { type: github-releases-latest, repo: kubernetes-sigs/aws-load-balancer-controller, strip-v: true }
+  tarball: { url: "https://github.com/kubernetes-sigs/aws-load-balancer-controller/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/kubernetes-sigs/aws-load-balancer-controller/releases"
+    notes: "https://github.com/kubernetes-sigs/aws-load-balancer-controller/releases/tag/v{version}"
+
+- name: aws-ebs-csi-driver
+  cron-enabled: true   # batch-7b (dispatch-validated on the onboarding branch)
+  files: [images/aws-ebs-csi-driver/melange.yaml]
+  source: { type: github-releases-latest, repo: kubernetes-sigs/aws-ebs-csi-driver, strip-v: true }
+  tarball: { url: "https://github.com/kubernetes-sigs/aws-ebs-csi-driver/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases"
+    notes: "https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/tag/v{version}"

@@ -150,6 +150,10 @@ MYSQLD_EXPORTER_VERSION ?= $(call melange_version,images/mysqld-exporter/melange
 PHPMYADMIN_VERSION ?= $(call melange_version,images/phpmyadmin/melange.yaml)
 DRUPAL_VERSION ?= $(call melange_version,images/drupal/melange.yaml)
 MATOMO_VERSION ?= $(call melange_version,images/matomo/melange.yaml)
+AMAZON_CLOUDWATCH_AGENT_VERSION ?= $(call melange_version,images/amazon-cloudwatch-agent/melange.yaml)
+AWS_XRAY_DAEMON_VERSION ?= $(call melange_version,images/aws-xray-daemon/melange.yaml)
+AWS_LOAD_BALANCER_CONTROLLER_VERSION ?= $(call melange_version,images/aws-load-balancer-controller/melange.yaml)
+AWS_EBS_CSI_DRIVER_VERSION ?= $(call melange_version,images/aws-ebs-csi-driver/melange.yaml)
 GATEKEEPER_VERSION ?= $(call melange_version,images/gatekeeper/melange.yaml)
 ENVOY_GATEWAY_VERSION ?= $(call melange_version,images/envoy-gateway/melange.yaml)
 FALCOSIDEKICK_VERSION ?= $(call melange_version,images/falcosidekick/melange.yaml)
@@ -323,6 +327,10 @@ endef
 .PHONY: phpmyadmin phpmyadmin-melange test-phpmyadmin
 .PHONY: drupal drupal-melange test-drupal
 .PHONY: matomo matomo-melange test-matomo
+.PHONY: amazon-cloudwatch-agent amazon-cloudwatch-agent-melange test-amazon-cloudwatch-agent
+.PHONY: aws-xray-daemon aws-xray-daemon-melange test-aws-xray-daemon
+.PHONY: aws-load-balancer-controller aws-load-balancer-controller-melange test-aws-load-balancer-controller
+.PHONY: aws-ebs-csi-driver aws-ebs-csi-driver-melange test-aws-ebs-csi-driver
 .PHONY: gatekeeper gatekeeper-melange test-gatekeeper
 .PHONY: envoy-gateway envoy-gateway-melange test-envoy-gateway
 .PHONY: falcosidekick falcosidekick-melange test-falcosidekick
@@ -373,7 +381,7 @@ endef
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl sealed-secrets cloudnative-pg argo-rollouts trust-manager chartmuseum prometheus-operator kube-rbac-proxy cadvisor nginx-prometheus-exporter memcached-exporter argo-cd argo-cd-repo-server karpenter keda harbor-portal aws-cli mysqld-exporter mongodb-exporter configmap-reload contour cluster-autoscaler jmx-exporter openldap apache-exporter elasticsearch-exporter pgpool phpmyadmin groovy tomee jetty adminer maven composer bash gradle rust fluentd azure-cli ghost drupal matomo gatekeeper envoy-gateway falcosidekick whoami aws-node-termination-handler curl ollama
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl sealed-secrets cloudnative-pg argo-rollouts trust-manager chartmuseum prometheus-operator kube-rbac-proxy cadvisor nginx-prometheus-exporter memcached-exporter argo-cd argo-cd-repo-server karpenter keda harbor-portal aws-cli mysqld-exporter mongodb-exporter configmap-reload contour cluster-autoscaler jmx-exporter openldap apache-exporter elasticsearch-exporter pgpool phpmyadmin groovy tomee jetty adminer maven composer bash gradle rust fluentd azure-cli ghost drupal matomo gatekeeper envoy-gateway falcosidekick whoami aws-node-termination-handler curl ollama amazon-cloudwatch-agent aws-xray-daemon aws-load-balancer-controller aws-ebs-csi-driver
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -534,6 +542,10 @@ $(eval $(call DEV_IMAGE_RULE,mysqld-exporter,mysqld-exporter-melange,--repositor
 $(eval $(call DEV_IMAGE_RULE,phpmyadmin,phpmyadmin-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,drupal,drupal-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,matomo,matomo-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,amazon-cloudwatch-agent,amazon-cloudwatch-agent-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,aws-xray-daemon,aws-xray-daemon-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,aws-load-balancer-controller,aws-load-balancer-controller-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,aws-ebs-csi-driver,aws-ebs-csi-driver-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,gatekeeper,gatekeeper-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,envoy-gateway,envoy-gateway-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,falcosidekick,falcosidekick-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -3687,6 +3699,98 @@ ollama:
 	@rm -f ollama.tar sbom-*.spdx.json
 	@echo "✓ minimal-ollama built (Wolfi package)"
 
+amazon-cloudwatch-agent-melange: keygen
+	@echo "Building amazon-cloudwatch-agent $(AMAZON_CLOUDWATCH_AGENT_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/amazon-cloudwatch-agent/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ amazon-cloudwatch-agent package built from source"
+
+amazon-cloudwatch-agent: amazon-cloudwatch-agent-melange
+	@echo "Assembling minimal-amazon-cloudwatch-agent image with apko..."
+	apko build images/amazon-cloudwatch-agent/apko/amazon-cloudwatch-agent.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-amazon-cloudwatch-agent:$(VERSION) \
+		amazon-cloudwatch-agent.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < amazon-cloudwatch-agent.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-amazon-cloudwatch-agent:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-amazon-cloudwatch-agent:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-amazon-cloudwatch-agent:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-amazon-cloudwatch-agent:latest
+	@rm -f amazon-cloudwatch-agent.tar sbom-*.spdx.json
+	@echo "✓ minimal-amazon-cloudwatch-agent built (source build)"
+
+aws-xray-daemon-melange: keygen
+	@echo "Building aws-xray-daemon $(AWS_XRAY_DAEMON_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/aws-xray-daemon/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ aws-xray-daemon package built from source"
+
+aws-xray-daemon: aws-xray-daemon-melange
+	@echo "Assembling minimal-aws-xray-daemon image with apko..."
+	apko build images/aws-xray-daemon/apko/aws-xray-daemon.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-aws-xray-daemon:$(VERSION) \
+		aws-xray-daemon.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < aws-xray-daemon.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-aws-xray-daemon:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-aws-xray-daemon:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-aws-xray-daemon:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-aws-xray-daemon:latest
+	@rm -f aws-xray-daemon.tar sbom-*.spdx.json
+	@echo "✓ minimal-aws-xray-daemon built (source build)"
+
+aws-load-balancer-controller-melange: keygen
+	@echo "Building aws-load-balancer-controller $(AWS_LOAD_BALANCER_CONTROLLER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/aws-load-balancer-controller/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ aws-load-balancer-controller package built from source"
+
+aws-load-balancer-controller: aws-load-balancer-controller-melange
+	@echo "Assembling minimal-aws-load-balancer-controller image with apko..."
+	apko build images/aws-load-balancer-controller/apko/aws-load-balancer-controller.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-aws-load-balancer-controller:$(VERSION) \
+		aws-load-balancer-controller.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < aws-load-balancer-controller.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-aws-load-balancer-controller:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-aws-load-balancer-controller:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-aws-load-balancer-controller:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-aws-load-balancer-controller:latest
+	@rm -f aws-load-balancer-controller.tar sbom-*.spdx.json
+	@echo "✓ minimal-aws-load-balancer-controller built (source build)"
+
+aws-ebs-csi-driver-melange: keygen
+	@echo "Building aws-ebs-csi-driver $(AWS_EBS_CSI_DRIVER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/aws-ebs-csi-driver/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ aws-ebs-csi-driver package built from source"
+
+aws-ebs-csi-driver: aws-ebs-csi-driver-melange
+	@echo "Assembling minimal-aws-ebs-csi-driver image with apko..."
+	apko build images/aws-ebs-csi-driver/apko/aws-ebs-csi-driver.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-aws-ebs-csi-driver:$(VERSION) \
+		aws-ebs-csi-driver.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < aws-ebs-csi-driver.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-aws-ebs-csi-driver:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-aws-ebs-csi-driver:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-aws-ebs-csi-driver:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-aws-ebs-csi-driver:latest
+	@rm -f aws-ebs-csi-driver.tar sbom-*.spdx.json
+	@echo "✓ minimal-aws-ebs-csi-driver built (source build)"
+
 ghost-melange: keygen
 	@echo "Building ghost $(GHOST_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build images/ghost/melange.yaml \
@@ -4640,7 +4744,7 @@ scan-%:
 		$(REGISTRY)/$(OWNER)/minimal-$*:latest
 	@echo "✓ minimal-$*: scan passed"
 
-scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks scan-cmctl scan-sealed-secrets scan-cloudnative-pg scan-argo-rollouts scan-trust-manager scan-chartmuseum scan-prometheus-operator scan-kube-rbac-proxy scan-cadvisor scan-nginx-prometheus-exporter scan-memcached-exporter scan-argo-cd scan-argo-cd-repo-server scan-karpenter scan-keda scan-harbor-portal scan-aws-cli scan-openldap scan-mysqld-exporter scan-mongodb-exporter scan-configmap-reload scan-contour scan-cluster-autoscaler scan-jmx-exporter scan-apache-exporter scan-elasticsearch-exporter scan-pgpool scan-phpmyadmin scan-groovy scan-tomee scan-jetty scan-adminer scan-maven scan-composer scan-bash scan-gradle scan-rust scan-fluentd scan-azure-cli scan-ghost scan-drupal scan-matomo scan-gatekeeper scan-envoy-gateway scan-falcosidekick scan-whoami scan-aws-node-termination-handler scan-curl scan-ollama
+scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks scan-cmctl scan-sealed-secrets scan-cloudnative-pg scan-argo-rollouts scan-trust-manager scan-chartmuseum scan-prometheus-operator scan-kube-rbac-proxy scan-cadvisor scan-nginx-prometheus-exporter scan-memcached-exporter scan-argo-cd scan-argo-cd-repo-server scan-karpenter scan-keda scan-harbor-portal scan-aws-cli scan-openldap scan-mysqld-exporter scan-mongodb-exporter scan-configmap-reload scan-contour scan-cluster-autoscaler scan-jmx-exporter scan-apache-exporter scan-elasticsearch-exporter scan-pgpool scan-phpmyadmin scan-groovy scan-tomee scan-jetty scan-adminer scan-maven scan-composer scan-bash scan-gradle scan-rust scan-fluentd scan-azure-cli scan-ghost scan-drupal scan-matomo scan-gatekeeper scan-envoy-gateway scan-falcosidekick scan-whoami scan-aws-node-termination-handler scan-curl scan-ollama scan-amazon-cloudwatch-agent scan-aws-xray-daemon scan-aws-load-balancer-controller scan-aws-ebs-csi-driver
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -5076,7 +5180,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev test-cmctl test-cmctl-dev test-sealed-secrets test-sealed-secrets-dev test-cloudnative-pg test-cloudnative-pg-dev test-argo-rollouts test-argo-rollouts-dev test-trust-manager test-trust-manager-dev test-chartmuseum test-chartmuseum-dev test-prometheus-operator test-prometheus-operator-dev test-kube-rbac-proxy test-kube-rbac-proxy-dev test-cadvisor test-cadvisor-dev test-nginx-prometheus-exporter test-nginx-prometheus-exporter-dev test-memcached-exporter test-memcached-exporter-dev test-argo-cd test-argo-cd-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev test-harbor-portal test-harbor-portal-dev test-aws-cli test-mysqld-exporter test-mongodb-exporter test-configmap-reload test-contour test-cluster-autoscaler test-jmx-exporter test-openldap test-apache-exporter test-elasticsearch-exporter test-pgpool test-phpmyadmin test-groovy test-tomee test-jetty test-adminer test-maven test-composer test-bash test-gradle test-rust test-fluentd test-azure-cli test-ghost test-drupal test-matomo test-gatekeeper test-envoy-gateway test-falcosidekick test-whoami test-aws-node-termination-handler test-curl test-ollama
+test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev test-cmctl test-cmctl-dev test-sealed-secrets test-sealed-secrets-dev test-cloudnative-pg test-cloudnative-pg-dev test-argo-rollouts test-argo-rollouts-dev test-trust-manager test-trust-manager-dev test-chartmuseum test-chartmuseum-dev test-prometheus-operator test-prometheus-operator-dev test-kube-rbac-proxy test-kube-rbac-proxy-dev test-cadvisor test-cadvisor-dev test-nginx-prometheus-exporter test-nginx-prometheus-exporter-dev test-memcached-exporter test-memcached-exporter-dev test-argo-cd test-argo-cd-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev test-harbor-portal test-harbor-portal-dev test-aws-cli test-mysqld-exporter test-mongodb-exporter test-configmap-reload test-contour test-cluster-autoscaler test-jmx-exporter test-openldap test-apache-exporter test-elasticsearch-exporter test-pgpool test-phpmyadmin test-groovy test-tomee test-jetty test-adminer test-maven test-composer test-bash test-gradle test-rust test-fluentd test-azure-cli test-ghost test-drupal test-matomo test-gatekeeper test-envoy-gateway test-falcosidekick test-whoami test-aws-node-termination-handler test-curl test-ollama test-amazon-cloudwatch-agent test-aws-xray-daemon test-aws-load-balancer-controller test-aws-ebs-csi-driver
 
 $(eval $(call DEV_TEST_RULE,python))
 $(eval $(call DEV_TEST_RULE,node-slim))
@@ -5204,6 +5308,10 @@ $(eval $(call DEV_TEST_RULE,mysqld-exporter))
 $(eval $(call DEV_TEST_RULE,phpmyadmin))
 $(eval $(call DEV_TEST_RULE,drupal))
 $(eval $(call DEV_TEST_RULE,matomo))
+$(eval $(call DEV_TEST_RULE,amazon-cloudwatch-agent))
+$(eval $(call DEV_TEST_RULE,aws-xray-daemon))
+$(eval $(call DEV_TEST_RULE,aws-load-balancer-controller))
+$(eval $(call DEV_TEST_RULE,aws-ebs-csi-driver))
 $(eval $(call DEV_TEST_RULE,gatekeeper))
 $(eval $(call DEV_TEST_RULE,envoy-gateway))
 $(eval $(call DEV_TEST_RULE,falcosidekick))
@@ -5926,6 +6034,30 @@ test-ollama:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-ollama:latest" && \
 		images/ollama/test.sh
 	@echo "✓ ollama tests passed"
+
+test-amazon-cloudwatch-agent:
+	@echo "Testing amazon-cloudwatch-agent image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-amazon-cloudwatch-agent:latest" && \
+		images/amazon-cloudwatch-agent/test.sh
+	@echo "✓ amazon-cloudwatch-agent tests passed"
+
+test-aws-xray-daemon:
+	@echo "Testing aws-xray-daemon image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-aws-xray-daemon:latest" && \
+		images/aws-xray-daemon/test.sh
+	@echo "✓ aws-xray-daemon tests passed"
+
+test-aws-load-balancer-controller:
+	@echo "Testing aws-load-balancer-controller image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-aws-load-balancer-controller:latest" && \
+		images/aws-load-balancer-controller/test.sh
+	@echo "✓ aws-load-balancer-controller tests passed"
+
+test-aws-ebs-csi-driver:
+	@echo "Testing aws-ebs-csi-driver image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-aws-ebs-csi-driver:latest" && \
+		images/aws-ebs-csi-driver/test.sh
+	@echo "✓ aws-ebs-csi-driver tests passed"
 
 test-ghost:
 	@echo "Testing ghost image..."

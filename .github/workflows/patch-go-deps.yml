@@ -185,6 +185,10 @@ jobs:
             [chartmuseum]="/home/build/chartmuseum-${D}{{package.version}}"
             [prometheus-operator]="/home/build/prometheus-operator-${D}{{package.version}}"
             [kube-rbac-proxy]="/home/build/kube-rbac-proxy-${D}{{package.version}}"
+            [amazon-cloudwatch-agent]="/home/build/amazon-cloudwatch-agent-${D}{{package.version}}"
+            [aws-xray-daemon]="/home/build/aws-xray-daemon-${D}{{package.version}}"
+            [aws-load-balancer-controller]="/home/build/aws-load-balancer-controller-${D}{{package.version}}"
+            [aws-ebs-csi-driver]="/home/build/aws-ebs-csi-driver-${D}{{package.version}}"
             [gatekeeper]="/home/build/gatekeeper-${D}{{package.version}}"
             [envoy-gateway]="/home/build/envoy-gateway-${D}{{package.version}}"
             [falcosidekick]="/home/build/falcosidekick-${D}{{package.version}}"
@@ -302,6 +306,10 @@ jobs:
             [chartmuseum]="helm.sh/chartmuseum"
             [prometheus-operator]="github.com/prometheus-operator/prometheus-operator"
             [kube-rbac-proxy]="github.com/brancz/kube-rbac-proxy"
+            [amazon-cloudwatch-agent]="github.com/aws/amazon-cloudwatch-agent"
+            [aws-xray-daemon]="github.com/aws/aws-xray-daemon"
+            [aws-load-balancer-controller]="sigs.k8s.io/aws-load-balancer-controller/v3"
+            [aws-ebs-csi-driver]="github.com/kubernetes-sigs/aws-ebs-csi-driver"
             [gatekeeper]="github.com/open-policy-agent/gatekeeper/v3"
             [envoy-gateway]="github.com/envoyproxy/gateway"
             [falcosidekick]="github.com/falcosecurity/falcosidekick"
@@ -418,6 +426,10 @@ jobs:
             [chartmuseum]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [prometheus-operator]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [kube-rbac-proxy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [amazon-cloudwatch-agent]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [aws-xray-daemon]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [aws-load-balancer-controller]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [aws-ebs-csi-driver]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [gatekeeper]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [envoy-gateway]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [falcosidekick]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

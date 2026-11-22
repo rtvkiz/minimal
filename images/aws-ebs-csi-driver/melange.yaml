@@ -1,0 +1,72 @@
+# Melange build configuration for minimal aws-ebs-csi-driver
+# Amazon EBS CSI driver: one binary for the controller (CreateVolume/attach) and
+# the node plugin (format, mount, resize) that backs EBS PersistentVolumes on EKS.
+# Pure Go from source, CGO off (static). License: Apache-2.0.
+#
+# Source-built rather than apko-only: Wolfi's `aws-ebs-csi-driver` package stopped receiving builds in June 2026
+# (recipe removed from wolfi-dev/os), so it is frozen behind upstream.
+
+package:
+  # Named exactly what upstream calls it, not `aws-ebs-csi-driver-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: aws-ebs-csi-driver
+  version: 1.68.1
+  epoch: 0
+  description: "Minimal aws-ebs-csi-driver built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi still ships a (frozen) package of this name; apko picks the highest
+    # version across ALL repositories unless provider-priority pins ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 50f3c6ad40d5885d5e796803d6c6d2c7694ed792cd6451fecd65a379ca7c9593
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/aws-ebs-csi-driver-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/kubernetes-sigs/aws-ebs-csi-driver/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/aws-ebs-csi-driver.tar.gz
+      echo "${{vars.sha256}}  /home/build/aws-ebs-csi-driver.tar.gz" | sha256sum -c -
+      tar xzf /home/build/aws-ebs-csi-driver.tar.gz -C /home/build/aws-ebs-csi-driver-${{package.version}} --strip-components=1
+      rm /home/build/aws-ebs-csi-driver.tar.gz
+
+  - runs: |
+      cd /home/build/aws-ebs-csi-driver-${{package.version}}
+      PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath -mod=readonly \
+        -ldflags="-s -w -buildid= \
+          -X ${PKG}/pkg/driver.driverVersion=v${{package.version}} \
+          -X ${PKG}/pkg/cloud.driverVersion=v${{package.version}} \
+          -X ${PKG}/pkg/driver.gitCommit=v${{package.version}}" \
+        -o /home/build/aws-ebs-csi-driver-bin \
+        ./cmd/
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/aws-ebs-csi-driver-bin "${{targets.destdir}}/usr/bin/aws-ebs-csi-driver"
+      chmod 0755 "${{targets.destdir}}/usr/bin/aws-ebs-csi-driver"
+
+
+  - runs: |
+      echo "Verifying aws-ebs-csi-driver binary..."
+      "${{targets.destdir}}/usr/bin/aws-ebs-csi-driver" --version 2>&1 | grep -q "v${{package.version}}" \
+        || { echo "FAIL: aws-ebs-csi-driver binary did not run as expected"; exit 1; }
