@@ -866,7 +866,11 @@ jobs:
               # which prometheus removed in newer tags). Bumping
               # prometheus/prometheus to @latest breaks their build with
               # "module found (vX) but does not contain package ...". Pin them.
-              if { [ "$IMAGE" = "loki" ] || [ "$IMAGE" = "thanos" ]; } && [[ "$mod_ver" == github.com/prometheus/prometheus@* ]]; then
+              # amazon-cloudwatch-agent is the same shape: it pins a main-branch
+              # pseudo-version (v0.311.2-0.2026...), and AWS's prometheusreceiver
+              # fork uses discovery API that the v0.311.x release tags lack, so the
+              # "newer" tag fails with sdMetrics.RefreshManager undefined (PR #1210).
+              if { [ "$IMAGE" = "loki" ] || [ "$IMAGE" = "thanos" ] || [ "$IMAGE" = "amazon-cloudwatch-agent" ]; } && [[ "$mod_ver" == github.com/prometheus/prometheus@* ]]; then
                 echo "  Skipping incompatible ${IMAGE} module bump: $mod_ver"
                 continue
               fi
