@@ -11,7 +11,7 @@ package:
   # bare, as cpe:2.3:a:traefik:traefik:*, so none of them matched, and the
   # Wolfi secdb missed it too.
   name: traefik
-  version: 3.7.19
+  version: 3.8.0
   epoch: 0
   description: "Minimal Traefik cloud-native reverse proxy built from source"
   copyright:
@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: a9fe96056045a1ba8d7fadcaab0862bc9c9eec6975ecdccb85a2dd7e77a290fb
+  sha256: 9c3a5a5aefd7d77cc2c7052b47cba3bb88764a81e07e5504aa9a7f0445e908a0
 
 environment:
   contents:
