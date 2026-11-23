@@ -503,12 +503,15 @@ builds even where Wolfi has a package.
 | — | aws-efs-csi-driver | 1.3B | Apache-2.0 | Go; Wolfi frozen. Deferred from 7b: needs AWS's Python efs-utils + stunnel + nfs-utils at runtime, and `releases/latest` is a Helm-chart tag (needs a `github-tags` pattern) | own effort |
 | 7b | aws-load-balancer-controller | 165M | Apache-2.0 | Go; Wolfi frozen | batch 7b |
 | 7b | aws-ebs-csi-driver | 53M | Apache-2.0 | Go; Wolfi frozen; ships util-linux/e2fsprogs/xfsprogs/nvme-cli (bash comes with the -extra packages — declared exception) | batch 7b |
-| 7c | otelcol-contrib | 1.4B | Apache-2.0 | Go via ocb; large graph — CI build, likely SKIP_IMAGES | own effort |
-| 7c | harbor (core, jobservice, registryctl, exporter) | 30M+ each | Apache-2.0 | Go, one repo; completes harbor-portal | own effort |
-| 7c | postgis | 351M | GPL-2.0 | Wolfi `postgis-18` (fresh) on our postgres-slim — check ABI pairing first | own effort |
+| 7c | otelcol-contrib | 1.4B | Apache-2.0 | Wolfi `opentelemetry-collector-contrib` (fresh, ahead of upstream) + `-compat`; no source build needed | batch 7c |
+| 7c | percona-xtradb-cluster-operator | 2.7B | Apache-2.0 | Go; the image is also the init-container toolbox, so bash + busybox ship in prod (declared) | batch 7c |
+| 7c | kong-ingress-controller | 403M | Apache-2.0 | Go; pairs with our kong | batch 7c |
+| 7c | jruby | 52M | EPL-2.0/GPL/LGPL | jruby-dist on OpenJDK 25 (Wolfi's jruby-10.1 lags); shell-less java entrypoint | batch 7c |
+| 7d | harbor (core, jobservice, registryctl, exporter + registry, trivy-adapter) | 30M+ each | Apache-2.0 | Go, one repo (src/) plus the distribution and trivy-adapter forks (Wolfi frozen); completes harbor-portal; needs a multi-container test | next |
+| 7c | postgis | 351M | GPL-2.0 | Wolfi `postgis-18` on the postgres-slim base; moves in lockstep with the postgres family; carries perl (postgis-18 dependency) | batch 7c |
 | — | calico (node, cni, kube-controllers, typha) | 1.7B / 1.3B / 700M | Apache-2.0 | Go + BPF/iptables, multi-image | own effort |
 | — | jenkins inbound-agent | 522M | MIT | JAR on JRE; agents need a shell + git (dev-shaped prod) | needs a call |
-| — | selenium standalone-chrome | 528M | Apache-2.0 | Java + Chromium; Chromium CVE churn | needs a call |
+| — | selenium standalone-chrome | 528M | Apache-2.0 | Java + Chromium; Wolfi chromium frozen since June 2026 | blocked |
 | — | falco | 88M | Apache-2.0 | C++ + kernel driver/eBPF | own effort |
 | — | mediawiki / odoo / owncloud | 50–60M | GPL / LGPL / AGPL | PHP/Python apps (drupal/matomo pattern) | later |
 

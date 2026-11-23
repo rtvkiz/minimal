@@ -171,6 +171,9 @@ jobs:
             {"name":"fluentd","variants":["prod","dev"]},
             {"name":"azure-cli","variants":["prod","dev"]},
             {"name":"ghost","variants":["prod","dev"]},
+            {"name":"percona-xtradb-cluster-operator","variants":["prod","dev"]},
+            {"name":"kong-ingress-controller","variants":["prod","dev"]},
+            {"name":"jruby","variants":["prod","dev"]},
             {"name":"amazon-cloudwatch-agent","variants":["prod","dev"]},
             {"name":"aws-xray-daemon","variants":["prod","dev"]},
             {"name":"aws-load-balancer-controller","variants":["prod","dev"]},
@@ -205,6 +208,8 @@ jobs:
             {"name":"gradle","grep":"gradle-[0-9]","variants":["prod","dev"]},
             {"name":"rust","grep":"rust-[0-9]","variants":["prod","dev"]},
             {"name":"bash","grep":"bash","variants":["prod","dev"]},
+            {"name":"otelcol-contrib","grep":"opentelemetry-collector-contrib","variants":["prod","dev"]},
+            {"name":"postgis","grep":"postgis-[0-9]|postgresql-[0-9]","variants":["prod","dev"]},
             {"name":"curl","grep":"curl","variants":["prod","dev"]},
             {"name":"ollama","grep":"ollama","variants":["prod","dev"]},
             {"name":"composer","grep":"composer","variants":["prod","dev"]}

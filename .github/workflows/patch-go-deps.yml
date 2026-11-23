@@ -185,6 +185,8 @@ jobs:
             [chartmuseum]="/home/build/chartmuseum-${D}{{package.version}}"
             [prometheus-operator]="/home/build/prometheus-operator-${D}{{package.version}}"
             [kube-rbac-proxy]="/home/build/kube-rbac-proxy-${D}{{package.version}}"
+            [percona-xtradb-cluster-operator]="/home/build/percona-xtradb-cluster-operator-${D}{{package.version}}"
+            [kong-ingress-controller]="/home/build/kong-ingress-controller-${D}{{package.version}}"
             [amazon-cloudwatch-agent]="/home/build/amazon-cloudwatch-agent-${D}{{package.version}}"
             [aws-xray-daemon]="/home/build/aws-xray-daemon-${D}{{package.version}}"
             [aws-load-balancer-controller]="/home/build/aws-load-balancer-controller-${D}{{package.version}}"
@@ -306,6 +308,8 @@ jobs:
             [chartmuseum]="helm.sh/chartmuseum"
             [prometheus-operator]="github.com/prometheus-operator/prometheus-operator"
             [kube-rbac-proxy]="github.com/brancz/kube-rbac-proxy"
+            [percona-xtradb-cluster-operator]="github.com/percona/percona-xtradb-cluster-operator"
+            [kong-ingress-controller]="github.com/kong/kubernetes-ingress-controller/v3"
             [amazon-cloudwatch-agent]="github.com/aws/amazon-cloudwatch-agent"
             [aws-xray-daemon]="github.com/aws/aws-xray-daemon"
             [aws-load-balancer-controller]="sigs.k8s.io/aws-load-balancer-controller/v3"
@@ -426,6 +430,8 @@ jobs:
             [chartmuseum]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [prometheus-operator]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [kube-rbac-proxy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [percona-xtradb-cluster-operator]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kong-ingress-controller]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [amazon-cloudwatch-agent]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [aws-xray-daemon]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
             [aws-load-balancer-controller]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'

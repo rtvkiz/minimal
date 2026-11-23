@@ -1,0 +1,70 @@
+# Melange build configuration for minimal kong-ingress-controller
+# Kong Ingress Controller (KIC): configures Kong Gateway from Kubernetes Ingress,
+# Gateway API and Kong CRDs. Pairs with the minimal kong image as its data plane.
+# Pure Go from source, CGO off (static, shell-less). License: Apache-2.0.
+#
+# Source-built: Wolfi does not package the controller.
+
+package:
+  # Named for the product upstream ships (Kong/kubernetes-ingress-controller,
+  # published as kong/kubernetes-ingress-controller), not `-minimal` — see
+  # docs/onboarding.md "Package naming and scanner visibility".
+  name: kong-ingress-controller
+  version: 3.5.15
+  epoch: 0
+  description: "Minimal kong-ingress-controller built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 99dab617be8aafc76cde92d16fe3217001eabb6c7a38e793542e9b0b1cce4941
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/kong-ingress-controller-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/Kong/kubernetes-ingress-controller/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/kong-ingress-controller.tar.gz
+      echo "${{vars.sha256}}  /home/build/kong-ingress-controller.tar.gz" | sha256sum -c -
+      tar xzf /home/build/kong-ingress-controller.tar.gz -C /home/build/kong-ingress-controller-${{package.version}} --strip-components=1
+      rm /home/build/kong-ingress-controller.tar.gz
+
+  - runs: |
+      cd /home/build/kong-ingress-controller-${{package.version}}
+      M=github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -buildid= \
+          -X $M.Release=v${{package.version}} \
+          -X $M.Commit=v${{package.version}} \
+          -X $M.Repo=https://github.com/Kong/kubernetes-ingress-controller.git \
+          -X $M.ProjectURL=github.com/kong/kubernetes-ingress-controller" \
+        -o /home/build/kong-ingress-controller-bin \
+        ./internal/cmd/main.go
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/kong-ingress-controller-bin "${{targets.destdir}}/usr/bin/kong-ingress-controller"
+      chmod 0755 "${{targets.destdir}}/usr/bin/kong-ingress-controller"
+      # Upstream's image and Helm chart run /manager.
+      ln -sf usr/bin/kong-ingress-controller "${{targets.destdir}}/manager"
+
+  - runs: |
+      echo "Verifying kong-ingress-controller binary..."
+      "${{targets.destdir}}/usr/bin/kong-ingress-controller" version 2>&1 | grep -q "v${{package.version}}" \
+        || { echo "FAIL: kong-ingress-controller binary did not run as expected"; exit 1; }

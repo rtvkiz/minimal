@@ -20,6 +20,8 @@ wolfi-versioned:
   - postgres-slim   # postgresql-*
   - patroni         # patroni (unversioned) BUT pins postgresql-* like postgres-slim;
                     # update-wolfi-packages.yml rewrites both in lockstep
+  - postgis         # postgis-N + postgresql-N, same family; moves in lockstep with
+                    # postgres-slim/patroni (update-wolfi-packages.yml)
   - couchdb         # couchdb-3.N (line bumped by update-wolfi-packages.yml)
   - aws-cli         # aws-cli-2 (major-line PR is opened for review, not auto-merged)
   - openldap        # openldap-2.7 (new 2.N line PR is opened for review, not auto-merged)
@@ -40,6 +42,7 @@ wolfi-rolling:
   - bash            # bash (unversioned)
   - curl            # curl (unversioned)
   - ollama          # ollama + ollama-cpu (unversioned)
+  - otelcol-contrib # opentelemetry-collector-contrib (+ -compat), unversioned
   - composer        # composer (unversioned); PHP pinned to php-8.5 (line bumped by hand, like the JDK pins)
 
 # bespoke: SOURCE-BUILT images auto-updated by a dedicated workflow instead of

@@ -691,8 +691,11 @@ jobs:
           # here and classified wolfi-rolling, so its pin was watched by nothing —
           # postgres-slim would advance while patroni silently stayed behind.
           # Detection still reads postgres-slim as the source of truth.
-          for f in images/postgres-slim/apko/*.yaml images/patroni/apko/*.yaml; do
-            sed -i -E "s/\b(postgresql|libpq|ecpg|pgaudit)-${OLD_VER}\b/\1-${NEW_VER}/g" "$f"
+          # postgis is postgres-slim plus postgis-N, which Wolfi builds per
+          # PostgreSQL major: it moves with the family too, or it would pair
+          # postgis-18 with a postgresql-19 server and fail to load.
+          for f in images/postgres-slim/apko/*.yaml images/patroni/apko/*.yaml images/postgis/apko/*.yaml; do
+            sed -i -E "s/\b(postgresql|libpq|ecpg|pgaudit|postgis)-${OLD_VER}\b/\1-${NEW_VER}/g" "$f"
           done
           BRANCH="update-postgres-${NEW}"
           git config user.name "github-actions[bot]"

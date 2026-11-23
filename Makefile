@@ -150,6 +150,9 @@ MYSQLD_EXPORTER_VERSION ?= $(call melange_version,images/mysqld-exporter/melange
 PHPMYADMIN_VERSION ?= $(call melange_version,images/phpmyadmin/melange.yaml)
 DRUPAL_VERSION ?= $(call melange_version,images/drupal/melange.yaml)
 MATOMO_VERSION ?= $(call melange_version,images/matomo/melange.yaml)
+PERCONA_XTRADB_CLUSTER_OPERATOR_VERSION ?= $(call melange_version,images/percona-xtradb-cluster-operator/melange.yaml)
+KONG_INGRESS_CONTROLLER_VERSION ?= $(call melange_version,images/kong-ingress-controller/melange.yaml)
+JRUBY_VERSION ?= $(call melange_version,images/jruby/melange.yaml)
 AMAZON_CLOUDWATCH_AGENT_VERSION ?= $(call melange_version,images/amazon-cloudwatch-agent/melange.yaml)
 AWS_XRAY_DAEMON_VERSION ?= $(call melange_version,images/aws-xray-daemon/melange.yaml)
 AWS_LOAD_BALANCER_CONTROLLER_VERSION ?= $(call melange_version,images/aws-load-balancer-controller/melange.yaml)
@@ -327,6 +330,11 @@ endef
 .PHONY: phpmyadmin phpmyadmin-melange test-phpmyadmin
 .PHONY: drupal drupal-melange test-drupal
 .PHONY: matomo matomo-melange test-matomo
+.PHONY: percona-xtradb-cluster-operator percona-xtradb-cluster-operator-melange test-percona-xtradb-cluster-operator
+.PHONY: kong-ingress-controller kong-ingress-controller-melange test-kong-ingress-controller
+.PHONY: jruby jruby-melange test-jruby
+.PHONY: otelcol-contrib otelcol-contrib-dev test-otelcol-contrib test-otelcol-contrib-dev
+.PHONY: postgis postgis-dev test-postgis test-postgis-dev
 .PHONY: amazon-cloudwatch-agent amazon-cloudwatch-agent-melange test-amazon-cloudwatch-agent
 .PHONY: aws-xray-daemon aws-xray-daemon-melange test-aws-xray-daemon
 .PHONY: aws-load-balancer-controller aws-load-balancer-controller-melange test-aws-load-balancer-controller
@@ -381,7 +389,7 @@ endef
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl sealed-secrets cloudnative-pg argo-rollouts trust-manager chartmuseum prometheus-operator kube-rbac-proxy cadvisor nginx-prometheus-exporter memcached-exporter argo-cd argo-cd-repo-server karpenter keda harbor-portal aws-cli mysqld-exporter mongodb-exporter configmap-reload contour cluster-autoscaler jmx-exporter openldap apache-exporter elasticsearch-exporter pgpool phpmyadmin groovy tomee jetty adminer maven composer bash gradle rust fluentd azure-cli ghost drupal matomo gatekeeper envoy-gateway falcosidekick whoami aws-node-termination-handler curl ollama amazon-cloudwatch-agent aws-xray-daemon aws-load-balancer-controller aws-ebs-csi-driver
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl sealed-secrets cloudnative-pg argo-rollouts trust-manager chartmuseum prometheus-operator kube-rbac-proxy cadvisor nginx-prometheus-exporter memcached-exporter argo-cd argo-cd-repo-server karpenter keda harbor-portal aws-cli mysqld-exporter mongodb-exporter configmap-reload contour cluster-autoscaler jmx-exporter openldap apache-exporter elasticsearch-exporter pgpool phpmyadmin groovy tomee jetty adminer maven composer bash gradle rust fluentd azure-cli ghost drupal matomo gatekeeper envoy-gateway falcosidekick whoami aws-node-termination-handler curl ollama amazon-cloudwatch-agent aws-xray-daemon aws-load-balancer-controller aws-ebs-csi-driver percona-xtradb-cluster-operator kong-ingress-controller jruby otelcol-contrib postgis
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -542,6 +550,11 @@ $(eval $(call DEV_IMAGE_RULE,mysqld-exporter,mysqld-exporter-melange,--repositor
 $(eval $(call DEV_IMAGE_RULE,phpmyadmin,phpmyadmin-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,drupal,drupal-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,matomo,matomo-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,percona-xtradb-cluster-operator,percona-xtradb-cluster-operator-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,kong-ingress-controller,kong-ingress-controller-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,jruby,jruby-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,otelcol-contrib))
+$(eval $(call DEV_IMAGE_RULE,postgis))
 $(eval $(call DEV_IMAGE_RULE,amazon-cloudwatch-agent,amazon-cloudwatch-agent-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,aws-xray-daemon,aws-xray-daemon-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,aws-load-balancer-controller,aws-load-balancer-controller-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -3791,6 +3804,103 @@ aws-ebs-csi-driver: aws-ebs-csi-driver-melange
 	@rm -f aws-ebs-csi-driver.tar sbom-*.spdx.json
 	@echo "✓ minimal-aws-ebs-csi-driver built (source build)"
 
+percona-xtradb-cluster-operator-melange: keygen
+	@echo "Building percona-xtradb-cluster-operator $(PERCONA_XTRADB_CLUSTER_OPERATOR_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/percona-xtradb-cluster-operator/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ percona-xtradb-cluster-operator package built from source"
+
+percona-xtradb-cluster-operator: percona-xtradb-cluster-operator-melange
+	@echo "Assembling minimal-percona-xtradb-cluster-operator image with apko..."
+	apko build images/percona-xtradb-cluster-operator/apko/percona-xtradb-cluster-operator.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-percona-xtradb-cluster-operator:$(VERSION) \
+		percona-xtradb-cluster-operator.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < percona-xtradb-cluster-operator.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-percona-xtradb-cluster-operator:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-percona-xtradb-cluster-operator:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-percona-xtradb-cluster-operator:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-percona-xtradb-cluster-operator:latest
+	@rm -f percona-xtradb-cluster-operator.tar sbom-*.spdx.json
+	@echo "✓ minimal-percona-xtradb-cluster-operator built (source build)"
+
+kong-ingress-controller-melange: keygen
+	@echo "Building kong-ingress-controller $(KONG_INGRESS_CONTROLLER_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/kong-ingress-controller/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ kong-ingress-controller package built from source"
+
+kong-ingress-controller: kong-ingress-controller-melange
+	@echo "Assembling minimal-kong-ingress-controller image with apko..."
+	apko build images/kong-ingress-controller/apko/kong-ingress-controller.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-kong-ingress-controller:$(VERSION) \
+		kong-ingress-controller.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < kong-ingress-controller.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kong-ingress-controller:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kong-ingress-controller:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-kong-ingress-controller:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-kong-ingress-controller:latest
+	@rm -f kong-ingress-controller.tar sbom-*.spdx.json
+	@echo "✓ minimal-kong-ingress-controller built (source build)"
+
+jruby-melange: keygen
+	@echo "Building jruby $(JRUBY_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/jruby/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ jruby package built from source"
+
+jruby: jruby-melange
+	@echo "Assembling minimal-jruby image with apko..."
+	apko build images/jruby/apko/jruby.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-jruby:$(VERSION) \
+		jruby.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < jruby.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-jruby:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-jruby:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-jruby:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-jruby:latest
+	@rm -f jruby.tar sbom-*.spdx.json
+	@echo "✓ minimal-jruby built (source build)"
+
+otelcol-contrib:
+	@echo "Assembling minimal-otelcol-contrib image with apko..."
+	apko build images/otelcol-contrib/apko/otelcol-contrib.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-otelcol-contrib:$(VERSION) \
+		otelcol-contrib.tar \
+		--arch x86_64
+	docker load < otelcol-contrib.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-otelcol-contrib:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-otelcol-contrib:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-otelcol-contrib:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-otelcol-contrib:latest
+	@rm -f otelcol-contrib.tar sbom-*.spdx.json
+	@echo "✓ minimal-otelcol-contrib built (Wolfi package)"
+
+postgis:
+	@echo "Assembling minimal-postgis image with apko..."
+	apko build images/postgis/apko/postgis.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-postgis:$(VERSION) \
+		postgis.tar \
+		--arch x86_64
+	docker load < postgis.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-postgis:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-postgis:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-postgis:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-postgis:latest
+	@rm -f postgis.tar sbom-*.spdx.json
+	@echo "✓ minimal-postgis built (Wolfi package)"
+
 ghost-melange: keygen
 	@echo "Building ghost $(GHOST_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build images/ghost/melange.yaml \
@@ -4744,7 +4854,7 @@ scan-%:
 		$(REGISTRY)/$(OWNER)/minimal-$*:latest
 	@echo "✓ minimal-$*: scan passed"
 
-scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks scan-cmctl scan-sealed-secrets scan-cloudnative-pg scan-argo-rollouts scan-trust-manager scan-chartmuseum scan-prometheus-operator scan-kube-rbac-proxy scan-cadvisor scan-nginx-prometheus-exporter scan-memcached-exporter scan-argo-cd scan-argo-cd-repo-server scan-karpenter scan-keda scan-harbor-portal scan-aws-cli scan-openldap scan-mysqld-exporter scan-mongodb-exporter scan-configmap-reload scan-contour scan-cluster-autoscaler scan-jmx-exporter scan-apache-exporter scan-elasticsearch-exporter scan-pgpool scan-phpmyadmin scan-groovy scan-tomee scan-jetty scan-adminer scan-maven scan-composer scan-bash scan-gradle scan-rust scan-fluentd scan-azure-cli scan-ghost scan-drupal scan-matomo scan-gatekeeper scan-envoy-gateway scan-falcosidekick scan-whoami scan-aws-node-termination-handler scan-curl scan-ollama scan-amazon-cloudwatch-agent scan-aws-xray-daemon scan-aws-load-balancer-controller scan-aws-ebs-csi-driver
+scan: scan-python scan-node-slim scan-bun scan-go scan-java scan-ruby scan-php scan-dotnet scan-deno scan-mysql scan-mariadb scan-postgres-slim scan-pgbouncer scan-unbound scan-dnsmasq scan-keepalived scan-vector scan-patroni scan-metrics-server scan-external-dns scan-velero scan-kaniko scan-step-ca scan-skopeo scan-sqlite scan-opensearch scan-meilisearch scan-airflow scan-wordpress scan-redis-slim scan-valkey scan-memcached scan-kafka scan-zookeeper scan-cassandra scan-solr scan-pulsar scan-tomcat scan-rabbitmq scan-nats scan-mosquitto scan-nginx scan-httpd scan-caddy scan-haproxy scan-traefik scan-envoy scan-oauth2-proxy scan-prometheus scan-alertmanager scan-victoria-metrics scan-thanos scan-mimir scan-jaeger scan-loki scan-tempo scan-otelcol scan-fluent-bit scan-telegraf scan-node-exporter scan-blackbox-exporter scan-pushgateway scan-coredns scan-etcd scan-openbao scan-keycloak scan-qdrant scan-registry scan-consul scan-helm scan-kubectl scan-opentofu scan-trivy scan-cosign scan-syft scan-grype scan-osv-scanner scan-oras scan-notation scan-conftest scan-kubeconform scan-kube-bench scan-trufflehog scan-flux scan-kustomize scan-sops scan-crane scan-kubeseal scan-helmfile scan-regctl scan-stern scan-gitleaks scan-step-cli scan-opa scan-jenkins scan-gitea scan-minio scan-rails scan-mailpit scan-external-secrets scan-kyverno scan-flagger scan-reloader scan-postgres-exporter scan-headscale scan-victoria-logs scan-metallb scan-temporal-server scan-temporal-admin-tools scan-temporal-ui-server scan-kong scan-couchdb scan-kvrocks scan-cmctl scan-sealed-secrets scan-cloudnative-pg scan-argo-rollouts scan-trust-manager scan-chartmuseum scan-prometheus-operator scan-kube-rbac-proxy scan-cadvisor scan-nginx-prometheus-exporter scan-memcached-exporter scan-argo-cd scan-argo-cd-repo-server scan-karpenter scan-keda scan-harbor-portal scan-aws-cli scan-openldap scan-mysqld-exporter scan-mongodb-exporter scan-configmap-reload scan-contour scan-cluster-autoscaler scan-jmx-exporter scan-apache-exporter scan-elasticsearch-exporter scan-pgpool scan-phpmyadmin scan-groovy scan-tomee scan-jetty scan-adminer scan-maven scan-composer scan-bash scan-gradle scan-rust scan-fluentd scan-azure-cli scan-ghost scan-drupal scan-matomo scan-gatekeeper scan-envoy-gateway scan-falcosidekick scan-whoami scan-aws-node-termination-handler scan-curl scan-ollama scan-amazon-cloudwatch-agent scan-aws-xray-daemon scan-aws-load-balancer-controller scan-aws-ebs-csi-driver scan-percona-xtradb-cluster-operator scan-kong-ingress-controller scan-jruby scan-otelcol-contrib scan-postgis
 
 scan-python:
 	@echo "Scanning minimal-python..."
@@ -5180,7 +5290,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev test-cmctl test-cmctl-dev test-sealed-secrets test-sealed-secrets-dev test-cloudnative-pg test-cloudnative-pg-dev test-argo-rollouts test-argo-rollouts-dev test-trust-manager test-trust-manager-dev test-chartmuseum test-chartmuseum-dev test-prometheus-operator test-prometheus-operator-dev test-kube-rbac-proxy test-kube-rbac-proxy-dev test-cadvisor test-cadvisor-dev test-nginx-prometheus-exporter test-nginx-prometheus-exporter-dev test-memcached-exporter test-memcached-exporter-dev test-argo-cd test-argo-cd-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev test-harbor-portal test-harbor-portal-dev test-aws-cli test-mysqld-exporter test-mongodb-exporter test-configmap-reload test-contour test-cluster-autoscaler test-jmx-exporter test-openldap test-apache-exporter test-elasticsearch-exporter test-pgpool test-phpmyadmin test-groovy test-tomee test-jetty test-adminer test-maven test-composer test-bash test-gradle test-rust test-fluentd test-azure-cli test-ghost test-drupal test-matomo test-gatekeeper test-envoy-gateway test-falcosidekick test-whoami test-aws-node-termination-handler test-curl test-ollama test-amazon-cloudwatch-agent test-aws-xray-daemon test-aws-load-balancer-controller test-aws-ebs-csi-driver
+test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev test-cmctl test-cmctl-dev test-sealed-secrets test-sealed-secrets-dev test-cloudnative-pg test-cloudnative-pg-dev test-argo-rollouts test-argo-rollouts-dev test-trust-manager test-trust-manager-dev test-chartmuseum test-chartmuseum-dev test-prometheus-operator test-prometheus-operator-dev test-kube-rbac-proxy test-kube-rbac-proxy-dev test-cadvisor test-cadvisor-dev test-nginx-prometheus-exporter test-nginx-prometheus-exporter-dev test-memcached-exporter test-memcached-exporter-dev test-argo-cd test-argo-cd-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev test-harbor-portal test-harbor-portal-dev test-aws-cli test-mysqld-exporter test-mongodb-exporter test-configmap-reload test-contour test-cluster-autoscaler test-jmx-exporter test-openldap test-apache-exporter test-elasticsearch-exporter test-pgpool test-phpmyadmin test-groovy test-tomee test-jetty test-adminer test-maven test-composer test-bash test-gradle test-rust test-fluentd test-azure-cli test-ghost test-drupal test-matomo test-gatekeeper test-envoy-gateway test-falcosidekick test-whoami test-aws-node-termination-handler test-curl test-ollama test-amazon-cloudwatch-agent test-aws-xray-daemon test-aws-load-balancer-controller test-aws-ebs-csi-driver test-percona-xtradb-cluster-operator test-kong-ingress-controller test-jruby test-otelcol-contrib test-postgis
 
 $(eval $(call DEV_TEST_RULE,python))
 $(eval $(call DEV_TEST_RULE,node-slim))
@@ -5308,6 +5418,11 @@ $(eval $(call DEV_TEST_RULE,mysqld-exporter))
 $(eval $(call DEV_TEST_RULE,phpmyadmin))
 $(eval $(call DEV_TEST_RULE,drupal))
 $(eval $(call DEV_TEST_RULE,matomo))
+$(eval $(call DEV_TEST_RULE,percona-xtradb-cluster-operator))
+$(eval $(call DEV_TEST_RULE,kong-ingress-controller))
+$(eval $(call DEV_TEST_RULE,jruby))
+$(eval $(call DEV_TEST_RULE,otelcol-contrib))
+$(eval $(call DEV_TEST_RULE,postgis))
 $(eval $(call DEV_TEST_RULE,amazon-cloudwatch-agent))
 $(eval $(call DEV_TEST_RULE,aws-xray-daemon))
 $(eval $(call DEV_TEST_RULE,aws-load-balancer-controller))
@@ -6058,6 +6173,36 @@ test-aws-ebs-csi-driver:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-aws-ebs-csi-driver:latest" && \
 		images/aws-ebs-csi-driver/test.sh
 	@echo "✓ aws-ebs-csi-driver tests passed"
+
+test-percona-xtradb-cluster-operator:
+	@echo "Testing percona-xtradb-cluster-operator image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-percona-xtradb-cluster-operator:latest" && \
+		images/percona-xtradb-cluster-operator/test.sh
+	@echo "✓ percona-xtradb-cluster-operator tests passed"
+
+test-kong-ingress-controller:
+	@echo "Testing kong-ingress-controller image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-kong-ingress-controller:latest" && \
+		images/kong-ingress-controller/test.sh
+	@echo "✓ kong-ingress-controller tests passed"
+
+test-jruby:
+	@echo "Testing jruby image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-jruby:latest" && \
+		images/jruby/test.sh
+	@echo "✓ jruby tests passed"
+
+test-otelcol-contrib:
+	@echo "Testing otelcol-contrib image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-otelcol-contrib:latest" && \
+		images/otelcol-contrib/test.sh
+	@echo "✓ otelcol-contrib tests passed"
+
+test-postgis:
+	@echo "Testing postgis image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-postgis:latest" && \
+		images/postgis/test.sh
+	@echo "✓ postgis tests passed"
 
 test-ghost:
 	@echo "Testing ghost image..."

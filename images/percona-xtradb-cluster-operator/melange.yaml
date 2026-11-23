@@ -1,0 +1,102 @@
+# Melange build configuration for minimal percona-xtradb-cluster-operator
+# Percona Operator for MySQL (XtraDB Cluster): runs Galera-replicated MySQL on
+# Kubernetes with HAProxy/ProxySQL, backups and point-in-time recovery.
+# Go from source, CGO off (static). License: Apache-2.0.
+#
+# Source-built: Wolfi does not package the operator.
+#
+# The operator image is also the init-container toolbox: its init containers
+# run build/*-init-entrypoint.sh FROM THIS IMAGE to `install` the helper
+# binaries and scripts below into the PXC, HAProxy, ProxySQL and backup pods.
+# So everything upstream's Dockerfile copies to / is shipped at the same path.
+
+package:
+  # Named exactly what upstream calls it — see docs/onboarding.md
+  # "Package naming and scanner visibility".
+  name: percona-xtradb-cluster-operator
+  version: 1.20.0
+  epoch: 0
+  description: "Minimal percona-xtradb-cluster-operator built from source"
+  copyright:
+    - license: Apache-2.0
+
+vars:
+  # SHA256 of the source tarball - updated by update-versions.yml workflow
+  sha256: 541ef85e2713057ec486f7e2cd482765046a52315f4db9f4f8b2fc0d9bbf2502
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build/percona-xtradb-cluster-operator-${{package.version}}
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/percona/percona-xtradb-cluster-operator/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/percona-xtradb-cluster-operator.tar.gz
+      echo "${{vars.sha256}}  /home/build/percona-xtradb-cluster-operator.tar.gz" | sha256sum -c -
+      tar xzf /home/build/percona-xtradb-cluster-operator.tar.gz -C /home/build/percona-xtradb-cluster-operator-${{package.version}} --strip-components=1
+      rm /home/build/percona-xtradb-cluster-operator.tar.gz
+
+  - runs: |
+      cd /home/build/percona-xtradb-cluster-operator-${{package.version}}
+      mkdir -p /home/build/pxc-bin
+      # Same six binaries upstream's build/Dockerfile builds.
+      for spec in \
+        percona-xtradb-cluster-operator:cmd/manager/main.go \
+        peer-list:cmd/peer-list/main.go \
+        pitr:cmd/pitr/main.go \
+        xtrabackup-server-sidecar:cmd/xtrabackup/server/main.go \
+        xtrabackup-run-backup:cmd/xtrabackup/run-backup/main.go \
+        mysql-state-monitor:cmd/mysql-state-monitor/main.go; do
+        out=${spec%%:*}; main=${spec#*:}
+        GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+          -trimpath \
+          -ldflags="-s -w -buildid= -X main.GitCommit=v${{package.version}} -X main.GitBranch=v${{package.version}}" \
+          -o /home/build/pxc-bin/$out \
+          ./$main
+      done
+
+  - runs: |
+      d="${{targets.destdir}}"
+      src=/home/build/percona-xtradb-cluster-operator-${{package.version}}
+      mkdir -p "$d/usr/local/bin" "$d/licenses"
+      install -m 0755 /home/build/pxc-bin/percona-xtradb-cluster-operator "$d/usr/local/bin/percona-xtradb-cluster-operator"
+      for b in peer-list pitr mysql-state-monitor xtrabackup-server-sidecar xtrabackup-run-backup; do
+        install -m 0755 /home/build/pxc-bin/$b "$d/$b"
+      done
+      # Scripts and configs the init containers install into the data-plane
+      # pods - the exact set upstream's Dockerfile COPYs to /.
+      for f in pxc-entrypoint.sh pxc-init-entrypoint.sh pitr-init-entrypoint.sh \
+        backup-init-entrypoint.sh pxc-configure-pxc.sh liveness-check.sh readiness-check.sh \
+        pmm-prerun.sh get-pxc-state wsrep_cmd_notify_handler.sh prepare_restored_cluster.sh \
+        haproxy-entrypoint.sh haproxy-init-entrypoint.sh haproxy_add_pxc_nodes.sh \
+        haproxy_check_pxc.sh haproxy_liveness_check.sh haproxy_readiness_check.sh \
+        proxysql-entrypoint.sh proxysql-init-entrypoint.sh proxysql_add_cluster_nodes.sh \
+        proxysql_add_proxysql_nodes.sh proxysql_add_pxc_nodes.sh; do
+        install -m 0755 "$src/build/$f" "$d/$f"
+      done
+      for f in haproxy.cfg haproxy-global.cfg proxysql.cnf proxysql-admin.cnf proxysql_scheduler_config.tmpl; do
+        install -m 0644 "$src/build/$f" "$d/$f"
+      done
+      cp -a "$src/build/logcollector" "$d/logcollector"
+      cp -a "$src/build/backup" "$d/backup"
+      chmod -R a+rX "$d/logcollector" "$d/backup"
+      cp "$src/LICENSE" "$d/licenses/LICENSE"
+
+  - runs: |
+      echo "Verifying percona-xtradb-cluster-operator build..."
+      "${{targets.destdir}}/usr/local/bin/percona-xtradb-cluster-operator" --help 2>&1 | grep -q "kubeconfig" \
+        || { echo "FAIL: operator binary did not run as expected"; exit 1; }
+      test -x "${{targets.destdir}}/pxc-init-entrypoint.sh"
+      test -x "${{targets.destdir}}/peer-list"

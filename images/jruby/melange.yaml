@@ -1,0 +1,61 @@
+# Melange build configuration for minimal jruby
+# JRuby: Ruby on the JVM, from the official jruby-dist binary distribution
+# (Maven Central), run on Wolfi's OpenJDK 25 JRE. License: EPL-2.0 OR GPL-2.0 OR LGPL-2.1.
+#
+# Source-built rather than apko-only: Wolfi's `jruby-10.1` package lags upstream
+# (10.1.1 vs 10.1.3 at onboarding), and the release is a JVM distribution, so
+# repackaging the upstream tarball is the faithful build - the groovy pattern.
+
+package:
+  name: jruby
+  version: 10.1.3.0
+  epoch: 0
+  description: "JRuby from the official jruby-dist binary distribution"
+  copyright:
+    - license: EPL-2.0 OR GPL-2.0-only OR LGPL-2.1-only
+  dependencies:
+    # Wolfi ships jruby-10.1 / jruby-9.4; keep apko on ours.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the binary distribution - updated by update-versions.yml workflow
+  sha256: 3d76fe1fce6aa9f56fd7efb1015a9db95a0aa6f95fe9ec868f9e75d9ddc1871c
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://repo1.maven.org/maven2/org/jruby/jruby-dist/${{package.version}}/jruby-dist-${{package.version}}-bin.tar.gz" \
+        -o /home/build/jruby.tar.gz
+      echo "${{vars.sha256}}  /home/build/jruby.tar.gz" | sha256sum -c -
+
+  - runs: |
+      cd /home/build && tar xzf jruby.tar.gz
+      src=/home/build/jruby-${{package.version}}
+      J="${{targets.destdir}}/usr/share/jruby"
+      mkdir -p "$J"
+      cp -a "$src/lib" "$src/bin" "$src/COPYING" "$src/LICENSE.RUBY" "$J/"
+      # Keep only the Linux JNI stubs this image can run on; the rest (Windows,
+      # BSDs, SunOS, AIX, Darwin...) are dead weight and scanner noise.
+      for dir in "$J"/lib/jni/*; do
+        case "$(basename "$dir")" in x86_64-Linux|aarch64-Linux) ;; *) rm -rf "$dir" ;; esac
+      done
+      # Windows launchers have no place in a Linux image.
+      rm -f "$J"/bin/*.bat "$J"/bin/*.exe "$J"/bin/*.dll
+      chmod -R a+rX "$J"
+
+  - runs: |
+      echo "Verifying JRuby build..."
+      test -f "${{targets.destdir}}/usr/share/jruby/lib/jruby.jar"
+      test -d "${{targets.destdir}}/usr/share/jruby/lib/jni/x86_64-Linux"
+      test -d "${{targets.destdir}}/usr/share/jruby/lib/jni/aarch64-Linux"
