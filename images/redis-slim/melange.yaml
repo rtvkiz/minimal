@@ -13,7 +13,7 @@ package:
   # a go-module entry as a fallback; this one has only the apk name), so the
   # suffix made it entirely unscannable.
   name: redis
-  version: 8.10.3
+  version: 8.12.0
   epoch: 0
   description: "Minimal Redis server and CLI built from source"
   copyright:
@@ -36,7 +36,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: 85ae62e175cc76f638015fa18cb384b549b6808a765425d9e9d47466f69532ea
+  sha256: 07e2477372566acf587e32c1abc8af088ad901fb2c725388ec9a5bef29c47319
 
 environment:
   contents:
