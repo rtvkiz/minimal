@@ -1,0 +1,74 @@
+# Minimal JRuby image - official jruby-dist on Wolfi's OpenJDK 25 JRE.
+#
+# Shell-less: JRuby's bin/jruby launcher is a POSIX sh script, so the
+# entrypoint is the exact java command that launcher builds (captured with
+# `jruby --environment`), minus its AppCDS flags (they write a JDK-specific
+# archive into lib/, which is not writable as nonroot). Run tools through -S:
+#   docker run IMAGE -S gem install rake      docker run IMAGE -S rake -T
+# Gems install to GEM_HOME=/usr/local/bundle, the same path library/jruby uses.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    # Local melange-built packages (passed via --repository-append CLI flag)
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    # Local signing key passed via --keyring-append CLI flag
+  packages:
+    - jruby
+    - wolfi-baselayout
+    - openjdk-25-jre
+    - openjdk-25-default-jvm
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/lib/jvm/java-25-openjdk/bin/java @/usr/share/jruby/bin/.jruby.java_opts @/usr/share/jruby/bin/.jruby.module_opts -Xss2048k -Djffi.boot.library.path=/usr/share/jruby/lib/jni -Djava.security.egd=file:/dev/urandom --enable-native-access=org.jruby.dist --sun-misc-unsafe-memory-access=allow --module-path /usr/share/jruby/lib/jruby.jar -Djruby.home=/usr/share/jruby -Djruby.lib=/usr/share/jruby/lib -Djruby.script=jruby -Djruby.shell=/bin/sh org.jruby.main.Main
+
+work-dir: /work
+
+environment:
+  PATH: /usr/local/bundle/bin:/usr/lib/jvm/java-25-openjdk/bin:/usr/bin:/bin
+  JAVA_HOME: /usr/lib/jvm/java-25-openjdk
+  JRUBY_HOME: /usr/share/jruby
+  GEM_HOME: /usr/local/bundle
+  BUNDLE_APP_CONFIG: /usr/local/bundle
+  HOME: /tmp
+  LANG: C.UTF-8
+
+paths:
+  - path: /usr/local/bundle
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /work
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-jruby"
+  org.opencontainers.image.description: "Hardened shell-less JRuby on OpenJDK 25 from the official jruby-dist release, rebuilt daily for CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/jruby"
+  org.opencontainers.image.licenses: "EPL-2.0 OR GPL-2.0-only OR LGPL-2.1-only"
+
+archs:
+  - x86_64
+  - aarch64

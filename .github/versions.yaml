@@ -1917,3 +1917,30 @@
   links:
     releases: "https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases"
     notes: "https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/tag/v{version}"
+
+- name: percona-xtradb-cluster-operator
+  cron-enabled: true   # batch-7c (dispatch-validated on the onboarding branch)
+  files: [images/percona-xtradb-cluster-operator/melange.yaml]
+  source: { type: github-releases-latest, repo: percona/percona-xtradb-cluster-operator, strip-v: true }
+  tarball: { url: "https://github.com/percona/percona-xtradb-cluster-operator/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/percona/percona-xtradb-cluster-operator/releases"
+    notes: "https://github.com/percona/percona-xtradb-cluster-operator/releases/tag/v{version}"
+- name: kong-ingress-controller
+  cron-enabled: true   # batch-7c (dispatch-validated on the onboarding branch)
+  files: [images/kong-ingress-controller/melange.yaml]
+  source: { type: github-releases-latest, repo: Kong/kubernetes-ingress-controller, strip-v: true }
+  tarball: { url: "https://github.com/Kong/kubernetes-ingress-controller/archive/refs/tags/v{version}.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/Kong/kubernetes-ingress-controller/releases"
+    notes: "https://github.com/Kong/kubernetes-ingress-controller/releases/tag/v{version}"
+- name: jruby
+  # Release tags are bare N.N.N.N; the artifact is the binary distribution on
+  # Maven Central, not the GitHub source archive (the groovy pattern).
+  cron-enabled: true   # batch-7c (dispatch-validated on the onboarding branch)
+  files: [images/jruby/melange.yaml]
+  source: { type: github-releases-latest, repo: jruby/jruby }
+  tarball: { url: "https://repo1.maven.org/maven2/org/jruby/jruby-dist/{version}/jruby-dist-{version}-bin.tar.gz", field: sha256 }
+  links:
+    releases: "https://github.com/jruby/jruby/releases"
+    notes: "https://github.com/jruby/jruby/releases/tag/{version}"

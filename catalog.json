@@ -2353,6 +2353,71 @@
       "seo_noun": "EBS CSI",
       "summary": "Amazon EBS CSI driver with its mount and filesystem tools, from source.",
       "description": "Amazon EBS CSI driver: controller and node plugin that create, attach, format, mount and resize EBS volumes for EKS. Ships ext4/XFS tools, no package manager."
+    },
+    {
+      "name": "otelcol-contrib",
+      "category": "Observability",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "opentelemetry-collector-contrib",
+      "upstream_url": "https://github.com/open-telemetry/opentelemetry-collector-contrib",
+      "seo_noun": "OTel collector",
+      "summary": "Shell-less OpenTelemetry Collector Contrib, built on Wolfi.",
+      "description": "OpenTelemetry Collector Contrib with all 258 receivers, processors and exporters, as a drop-in for otel/opentelemetry-collector-contrib. Shell-less, non-root."
+    },
+    {
+      "name": "percona-xtradb-cluster-operator",
+      "category": "Databases",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "percona-xtradb-cluster-operator",
+      "upstream_url": "https://github.com/percona/percona-xtradb-cluster-operator",
+      "seo_noun": "MySQL",
+      "summary": "Percona Operator for MySQL (XtraDB Cluster), built from source via melange.",
+      "description": "Percona Operator for MySQL runs Galera-replicated XtraDB Cluster on Kubernetes with HAProxy or ProxySQL, backups and PITR. Upstream layout, no package manager."
+    },
+    {
+      "name": "kong-ingress-controller",
+      "category": "Web Servers & Proxies",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "kong-ingress-controller",
+      "upstream_url": "https://github.com/Kong/kubernetes-ingress-controller",
+      "seo_noun": "ingress",
+      "summary": "Shell-less Kong Ingress Controller, built from source via melange.",
+      "description": "Kong Ingress Controller configures Kong Gateway from Kubernetes Ingress, Gateway API and Kong CRDs. Drop-in /manager entrypoint, shell-less and non-root."
+    },
+    {
+      "name": "postgis",
+      "category": "Databases",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "postgis",
+      "upstream_url": "https://postgis.net",
+      "seo_noun": "PostGIS",
+      "summary": "PostgreSQL 18 with PostGIS, GEOS, PROJ and GDAL, built on Wolfi.",
+      "description": "PostGIS spatial database: PostgreSQL 18 with the PostGIS extension plus GEOS, PROJ and GDAL for vector and raster queries. No package manager, runs as postgres."
+    },
+    {
+      "name": "jruby",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "jruby",
+      "upstream_url": "https://www.jruby.org",
+      "seo_noun": "JRuby",
+      "summary": "Shell-less JRuby on OpenJDK 25, from the official jruby-dist release.",
+      "description": "JRuby, the Ruby implementation on the JVM, from the official jruby-dist release on OpenJDK 25 with Java interop and gems in /usr/local/bundle. Shell-less."
     }
   ]
 }
