@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of kube-vip source tarball - updated by update-versions.yml workflow
-  sha256: a5e12ed26428b174a8254db7e7c927ab935030c015315caa0429af32383ba9ab
+  sha256: 2c0af26bd2485a32a74f327a4d44d00ea77166c1267d09f57d520831b5f7bc52
 
 environment:
   contents:
