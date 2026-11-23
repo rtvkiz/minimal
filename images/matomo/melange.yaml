@@ -9,14 +9,14 @@
 # Wolfi does not package Matomo.
 package:
   name: matomo
-  version: 5.14.3
+  version: 6.0.0
   epoch: 0
   description: "Matomo web analytics platform from the official release"
   copyright:
     - license: GPL-3.0-or-later
 
 vars:
-  sha256: 7fa48e56257ea716ca7f916294833fb10d0b72271896b100e5c0441e5a7460a2
+  sha256: 9ac196f8ee12e261c251daf49dd1c64417197bbd18283280698a3fcca73541f0
 
 environment:
   contents:
