@@ -10,7 +10,7 @@ package:
   # Named exactly what upstream calls it, not `amazon-cloudwatch-agent-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: amazon-cloudwatch-agent
-  version: 1.300074.0
+  version: 1.300074.1
   epoch: 0
   description: "Minimal amazon-cloudwatch-agent built from source"
   copyright:
@@ -22,7 +22,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: cb37b0e99b44bb64085554bf28c3cf1e409b938ec577bcd48285db771995a678
+  sha256: 1cfecb4e5cb1a5a7a88e9cf019e7fda9b5b2870f48c8619114bb1ee90ee129aa
 
 environment:
   contents:
