@@ -10,7 +10,7 @@ package:
   # product bare, as cpe:2.3:a:helmfile:helmfile:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: helmfile
-  version: 1.8.4
+  version: 1.8.5
   epoch: 0
   description: "Minimal Helmfile declarative Helm manager built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of helmfile source tarball - updated by update-versions.yml workflow
-  sha256: 920f59113da7a09ab0d4b693c2b0d3a36cc5be9b974d146b2d6b76f572409468
+  sha256: 916370931c502d9b33f7aec56737b990d65e4b342c946506cdf8e8a9259c0303
 
 environment:
   contents:
