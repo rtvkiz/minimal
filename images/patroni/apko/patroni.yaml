@@ -19,8 +19,8 @@ contents:
     # stops postgres, and promotes/demotes replicas. Without the server binaries
     # the image can only act as a patronictl client. Pinned to the same major
     # the postgres-slim image ships so a cluster is version-consistent.
-    - postgresql-18
-    - postgresql-18-client
+    - postgresql-19
+    - postgresql-19-client
 
     # Shell — REQUIRED, not a convenience. PostgreSQL's initdb runs
     # `"postgres" -V` through popen(), which execs /bin/sh; with no shell it
