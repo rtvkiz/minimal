@@ -15,8 +15,8 @@ contents:
 
     # Patroni + PostgreSQL (same as prod)
     - patroni
-    - postgresql-18
-    - postgresql-18-client
+    - postgresql-19
+    - postgresql-19-client
 
     # Core libs (same as prod)
     - glibc

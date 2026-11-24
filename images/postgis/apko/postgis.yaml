@@ -1,11 +1,11 @@
 # Minimal PostGIS image - PostgreSQL 18 + PostGIS from Wolfi's pre-built packages.
 # Same base as postgres-slim (busybox-only shell for initdb, uid 70, no apk-tools),
-# plus postgis-18 and the geospatial libraries it links (GEOS, PROJ, GDAL).
+# plus postgis-19 and the geospatial libraries it links (GEOS, PROJ, GDAL).
 #
-# postgis-18 depends on perl (postgis_restore.pl and friends), so perl ships too.
+# postgis-19 depends on perl (postgis_restore.pl and friends), so perl ships too.
 # Unlike upstream's postgis/postgis there is no docker-entrypoint script: create
 # the extension yourself (CREATE EXTENSION postgis;), as with postgres-slim.
-# The postgresql-18/postgis-18 pins move in lockstep with postgres-slim via
+# The postgresql-19/postgis-19 pins move in lockstep with postgres-slim via
 # update-wolfi-packages.yml.
 
 contents:
@@ -27,16 +27,16 @@ contents:
     - busybox
 
     # PostgreSQL from Wolfi (CVE-patched)
-    - postgresql-18
+    - postgresql-19
 
-    - postgresql-18-base
-    - postgresql-18-client
-    - postgresql-18-client-base
-    - postgresql-18-contrib
+    - postgresql-19-base
+    - postgresql-19-client
+    - postgresql-19-client-base
+    - postgresql-19-contrib
     # PostGIS (+ GEOS/PROJ/GDAL/protobuf-c via its dependencies)
-    - postgis-18
-    - libpq-18
-    - pgaudit-18
+    - postgis-19
+    - libpq-19
+    - pgaudit-19
 
     # Core libraries
     - glibc
