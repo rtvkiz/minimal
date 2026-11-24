@@ -5,13 +5,19 @@
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 
+# The PostgreSQL major is whatever the apko config pins. update-wolfi-packages.yml
+# moves that pin on a new major, so read it rather than hardcode a number the
+# bot does not know to rewrite.
+PG_MAJOR=$(grep -oE '^[[:space:]]*- postgresql-[0-9]+$' "$(dirname "$0")/apko/patroni-dev.yaml" | grep -oE '[0-9]+$')
+: "${PG_MAJOR:?could not read the postgresql-N pin from apko/patroni-dev.yaml}"
+
 echo "Testing patroni version..."
 docker run --rm --entrypoint /usr/bin/patroni "$IMAGE" --version 2>&1 | grep -qiE '^patroni 4\.' \
   || { echo "FAIL: patroni version string not found"; exit 1; }
 
 echo "Testing the managed PostgreSQL server is present..."
-docker run --rm --entrypoint /usr/bin/postgres "$IMAGE" --version 2>&1 | grep -qiE 'PostgreSQL\) 18\.' \
-  || { echo "FAIL: postgres 18 not found in image"; exit 1; }
+docker run --rm --entrypoint /usr/bin/postgres "$IMAGE" --version 2>&1 | grep -qiE "PostgreSQL\\) ${PG_MAJOR}\\." \
+  || { echo "FAIL: postgres ${PG_MAJOR} not found in image"; exit 1; }
 
 echo "Testing initdb can bootstrap a cluster as nonroot (offline)..."
 docker run --rm --tmpfs /pgtest:uid=65532,gid=65532,mode=0700 \
