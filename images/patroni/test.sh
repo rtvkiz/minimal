@@ -3,6 +3,12 @@
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 
+# The PostgreSQL major is whatever the apko config pins. update-wolfi-packages.yml
+# moves that pin on a new major, so read it rather than hardcode a number the
+# bot does not know to rewrite.
+PG_MAJOR=$(grep -oE '^[[:space:]]*- postgresql-[0-9]+$' "$(dirname "$0")/apko/patroni.yaml" | grep -oE '[0-9]+$')
+: "${PG_MAJOR:?could not read the postgresql-N pin from apko/patroni.yaml}"
+
 echo "Testing patroni version..."
 docker run --rm --entrypoint /usr/bin/patroni "$IMAGE" --version 2>&1 | grep -qiE '^patroni 4\.' \
   || { echo "FAIL: patroni version string not found"; exit 1; }
@@ -14,8 +20,8 @@ docker run --rm --entrypoint /usr/bin/patronictl "$IMAGE" version 2>&1 | grep -q
 echo "Testing the managed PostgreSQL server is present..."
 # Patroni is a supervisor — without the server binaries it can only act as a
 # patronictl client, so the postgres major version is part of the contract.
-docker run --rm --entrypoint /usr/bin/postgres "$IMAGE" --version 2>&1 | grep -qiE 'PostgreSQL\) 18\.' \
-  || { echo "FAIL: postgres 18 not found in image"; exit 1; }
+docker run --rm --entrypoint /usr/bin/postgres "$IMAGE" --version 2>&1 | grep -qiE "PostgreSQL\\) ${PG_MAJOR}\\." \
+  || { echo "FAIL: postgres ${PG_MAJOR} not found in image"; exit 1; }
 
 echo "Testing sample config generation (proves the Python import graph resolves)..."
 # The whole py3.13-{psycopg,pysyncobj,boto3,click,prettytable,ydiff} dependency

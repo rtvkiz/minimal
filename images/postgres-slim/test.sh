@@ -2,13 +2,19 @@
 set -euo pipefail
 : "${IMAGE:?IMAGE env var required}"
 
+# The PostgreSQL major is whatever the apko config pins. update-wolfi-packages.yml
+# moves that pin on a new major, so read it rather than hardcode a number the
+# bot does not know to rewrite.
+PG_MAJOR=$(grep -oE '^[[:space:]]*- postgresql-[0-9]+$' "$(dirname "$0")/apko/postgres.yaml" | grep -oE '[0-9]+$')
+: "${PG_MAJOR:?could not read the postgresql-N pin from apko/postgres.yaml}"
+
 echo "Testing PostgreSQL version..."
-docker run --rm --entrypoint /usr/bin/postgres "$IMAGE" --version | grep -qiE 'PostgreSQL\) 18\.' \
-  || { echo "FAIL: postgres 18 version string not found"; exit 1; }
+docker run --rm --entrypoint /usr/bin/postgres "$IMAGE" --version | grep -qiE "PostgreSQL\\) ${PG_MAJOR}\\." \
+  || { echo "FAIL: postgres ${PG_MAJOR} version string not found"; exit 1; }
 
 echo "Testing psql client..."
-docker run --rm --entrypoint /usr/bin/psql "$IMAGE" --version | grep -qiE 'psql .*18\.' \
-  || { echo "FAIL: psql 18 version string not found"; exit 1; }
+docker run --rm --entrypoint /usr/bin/psql "$IMAGE" --version | grep -qiE "psql .*${PG_MAJOR}\\." \
+  || { echo "FAIL: psql ${PG_MAJOR} version string not found"; exit 1; }
 
 echo "Testing initdb can initialise a fresh PGDATA..."
 # REGRESSION GUARD: initdb runs `"postgres" -V` via popen(), which execs /bin/sh.
