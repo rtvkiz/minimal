@@ -191,8 +191,8 @@ pipeline:
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w -buildid= \
-          -X github.com/vmware-tanzu/velero/pkg/buildinfo.Version=v${{package.version}} \
-          -X github.com/vmware-tanzu/velero/pkg/buildinfo.GitTreeState=clean" \
+          -X github.com/velero-io/velero/pkg/buildinfo.Version=v${{package.version}} \
+          -X github.com/velero-io/velero/pkg/buildinfo.GitTreeState=clean" \
         -o /home/build/velero-bin \
         ./cmd/velero
 
@@ -205,7 +205,10 @@ pipeline:
   # Verify the build
   - runs: |
       echo "Verifying velero binary..."
-      "${{targets.destdir}}/usr/bin/velero" version --client-only
+      # Assert the injected version, not just that the binary runs: go build
+      # silently ignores an -X for a symbol that does not exist, so a module
+      # rename (vmware-tanzu -> velero-io in 1.19) ships an empty Version.
+      "${{targets.destdir}}/usr/bin/velero" version --client-only | grep -F "Version: v${{package.version}}"
 
 update:
   enabled: true
