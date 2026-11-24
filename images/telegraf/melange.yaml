@@ -12,7 +12,7 @@ package:
   # product bare, as cpe:2.3:a:telegraf:telegraf:*, so none of them matched,
   # and the Wolfi secdb missed it too.
   name: telegraf
-  version: 1.40.3
+  version: 1.40.4
   epoch: 0
   description: "Minimal Telegraf metrics agent built from source"
   copyright:
@@ -30,7 +30,7 @@ package:
 
 vars:
   # SHA256 checksum of source tarball - updated by update-versions.yml workflow
-  sha256: 27bfeaf8c56cbcffc289065623ff7e3b0ff9e48c1d9c00e2278ed453900a0e66
+  sha256: 1770b4eba7e3e7885928c29b7aa09fb438ba2f1e1b4ababf2411ae50b2e8c537
 
 environment:
   contents:
