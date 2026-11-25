@@ -259,10 +259,14 @@ function isMeaningfulTag(tag) {
   return true;
 }
 
-// Best-effort list of all published tags. Prefers the GitHub Packages REST API
-// (tags + created timestamps) when a token is available; otherwise falls back
-// to the anonymous registry v2 tags/list (names only). Any failure returns a
-// synthesized ["latest"] with status 'partial'.
+// Best-effort list of all published tags, from the anonymous registry v2
+// tags/list (paginated via the Link header). Deliberately NOT the GitHub
+// Packages REST API: listing versions for ~190 images cost up to ~1,900 REST
+// calls per deploy, which exhausted the repo's shared GITHUB_TOKEN budget
+// (1,000/h) and starved cleanup-packages.yml. The registry isn't REST-limited.
+// It returns names only, so `created` comes from a dated tag's -YYYYMMDD and
+// `digest` stays null (the Tags tab falls back to the highest version).
+// Any failure returns a synthesized ["latest"] with status 'partial'.
 async function fetchTags(imageName, fallbacks) {
   const pkg = `${PREFIX}${imageName}`;
   const synth = () => ({
@@ -271,58 +275,42 @@ async function fetchTags(imageName, fallbacks) {
   });
   if (SKIP_TAGS) return { status: 'none', tags: synth().tags };
 
-  // 1) GitHub Packages REST API (needs read:packages)
-  if (GH_TOKEN) {
-    try {
-      const all = [];
-      for (let page = 1; page <= 10; page++) {
-        const res = await fetchJson(
-          `https://api.github.com/users/${ORG}/packages/container/${encodeURIComponent(pkg)}/versions?per_page=100&page=${page}`,
-          { headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' } }
-        );
-        if (!res.ok) throw new Error(`REST ${res.status}`);
-        const versions = res.body;
-        if (!Array.isArray(versions) || versions.length === 0) break;
-        for (const v of versions) {
-          const meta = v.metadata && v.metadata.container;
-          const tags = (meta && Array.isArray(meta.tags)) ? meta.tags : [];
-          for (const t of tags) {
-            if (!isMeaningfulTag(t)) continue;
-            all.push({ name: t, created: v.updated_at || v.created_at || null, digest: v.name || null });
-          }
-        }
-        if (versions.length < 100) break;
-      }
-      if (all.length) {
-        all.sort((a, b) => (Date.parse(b.created || 0) - Date.parse(a.created || 0)) || a.name.localeCompare(b.name));
-        return { status: 'full', tags: all };
-      }
-    } catch (e) {
-      warn(`tags(${pkg}) REST API failed: ${e.message}; trying anonymous registry`);
-    }
-  }
-
-  // 2) Anonymous registry v2 tags/list (names only)
   try {
     const tokRes = await fetchJson(
       `https://${REGISTRY}/token?scope=repository:${ORG}/${pkg}:pull&service=${REGISTRY}`
     );
     if (!tokRes.ok) throw new Error(`token ${tokRes.status}`);
     const { token } = tokRes.body;
-    const res = await fetchJson(`https://${REGISTRY}/v2/${ORG}/${pkg}/tags/list`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) throw new Error(`tags/list ${res.status}`);
-    const body = res.body;
-    const names = (Array.isArray(body.tags) ? body.tags : []).filter(isMeaningfulTag);
-    if (names.length) {
-      // tags/list is paginated & alphabetical; page 1 may miss tags when cosign
-      // artifacts crowd the list, so flag as partial unless clearly small.
-      const status = names.length < 100 ? 'full' : 'partial';
-      return { status, tags: names.sort().map((t) => ({ name: t, created: null, digest: null })) };
+    const names = [];
+    let path = `/v2/${ORG}/${pkg}/tags/list?n=1000`;
+    for (let page = 0; path && page < 50; page++) {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+      let res;
+      try {
+        res = await fetch(`https://${REGISTRY}${path}`, { headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal });
+        if (!res.ok) throw new Error(`tags/list ${res.status}`);
+        const body = await res.json();
+        names.push(...(Array.isArray(body.tags) ? body.tags : []));
+      } finally {
+        clearTimeout(t);
+      }
+      // Link: </v2/.../tags/list?last=X&n=1000>; rel="next"
+      const link = res.headers.get('link') || '';
+      const m = link.match(/<([^>]+)>;\s*rel="next"/);
+      path = m ? m[1] : null;
+    }
+    if (path) throw new Error('tags/list pagination did not finish');
+    const meaningful = [...new Set(names.filter(isMeaningfulTag))];
+    if (meaningful.length) {
+      const dated = (n) => {
+        const m = n.match(/-([0-9]{4})([0-9]{2})([0-9]{2})(-dev)?$/);
+        return m ? `${m[1]}-${m[2]}-${m[3]}T00:00:00Z` : null;
+      };
+      return { status: 'full', tags: meaningful.sort().map((n) => ({ name: n, created: dated(n), digest: null })) };
     }
   } catch (e) {
-    warn(`tags(${pkg}) registry fallback failed: ${e.message}`);
+    warn(`tags(${pkg}) registry fetch failed: ${e.message}`);
   }
 
   return synth();
@@ -500,6 +488,21 @@ async function main() {
     }
   }
 
+  // Star count for the header "Star" button. Fetched at build time (the site
+  // redeploys on every data refresh) so visitors make no GitHub API call and
+  // hit no rate limit. Cosmetic: on any failure the button renders without a
+  // count rather than failing the build or showing a stale number.
+  let stars = null;
+  try {
+    const r = await fetchJson(`https://api.github.com/repos/${ORG}/minimal`, {
+      headers: { Accept: 'application/vnd.github+json', ...(GH_TOKEN ? { Authorization: `Bearer ${GH_TOKEN}` } : {}) },
+    });
+    if (r.ok && Number.isInteger(r.body?.stargazers_count)) stars = r.body.stargazers_count;
+    else warn(`star count unavailable (HTTP ${r.status})`);
+  } catch (e) {
+    warn(`star count unavailable (${e.message})`);
+  }
+
   const full = records.filter((r) => !r.degraded).length;
   const degraded = records.filter((r) => r.degraded);
   const out = {
@@ -507,6 +510,7 @@ async function main() {
     buildDate: process.env.BUILD_DATE || new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC',
     commitSha: process.env.COMMIT_SHA || '',
     runUrl: process.env.RUN_URL || '',
+    stars,
     registry: REGISTRY,
     org: ORG,
     prefix: PREFIX,

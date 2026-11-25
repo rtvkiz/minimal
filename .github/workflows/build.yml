@@ -208,6 +208,7 @@ jobs:
             {"name":"gradle","grep":"gradle-[0-9]","variants":["prod","dev"]},
             {"name":"rust","grep":"rust-[0-9]","variants":["prod","dev"]},
             {"name":"bash","grep":"bash","variants":["prod","dev"]},
+            {"name":"busybox","grep":"busybox","variants":["prod","dev"]},
             {"name":"otelcol-contrib","grep":"opentelemetry-collector-contrib","variants":["prod","dev"]},
             {"name":"postgis","grep":"postgis-[0-9]|postgresql-[0-9]","variants":["prod","dev"]},
             {"name":"curl","grep":"curl","variants":["prod","dev"]},

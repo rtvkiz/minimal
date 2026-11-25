@@ -8,14 +8,14 @@
 # Wolfi does not package Drupal.
 package:
   name: drupal
-  version: 11.4.13
+  version: 11.4.14
   epoch: 0
   description: "Drupal content management framework from the official drupal.org release"
   copyright:
     - license: GPL-2.0-or-later
 
 vars:
-  sha256: b0f33b15f7e3dae988d631ef7488919315e36e133713bdfd78f51a8e5e121925
+  sha256: 2cd724ca1e93acf05993398533ecd274f0b6b167824638874f3dc1c12732c773
 
 environment:
   contents:
