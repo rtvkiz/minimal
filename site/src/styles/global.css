@@ -640,3 +640,13 @@ main .hero-popular a:hover { color: var(--fg-strong); text-decoration: underline
 .verify-grid.two { grid-template-columns: 1fr; }
 @media (min-width: 700px) { .verify-grid.two { grid-template-columns: repeat(2, 1fr); } }
 
+
+/* Tags tab: recommended row, collapsed history/older sections */
+.tag-table .tag-rec td { background: var(--bg-muted); }
+.tag-table .pill { margin-left: 6px; vertical-align: 1px; }
+.tag-more { margin-top: 20px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 14px; }
+.tag-more > summary { cursor: pointer; padding: 12px 0; font-weight: 600; color: var(--fg-strong); }
+.tag-more > summary .muted { font-weight: 400; margin-left: 6px; }
+.tag-more[open] { padding-bottom: 14px; }
+.tag-more p { margin: 0 0 12px; }
+.tag-cloud { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; }
