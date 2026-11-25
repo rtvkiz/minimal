@@ -14,9 +14,16 @@ name: Cleanup Package Versions
 # broken every image the first time it ran with dry_run=false; it only ever
 # ran as a dry run.
 #
-# Reconcile, don't batch: the REST API allows ~1000 req/h, so each run is
-# budgeted (MAX_DELETES, RATE_FLOOR) and the next run resumes. Scheduled runs
-# apply; manual runs default to report.
+# Reconcile, don't batch: each run is budgeted against the REST rate limit
+# (MAX_DELETES, RATE_FLOOR) and the next run resumes.
+#
+# Token: GHCR_CLEANUP_TOKEN (classic PAT: read:packages + delete:packages) when
+# set — its own 5000 req/h bucket. Falls back to GITHUB_TOKEN, whose
+# installation budget is shared with every other workflow in the repo and is
+# often already exhausted (the backlog then drains only in quiet hours).
+#
+# Mode: manual runs default to report. Scheduled runs use the repo variable
+# GC_SCHEDULE_MODE (report until someone has read a real report, then apply).
 
 on:
   schedule:
@@ -61,9 +68,9 @@ jobs:
 
       - name: Sweep
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GHCR_CLEANUP_TOKEN || secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
-          MODE: ${{ github.event_name == 'schedule' && 'apply' || inputs.mode }}
+          MODE: ${{ github.event_name == 'schedule' && (vars.GC_SCHEDULE_MODE || 'report') || inputs.mode }}
           ONLY: ${{ inputs.only }}
           KEEP_DATED: '30'
           MIN_AGE_HOURS: '24'
