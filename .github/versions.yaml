@@ -1190,8 +1190,9 @@
     notes: "https://github.com/kubernetes-sigs/external-dns/releases/tag/v{version}"
 
 # velero moved orgs: vmware-tanzu/velero → velero-io/velero (a 301 the resolver's
-# raw curl won't follow). Use the canonical repo. NB the Go *module* path is still
-# github.com/vmware-tanzu/velero (unchanged in go.mod) — that's the ldflags path.
+# raw curl won't follow). Use the canonical repo. The Go *module* path followed in
+# 1.19.0 (github.com/velero-io/velero); the ldflags -X path in melange.yaml must
+# match go.mod or the version silently comes out empty.
 - name: velero
   cron-enabled: true   # wave 11 (dispatch-validated 2026-07-18)
   files: [images/velero/melange.yaml]
