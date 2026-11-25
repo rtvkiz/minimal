@@ -10,7 +10,7 @@ package:
   # Named exactly what upstream calls it, not `aws-load-balancer-controller-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: aws-load-balancer-controller
-  version: 3.6.3
+  version: 3.7.0
   epoch: 0
   description: "Minimal aws-load-balancer-controller built from source"
   copyright:
@@ -22,7 +22,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: 221e61b09a012ba4e71f9f36a1423b3247af782ad220bf3063906e7c4d098729
+  sha256: 321fb32a86ff379e0ce997dbb4d27479f135dcf69499a76089a2d0dd6cf3935a
 
 environment:
   contents:
