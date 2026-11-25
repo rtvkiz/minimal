@@ -442,6 +442,7 @@ SSPL, vault BSL, elasticsearch/kibana/logstash, sentry, couchbase).
 | 6b | mongo-express | 278M | MIT | Node app (ghost pattern) | deferred: no stable release since 1.0.2 (2023) |
 | 6b | drupal | 211M | GPL-2.0-or-later | drupal.org tarball on Wolfi PHP 8.4 FPM | batch 6b |
 | 6b | matomo | 141M | GPL-3.0-or-later | builds.matomo.org tarball on Wolfi PHP 8.4 FPM | batch 6b |
+| 6c | busybox | 13.1B | GPL-2.0-only | Wolfi `busybox` (fresh, 1.38.0-r4 built 2026-11-23). Originally skipped as an OS base; added 2026-11-25. Not source-built: BusyBox releases every year or two and CVE fixes arrive as patches Wolfi carries, which `versions.yaml` (release-tracking) would never pick up. Wolfi's default build already omits the network applets (wget/nc/telnet are `busybox-full`). No entrypoint, `CMD /bin/sh` — the Docker Hub shape | batch 6c |
 | — | influxdb | 1.1B | MIT / Apache-2.0 | Rust, own effort | not scheduled |
 
 Lessons from 6a:
