@@ -44,6 +44,9 @@ KEEP_DATED = int(os.environ.get("KEEP_DATED", "30"))
 MIN_AGE_HOURS = float(os.environ.get("MIN_AGE_HOURS", "24"))
 MAX_DELETES = int(os.environ.get("MAX_DELETES", "700"))
 RATE_FLOOR = int(os.environ.get("RATE_FLOOR", "150"))
+# Wall-clock budget: stop cleanly (and print the summary) before the job's
+# timeout-minutes kills the process, which would lose the run's output.
+MAX_MINUTES = float(os.environ.get("MAX_MINUTES", "70"))
 TOKEN = os.environ.get("GH_TOKEN", "")
 
 ARTIFACT_RE = re.compile(r"^sha256-([0-9a-f]{64})(\.(sig|att|sbom))?$")
@@ -246,11 +249,17 @@ def main(names):
     print(f"MODE={MODE} KEEP_DATED={KEEP_DATED} MIN_AGE_HOURS={MIN_AGE_HOURS} "
           f"MAX_DELETES={MAX_DELETES} RATE_FLOOR={RATE_FLOOR} start={names[0] if names else '-'}")
 
+    t0 = time.monotonic()
     deleted = failed = pending = 0
     problems = []
     budget_hit = False
     for name in names:
         pkg = PREFIX + name
+        if (time.monotonic() - t0) / 60 > MAX_MINUTES:
+            budget_hit = True
+            print(f"── stop: {MAX_MINUTES:g} min time budget reached before {pkg}; next run resumes")
+            break
+        t_img = time.monotonic()
         if rate_remaining is not None and rate_remaining < RATE_FLOOR:
             budget_hit = True
             print(f"── stop: REST rate limit remaining {rate_remaining} < {RATE_FLOOR}; next run resumes")
@@ -288,7 +297,8 @@ def main(names):
             print(f"── {pkg}: SKIP (no :latest root) {info}")
             continue
         print(f"── {pkg}: {info['versions']} versions, keep {info['live']}, "
-              f"sweep {info['sweep']} (dated builds {info['dated_total']} → keep {min(KEEP_DATED, info['dated_total'])})")
+              f"sweep {info['sweep']} (dated builds {info['dated_total']}) "
+              f"[{time.monotonic() - t_img:.0f}s, rate left {rate_remaining}]")
         for v in sweep:
             label = ",".join(v["tags"]) or "untagged"
             if MODE == "report" or budget_hit:

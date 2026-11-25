@@ -78,6 +78,7 @@ jobs:
           MIN_AGE_HOURS: '24'
           MAX_DELETES: '700'
           RATE_FLOOR: '350'   # never spend the last 350/h: other workflows share this budget
+          MAX_MINUTES: '70'   # stop cleanly before timeout-minutes (90)
           ROTATE: ${{ github.run_number }}
         run: |
           if [ -n "$ONLY" ]; then
@@ -85,4 +86,5 @@ jobs:
           else
             mapfile -t NAMES < <(jq -r '.images[].name' catalog.json)
           fi
-          python3 .github/scripts/ghcr-gc.py "${NAMES[@]}"
+          # -u: unbuffered, so progress is visible live and survives a timeout kill
+          python3 -u .github/scripts/ghcr-gc.py "${NAMES[@]}"
