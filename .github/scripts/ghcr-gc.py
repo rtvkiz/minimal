@@ -287,6 +287,12 @@ def main(names):
         unreadable = reg.missing & live
         if unreadable:
             problems.append(f"{pkg}: {len(unreadable)} live manifest(s) unreadable — skipped, nothing deleted")
+            by_d = {v["digest"]: v for v in versions}
+            for d in sorted(unreadable)[:10]:
+                v = by_d.get(d)
+                where = (",".join(v["tags"]) or "untagged") + f" created {v['created']:%Y-%m-%d}" if v else "not a listed version"
+                parents = [p for p, kids in reg.cache.items() if d in kids][:2]
+                print(f"   unreadable {d} ({where}); referenced by {[p[:19] for p in parents] or 'a tag/artifact'}")
             print(f"── {pkg}: SKIP ({len(unreadable)} live manifests unreadable)")
             continue
 
