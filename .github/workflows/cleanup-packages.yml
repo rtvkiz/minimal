@@ -19,7 +19,7 @@ name: Cleanup Package Versions
 #
 # Token: GITHUB_TOKEN only, scoped to this repo's packages. A classic PAT
 # with delete:packages would reach every package on the account, so we don't
-# use one. GITHUB_TOKEN's 1,000 req/h budget is shared with every workflow in
+# use one. GITHUB_TOKEN's 5,000 req/h budget is shared with every workflow in
 # the repo: RATE_FLOOR always leaves headroom for the others, and the site
 # deploy reads tags from the registry rather than REST so it doesn't drain it.
 # The first pass has a large backlog and drains over days of hourly runs.
@@ -76,8 +76,8 @@ jobs:
           ONLY: ${{ inputs.only }}
           KEEP_DATED: '30'
           MIN_AGE_HOURS: '24'
-          MAX_DELETES: '700'
-          RATE_FLOOR: '350'   # never spend the last 350/h: other workflows share this budget
+          MAX_DELETES: '3000'  # ~12 min of sequential DELETEs; rate floor is the real limit
+          RATE_FLOOR: '1000'  # GITHUB_TOKEN gets 5000/h here; never spend the last 1000, other workflows share it
           MAX_MINUTES: '70'   # stop cleanly before timeout-minutes (90)
           ROTATE: ${{ github.run_number }}
         run: |
