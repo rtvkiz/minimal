@@ -1,89 +1,79 @@
 name: Cleanup Package Versions
 
-# Two jobs of housekeeping on the GHCR packages:
-#   1. delete untagged versions (garbage left by same-tag re-pushes)
-#   2. enforce retention on the immutable dated build tags (<version>-YYYYMMDD)
-#      that build.yml publishes for version history — keep the newest N per
-#      image, prune older ones so storage stays bounded.
+# Mark-and-sweep GC for the minimal-* GHCR packages (.github/scripts/ghcr-gc.py).
 #
-# SAFETY: destructive deletion is gated behind DRY_RUN, which defaults to true
-# (scheduled runs and the default dispatch only LOG what they would delete).
-# Run manually with dry_run=false once the dry-run output looks correct.
+# Keeps every tag users pull (latest, <version>, :3 / :3.15 line tags), the
+# newest 30 dated builds per variant, and everything those reference: per-arch
+# manifests, signatures, SBOM and provenance attestations. Sweeps the rest:
+# aged-out dated builds, orphaned signatures/attestations, unreferenced
+# manifests, and legacy tags no build produces any more (bare YYYYMMDD,
+# -amd64/-arm64).
+#
+# The previous version deleted *untagged* versions. On GHCR every per-arch
+# manifest of a multi-arch image is an untagged version, so that would have
+# broken every image the first time it ran with dry_run=false; it only ever
+# ran as a dry run.
+#
+# Reconcile, don't batch: the REST API allows ~1000 req/h, so each run is
+# budgeted (MAX_DELETES, RATE_FLOOR) and the next run resumes. Scheduled runs
+# apply; manual runs default to report.
 
 on:
   schedule:
-    - cron: '0 4 * * 0'   # weekly, Sunday 04:00 UTC (dry-run by default)
+    - cron: '17 */4 * * *'   # every 4h: drains the initial backlog, then steady-state
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: 'Log deletions without performing them'
-        type: boolean
-        default: true
+      mode:
+        description: 'report = log only, apply = delete'
+        type: choice
+        options: [report, apply]
+        default: report
+      only:
+        description: 'Space-separated image names (default: every catalog image)'
+        type: string
+        default: ''
 
 permissions: {}
+
+concurrency:
+  group: cleanup-packages
+  cancel-in-progress: false
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     permissions:
       contents: read
       packages: write
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Scheduled runs carry no inputs -> default to the safe dry-run.
-      DRY_RUN: ${{ github.event.inputs.dry_run == 'false' && 'false' || 'true' }}
-      KEEP_DATED: '30'   # newest dated builds to retain per image
     steps:
-      - name: Checkout catalog.json
+      - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          sparse-checkout: catalog.json
+          sparse-checkout: |
+            catalog.json
+            .github/scripts/ghcr-gc.py
+            .github/scripts/test_ghcr_gc.py
           sparse-checkout-cone-mode: false
 
-      - name: Prune untagged versions and enforce dated-tag retention
+      - name: Self-test the sweep planner
+        run: python3 .github/scripts/test_ghcr_gc.py
+
+      - name: Sweep
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          MODE: ${{ github.event_name == 'schedule' && 'apply' || inputs.mode }}
+          ONLY: ${{ inputs.only }}
+          KEEP_DATED: '30'
+          MIN_AGE_HOURS: '24'
+          MAX_DELETES: '700'
+          RATE_FLOOR: '150'
+          ROTATE: ${{ github.run_number }}
         run: |
-          OWNER="${{ github.repository_owner }}"
-          echo "DRY_RUN=$DRY_RUN · keeping newest $KEEP_DATED dated builds per image"
-
-          # $1=package  $2=version id  $3=reason
-          del() {
-            if [ "$DRY_RUN" = "false" ]; then
-              if gh api --method DELETE "/users/${OWNER}/packages/container/$1/versions/$2" >/dev/null 2>&1; then
-                echo "   deleted $2 ($3)"
-              else
-                echo "   skipped $2 ($3) — delete failed or still referenced"
-              fi
-            else
-              echo "   [dry-run] would delete $2 ($3)"
-            fi
-          }
-
-          # Package list is derived from catalog.json so it never drifts.
-          for name in $(jq -r '.images[].name' catalog.json); do
-            pkg="minimal-${name}"
-            echo "── ${pkg}"
-
-            versions=$(gh api "/users/${OWNER}/packages/container/${pkg}/versions" --paginate \
-              --jq '.[] | {id, created: .created_at, tags: (.metadata.container.tags // [])}' 2>/dev/null) \
-              || { echo "   (no versions / not accessible)"; continue; }
-
-            # 1) untagged versions (safe to remove)
-            echo "$versions" | jq -r 'select(.tags | length == 0) | .id' | while read -r id; do
-              [ -n "$id" ] && del "$pkg" "$id" "untagged"
-            done
-
-            # 2) dated-build retention. A version is a pure dated build only when
-            #    EVERY tag it carries matches -YYYYMMDD (optionally -dev). Versions
-            #    holding latest / a moving <version> tag / cosign artifacts have a
-            #    non-dated tag and are therefore never selected. Keep newest N.
-            echo "$versions" \
-              | jq -r 'select((.tags | length > 0) and ([.tags[] | test("-[0-9]{8}(-dev)?$")] | all))
-                       | [.created, .id, (.tags | join(","))] | @tsv' \
-              | sort -r \
-              | awk -v keep="$KEEP_DATED" 'NR > keep { print }' \
-              | while IFS="$(printf '\t')" read -r created id tags; do
-                  [ -n "$id" ] && del "$pkg" "$id" "old dated build: ${tags}"
-                done
-          done
-
-          echo "Done. (DRY_RUN=$DRY_RUN)"
+          if [ -n "$ONLY" ]; then
+            read -r -a NAMES <<< "$ONLY"
+          else
+            mapfile -t NAMES < <(jq -r '.images[].name' catalog.json)
+          fi
+          python3 .github/scripts/ghcr-gc.py "${NAMES[@]}"
