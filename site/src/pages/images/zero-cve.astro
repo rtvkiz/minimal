@@ -1,0 +1,69 @@
+---
+import Layout from '../../components/Layout.astro';
+import ImageList from '../../components/ImageList.astro';
+import { dataset, images, imageHref, zeroCveImages } from '../../lib/catalog';
+
+// One indexable answer to "zero CVE container images". The list is computed
+// from the latest scan at build time, so the count can never drift from the
+// data, and an image with no scan data is never counted (see zeroCveImages).
+const items = zeroCveImages().sort((a, b) => a.displayName.localeCompare(b.displayName));
+const scanned = images.filter((i) => i.vulnerabilities !== null).length;
+
+const title = 'Container images with zero known CVEs — free and signed';
+const description = items.length
+  ? `${items.length} free, hardened container images whose latest Grype scan found no known CVEs. Rescanned on every daily rebuild, signed, with SBOM and provenance.`
+  : 'Free, hardened container images whose latest Grype scan found no known CVEs, rescanned on every daily rebuild.';
+
+const schema = [{
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Container images with zero known CVEs',
+  numberOfItems: items.length,
+  itemListElement: items.map((img, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: `minimal-${img.name}`,
+    url: new URL(imageHref(img.name), Astro.site).href,
+  })),
+}];
+---
+<Layout title={title} description={description} schema={schema} breadcrumbs={[{ name: 'Images', href: '/images/' }]}>
+  <div class="page-head">
+    <div class="container">
+      <ol class="breadcrumb">
+        <li><a href="/images/">Images</a></li>
+        <li aria-current="page">Zero known CVEs</li>
+      </ol>
+      <h1>Container images with zero known CVEs</h1>
+      {items.length ? (
+        <p>
+          {items.length} of the {scanned} images we scan had no known CVEs in their latest scan
+          (data from {dataset.buildDate}). Each is a production image: no package manager, signed,
+          with an SBOM and build provenance attached.
+        </p>
+      ) : (
+        <p>No scan data is available for this build, so no image is listed. The list fills in after the next scheduled scan.</p>
+      )}
+    </div>
+  </div>
+
+  <div class="container">
+    <ImageList images={items} showCategory={true} />
+
+    <h2 class="section-title" style="margin-top:48px;font-size:1rem">What "zero" means here</h2>
+    <p class="small" style="max-width:72ch">
+      Grype matched no known vulnerability against any package in the production image, using the
+      vulnerability database current at scan time. That is a statement about known, published CVEs on
+      that day, not a guarantee that the software has no bugs. A new advisory can add a CVE to any image
+      tomorrow; the daily rebuild then picks up the fix once the package is patched, and this page
+      follows the scan. Another scanner can report a different number for the same image, and both can
+      be right: see <a href="/docs/scanners/">why two scanners disagree</a> and
+      <a href="/blog/why-your-scanner-reports-zero-cves/">why your scanner reports zero CVEs</a>.
+    </p>
+    <p class="small muted" style="margin-top:24px">
+      Every image's current findings are on its Advisories tab, and how to read them is in
+      <a href="/docs/vulnerabilities/">reading scan results</a>. All {images.length} images are in the
+      <a href="/images/">full directory</a>.
+    </p>
+  </div>
+</Layout>

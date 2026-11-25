@@ -1,7 +1,7 @@
 ---
 import Layout from '../../components/Layout.astro';
 import ImageList from '../../components/ImageList.astro';
-import { byCategory, categories, images, imageHref } from '../../lib/catalog';
+import { byCategory, categories, images, imageHref, zeroCveImages } from '../../lib/catalog';
 const grouped = byCategory();
 const sorted = [...images].sort((a, b) => a.displayName.localeCompare(b.displayName, 'en', { sensitivity: 'base' }));
 
@@ -19,6 +19,7 @@ const schema = [{
     url: new URL(imageHref(img.name), Astro.site).href,
   })),
 }];
+const zeroCve = zeroCveImages().length;
 ---
 <Layout
   title={`All ${images.length} hardened container images — free and signed`}
@@ -28,6 +29,7 @@ const schema = [{
   <div class="page-head" style="border-bottom:0;padding-bottom:8px">
     <div class="container">
       <h1>All {images.length} hardened container images</h1>
+      {zeroCve > 0 && <p class="small muted" style="margin:8px 0 0">{zeroCve} currently scan with zero known CVEs — <a href="/images/zero-cve/">see the list</a>.</p>}
     </div>
   </div>
 

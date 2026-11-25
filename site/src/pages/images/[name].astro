@@ -2,7 +2,7 @@
 import Layout from '../../components/Layout.astro';
 import CopyButton from '../../components/CopyButton.astro';
 import VulnSummary from '../../components/VulnSummary.astro';
-import { images, getImage, categorySlug, imageTitle, imageHref, groupTags } from '../../lib/catalog';
+import { images, getImage, categorySlug, imageTitle, imageHref, groupTags, hasShell } from '../../lib/catalog';
 
 export function getStaticPaths() {
   // Addressed by `slug`, not `name`: three images publish as minimal-<x>-slim but
@@ -116,6 +116,13 @@ const KIND_TEXT = {
         <div class="variant-block" data-variant={vk} hidden={vk !== 'prod'}>
           <CopyButton code={`docker pull ${image.variants[vk].pullRef}`} />
           {vk === 'dev' && <p class="small muted" style="margin:8px 0 0">The <code>-dev</code> variant adds a shell, package manager and build toolchain. For CI and debugging — not production.</p>}
+          {vk === 'prod' && !hasShell(image) && (
+            <p class="small muted" style="margin:8px 0 0">
+              <strong>No shell in this image</strong>, so <code>docker exec … sh</code> won't work.
+              To debug, {hasDev ? <>run the <code>-dev</code> variant or </> : null}attach an ephemeral container with <code>kubectl debug</code>.
+              {' '}<a href="/blog/debugging-a-container-with-no-shell/">How to debug a container with no shell</a>
+            </p>
+          )}
         </div>
       ))}
       {/* The registry name outlives the page name: these publish as

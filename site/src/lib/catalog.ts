@@ -192,9 +192,25 @@ export function totalCves(img: ImageRecord): number {
   return img.vulnerabilities ? img.vulnerabilities.total : 0;
 }
 
+/**
+ * Images whose latest prod scan found no known CVEs. Requires an actual scan:
+ * totalCves() returns 0 for an image with no scan data, and counting those
+ * would claim "zero CVEs" for images nobody scanned.
+ */
+export function zeroCveImages(): ImageRecord[] {
+  if (!dataset.hasScanData) return [];
+  return images.filter((i) => i.vulnerabilities !== null && i.vulnerabilities.total === 0);
+}
+
+/** True when the prod image ships a shell (busybox, bash or dash requested). */
+export function hasShell(img: ImageRecord): boolean {
+  const pkgs = img.variants.prod?.specs?.packagesRequested ?? [];
+  return pkgs.some((p) => /^(busybox|bash|dash)$/.test(p));
+}
+
 /** Aggregate a few site-wide numbers for the landing hero. */
 export function siteStats() {
-  const clean = images.filter((i) => dataset.hasScanData && totalCves(i) === 0).length;
+  const clean = zeroCveImages().length;
   return {
     images: images.length,
     categories: categories.length,
