@@ -73,11 +73,21 @@ def classify(tag):
     return "root"
 
 
-def plan(versions, children_many, now, keep_dated=KEEP_DATED, min_age_hours=MIN_AGE_HOURS):
+MOVING_RE = re.compile(r"^(latest|[0-9]+(\.[0-9]+)?)(-dev)?$")
+
+
+def plan(versions, children_many, now, keep_dated=KEEP_DATED, min_age_hours=MIN_AGE_HOURS,
+         missing=lambda: set()):
     """Pure function: decide what to keep. Returns (live_digests, sweep_versions, info).
 
     versions: [{id, digest, tags, created(datetime)}]
     children_many(digests) -> {digest: [child digests]} (one level, may fetch in parallel)
+    missing() -> digests the registry answered 404 for while walking
+
+    A root whose index lists a per-arch manifest the registry 404s is already
+    unpullable. If it is an exact-version or dated tag older than MIN_AGE it is
+    swept like garbage; a broken moving tag (latest, :3, :3.15) is reported in
+    info["broken_moving"] and never swept — the caller must alert and skip.
     """
     by_digest = {v["digest"]: v for v in versions}
     roots, dated = [], []
@@ -102,18 +112,35 @@ def plan(versions, children_many, now, keep_dated=KEEP_DATED, min_age_hours=MIN_
             if m:
                 artifacts.setdefault("sha256:" + m.group(1), []).append(v)
 
-    # Breadth-first so each level's manifests can be fetched in parallel.
-    live, frontier = set(), {v["digest"] for v in roots}
-    while frontier:
-        live |= frontier
-        kids = children_many(sorted(frontier))
-        nxt = set()
-        for d in frontier:
-            nxt.update(kids.get(d, []))
-            nxt.update(a["digest"] for a in artifacts.get(d, []))
-        frontier = nxt - live
+    def walk(root_versions):
+        # Breadth-first so each level's manifests can be fetched in parallel.
+        live, frontier = set(), {v["digest"] for v in root_versions}
+        while frontier:
+            live |= frontier
+            kids = children_many(sorted(frontier))
+            nxt = set()
+            for d in frontier:
+                nxt.update(kids.get(d, []))
+                nxt.update(a["digest"] for a in artifacts.get(d, []))
+            frontier = nxt - live
+        return live
 
+    live = walk(roots)
+    gone = missing()
     cutoff = min_age_hours * 3600
+    broken, broken_moving = [], []
+    if gone:
+        kids = children_many(sorted(v["digest"] for v in roots))
+        for v in roots:
+            if v["digest"] in gone or any(c in gone for c in kids.get(v["digest"], [])):
+                if any(MOVING_RE.match(t) for t in v["tags"]):
+                    broken_moving.append(v)
+                elif (now - v["created"]).total_seconds() > cutoff:
+                    broken.append(v)
+        if broken:
+            ids = {v["id"] for v in broken}
+            live = walk([v for v in roots if v["id"] not in ids])
+
     sweep = [v for v in versions
              if v["digest"] not in live and (now - v["created"]).total_seconds() > cutoff]
     info = {
@@ -123,6 +150,8 @@ def plan(versions, children_many, now, keep_dated=KEEP_DATED, min_age_hours=MIN_
         "live": len(live & set(by_digest)),
         "sweep": len(sweep),
         "has_latest": any("latest" in v["tags"] for v in roots),
+        "broken": [",".join(v["tags"]) for v in broken],
+        "broken_moving": [",".join(v["tags"]) for v in broken_moving],
     }
     return live, sweep, info
 
@@ -277,11 +306,18 @@ def main(names):
             continue
         try:
             reg = Registry(f"{OWNER}/{pkg}")
-            live, sweep, info = plan(versions, reg.children_many, now)
+            live, sweep, info = plan(versions, reg.children_many, now, missing=lambda: reg.missing)
         except Exception as e:  # noqa: BLE001 — a failed walk must delete nothing
             problems.append(f"{pkg}: graph walk failed ({e}) — skipped, nothing deleted")
             print(f"── {pkg}: SKIP (walk failed: {e})")
             continue
+        if info["broken_moving"]:
+            problems.append(f"{pkg}: moving tag(s) NOT pullable: {info['broken_moving']} — skipped, nothing deleted")
+            print(f"── {pkg}: SKIP (broken moving tags {info['broken_moving']})")
+            continue
+        if info["broken"]:
+            print(f"   broken (unpullable) tags swept with their image: {info['broken'][:8]}"
+                  f"{' …' if len(info['broken']) > 8 else ''}")
         # An under-marked graph would sweep live per-arch manifests, so any
         # live digest the registry couldn't serve aborts this image.
         unreadable = reg.missing & live

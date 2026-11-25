@@ -49,4 +49,21 @@ expect = ({7, 900, 901}
           | {500 + d for d in range(30, 35)})
 assert swept == expect, f"unexpected sweep set: extra={sorted(swept - expect)} missing={sorted(expect - swept)}"
 assert info["has_latest"]
-print("ghcr-gc plan test OK:", info)
+assert info["broken"] == [] and info["broken_moving"] == []
+
+# Broken roots: an old exact-version tag whose per-arch manifests are gone is
+# swept; a broken moving tag is reported and nothing of it is swept.
+add(1000, ["1.1.0-r0"], kids=(1001, 1002))            # index ok, both children 404
+add(1003, ["sha256-%064x.sig" % 1000])                # its signature
+add(1010, ["3.14", "3.14-dev"], kids=(1011,))         # moving tag, child 404
+gone = {dg(1001), dg(1002), dg(1011)}
+present = {k: v for k, v in G.items() if k not in gone}
+live, sweep, info = gc.plan(V, lambda ds: {d: present.get(d, []) if d not in gone else [] for d in ds},
+                            now, keep_dated=30, min_age_hours=24, missing=lambda: gone)
+swept = {v["id"] for v in sweep}
+assert 1000 in swept and 1003 in swept, sorted(swept)
+assert 1010 not in swept, "broken moving tag must never be swept"
+assert info["broken"] == ["1.1.0-r0"], info["broken"]
+assert info["broken_moving"] == ["3.14,3.14-dev"], info["broken_moving"]
+assert dg(1) in live and 1 not in swept
+print("ghcr-gc plan test OK:", {k: info[k] for k in ("versions", "live", "sweep", "broken", "broken_moving")})
