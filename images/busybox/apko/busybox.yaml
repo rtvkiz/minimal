@@ -1,0 +1,71 @@
+# Minimal BusyBox image - using Wolfi's pre-built packages
+# CVE patching via the daily rebuild (Wolfi's `busybox` package is unversioned;
+# Wolfi carries the upstream CVE patches between BusyBox's infrequent releases,
+# which is why this is not source-built — see docs/onboarding.md §1).
+#
+# The shell IS the product here, so this is a declared prod-shell exception
+# (same shape as bash). Wolfi's default `busybox` build already leaves out the
+# network applets (wget, nc, telnet — those live in busybox-full), so prod is
+# a shell plus core utilities and nothing that dials out. apk-tools stays out
+# of prod like every other image.
+#
+# No entrypoint, CMD /bin/sh: the same shape as Docker Hub's busybox, so
+# `docker run IMAGE echo hi` and `docker run -it IMAGE` both behave the same
+# as a drop-in replacement.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # BusyBox from Wolfi (listed first: build.yml takes the primary package's
+    # version from the first package line matching `busybox`)
+    - busybox
+
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Certificates (for anything the user copies in that talks TLS)
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+cmd: /bin/sh
+
+work-dir: /work
+
+environment:
+  PATH: /usr/bin:/bin
+  HOME: /tmp
+
+paths:
+  - path: /work
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-busybox"
+  org.opencontainers.image.description: "Hardened BusyBox shell and core utilities with no network applets and no package manager, built on Wolfi with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/busybox"
+  org.opencontainers.image.licenses: "GPL-2.0-only"
+
+archs:
+  - x86_64
+  - aarch64

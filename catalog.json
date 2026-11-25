@@ -2121,6 +2121,19 @@
       "description": "GNU Bash with busybox utilities for running shell scripts in CI jobs, init containers and multi-stage builds. No package manager in prod, non-root, signed."
     },
     {
+      "name": "busybox",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "busybox",
+      "upstream_url": "https://busybox.net",
+      "seo_noun": "BusyBox shell",
+      "summary": "BusyBox shell and utilities with no network applets or package manager, built on Wolfi.",
+      "description": "BusyBox shell and core utilities as a drop-in for library/busybox in init containers and CI jobs. No network applets, no package manager, non-root."
+    },
+    {
       "name": "composer",
       "category": "Languages & Runtimes",
       "variants": [
