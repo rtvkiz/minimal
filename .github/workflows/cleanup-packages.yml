@@ -17,17 +17,19 @@ name: Cleanup Package Versions
 # Reconcile, don't batch: each run is budgeted against the REST rate limit
 # (MAX_DELETES, RATE_FLOOR) and the next run resumes.
 #
-# Token: GHCR_CLEANUP_TOKEN (classic PAT: read:packages + delete:packages) when
-# set — its own 5000 req/h bucket. Falls back to GITHUB_TOKEN, whose
-# installation budget is shared with every other workflow in the repo and is
-# often already exhausted (the backlog then drains only in quiet hours).
+# Token: GITHUB_TOKEN only, scoped to this repo's packages. A classic PAT
+# with delete:packages would reach every package on the account, so we don't
+# use one. GITHUB_TOKEN's 1,000 req/h budget is shared with every workflow in
+# the repo: RATE_FLOOR always leaves headroom for the others, and the site
+# deploy reads tags from the registry rather than REST so it doesn't drain it.
+# The first pass has a large backlog and drains over days of hourly runs.
 #
 # Mode: manual runs default to report. Scheduled runs use the repo variable
 # GC_SCHEDULE_MODE (report until someone has read a real report, then apply).
 
 on:
   schedule:
-    - cron: '17 */4 * * *'   # every 4h: drains the initial backlog, then steady-state
+    - cron: '17 * * * *'   # hourly: each run spends what the budget allows, the next resumes
   workflow_dispatch:
     inputs:
       mode:
@@ -68,14 +70,14 @@ jobs:
 
       - name: Sweep
         env:
-          GH_TOKEN: ${{ secrets.GHCR_CLEANUP_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
           MODE: ${{ github.event_name == 'schedule' && (vars.GC_SCHEDULE_MODE || 'report') || inputs.mode }}
           ONLY: ${{ inputs.only }}
           KEEP_DATED: '30'
           MIN_AGE_HOURS: '24'
           MAX_DELETES: '700'
-          RATE_FLOOR: '150'
+          RATE_FLOOR: '350'   # never spend the last 350/h: other workflows share this budget
           ROTATE: ${{ github.run_number }}
         run: |
           if [ -n "$ONLY" ]; then
