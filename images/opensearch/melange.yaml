@@ -16,7 +16,7 @@ package:
   # product bare, as cpe:2.3:a:opensearch:opensearch:*, so none of them
   # matched, and the Wolfi secdb missed it too.
   name: opensearch
-  version: 3.10.0
+  version: 3.10.1
   epoch: 0
   description: "Minimal OpenSearch from the official upstream min distribution"
   copyright:
@@ -35,8 +35,8 @@ package:
 vars:
   # SHA512 of the official opensearch-min-<ver>-linux-<arch>.tar.gz, from the
   # upstream .sha512 files. Updated by update-versions.yml.
-  sha512_x86: aa20d9807dbec847c2be6295451609c5aafd41f1e8693367df6bc17904888813acb58b5bbe7f2ff9e8122cf0c4f9ec22fe89addc4501485c1a0af771c6d3634a
-  sha512_arm: 9b79c906562d08e8b5b7215593d23fa66b73c508272105716adbaac61b35e2dd67ff6647449dfebd5d90111ef0e63536580644b18580d86833741ffd26f264d7
+  sha512_x86: c9d0864196d1f88f13c9aa57629ee01da3c5f5204d6fde6ba6028ca5b1846fa3bbe9c8c671836bec6d73e0d1080454cb72383e3f8106156e5da5bf7578175105
+  sha512_arm: 5dd1355ff77dadb2a8d855f21156e42545df3e63a25299928591f9dd1e42519e60549d7d205c16af7290642460f9ca9fe6651fa30b2ce45aa408594eeec42115
 
 environment:
   contents:
