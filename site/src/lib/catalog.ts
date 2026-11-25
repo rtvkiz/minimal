@@ -101,6 +101,7 @@ export interface Dataset {
   buildDate: string;
   commitSha: string;
   runUrl: string;
+  stars?: number | null;
   registry: string;
   org: string;
   prefix: string;

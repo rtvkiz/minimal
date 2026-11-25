@@ -500,6 +500,21 @@ async function main() {
     }
   }
 
+  // Star count for the header "Star" button. Fetched at build time (the site
+  // redeploys on every data refresh) so visitors make no GitHub API call and
+  // hit no rate limit. Cosmetic: on any failure the button renders without a
+  // count rather than failing the build or showing a stale number.
+  let stars = null;
+  try {
+    const r = await fetchJson(`https://api.github.com/repos/${ORG}/minimal`, {
+      headers: { Accept: 'application/vnd.github+json', ...(GH_TOKEN ? { Authorization: `Bearer ${GH_TOKEN}` } : {}) },
+    });
+    if (r.ok && Number.isInteger(r.body?.stargazers_count)) stars = r.body.stargazers_count;
+    else warn(`star count unavailable (HTTP ${r.status})`);
+  } catch (e) {
+    warn(`star count unavailable (${e.message})`);
+  }
+
   const full = records.filter((r) => !r.degraded).length;
   const degraded = records.filter((r) => r.degraded);
   const out = {
@@ -507,6 +522,7 @@ async function main() {
     buildDate: process.env.BUILD_DATE || new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC',
     commitSha: process.env.COMMIT_SHA || '',
     runUrl: process.env.RUN_URL || '',
+    stars,
     registry: REGISTRY,
     org: ORG,
     prefix: PREFIX,

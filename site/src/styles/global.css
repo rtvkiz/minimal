@@ -196,6 +196,11 @@ p code, li code, td code, dd code:not(.kv-mono) {
 .icon-btn:hover { color: var(--fg-strong); background: var(--bg-muted); text-decoration: none; }
 .icon-btn.outlined { border-color: var(--border-strong); color: var(--fg-strong); }
 .icon-btn svg { width: 16px; height: 16px; flex: none; }
+.star-btn .star-count {
+  margin-left: 1px; padding-left: 8px; border-left: 1px solid var(--border-strong);
+  font-variant-numeric: tabular-nums; color: var(--muted);
+}
+.star-btn:hover .star-count { color: var(--fg-strong); }
 .theme-toggle .icon-moon { display: none; }
 :root[data-theme="dark"] .theme-toggle .icon-sun { display: none; }
 :root[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
