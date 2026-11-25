@@ -12,7 +12,7 @@ package:
   # bare, as cpe:2.3:a:velero:velero:*, so none of them matched, and the Wolfi
   # secdb missed it too.
   name: velero
-  version: 1.18.4
+  version: 1.19.0
   epoch: 0
   description: "Minimal Velero Kubernetes backup and restore tool built from source"
   copyright:
@@ -29,7 +29,7 @@ package:
 
 vars:
   # SHA256 of velero source tarball - updated by update-versions.yml
-  sha256: f551c797c90bc9e76f4de31e07011888666aeb63cd277991b909e4509baf9142
+  sha256: 789f13190b0d35a8edadddfb7dfb442236f2e2699c6a78b1d3fd45da7c7957c1
 
 environment:
   contents:
@@ -191,8 +191,8 @@ pipeline:
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-s -w -buildid= \
-          -X github.com/vmware-tanzu/velero/pkg/buildinfo.Version=v${{package.version}} \
-          -X github.com/vmware-tanzu/velero/pkg/buildinfo.GitTreeState=clean" \
+          -X github.com/velero-io/velero/pkg/buildinfo.Version=v${{package.version}} \
+          -X github.com/velero-io/velero/pkg/buildinfo.GitTreeState=clean" \
         -o /home/build/velero-bin \
         ./cmd/velero
 
@@ -205,7 +205,10 @@ pipeline:
   # Verify the build
   - runs: |
       echo "Verifying velero binary..."
-      "${{targets.destdir}}/usr/bin/velero" version --client-only
+      # Assert the injected version, not just that the binary runs: go build
+      # silently ignores an -X for a symbol that does not exist, so a module
+      # rename (vmware-tanzu -> velero-io in 1.19) ships an empty Version.
+      "${{targets.destdir}}/usr/bin/velero" version --client-only | grep -F "Version: v${{package.version}}"
 
 update:
   enabled: true
