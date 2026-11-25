@@ -253,3 +253,81 @@ export function imageTitle(img: ImageRecord): string {
   const noun = img.seoNoun || categoryNoun(img.category);
   return `${img.displayName} — free hardened ${noun ? `${noun} ` : ''}container image`;
 }
+
+//--- tag grouping for the Tags tab ---------------------------------------------
+
+export interface TagRow {
+  /** prod tag, e.g. "3.15"; dev is the same tag + "-dev" when published */
+  tag: string;
+  dev: string | null;
+  kind: 'major' | 'minor' | 'latest' | 'exact';
+  recommended: boolean;
+}
+
+export interface GroupedTags {
+  /** Moving tags users should pick from, plus the current exact version. */
+  primary: TagRow[];
+  /** Dated build-history tags (<version>-YYYYMMDD), newest first. */
+  history: Tag[];
+  /** Superseded exact-version tags (frozen: no further security fixes). */
+  older: Tag[];
+}
+
+const DATED = /-[0-9]{8}(-dev)?$/;
+// Single-arch / bare-date tags the build no longer produces (swept by
+// cleanup-packages.yml); never offered to users.
+const LEGACY = /^[0-9]{8}(-dev)?$|-(amd64|arm64)(-dev)?$/;
+const LINE = /^[0-9]+(\.[0-9]+)?$/;
+
+function versionKey(v: string): number[] {
+  return v.replace(/-dev$/, '').split(/[^0-9]+/).filter(Boolean).map(Number);
+}
+function cmpVersion(a: string, b: string): number {
+  const x = versionKey(a), y = versionKey(b);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const d = (x[i] ?? -1) - (y[i] ?? -1);
+    if (d) return d;
+  }
+  return 0;
+}
+
+/**
+ * Split a flat tag list into what a user should pull vs history. The
+ * recommended tag is the major line (:3) — patches without crossing a major
+ * bump — or the minor line for 0.x images, where a :0 line would promise a
+ * compatibility semver doesn't give (same rule as /docs/tags/).
+ */
+export function groupTags(tags: Tag[]): GroupedTags {
+  const names = new Set(tags.map((t) => t.name));
+  const usable = tags.filter((t) => !LEGACY.test(t.name));
+  const prod = usable.filter((t) => !t.name.endsWith('-dev') && t.name !== 'latest-dev');
+  const devOf = (n: string) => (names.has(n === 'latest' ? 'latest-dev' : `${n}-dev`) ? (n === 'latest' ? 'latest-dev' : `${n}-dev`) : null);
+
+  const lines = prod.filter((t) => LINE.test(t.name)).map((t) => t.name);
+  const majors = lines.filter((n) => !n.includes('.')).sort(cmpVersion).reverse();
+  const minors = lines.filter((n) => n.includes('.')).sort(cmpVersion).reverse();
+  const exact = prod.filter((t) => t.name !== 'latest' && !LINE.test(t.name) && !DATED.test(t.name));
+
+  // Current exact version = the one sharing :latest's digest when the REST
+  // API gave digests, else the highest version.
+  const latestDigest = tags.find((t) => t.name === 'latest')?.digest;
+  const byDigest = latestDigest ? exact.find((t) => t.digest === latestDigest) : undefined;
+  const current = byDigest?.name ?? exact.map((t) => t.name).sort(cmpVersion).pop() ?? null;
+
+  const rec = majors.find((m) => m !== '0') ?? minors[0] ?? 'latest';
+  const row = (tag: string, kind: TagRow['kind']): TagRow => ({ tag, dev: devOf(tag), kind, recommended: tag === rec });
+  const primary: TagRow[] = [
+    ...majors.filter((m) => m !== '0').map((m) => row(m, 'major')),
+    ...minors.map((m) => row(m, 'minor')),
+    ...(names.has('latest') ? [row('latest', 'latest')] : []),
+    ...(current ? [row(current, 'exact')] : []),
+  ];
+
+  const byNewest = (a: Tag, b: Tag) =>
+    (Date.parse(b.created || '') || 0) - (Date.parse(a.created || '') || 0) || cmpVersion(b.name, a.name);
+  return {
+    primary,
+    history: usable.filter((t) => DATED.test(t.name) && !t.name.endsWith('-dev')).sort(byNewest),
+    older: exact.filter((t) => t.name !== current).sort((a, b) => cmpVersion(b.name, a.name)),
+  };
+}

@@ -2,7 +2,7 @@
 import Layout from '../../components/Layout.astro';
 import CopyButton from '../../components/CopyButton.astro';
 import VulnSummary from '../../components/VulnSummary.astro';
-import { images, getImage, categorySlug, imageTitle, imageHref } from '../../lib/catalog';
+import { images, getImage, categorySlug, imageTitle, imageHref, groupTags } from '../../lib/catalog';
 
 export function getStaticPaths() {
   // Addressed by `slug`, not `name`: three images publish as minimal-<x>-slim but
@@ -71,6 +71,13 @@ const schema = [{
   ...(image.builtAt ? { dateModified: image.builtAt } : {}),
   maintainer: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
 }];
+const tagGroups = groupTags(image.tags);
+const KIND_TEXT = {
+  major: (t: string) => `Newest ${t}.x build. Gets every patch and minor release, never a new major version.`,
+  minor: (t: string) => `Newest ${t}.x build. Patch releases only.`,
+  latest: () => 'Newest build. Moves to the next major version when one ships.',
+  exact: () => 'This exact version. Rebuilt with fixes only until a newer version ships, then frozen.',
+} as const;
 ---
 <Layout
   title={pageTitle}
@@ -123,7 +130,7 @@ const schema = [{
     <div class="tabs" role="tablist" aria-label="Image details">
       <button class="tab" role="tab" aria-selected="true" data-tab="overview">Overview</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="specs">Specifications</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="tags">Tags <span class="muted">{image.tags.length}</span></button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="tags">Tags</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="packages">Packages{image.packages ? <span class="muted"> {image.packages.length}</span> : null}</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="advisories">Advisories{v ? <span class="muted"> {v.total}</span> : null}</button>
       <button class="tab" role="tab" aria-selected="false" data-tab="provenance">Provenance</button>
@@ -189,18 +196,43 @@ const schema = [{
       ) : (
         <>
           {image.tagsStatus === 'partial' && <p class="notice warn" style="margin-bottom:16px">Showing a partial tag list — the registry returned incomplete data for this build.</p>}
-          <div class="table-wrap"><table class="data">
-            <thead><tr><th>Tag</th><th>Pull</th>{image.tags.some((t) => t.created) && <th>Published</th>}</tr></thead>
+          <p class="section-sub">Pick a moving tag to keep getting security fixes. Every tag has a <code>-dev</code> twin with a shell and package manager. <a href="/docs/tags/">How tags work</a></p>
+          <div class="table-wrap"><table class="data tag-table">
+            <thead><tr><th>Tag</th><th>What you get</th><th>Dev variant</th></tr></thead>
             <tbody>
-              {image.tags.map((t) => (
-                <tr>
-                  <td class="mono">{t.name}</td>
-                  <td class="mono">{image.repo}:{t.name}</td>
-                  {image.tags.some((x) => x.created) && <td class="small muted">{t.created ? new Date(t.created).toISOString().slice(0, 10) : '—'}</td>}
+              {tagGroups.primary.map((r) => (
+                <tr class={r.recommended ? 'tag-rec' : undefined}>
+                  <td class="mono">{image.repo}:{r.tag}{r.recommended && <> <span class="pill clean">Recommended</span></>}</td>
+                  <td class="small">{KIND_TEXT[r.kind](r.tag)}</td>
+                  <td class="mono small muted">{r.dev ? `:${r.dev}` : '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table></div>
+          {tagGroups.history.length > 0 && (
+            <details class="tag-more">
+              <summary>Build history <span class="muted">{tagGroups.history.length} dated builds</span></summary>
+              <p class="small muted">One immutable-by-date tag per daily rebuild, for rollback or reproducing an old build. The newest 30 are kept; add <code>-dev</code> for the dev variant.</p>
+              <div class="table-wrap"><table class="data">
+                <thead><tr><th>Tag</th>{tagGroups.history.some((t) => t.created) && <th>Published</th>}</tr></thead>
+                <tbody>
+                  {tagGroups.history.map((t) => (
+                    <tr>
+                      <td class="mono">{image.repo}:{t.name}</td>
+                      {tagGroups.history.some((x) => x.created) && <td class="small muted">{t.created ? new Date(t.created).toISOString().slice(0, 10) : '—'}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+            </details>
+          )}
+          {tagGroups.older.length > 0 && (
+            <details class="tag-more">
+              <summary>Older versions <span class="muted">{tagGroups.older.length} frozen tags</span></summary>
+              <p class="small muted">Superseded exact versions. They still pull, but no longer receive security fixes.</p>
+              <ul class="tag-cloud">{tagGroups.older.map((t) => <li class="mono small">{t.name}</li>)}</ul>
+            </details>
+          )}
         </>
       )}
     </div>
