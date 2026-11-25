@@ -146,7 +146,11 @@ def rest(method, path):
             if e.code in (500, 502, 503, 504) and attempt < 3:
                 time.sleep(5 * (attempt + 1))
                 continue
-            return e.code, None
+            try:
+                msg = json.loads(e.read() or b"{}").get("message", "")
+            except ValueError:
+                msg = ""
+            return e.code, {"message": msg}
         except (urllib.error.URLError, TimeoutError):
             if attempt < 3:
                 time.sleep(5 * (attempt + 1))
@@ -160,7 +164,7 @@ def list_versions(pkg):
     while True:
         status, body = rest("GET", f"/users/{OWNER}/packages/container/{pkg}/versions?per_page=100&page={page}")
         if status != 200:
-            raise RuntimeError(f"list versions HTTP {status}")
+            raise RuntimeError(f"list versions HTTP {status}: {(body or {}).get('message', '')}")
         for v in body:
             out.append({
                 "id": v["id"],
@@ -254,6 +258,10 @@ def main(names):
         try:
             versions = list_versions(pkg)
         except Exception as e:  # noqa: BLE001 — one package must not stop the sweep
+            if rate_remaining == 0:
+                budget_hit = True
+                print(f"── stop: REST rate limit exhausted at {pkg} ({e}); next run resumes")
+                break
             print(f"── {pkg}: skipped ({e})")
             continue
         if not versions:
@@ -290,12 +298,12 @@ def main(names):
                 budget_hit = True
                 pending += 1
                 continue
-            status, _ = rest("DELETE", f"/users/{OWNER}/packages/container/{pkg}/versions/{v['id']}")
+            status, body = rest("DELETE", f"/users/{OWNER}/packages/container/{pkg}/versions/{v['id']}")
             if status in (200, 204):
                 deleted += 1
             else:
                 failed += 1
-                print(f"   ! delete {v['digest'][:19]} ({label}) HTTP {status}")
+                print(f"   ! delete {v['digest'][:19]} ({label}) HTTP {status}: {(body or {}).get('message', '')}")
         if MODE == "apply" and sweep and not reg.pullable("latest"):
             problems.append(f"{pkg}: :latest NOT pullable after sweep")
 
