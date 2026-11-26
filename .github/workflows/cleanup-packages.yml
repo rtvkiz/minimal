@@ -55,6 +55,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      issues: write      # the "GHCR cleanup: backlog progress" issue (label ghcr-gc)
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -80,6 +81,7 @@ jobs:
           RATE_FLOOR: '1000'  # GITHUB_TOKEN gets 5000/h here; never spend the last 1000, other workflows share it
           MAX_MINUTES: '70'   # stop cleanly before timeout-minutes (90)
           ROTATE: ${{ github.run_number }}
+          PROGRESS_ISSUE: '1'   # apply runs update one tracking issue; closed when every image has cleared
         run: |
           if [ -n "$ONLY" ]; then
             read -r -a NAMES <<< "$ONLY"
