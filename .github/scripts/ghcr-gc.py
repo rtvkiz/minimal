@@ -26,6 +26,7 @@ batch). Graph reads go to the registry (ghcr.io/v2), which is not REST-limited.
 Modes: report (log only, the default) | apply (delete). Exit 1 in either mode
 if a safety check fails, so a broken run is red rather than silently partial.
 """
+import http.client
 import json
 import os
 import re
@@ -159,6 +160,32 @@ def plan(versions, children_many, now, keep_dated=KEEP_DATED, min_age_hours=MIN_
 # --- I/O -----------------------------------------------------------------------
 
 rate_remaining = None
+rate_reset = None  # epoch seconds when the REST budget refills
+
+
+def note_reset(headers):
+    global rate_reset
+    try:
+        rate_reset = int(headers.get("X-RateLimit-Reset")) if headers.get("X-RateLimit-Reset") else rate_reset
+    except (TypeError, ValueError):
+        pass
+
+
+def wait_for_budget(t0):
+    """Sleep until the REST budget refills, if the run's time budget allows.
+
+    Returns True when the caller may continue, False when it should stop."""
+    global rate_remaining
+    if rate_remaining is None or rate_remaining >= RATE_FLOOR:
+        return True
+    wait = (rate_reset or time.time() + 3600) - time.time() + 15
+    left = MAX_MINUTES * 60 - (time.monotonic() - t0)
+    if wait > left:
+        return False
+    print(f"   rate {rate_remaining} < {RATE_FLOOR}: sleeping {wait/60:.1f} min for the hourly reset")
+    time.sleep(max(wait, 0))
+    rate_remaining = None  # refreshed by the next response
+    return True
 
 
 def rest(method, path):
@@ -171,10 +198,12 @@ def rest(method, path):
         try:
             with urllib.request.urlopen(req, timeout=30) as r:
                 rate_remaining = int(r.headers.get("X-RateLimit-Remaining", rate_remaining or 0))
+                note_reset(r.headers)
                 body = r.read()
                 return r.status, (json.loads(body) if body else None)
         except urllib.error.HTTPError as e:
             rate_remaining = int(e.headers.get("X-RateLimit-Remaining", rate_remaining or 0))
+            note_reset(e.headers)
             if e.code in (500, 502, 503, 504) and attempt < 3:
                 time.sleep(5 * (attempt + 1))
                 continue
@@ -183,11 +212,15 @@ def rest(method, path):
             except ValueError:
                 msg = ""
             return e.code, {"message": msg}
-        except (urllib.error.URLError, TimeoutError):
+        except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException) as e:
+            # URLError, timeouts, and the connection resets / RemoteDisconnected
+            # that http.client raises directly: retry, then report as a failed
+            # request instead of crashing the run (the 2026-11-26 11:08 run died
+            # on one RemoteDisconnected during a DELETE).
             if attempt < 3:
                 time.sleep(5 * (attempt + 1))
                 continue
-            raise
+            return 599, {"message": f"network error: {e.__class__.__name__}: {e}"}
     return 599, None
 
 
@@ -233,7 +266,7 @@ class Registry:
                     return None, None
                 if attempt == 3:
                     raise
-            except (urllib.error.URLError, TimeoutError):
+            except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException):
                 if attempt == 3:
                     raise
             time.sleep(3 * (attempt + 1))
@@ -396,9 +429,9 @@ def main(names):
             print(f"── stop: {MAX_MINUTES:g} min time budget reached before {pkg}; next run resumes")
             break
         t_img = time.monotonic()
-        if rate_remaining is not None and rate_remaining < RATE_FLOOR:
+        if not wait_for_budget(t0):
             budget_hit = True
-            print(f"── stop: REST rate limit remaining {rate_remaining} < {RATE_FLOOR}; next run resumes")
+            print(f"── stop: REST budget low ({rate_remaining}) and no time left to wait; next run resumes")
             break
         try:
             versions = list_versions(pkg)
@@ -460,7 +493,7 @@ def main(names):
                 pending += 1
                 img_pending += 1
                 continue
-            if deleted >= MAX_DELETES or (rate_remaining is not None and rate_remaining < RATE_FLOOR):
+            if deleted >= MAX_DELETES or not wait_for_budget(t0):
                 budget_hit = True
                 pending += 1
                 img_pending += 1
@@ -478,6 +511,13 @@ def main(names):
         results[name] = {"deleted": img_deleted, "pending": img_pending, "kept": info["live"],
                          "status": "cleared" if img_pending == 0 else "pending"}
 
+    # Backlog left (unfinished images or budget stop): ask the workflow to
+    # dispatch the next run right away instead of waiting for the scheduler.
+    more = MODE == "apply" and (budget_hit or pending > 0)
+    out = os.environ.get("GITHUB_OUTPUT")
+    if out:
+        with open(out, "a") as f:
+            f.write(f"more={'true' if more else 'false'}\n")
     print(f"\nDone. MODE={MODE} deleted={deleted} failed={failed} pending={pending} "
           f"rate_remaining={rate_remaining} budget_hit={budget_hit}")
     summary = os.environ.get("GITHUB_STEP_SUMMARY")

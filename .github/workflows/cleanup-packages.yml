@@ -51,10 +51,11 @@ concurrency:
 jobs:
   cleanup:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 345
     permissions:
       contents: read
       packages: write
+      actions: write     # dispatch the next run while a backlog remains
       issues: write      # the "GHCR cleanup: backlog progress" issue (label ghcr-gc)
     steps:
       - name: Checkout
@@ -70,6 +71,7 @@ jobs:
         run: python3 .github/scripts/test_ghcr_gc.py
 
       - name: Sweep
+        id: sweep
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
@@ -77,9 +79,9 @@ jobs:
           ONLY: ${{ inputs.only }}
           KEEP_DATED: '30'
           MIN_AGE_HOURS: '24'
-          MAX_DELETES: '3000'  # ~12 min of sequential DELETEs; rate floor is the real limit
+          MAX_DELETES: '100000'  # effectively unbounded: RATE_FLOOR and MAX_MINUTES are the limits
           RATE_FLOOR: '1000'  # GITHUB_TOKEN gets 5000/h here; never spend the last 1000, other workflows share it
-          MAX_MINUTES: '70'   # stop cleanly before timeout-minutes (90)
+          MAX_MINUTES: '330'  # waits out hourly rate resets; stops cleanly before timeout-minutes (345)
           ROTATE: ${{ github.run_number }}
           PROGRESS_ISSUE: '1'   # apply runs update one tracking issue; closed when every image has cleared
         run: |
@@ -90,3 +92,15 @@ jobs:
           fi
           # -u: unbuffered, so progress is visible live and survives a timeout kill
           python3 -u .github/scripts/ghcr-gc.py "${NAMES[@]}"
+
+      # GitHub's scheduler fires this far less often than hourly (about every
+      # 9h on 2026-11-26), so while a backlog remains each run starts the next
+      # one. GITHUB_TOKEN may trigger workflow_dispatch; the concurrency group
+      # keeps runs serial. Stops once a run finishes with nothing pending.
+      - name: Chain the next run while a backlog remains
+        # always(): a red sweep (one skipped image) must not stall the drain; the
+        # chain still ends on its own once nothing is pending.
+        if: always() && steps.sweep.outputs.more == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run cleanup-packages.yml -R "${{ github.repository }}" --ref main -f mode=apply
