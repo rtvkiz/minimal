@@ -11,7 +11,7 @@ package:
   # bare, as cpe:2.3:a:cosign:cosign:*, so none of them matched, and the Wolfi
   # secdb missed it too.
   name: cosign
-  version: 3.1.5
+  version: 3.1.6
   epoch: 0
   description: "Minimal Sigstore Cosign (container signing & verification) built from source"
   copyright:
@@ -28,7 +28,7 @@ package:
 
 vars:
   # SHA256 of cosign source tarball - updated by update-versions.yml workflow
-  sha256: eab9e35839fd50dd17d128b6c22cb0cf12e6f1e782fe598a321f7dbc467585ce
+  sha256: ca0b3030158ab97ba6927c75f0586c3d2449651e95015890351174f6753da88d
 
 environment:
   contents:
