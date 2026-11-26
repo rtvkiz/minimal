@@ -521,6 +521,35 @@ portainer (frontend-in-bwrap), renovate (Node, heavy), n8n (Sustainable Use
 License 🔴), cockroach/confluent cp-*/redpanda/arangodb/directus (BSL or
 community licenses 🔴), dynamodb-local/filebeat (proprietary/Elastic 🔴).
 
+## Wave 6 — Docker Hub official-image gaps, re-ranked (2026-11-26)
+
+Source: all 141 `library/` images from docker-library/official-images, with live
+Docker Hub pull counts (2026-11-26), minus what we ship (including renames:
+golang, node, postgres, redis, openjdk/temurin/corretto, eclipse-mosquitto),
+OS bases, and non-OSS licenses. Wolfi freshness from the live APKINDEX (a
+package last built in June 2026 counts as frozen); upstream activity from the
+GitHub API.
+
+| Batch | Image | Pulls | License | Build | Status |
+|---|---|---:|---|---|---|
+| 8a | docker | 3.69B | Apache-2.0 | Wolfi `docker-cli` + buildx + compose (fresh). Prod is the non-root CLI; **dev is Docker-in-Docker** (`docker-29` + `dockerd-oci-entrypoint-29`, root + `--privileged`, a declared deviation from the dev-variant conventions) | batch 8a |
+| 8a | rethinkdb | 78M | Apache-2.0 | Wolfi `rethinkdb` (rebuilt 2026-11-17; upstream releases are slow, last v2.4.4 in 2023-12) | batch 8a |
+| 8a | gcc | 33M | GPL-3.0-or-later WITH GCC-exception-3.1 | Wolfi `gcc` + binutils + glibc-dev + make + pkgconf; builder-shaped like go/rust, shell-less | batch 8a |
+| 8a | r-base | 12M | GPL-2.0-only OR GPL-3.0-only | Wolfi `R` + `R-dev`. Carries busybox (declared: `/usr/bin/R` is a `#!/bin/sh` launcher) and gcc/gfortran (R's own deps, so `install.packages()` builds from source) | batch 8a |
+| 8b | joomla | 89M | GPL-2.0-or-later | joomla-cms release tarball on our PHP-FPM (drupal pattern) | next |
+| 8b | elixir | 69M | Apache-2.0 | precompiled release on our erlang image | next |
+| 8b | mediawiki | 50M | GPL-2.0-or-later | release tarball on our PHP-FPM; releases ship from Wikimedia's Gerrit, not GitHub releases | next |
+| 8b | yourls | 24M | MIT | release tarball on our PHP-FPM | next |
+| 8b | crate | 21M | Apache-2.0 | release tarball on our JRE (jetty/groovy pattern) | next |
+| 8b | julia | 17M | MIT | official binary release (glibc) | next |
+
+Not scheduled from this survey: pypy, percona-server and influxdb's `influx`
+(Wolfi frozen since June 2026); aerospike and monica (AGPL — same call as
+grafana); redmine (full Rails app); clojure (launcher scripts need bash);
+xwiki, swift, haskell (heavy); varnish (needs a C compiler at runtime, see
+above); mongo-express (no stable release); hello-world (a test stub). nextcloud
+and sonarqube stay out of the cheap tier per the 2026-09-28 reclassification.
+
 ## Execution model
 
 - **One PR per tier group (~6–8 images).** Each image: 10 registration points
