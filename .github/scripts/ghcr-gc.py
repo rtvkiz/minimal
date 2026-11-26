@@ -265,6 +265,101 @@ class Registry:
         return True
 
 
+STATE_RE = re.compile(r"<!-- ghcr-gc-state (.*?) -->", re.S)
+
+
+def update_progress_issue(results, names, problems, deleted_now):
+    """Keep one issue (label ghcr-gc) tracking the backlog drain across runs.
+
+    State lives in the issue body as hidden JSON, so each budget-limited run
+    adds what it saw. An image is "cleared" once an apply run finished its
+    whole sweep (nothing pending). When every catalog image has cleared, post a
+    summary and close the issue; later runs leave a closed, done issue alone.
+    """
+    repo = os.environ["GITHUB_REPOSITORY"]
+    status, issues = rest("GET", f"/repos/{repo}/issues?labels=ghcr-gc&state=all&per_page=5")
+    if status != 200:
+        raise RuntimeError(f"list issues HTTP {status}")
+    issue = issues[0] if issues else None
+    state = {"images": {}, "deleted_total": 0, "started": None}
+    if issue:
+        m = STATE_RE.search(issue.get("body") or "")
+        if m:
+            state = json.loads(m.group(1))
+        if issue["state"] == "closed" and state.get("done"):
+            return  # backlog already drained; steady-state runs don't need an issue
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    state["started"] = state.get("started") or now
+    state["deleted_total"] = state.get("deleted_total", 0) + deleted_now
+    for name, r in results.items():
+        prev = state["images"].get(name, {})
+        prev.update({"last": now, "status": r["status"]})
+        if r["status"] == "cleared" or prev.get("cleared"):
+            prev["cleared"] = True
+        if "pending" in r:
+            prev["pending"] = r["pending"]
+        state["images"][name] = prev
+    catalog = set(names)
+    cleared = sorted(n for n in catalog if state["images"].get(n, {}).get("cleared"))
+    todo = sorted(catalog - set(cleared))
+    done = not todo
+    state["done"] = done
+
+    lines = [
+        "Tracks `cleanup-packages.yml` draining the GHCR backlog (old dated builds, orphaned",
+        "signatures/attestations, unreferenced per-arch manifests, broken tags). Updated by every",
+        "apply run; closed automatically once every catalog image has had a full sweep.",
+        "",
+        "| | |", "|---|---|",
+        f"| Images cleared | **{len(cleared)} / {len(catalog)}** |",
+        f"| Versions deleted so far | {state['deleted_total']:,} |",
+        f"| Started | {state['started']} |",
+        f"| Last run | {now} (deleted {deleted_now:,}) |",
+    ]
+    if problems:
+        lines += ["", "**Problems in the last run** (those images were skipped, nothing deleted):"]
+        lines += [f"- {p}" for p in problems]
+    if todo:
+        lines += ["", f"<details><summary>Not cleared yet ({len(todo)})</summary>", "",
+                  ", ".join(f"`{n}`" + (f" ({state['images'][n].get('pending', '?'):,} pending)"
+                                         if isinstance(state['images'].get(n, {}).get('pending'), int) else "")
+                            for n in todo),
+                  "", "</details>"]
+    body = "\n".join(lines) + f"\n\n<!-- ghcr-gc-state {json.dumps(state, separators=(',', ':'))} -->\n"
+
+    if not issue:
+        rest_json("POST", f"/repos/{repo}/labels", {"name": "ghcr-gc", "color": "0e8a16",
+                                                    "description": "GHCR cleanup backlog tracking"})
+        status, issue = rest_json("POST", f"/repos/{repo}/issues",
+                                  {"title": "GHCR cleanup: backlog progress", "body": body, "labels": ["ghcr-gc"]})
+        if status != 201:
+            raise RuntimeError(f"create issue HTTP {status}")
+    else:
+        rest_json("PATCH", f"/repos/{repo}/issues/{issue['number']}", {"body": body})
+    if done:
+        rest_json("POST", f"/repos/{repo}/issues/{issue['number']}/comments", {"body":
+                  f"Backlog cleared: all {len(catalog)} catalog images have had a full sweep. "
+                  f"{state['deleted_total']:,} versions deleted since {state['started']}. "
+                  "Hourly runs continue in steady state; closing."})
+        rest_json("PATCH", f"/repos/{repo}/issues/{issue['number']}", {"state": "closed", "state_reason": "completed"})
+    print(f"progress issue #{issue['number']}: {len(cleared)}/{len(catalog)} cleared{' — DONE, closed' if done else ''}")
+
+
+def rest_json(method, path, payload):
+    global rate_remaining
+    req = urllib.request.Request(
+        "https://api.github.com" + path, method=method, data=json.dumps(payload).encode(),
+        headers={"Authorization": f"Bearer {TOKEN}", "Accept": "application/vnd.github+json",
+                 "X-GitHub-Api-Version": "2022-11-28", "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            rate_remaining = int(r.headers.get("X-RateLimit-Remaining", rate_remaining or 0))
+            return r.status, json.loads(r.read() or b"null")
+    except urllib.error.HTTPError as e:
+        return e.code, None
+
+
 def main(names):
     if MODE not in ("report", "apply"):
         sys.exit(f"MODE must be report or apply, got {MODE!r}")
@@ -279,6 +374,7 @@ def main(names):
           f"MAX_DELETES={MAX_DELETES} RATE_FLOOR={RATE_FLOOR} start={names[0] if names else '-'}")
 
     t0 = time.monotonic()
+    results = {}  # name -> {"deleted", "pending", "kept", "status"} for the progress issue
     deleted = failed = pending = 0
     problems = []
     budget_hit = False
@@ -303,6 +399,7 @@ def main(names):
             print(f"── {pkg}: skipped ({e})")
             continue
         if not versions:
+            results[name] = {"deleted": 0, "pending": 0, "kept": 0, "status": "cleared"}
             continue
         try:
             reg = Registry(f"{OWNER}/{pkg}")
@@ -310,10 +407,12 @@ def main(names):
         except Exception as e:  # noqa: BLE001 — a failed walk must delete nothing
             problems.append(f"{pkg}: graph walk failed ({e}) — skipped, nothing deleted")
             print(f"── {pkg}: SKIP (walk failed: {e})")
+            results[name] = {"status": "skipped: walk failed"}
             continue
         if info["broken_moving"]:
             problems.append(f"{pkg}: moving tag(s) NOT pullable: {info['broken_moving']} — skipped, nothing deleted")
             print(f"── {pkg}: SKIP (broken moving tags {info['broken_moving']})")
+            results[name] = {"status": "skipped: broken moving tag"}
             continue
         if info["broken"]:
             print(f"   broken (unpullable) tags swept with their image: {info['broken'][:8]}"
@@ -330,6 +429,7 @@ def main(names):
                 parents = [p for p, kids in reg.cache.items() if d in kids][:2]
                 print(f"   unreadable {d} ({where}); referenced by {[p[:19] for p in parents] or 'a tag/artifact'}")
             print(f"── {pkg}: SKIP ({len(unreadable)} live manifests unreadable)")
+            results[name] = {"status": "skipped: unreadable manifests"}
             continue
 
         # Safety: never sweep an image whose roots don't include :latest, and
@@ -337,27 +437,35 @@ def main(names):
         if not info["has_latest"]:
             problems.append(f"{pkg}: no :latest among roots — skipped, nothing deleted")
             print(f"── {pkg}: SKIP (no :latest root) {info}")
+            results[name] = {"status": "skipped: no :latest"}
             continue
         print(f"── {pkg}: {info['versions']} versions, keep {info['live']}, "
               f"sweep {info['sweep']} (dated builds {info['dated_total']}) "
               f"[{time.monotonic() - t_img:.0f}s, rate left {rate_remaining}]")
+        img_deleted = img_pending = 0
         for v in sweep:
             label = ",".join(v["tags"]) or "untagged"
             if MODE == "report" or budget_hit:
                 pending += 1
+                img_pending += 1
                 continue
             if deleted >= MAX_DELETES or (rate_remaining is not None and rate_remaining < RATE_FLOOR):
                 budget_hit = True
                 pending += 1
+                img_pending += 1
                 continue
             status, body = rest("DELETE", f"/users/{OWNER}/packages/container/{pkg}/versions/{v['id']}")
             if status in (200, 204):
                 deleted += 1
+                img_deleted += 1
             else:
                 failed += 1
                 print(f"   ! delete {v['digest'][:19]} ({label}) HTTP {status}: {(body or {}).get('message', '')}")
+                img_pending += 1
         if MODE == "apply" and sweep and not reg.pullable("latest"):
             problems.append(f"{pkg}: :latest NOT pullable after sweep")
+        results[name] = {"deleted": img_deleted, "pending": img_pending, "kept": info["live"],
+                         "status": "cleared" if img_pending == 0 else "pending"}
 
     print(f"\nDone. MODE={MODE} deleted={deleted} failed={failed} pending={pending} "
           f"rate_remaining={rate_remaining} budget_hit={budget_hit}")
@@ -368,6 +476,11 @@ def main(names):
                     f"| {deleted} | {failed} | {pending} | {rate_remaining} |\n")
             for p in problems:
                 f.write(f"\n- ⚠️ {p}")
+    if MODE == "apply" and os.environ.get("PROGRESS_ISSUE") == "1":
+        try:
+            update_progress_issue(results, names, problems, deleted)
+        except Exception as e:  # noqa: BLE001 — reporting must never fail the sweep
+            print(f"::warning::progress issue not updated: {e}")
     for p in problems:
         print(f"::error::{p}")
     if problems or (failed and failed >= max(deleted, 1)):
