@@ -281,12 +281,21 @@ def update_progress_issue(results, names, problems, deleted_now):
     if status != 200:
         raise RuntimeError(f"list issues HTTP {status}")
     issue = issues[0] if issues else None
+    # "Done" is judged against the whole catalog, never just this run's images:
+    # a run limited with `only=` must not declare the backlog drained.
+    catalog = set(names)
+    try:
+        with open(os.environ.get("CATALOG", "catalog.json")) as f:
+            catalog = {i["name"] for i in json.load(f)["images"]}
+    except (OSError, ValueError, KeyError):
+        pass
     state = {"images": {}, "deleted_total": 0, "started": None}
     if issue:
         m = STATE_RE.search(issue.get("body") or "")
         if m:
             state = json.loads(m.group(1))
-        if issue["state"] == "closed" and state.get("done"):
+        all_cleared = all(state["images"].get(n, {}).get("cleared") for n in catalog)
+        if issue["state"] == "closed" and state.get("done") and all_cleared:
             return  # backlog already drained; steady-state runs don't need an issue
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -300,7 +309,6 @@ def update_progress_issue(results, names, problems, deleted_now):
         if "pending" in r:
             prev["pending"] = r["pending"]
         state["images"][name] = prev
-    catalog = set(names)
     cleared = sorted(n for n in catalog if state["images"].get(n, {}).get("cleared"))
     todo = sorted(catalog - set(cleared))
     done = not todo
@@ -336,7 +344,10 @@ def update_progress_issue(results, names, problems, deleted_now):
         if status != 201:
             raise RuntimeError(f"create issue HTTP {status}")
     else:
-        rest_json("PATCH", f"/repos/{repo}/issues/{issue['number']}", {"body": body})
+        patch = {"body": body}
+        if issue["state"] == "closed" and not done:
+            patch["state"] = "open"  # closed early (e.g. by a partial run): reopen until truly drained
+        rest_json("PATCH", f"/repos/{repo}/issues/{issue['number']}", patch)
     if done:
         rest_json("POST", f"/repos/{repo}/issues/{issue['number']}/comments", {"body":
                   f"Backlog cleared: all {len(catalog)} catalog images have had a full sweep. "
