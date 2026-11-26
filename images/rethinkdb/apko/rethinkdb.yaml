@@ -1,0 +1,66 @@
+# Minimal RethinkDB image - using Wolfi's pre-built package
+# CVE patching via the daily rebuild (Wolfi's `rethinkdb` package is
+# unversioned). Shell-less, non-root.
+#
+# Data lives in /data (the work-dir; rethinkdb's default --directory is
+# ./rethinkdb_data). --bind all is required for the ports to be reachable from
+# outside the container: 28015 client driver, 29015 intracluster, 8080 web UI.
+
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  packages:
+    # RethinkDB from Wolfi (listed first: build.yml takes the primary package's
+    # version from the first package line matching `rethinkdb`)
+    - rethinkdb
+
+    # Base filesystem
+    - wolfi-baselayout
+
+    # Certificates (TLS connections)
+    - ca-certificates-bundle
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+entrypoint:
+  command: /usr/bin/rethinkdb
+cmd: --bind all --directory /data/rethinkdb_data
+
+work-dir: /data
+
+environment:
+  PATH: /usr/bin:/bin
+  HOME: /tmp
+
+paths:
+  - path: /data
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o755
+  - path: /tmp
+    type: directory
+    uid: 65532
+    gid: 65532
+    permissions: 0o1777
+
+annotations:
+  org.opencontainers.image.title: "minimal-rethinkdb"
+  org.opencontainers.image.description: "Hardened shell-less RethinkDB document database built on Wolfi with daily CVE patches"
+  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
+  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/rethinkdb"
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+archs:
+  - x86_64
+  - aarch64
