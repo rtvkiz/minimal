@@ -41,6 +41,10 @@ wolfi-rolling:
   - dnsmasq         # dnsmasq (unversioned)
   - bash            # bash (unversioned)
   - busybox         # busybox (unversioned; Wolfi carries the CVE patches between releases)
+  - docker          # docker-cli + buildx + compose; dev: docker-29 / dockerd-oci-entrypoint-29
+  - rethinkdb       # rethinkdb (unversioned)
+  - gcc             # gcc + binutils + glibc-dev + make (unversioned)
+  - r-base          # R + R-dev (unversioned)
   - curl            # curl (unversioned)
   - ollama          # ollama + ollama-cpu (unversioned)
   - otelcol-contrib # opentelemetry-collector-contrib (+ -compat), unversioned

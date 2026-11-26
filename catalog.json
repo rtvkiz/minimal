@@ -2134,6 +2134,58 @@
       "description": "BusyBox shell and core utilities as a drop-in for library/busybox in init containers and CI jobs. No network applets, no package manager, non-root."
     },
     {
+      "name": "docker",
+      "category": "Kubernetes, CI & IaC",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "docker-cli",
+      "upstream_url": "https://www.docker.com",
+      "seo_noun": "Docker CLI",
+      "summary": "Shell-less Docker CLI with buildx and compose; Docker-in-Docker as the dev variant.",
+      "description": "Docker CLI with buildx and compose for CI jobs that drive a daemon over a socket, non-root and shell-less. The -dev variant runs Docker-in-Docker (privileged)."
+    },
+    {
+      "name": "rethinkdb",
+      "category": "Databases",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "rethinkdb",
+      "upstream_url": "https://rethinkdb.com",
+      "seo_noun": "document database",
+      "summary": "Shell-less RethinkDB realtime document database, built on Wolfi.",
+      "description": "RethinkDB realtime JSON document database with changefeeds, web admin UI and clustering. Shell-less, non-root, signed and rebuilt daily from Wolfi packages."
+    },
+    {
+      "name": "gcc",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "gcc",
+      "upstream_url": "https://gcc.gnu.org",
+      "seo_noun": "C/C++ compiler",
+      "summary": "Shell-less GCC C/C++ toolchain with binutils and make, built on Wolfi.",
+      "description": "GCC C and C++ compilers with binutils, glibc headers and make, as a builder stage for native binaries. Shell-less and non-root; the -dev variant adds a shell."
+    },
+    {
+      "name": "r-base",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "R",
+      "upstream_url": "https://www.r-project.org",
+      "seo_noun": "R runtime",
+      "summary": "R language runtime with compilers for source packages, built on Wolfi.",
+      "description": "R language runtime with Rscript and the C, C++ and Fortran toolchain install.packages() needs to build from source. Non-root, no package manager, signed."
+    },
+    {
       "name": "composer",
       "category": "Languages & Runtimes",
       "variants": [
