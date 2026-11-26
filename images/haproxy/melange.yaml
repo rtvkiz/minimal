@@ -13,7 +13,7 @@ package:
   # app with no second identity (Go images get a go-module entry as a fallback;
   # this one has only the apk name), so the suffix made it entirely unscannable.
   name: haproxy
-  version: 3.4.8
+  version: 3.4.9
   epoch: 0
   description: "Minimal HAProxy built from source"
   copyright:
@@ -47,7 +47,7 @@ vars:
   # The lesson is to pin what upstream's OWN published checksum says, not what
   # the CDN happens to return: a transient mismatch is upstream's problem to
   # resolve, and a checksum failure is the correct response to it.
-  sha256: 024bd521a6cbbe32b426853147e6bbd6a89b107c5a34144846193fee5b7c6ed1
+  sha256: 896c55b6029ec2a841617e92a327a335f36a8968e7d51a47eada159673c2f320
 
 environment:
   contents:
