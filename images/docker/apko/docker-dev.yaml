@@ -26,6 +26,12 @@ contents:
     - docker-29
     - dockerd-oci-entrypoint-29
     - openssl
+    # nftables backend for iptables + the nft tool. Wolfi's default `iptables`
+    # is the legacy backend, but hosts on nftables-only kernels (GitHub's
+    # Ubuntu 24.04 runners, most current distros) can't create the legacy NAT
+    # chain dockerd needs. See the /usr/local/sbin symlinks under paths:.
+    - iptables-nft
+    - nftables
 
     - wolfi-baselayout
     - ca-certificates-bundle
@@ -43,7 +49,10 @@ entrypoint:
   command: /usr/bin/dockerd-entrypoint.sh
 
 environment:
-  PATH: /usr/bin:/bin:/usr/sbin:/sbin
+  # /usr/local/sbin first: iptables there is the nftables backend (the
+  # docker:dind layout). dockerd-entrypoint.sh falls back to
+  # /usr/local/sbin/.iptables-legacy when the host only has legacy iptables.
+  PATH: /usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin
   # Same default as docker:dind: generate TLS certs here and listen on 2376.
   # Set DOCKER_TLS_CERTDIR="" to disable TLS (daemon then listens on 2375).
   DOCKER_TLS_CERTDIR: /certs
@@ -55,6 +64,64 @@ paths:
   - path: /var/lib/docker
     type: directory
     permissions: 0o711
+  # apko applies a symlink entry's permissions by following the link, so an
+  # entry without permissions chmods the xtables-*-multi target to 000 and
+  # breaks iptables entirely. Every link below carries 0o755 (the target's
+  # original mode) for that reason.
+  - path: /usr/local/sbin
+    type: directory
+    permissions: 0o755
+  - path: /usr/local/sbin/.iptables-legacy
+    type: directory
+    permissions: 0o755
+  - path: /usr/local/sbin/iptables
+    type: symlink
+    source: /sbin/xtables-nft-multi
+    permissions: 0o755
+  - path: /usr/local/sbin/.iptables-legacy/iptables
+    type: symlink
+    source: /sbin/xtables-legacy-multi
+    permissions: 0o755
+  - path: /usr/local/sbin/iptables-save
+    type: symlink
+    source: /sbin/xtables-nft-multi
+    permissions: 0o755
+  - path: /usr/local/sbin/.iptables-legacy/iptables-save
+    type: symlink
+    source: /sbin/xtables-legacy-multi
+    permissions: 0o755
+  - path: /usr/local/sbin/iptables-restore
+    type: symlink
+    source: /sbin/xtables-nft-multi
+    permissions: 0o755
+  - path: /usr/local/sbin/.iptables-legacy/iptables-restore
+    type: symlink
+    source: /sbin/xtables-legacy-multi
+    permissions: 0o755
+  - path: /usr/local/sbin/ip6tables
+    type: symlink
+    source: /sbin/xtables-nft-multi
+    permissions: 0o755
+  - path: /usr/local/sbin/.iptables-legacy/ip6tables
+    type: symlink
+    source: /sbin/xtables-legacy-multi
+    permissions: 0o755
+  - path: /usr/local/sbin/ip6tables-save
+    type: symlink
+    source: /sbin/xtables-nft-multi
+    permissions: 0o755
+  - path: /usr/local/sbin/.iptables-legacy/ip6tables-save
+    type: symlink
+    source: /sbin/xtables-legacy-multi
+    permissions: 0o755
+  - path: /usr/local/sbin/ip6tables-restore
+    type: symlink
+    source: /sbin/xtables-nft-multi
+    permissions: 0o755
+  - path: /usr/local/sbin/.iptables-legacy/ip6tables-restore
+    type: symlink
+    source: /sbin/xtables-legacy-multi
+    permissions: 0o755
 
 annotations:
   org.opencontainers.image.title: "minimal-docker-dev"
