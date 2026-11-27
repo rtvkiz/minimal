@@ -163,6 +163,9 @@ FALCOSIDEKICK_VERSION ?= $(call melange_version,images/falcosidekick/melange.yam
 WHOAMI_VERSION ?= $(call melange_version,images/whoami/melange.yaml)
 AWS_NODE_TERMINATION_HANDLER_VERSION ?= $(call melange_version,images/aws-node-termination-handler/melange.yaml)
 GROOVY_VERSION ?= $(call melange_version,images/groovy/melange.yaml)
+ELIXIR_VERSION ?= $(call melange_version,images/elixir/melange.yaml)
+JULIA_VERSION ?= $(call melange_version,images/julia/melange.yaml)
+CRATE_VERSION ?= $(call melange_version,images/crate/melange.yaml)
 TOMEE_VERSION ?= $(call melange_version,images/tomee/melange.yaml)
 JETTY_VERSION ?= $(call melange_version,images/jetty/melange.yaml)
 ADMINER_VERSION ?= $(call melange_version,images/adminer/melange.yaml)
@@ -352,6 +355,9 @@ endef
 .PHONY: curl curl-dev test-curl test-curl-dev
 .PHONY: ollama ollama-dev test-ollama test-ollama-dev
 .PHONY: groovy groovy-melange test-groovy
+.PHONY: elixir elixir-melange elixir-dev test-elixir test-elixir-dev
+.PHONY: julia julia-melange julia-dev test-julia test-julia-dev
+.PHONY: crate crate-melange crate-dev test-crate test-crate-dev
 .PHONY: tomee tomee-melange test-tomee
 .PHONY: jetty jetty-melange test-jetty
 .PHONY: adminer adminer-melange test-adminer
@@ -394,7 +400,7 @@ endef
 all: build scan
 
 # Build all images
-build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl sealed-secrets cloudnative-pg argo-rollouts trust-manager chartmuseum prometheus-operator kube-rbac-proxy cadvisor nginx-prometheus-exporter memcached-exporter argo-cd argo-cd-repo-server karpenter keda harbor-portal aws-cli mysqld-exporter mongodb-exporter configmap-reload contour cluster-autoscaler jmx-exporter openldap apache-exporter elasticsearch-exporter pgpool phpmyadmin groovy tomee jetty adminer maven composer bash gradle rust fluentd azure-cli ghost drupal matomo gatekeeper envoy-gateway falcosidekick whoami aws-node-termination-handler curl ollama amazon-cloudwatch-agent aws-xray-daemon aws-load-balancer-controller aws-ebs-csi-driver percona-xtradb-cluster-operator kong-ingress-controller jruby otelcol-contrib postgis busybox docker rethinkdb gcc r-base
+build: python node-slim bun go java ruby php dotnet deno mysql mariadb postgres-slim pgbouncer unbound dnsmasq keepalived vector patroni metrics-server external-dns velero kaniko step-ca skopeo sqlite opensearch meilisearch airflow wordpress redis-slim valkey memcached kafka zookeeper cassandra solr flink pulsar tomcat rabbitmq nats mosquitto nginx httpd caddy haproxy traefik envoy oauth2-proxy prometheus alertmanager victoria-metrics thanos mimir jaeger loki tempo otelcol fluent-bit telegraf node-exporter blackbox-exporter kube-state-metrics redis-exporter pushgateway coredns etcd openbao keycloak qdrant vaultwarden registry consul helm kubectl opentofu trivy cosign syft grype osv-scanner oras notation conftest kubeconform kube-bench trufflehog flux kustomize sops crane kubeseal helmfile regctl stern gitleaks step-cli opa jenkins gitea minio rails mailpit external-secrets kyverno flagger reloader postgres-exporter headscale victoria-logs metallb temporal-server temporal-admin-tools temporal-ui-server kong couchdb kvrocks cmctl sealed-secrets cloudnative-pg argo-rollouts trust-manager chartmuseum prometheus-operator kube-rbac-proxy cadvisor nginx-prometheus-exporter memcached-exporter argo-cd argo-cd-repo-server karpenter keda harbor-portal aws-cli mysqld-exporter mongodb-exporter configmap-reload contour cluster-autoscaler jmx-exporter openldap apache-exporter elasticsearch-exporter pgpool phpmyadmin groovy tomee jetty adminer maven composer bash gradle rust fluentd azure-cli ghost drupal matomo gatekeeper envoy-gateway falcosidekick whoami aws-node-termination-handler curl ollama amazon-cloudwatch-agent aws-xray-daemon aws-load-balancer-controller aws-ebs-csi-driver percona-xtradb-cluster-operator kong-ingress-controller jruby otelcol-contrib postgis busybox docker rethinkdb gcc r-base elixir julia crate
 
 #------------------------------------------------------------------------------
 # SIGNING KEY (required for melange packages)
@@ -577,6 +583,9 @@ $(eval $(call DEV_IMAGE_RULE,aws-node-termination-handler,aws-node-termination-h
 $(eval $(call DEV_IMAGE_RULE,curl))
 $(eval $(call DEV_IMAGE_RULE,ollama))
 $(eval $(call DEV_IMAGE_RULE,groovy,groovy-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,elixir,elixir-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,julia,julia-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
+$(eval $(call DEV_IMAGE_RULE,crate,crate-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,tomee,tomee-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,jetty,jetty-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
 $(eval $(call DEV_IMAGE_RULE,adminer,adminer-melange,--repository-append ./packages --keyring-append melange.rsa.pub))
@@ -3493,6 +3502,27 @@ groovy-melange: keygen
 		--signing-key melange.rsa
 	@echo "✓ groovy package built from source"
 
+elixir-melange: keygen
+	@echo "Building elixir $(ELIXIR_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/elixir/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ elixir package built from source"
+
+julia-melange: keygen
+	@echo "Building julia $(JULIA_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/julia/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ julia package built from source"
+
+crate-melange: keygen
+	@echo "Building crate $(CRATE_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
+	melange build images/crate/melange.yaml \
+		--arch x86_64 \
+		--signing-key melange.rsa
+	@echo "✓ crate package built from source"
+
 tomee-melange: keygen
 	@echo "Building tomee $(TOMEE_VERSION) from source via melange (x86_64 only locally; CI builds aarch64 natively)..."
 	melange build images/tomee/melange.yaml \
@@ -3577,6 +3607,54 @@ groovy: groovy-melange
 		$(REGISTRY)/$(OWNER)/minimal-groovy:latest
 	@rm -f groovy.tar sbom-*.spdx.json
 	@echo "✓ minimal-groovy built (source build, OpenJDK 25 JRE)"
+
+elixir: elixir-melange
+	@echo "Assembling minimal-elixir image with apko..."
+	apko build images/elixir/apko/elixir.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-elixir:$(VERSION) \
+		elixir.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < elixir.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-elixir:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-elixir:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-elixir:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-elixir:latest
+	@rm -f elixir.tar sbom-*.spdx.json
+	@echo "✓ minimal-elixir built (Elixir official release, Erlang/OTP 29)"
+
+julia: julia-melange
+	@echo "Assembling minimal-julia image with apko..."
+	apko build images/julia/apko/julia.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-julia:$(VERSION) \
+		julia.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < julia.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-julia:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-julia:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-julia:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-julia:latest
+	@rm -f julia.tar sbom-*.spdx.json
+	@echo "✓ minimal-julia built (Julia official binary release)"
+
+crate: crate-melange
+	@echo "Assembling minimal-crate image with apko..."
+	apko build images/crate/apko/crate.yaml \
+		$(REGISTRY)/$(OWNER)/minimal-crate:$(VERSION) \
+		crate.tar \
+		--arch x86_64 \
+		--repository-append ./packages \
+		--keyring-append melange.rsa.pub
+	docker load < crate.tar
+	docker tag $(REGISTRY)/$(OWNER)/minimal-crate:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-crate:$(VERSION)
+	docker tag $(REGISTRY)/$(OWNER)/minimal-crate:$(VERSION)-amd64 \
+		$(REGISTRY)/$(OWNER)/minimal-crate:latest
+	@rm -f crate.tar sbom-*.spdx.json
+	@echo "✓ minimal-crate built (CrateDB official release, OpenJDK 26 JRE)"
 
 tomee: tomee-melange
 	@echo "Assembling minimal-tomee image with apko..."
@@ -5400,7 +5478,7 @@ size:
 #------------------------------------------------------------------------------
 # TESTING
 #------------------------------------------------------------------------------
-test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev test-cmctl test-cmctl-dev test-sealed-secrets test-sealed-secrets-dev test-cloudnative-pg test-cloudnative-pg-dev test-argo-rollouts test-argo-rollouts-dev test-trust-manager test-trust-manager-dev test-chartmuseum test-chartmuseum-dev test-prometheus-operator test-prometheus-operator-dev test-kube-rbac-proxy test-kube-rbac-proxy-dev test-cadvisor test-cadvisor-dev test-nginx-prometheus-exporter test-nginx-prometheus-exporter-dev test-memcached-exporter test-memcached-exporter-dev test-argo-cd test-argo-cd-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev test-harbor-portal test-harbor-portal-dev test-aws-cli test-mysqld-exporter test-mongodb-exporter test-configmap-reload test-contour test-cluster-autoscaler test-jmx-exporter test-openldap test-apache-exporter test-elasticsearch-exporter test-pgpool test-phpmyadmin test-groovy test-tomee test-jetty test-adminer test-maven test-composer test-bash test-gradle test-rust test-fluentd test-azure-cli test-ghost test-drupal test-matomo test-gatekeeper test-envoy-gateway test-falcosidekick test-whoami test-aws-node-termination-handler test-curl test-ollama test-amazon-cloudwatch-agent test-aws-xray-daemon test-aws-load-balancer-controller test-aws-ebs-csi-driver test-percona-xtradb-cluster-operator test-kong-ingress-controller test-jruby test-otelcol-contrib test-postgis test-busybox test-docker test-rethinkdb test-gcc test-r-base
+test: test-python test-node-slim test-bun test-go test-java test-ruby test-php test-dotnet test-deno test-mysql test-mariadb test-postgres-slim test-pgbouncer test-unbound test-dnsmasq test-keepalived test-vector test-patroni test-metrics-server test-external-dns test-velero test-kaniko test-step-ca test-skopeo test-sqlite test-opensearch test-meilisearch test-airflow test-wordpress test-redis-slim test-valkey test-memcached test-kafka test-zookeeper test-cassandra test-solr test-pulsar test-tomcat test-rabbitmq test-nats test-mosquitto test-nginx test-httpd test-caddy test-haproxy test-traefik test-envoy test-oauth2-proxy test-prometheus test-alertmanager test-victoria-metrics test-thanos test-mimir test-jaeger test-loki test-tempo test-otelcol test-fluent-bit test-telegraf test-node-exporter test-blackbox-exporter test-pushgateway test-coredns test-etcd test-openbao test-keycloak test-qdrant test-registry test-consul test-helm test-kubectl test-opentofu test-trivy test-cosign test-syft test-grype test-osv-scanner test-oras test-notation test-conftest test-kubeconform test-kube-bench test-trufflehog test-flux test-kustomize test-sops test-crane test-kubeseal test-helmfile test-regctl test-stern test-gitleaks test-step-cli test-opa test-jenkins test-gitea test-minio test-rails test-mailpit test-external-secrets test-kyverno test-flagger test-reloader test-postgres-exporter test-headscale test-victoria-logs test-metallb test-temporal-server test-temporal-admin-tools test-temporal-ui-server test-kong test-couchdb test-kvrocks test-kvrocks-dev test-cmctl test-cmctl-dev test-sealed-secrets test-sealed-secrets-dev test-cloudnative-pg test-cloudnative-pg-dev test-argo-rollouts test-argo-rollouts-dev test-trust-manager test-trust-manager-dev test-chartmuseum test-chartmuseum-dev test-prometheus-operator test-prometheus-operator-dev test-kube-rbac-proxy test-kube-rbac-proxy-dev test-cadvisor test-cadvisor-dev test-nginx-prometheus-exporter test-nginx-prometheus-exporter-dev test-memcached-exporter test-memcached-exporter-dev test-argo-cd test-argo-cd-dev test-argo-cd-repo-server test-argo-cd-repo-server-dev test-harbor-portal test-harbor-portal-dev test-aws-cli test-mysqld-exporter test-mongodb-exporter test-configmap-reload test-contour test-cluster-autoscaler test-jmx-exporter test-openldap test-apache-exporter test-elasticsearch-exporter test-pgpool test-phpmyadmin test-groovy test-tomee test-jetty test-adminer test-maven test-composer test-bash test-gradle test-rust test-fluentd test-azure-cli test-ghost test-drupal test-matomo test-gatekeeper test-envoy-gateway test-falcosidekick test-whoami test-aws-node-termination-handler test-curl test-ollama test-amazon-cloudwatch-agent test-aws-xray-daemon test-aws-load-balancer-controller test-aws-ebs-csi-driver test-percona-xtradb-cluster-operator test-kong-ingress-controller test-jruby test-otelcol-contrib test-postgis test-busybox test-docker test-rethinkdb test-gcc test-r-base test-elixir test-julia test-crate
 
 $(eval $(call DEV_TEST_RULE,python))
 $(eval $(call DEV_TEST_RULE,node-slim))
@@ -5550,6 +5628,9 @@ $(eval $(call DEV_TEST_RULE,aws-node-termination-handler))
 $(eval $(call DEV_TEST_RULE,curl))
 $(eval $(call DEV_TEST_RULE,ollama))
 $(eval $(call DEV_TEST_RULE,groovy))
+$(eval $(call DEV_TEST_RULE,elixir))
+$(eval $(call DEV_TEST_RULE,julia))
+$(eval $(call DEV_TEST_RULE,crate))
 $(eval $(call DEV_TEST_RULE,tomee))
 $(eval $(call DEV_TEST_RULE,jetty))
 $(eval $(call DEV_TEST_RULE,adminer))
@@ -6198,6 +6279,24 @@ test-groovy:
 	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-groovy:latest" && \
 		images/groovy/test.sh
 	@echo "✓ groovy tests passed"
+
+test-elixir:
+	@echo "Testing elixir image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-elixir:latest" && \
+		images/elixir/test.sh
+	@echo "✓ elixir tests passed"
+
+test-julia:
+	@echo "Testing julia image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-julia:latest" && \
+		images/julia/test.sh
+	@echo "✓ julia tests passed"
+
+test-crate:
+	@echo "Testing crate image..."
+	export IMAGE="$(REGISTRY)/$(OWNER)/minimal-crate:latest" && \
+		images/crate/test.sh
+	@echo "✓ crate tests passed"
 
 test-tomee:
 	@echo "Testing tomee image..."

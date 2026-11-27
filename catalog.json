@@ -2251,6 +2251,45 @@
       "description": "Apache Groovy language runtime on OpenJDK 25 for running Groovy scripts and build logic in CI, with the JSON and XML modules bundled. Shell-less, non-root."
     },
     {
+      "name": "elixir",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "elixir",
+      "upstream_url": "https://elixir-lang.org",
+      "seo_noun": "Elixir runtime",
+      "summary": "Elixir on Erlang/OTP 29 from the official release, with no package manager.",
+      "description": "Elixir language on Erlang/OTP 29 with mix and iex, from the official release, for Phoenix apps and OTP services. Non-root and signed; dev adds a C toolchain."
+    },
+    {
+      "name": "julia",
+      "category": "Languages & Runtimes",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "julia",
+      "upstream_url": "https://julialang.org",
+      "seo_noun": "Julia runtime",
+      "summary": "Shell-less Julia language runtime from the official binary release.",
+      "description": "Julia language for numerical computing and data science, from the official binary release with the precompiled standard library. Shell-less, non-root, signed."
+    },
+    {
+      "name": "crate",
+      "category": "Databases",
+      "variants": [
+        "prod",
+        "dev"
+      ],
+      "primary_package": "crate",
+      "upstream_url": "https://cratedb.com",
+      "seo_noun": "distributed SQL database",
+      "summary": "Shell-less CrateDB distributed SQL database on OpenJDK 26.",
+      "description": "CrateDB distributed SQL database for time series and search, from the official release on a patched OpenJDK 26 instead of its bundled JDK. Shell-less, non-root."
+    },
+    {
       "name": "drupal",
       "category": "Apps",
       "variants": [

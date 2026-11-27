@@ -1945,3 +1945,48 @@
   links:
     releases: "https://github.com/jruby/jruby/releases"
     notes: "https://github.com/jruby/jruby/releases/tag/{version}"
+
+# ============================================================================
+# Batch 8b-1 (2026-11-27): official upstream releases built via melange.
+# ============================================================================
+
+- name: elixir
+  # The OTP-29 precompiled zip runs on Wolfi's erlang-29 (pinned in
+  # apko/elixir.yaml). When OTP 30 arrives, move both in one PR.
+  cron-enabled: true   # batch-8b-1 (dispatch-validated on the onboarding branch)
+  files: [images/elixir/melange.yaml]
+  source: { type: github-releases-latest, repo: elixir-lang/elixir, strip-v: true }
+  tarball: { url: "https://github.com/elixir-lang/elixir/releases/download/v{version}/elixir-otp-29.zip", field: sha256 }
+  links:
+    releases: "https://github.com/elixir-lang/elixir/releases"
+    notes: "https://github.com/elixir-lang/elixir/releases/tag/v{version}"
+
+- name: julia
+  # julialang's versions.json is the canonical release index; take the highest
+  # stable entry. Per-arch tarballs, one sha256 field each.
+  cron-enabled: true   # batch-8b-1 (dispatch-validated on the onboarding branch)
+  files: [images/julia/melange.yaml]
+  source:
+    type: json
+    url: "https://julialang-s3.julialang.org/bin/versions.json"
+    jq: '[to_entries[] | select(.value.stable) | .key] | sort_by(split(".") | map(tonumber)) | last'
+  tarballs:
+    - { url: "https://julialang-s3.julialang.org/bin/linux/x64/{minor}/julia-{version}-linux-x86_64.tar.gz",      field: sha256_x86, algo: sha256 }
+    - { url: "https://julialang-s3.julialang.org/bin/linux/aarch64/{minor}/julia-{version}-linux-aarch64.tar.gz", field: sha256_arm, algo: sha256 }
+  links:
+    releases: "https://julialang.org/downloads/"
+    notes: "https://github.com/JuliaLang/julia/releases/tag/v{version}"
+
+- name: crate
+  # GitHub releases are tagged bare (6.5.1). Per-arch tarballs from the CrateDB
+  # CDN; the bundled JDK is dropped in melange.yaml for Wolfi's openjdk-26-jre.
+  # A release that needs a newer JDK fails its smoke test and is held back.
+  cron-enabled: true   # batch-8b-1 (dispatch-validated on the onboarding branch)
+  files: [images/crate/melange.yaml]
+  source: { type: github-releases-latest, repo: crate/crate }
+  tarballs:
+    - { url: "https://cdn.crate.io/downloads/releases/cratedb/x64_linux/crate-{version}.tar.gz",     field: sha256_x86, algo: sha256 }
+    - { url: "https://cdn.crate.io/downloads/releases/cratedb/aarch64_linux/crate-{version}.tar.gz", field: sha256_arm, algo: sha256 }
+  links:
+    releases: "https://github.com/crate/crate/releases"
+    notes: "https://cratedb.com/docs/crate/reference/en/latest/appendices/release-notes/{version}.html"

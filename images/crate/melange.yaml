@@ -1,0 +1,65 @@
+# Melange build configuration for minimal crate (CrateDB)
+# CrateDB from the official per-architecture release tarball. The bundled JDK
+# (jdk/) is dropped: the image runs on Wolfi's openjdk-26-jre, the same JDK
+# feature release upstream bundles (26.0.2 for 6.5.1), so the JVM gets Wolfi's
+# daily CVE fixes. bin/crate is a shell launcher; the image runs
+# io.crate.bootstrap.CrateDB with java directly (see apko/crate.yaml).
+# License: Apache-2.0.
+package:
+  name: crate
+  version: 6.5.1
+  epoch: 0
+  description: "CrateDB distributed SQL database from the official release"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi ships no crate today; guard against one appearing at a higher
+    # version and replacing this build.
+    provider-priority: 100
+
+vars:
+  # SHA256 of each per-arch tarball - updated by update-versions.yml workflow
+  sha256_x86: 34447463c7342a71d433fbf87437a10f7200dd926fa855dc8fcc70fbbdb9eb5f
+  sha256_arm: e6986f5490f37656639ec81f72fca9c105a65ede0c1f06df2083fbb0de07034f
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      BUILD_ARCH="${{build.arch}}"
+      case "$BUILD_ARCH" in
+        x86_64)  DIR=x64_linux;     CHECKSUM="${{vars.sha256_x86}}" ;;
+        aarch64) DIR=aarch64_linux; CHECKSUM="${{vars.sha256_arm}}" ;;
+        *) echo "Unsupported arch: $BUILD_ARCH"; exit 1 ;;
+      esac
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://cdn.crate.io/downloads/releases/cratedb/${DIR}/crate-${{package.version}}.tar.gz" \
+        -o /home/build/crate.tar.gz
+      echo "${CHECKSUM}  /home/build/crate.tar.gz" | sha256sum -c -
+
+  - runs: |
+      C="${{targets.destdir}}/usr/share/crate"
+      mkdir -p "$C"
+      tar -xzf /home/build/crate.tar.gz -C "$C" --strip-components=1
+      # Bundled JDK replaced by Wolfi's openjdk-26-jre; Windows launcher unused.
+      rm -rf "$C/jdk" "$C/bin/crate.bat"
+      chmod -R a+rX "$C"
+
+  - runs: |
+      echo "Verifying CrateDB build..."
+      test -f "${{targets.destdir}}/usr/share/crate/lib/crate-app-${{package.version}}.jar"
+      test ! -e "${{targets.destdir}}/usr/share/crate/jdk"
+
+update:
+  enabled: true
+  github:
+    identifier: crate/crate
