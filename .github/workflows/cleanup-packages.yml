@@ -81,7 +81,7 @@ jobs:
           MIN_AGE_HOURS: '24'
           MAX_DELETES: '100000'  # effectively unbounded: RATE_FLOOR and MAX_MINUTES are the limits
           RATE_FLOOR: '1000'  # GITHUB_TOKEN gets 5000/h here; never spend the last 1000, other workflows share it
-          MAX_MINUTES: '330'  # waits out hourly rate resets; stops cleanly before timeout-minutes (345)
+          MAX_MINUTES: '300'  # waits out hourly rate resets; checked per delete, so it stops well before timeout-minutes (345)
           ROTATE: ${{ github.run_number }}
           PROGRESS_ISSUE: '1'   # apply runs update one tracking issue; closed when every image has cleared
         run: |
