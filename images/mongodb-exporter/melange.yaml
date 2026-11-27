@@ -9,7 +9,7 @@ package:
   # Named exactly what upstream calls it, not `mongodb-exporter-minimal` — see
   # docs/onboarding.md "Package naming and scanner visibility".
   name: mongodb-exporter
-  version: 0.54.0
+  version: 0.55.0
   epoch: 0
   description: "Minimal Percona MongoDB Exporter built from source"
   copyright:
@@ -17,7 +17,7 @@ package:
 
 vars:
   # SHA256 of the source tarball - updated by update-versions.yml workflow
-  sha256: 6d117ebdc7b0e4d7ae2db4d16735bd0a7afdddf48a6f9201997c4dbaa05f231c
+  sha256: af7c1cc3cb2a3ed785a9a9d06798609b833ca64701b0f77163624c2df00b1135
 
 environment:
   contents:
