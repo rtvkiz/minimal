@@ -537,11 +537,11 @@ GitHub API.
 | 8a | gcc | 33M | GPL-3.0-or-later WITH GCC-exception-3.1 | Wolfi `gcc` + binutils + glibc-dev + make + pkgconf; builder-shaped like go/rust, shell-less | batch 8a |
 | 8a | r-base | 12M | GPL-2.0-only OR GPL-3.0-only | Wolfi `R` + `R-dev`. Carries busybox (declared: `/usr/bin/R` is a `#!/bin/sh` launcher) and gcc/gfortran (R's own deps, so `install.packages()` builds from source) | batch 8a |
 | 8b | joomla | 89M | GPL-2.0-or-later | joomla-cms release tarball on our PHP-FPM (drupal pattern) | next |
-| 8b | elixir | 69M | Apache-2.0 | precompiled release on our erlang image | next |
+| 8b | elixir | 69M | Apache-2.0 | precompiled release on our erlang image | batch 8b-1 |
 | 8b | mediawiki | 50M | GPL-2.0-or-later | release tarball on our PHP-FPM; releases ship from Wikimedia's Gerrit, not GitHub releases | next |
 | 8b | yourls | 24M | MIT | release tarball on our PHP-FPM | next |
-| 8b | crate | 21M | Apache-2.0 | release tarball on our JRE (jetty/groovy pattern) | next |
-| 8b | julia | 17M | MIT | official binary release (glibc) | next |
+| 8b | crate | 21M | Apache-2.0 | release tarball on our JRE (jetty/groovy pattern) | batch 8b-1 |
+| 8b | julia | 17M | MIT | official binary release (glibc) | batch 8b-1 |
 
 Not scheduled from this survey: pypy, percona-server and influxdb's `influx`
 (Wolfi frozen since June 2026); aerospike and monica (AGPL — same call as

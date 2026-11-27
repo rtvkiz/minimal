@@ -1,0 +1,64 @@
+# Melange build configuration for minimal julia
+# Julia from the official per-architecture binary release (glibc), verified
+# against the sha256 published in julialang's versions.json. The tarball is
+# self-contained (libjulia, LLVM, OpenBLAS and the precompiled stdlib).
+# License: MIT.
+package:
+  name: julia
+  version: 1.13.4
+  epoch: 0
+  description: "Julia language from the official binary release"
+  copyright:
+    - license: MIT
+  dependencies:
+    # Wolfi ships no julia today; guard against one appearing at a higher
+    # version and replacing this build.
+    provider-priority: 100
+
+vars:
+  # SHA256 of each per-arch tarball - updated by update-versions.yml workflow
+  sha256_x86: cf1658f13b91facccd57d41464d7125a0e48a1d24f49062d71532d04d4ec4130
+  sha256_arm: d1814cb51e49a1ecd0c95ff0e4ac267ec5ddaba051f5eed2d866d55e40274de5
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+
+pipeline:
+  - runs: |
+      BUILD_ARCH="${{build.arch}}"
+      MINOR="$(echo "${{package.version}}" | cut -d. -f1-2)"
+      case "$BUILD_ARCH" in
+        x86_64)  DIR=x64;     TRIPLE=x86_64;  CHECKSUM="${{vars.sha256_x86}}" ;;
+        aarch64) DIR=aarch64; TRIPLE=aarch64; CHECKSUM="${{vars.sha256_arm}}" ;;
+        *) echo "Unsupported arch: $BUILD_ARCH"; exit 1 ;;
+      esac
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://julialang-s3.julialang.org/bin/linux/${DIR}/${MINOR}/julia-${{package.version}}-linux-${TRIPLE}.tar.gz" \
+        -o /home/build/julia.tar.gz
+      echo "${CHECKSUM}  /home/build/julia.tar.gz" | sha256sum -c -
+
+  - runs: |
+      J="${{targets.destdir}}/usr/lib/julia"
+      mkdir -p "$J" "${{targets.destdir}}/usr/bin"
+      tar -xzf /home/build/julia.tar.gz -C "$J" --strip-components=1
+      rm -rf "$J/share/man" "$J/share/applications" "$J/share/icons" "$J/share/appdata"
+      chmod -R a+rX "$J"
+      ln -sf ../lib/julia/bin/julia "${{targets.destdir}}/usr/bin/julia"
+
+  - runs: |
+      echo "Verifying Julia build..."
+      "${{targets.destdir}}/usr/lib/julia/bin/julia" --startup-file=no -e 'println("julia ", VERSION)'
+
+update:
+  enabled: true
+  github:
+    identifier: JuliaLang/julia
+    strip-prefix: v

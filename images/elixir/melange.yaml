@@ -1,0 +1,68 @@
+# Melange build configuration for minimal elixir
+# Elixir from the official precompiled release (elixir-otp-29.zip), verified
+# against the sha256 published with each GitHub release. Runs on Wolfi's
+# erlang-29, the same OTP line as minimal-erlang. The OTP-29 asset and the
+# erlang-29 pin move together: when OTP 30 arrives, bump both in one PR.
+# License: Apache-2.0.
+package:
+  name: elixir
+  version: 1.20.5
+  epoch: 0
+  description: "Elixir language from the official precompiled release, for Erlang/OTP 29"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # Wolfi ships no elixir today; guard against one appearing at a higher
+    # version and replacing this build.
+    provider-priority: 100
+    runtime:
+      - erlang-29
+      # bin/elixir, iex, mix and elixirc are #!/bin/sh launchers
+      - busybox
+
+vars:
+  # SHA256 of elixir-otp-29.zip - updated by update-versions.yml workflow
+  sha256: f424d6f0bb710a1d4898f2645d8ad6cab3f5eab8d71848c0dda2579d3a8e8a06
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      # verify step runs the built elixir
+      - erlang-29
+
+pipeline:
+  - runs: |
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://github.com/elixir-lang/elixir/releases/download/v${{package.version}}/elixir-otp-29.zip" \
+        -o /home/build/elixir.zip
+      echo "${{vars.sha256}}  /home/build/elixir.zip" | sha256sum -c -
+
+  - runs: |
+      E="${{targets.destdir}}/usr/lib/elixir"
+      mkdir -p "$E" "${{targets.destdir}}/usr/bin"
+      cd "$E" && unzip -q /home/build/elixir.zip
+      # Windows launchers and the man pages are not used by this image.
+      rm -f bin/*.bat bin/*.ps1
+      rm -rf man
+      chmod -R a+rX "$E"
+      # Relative links: absolute ones dangle inside the melange destdir.
+      for b in elixir elixirc iex mix; do
+        ln -sf ../lib/elixir/bin/$b "${{targets.destdir}}/usr/bin/$b"
+      done
+
+  - runs: |
+      echo "Verifying Elixir build..."
+      "${{targets.destdir}}/usr/lib/elixir/bin/elixir" -e 'IO.puts("elixir #{System.version()} on OTP #{System.otp_release()}")'
+
+update:
+  enabled: true
+  github:
+    identifier: elixir-lang/elixir
+    strip-prefix: v

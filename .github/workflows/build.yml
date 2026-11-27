@@ -186,7 +186,10 @@ jobs:
             {"name":"adminer","variants":["prod","dev"]},
             {"name":"jetty","variants":["prod","dev"]},
             {"name":"tomee","variants":["prod","dev"]},
-            {"name":"groovy","variants":["prod","dev"]}
+            {"name":"groovy","variants":["prod","dev"]},
+            {"name":"elixir","variants":["prod","dev"]},
+            {"name":"julia","variants":["prod","dev"]},
+            {"name":"crate","variants":["prod","dev"]}
           ]'
           APKO_IMAGES='[
             {"name":"python","grep":"python-[0-9]","variants":["prod","dev"]},
