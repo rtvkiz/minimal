@@ -493,7 +493,11 @@ def main(names):
                 pending += 1
                 img_pending += 1
                 continue
-            if deleted >= MAX_DELETES or not wait_for_budget(t0):
+            # Time is checked per delete, not just between images: one large
+            # image (16k+ deletions) outlasted the budget and the job timeout
+            # killed the run before it could report or chain the next one.
+            if (deleted >= MAX_DELETES or (time.monotonic() - t0) / 60 > MAX_MINUTES
+                    or not wait_for_budget(t0)):
                 budget_hit = True
                 pending += 1
                 img_pending += 1
