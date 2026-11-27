@@ -7,7 +7,7 @@
 # License: Apache-2.0.
 package:
   name: crate
-  version: 6.5.1
+  version: 6.5.2
   epoch: 0
   description: "CrateDB distributed SQL database from the official release"
   copyright:
@@ -19,8 +19,8 @@ package:
 
 vars:
   # SHA256 of each per-arch tarball - updated by update-versions.yml workflow
-  sha256_x86: 34447463c7342a71d433fbf87437a10f7200dd926fa855dc8fcc70fbbdb9eb5f
-  sha256_arm: e6986f5490f37656639ec81f72fca9c105a65ede0c1f06df2083fbb0de07034f
+  sha256_x86: ec242062e18e1ca31fe4c7af4cb8c9169105dc6f60260258ab2d082a37c6bc66
+  sha256_arm: cfc7afb3806f54d535e5fdf91905f596c098c771a524834c5b9237bc457ee3a9
 
 environment:
   contents:
