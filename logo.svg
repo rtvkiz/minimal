@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" width="600" height="200">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#14b8a6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d7268;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="shieldStroke" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5eead4;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#0d9488;stop-opacity:0.3" />
+    </linearGradient>
+  </defs>
+
+  <!-- Shield shape -->
+  <path d="M60,28 L108,12 L156,28 L156,90 C156,130 108,160 108,160 C108,160 60,130 60,90 Z"
+        fill="url(#shieldGrad)" stroke="url(#shieldStroke)" stroke-width="2.5"/>
+
+  <!-- Inner shield highlight -->
+  <path d="M70,36 L108,22 L146,36 L146,88 C146,122 108,148 108,148 C108,148 70,122 70,88 Z"
+        fill="none" stroke="#5eead4" stroke-width="0.8" opacity="0.3"/>
+
+  <!-- Container/cube icon inside shield -->
+  <!-- Front face -->
+  <path d="M92,70 L108,62 L124,70 L124,95 L108,103 L92,95 Z"
+        fill="none" stroke="#e2e8f0" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Top face -->
+  <path d="M92,70 L108,62 L124,70 L108,78 Z"
+        fill="#5eead4" fill-opacity="0.25" stroke="#e2e8f0" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Middle line -->
+  <line x1="108" y1="78" x2="108" y2="103"
+        stroke="#e2e8f0" stroke-width="1.5"/>
+  <!-- Left edge -->
+  <line x1="92" y1="70" x2="108" y2="78"
+        stroke="#e2e8f0" stroke-width="0" opacity="0"/>
+  <!-- Right edge -->
+  <line x1="124" y1="70" x2="108" y2="78"
+        stroke="#e2e8f0" stroke-width="0" opacity="0"/>
+
+  <!-- Small lock accent on cube -->
+  <rect x="104" y="84" width="8" height="6" rx="1"
+        fill="#5eead4" fill-opacity="0.5" stroke="#e2e8f0" stroke-width="1"/>
+  <path d="M106,84 L106,81 C106,79 110,79 110,81 L110,84"
+        fill="none" stroke="#e2e8f0" stroke-width="1" stroke-linecap="round"/>
+
+  <!-- "MINIMAL" text -->
+  <text x="190" y="98" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="52" font-weight="700" letter-spacing="3" fill="#e2e8f0">
+    MINIMAL
+  </text>
+
+  <!-- Tagline -->
+  <text x="192" y="126" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="16" font-weight="400" letter-spacing="4" fill="#94a3b8">
+    HARDENED CONTAINER IMAGES
+  </text>
+
+  <!-- Subtle accent line -->
+  <line x1="190" y1="106" x2="520" y2="106"
+        stroke="#0d9488" stroke-width="1.5" opacity="0.5"/>
+</svg>
